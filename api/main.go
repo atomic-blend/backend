@@ -24,7 +24,7 @@ func main() {
 
 	mongoURI := os.Getenv("MONGO_URI")
 	if mongoURI == "" {
-		mongoURI = "mongodb://mongo_user:password@127.0.0.1:27017"
+		mongoURI = "mongodb://mongo_user:password@mongodb:27017"
 	}
 	log.Info().Msgf("Connecting to MongoDB at %s", mongoURI)
 	// Initialize MongoDB connection
@@ -35,7 +35,7 @@ func main() {
 	defer func() {
 		if err := client.Disconnect(context.TODO()); err != nil {
 			log.Fatal().Err(err).Msg("❌ Error disconnecting from MongoDB")
-		}	
+		}
 		log.Fatal().Msg("✅ Disconnected from MongoDB")
 	}()
 
