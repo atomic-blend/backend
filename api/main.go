@@ -34,7 +34,7 @@ func main() {
 	log.Info().Msgf("Connecting to MongoDB at %s", mongoURI)
 
 	// Initialize MongoDB connection
-	client, err := db.ConnectMongo(mongoURI)
+	client, err := db.ConnectMongo(&mongoURI)
 	if err != nil {
 		log.Fatal().Err(err).Msg("❌ Error connecting to MongoDB")
 	}

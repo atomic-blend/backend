@@ -34,7 +34,7 @@ func (c *ProfileController) GetMyProfile(ctx *gin.Context) {
 		return
 	}
 
-	c.userRoleRepo.PopulateRoles(ctx, user)
+	err = c.userRoleRepo.PopulateRoles(ctx, user)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve user profile"})
 		return
