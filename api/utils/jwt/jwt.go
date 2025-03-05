@@ -46,6 +46,7 @@ func GenerateToken(userID primitive.ObjectID, tokenType TokenType) (*TokenDetail
 
 	claims := jwt.MapClaims{
 		"sub":  td.UserID,
+		"user_id": td.UserID,
 		"aud":  "atomic-blend",
 		"iss":  "atomic-blend",
 		"type": string(tokenType),
@@ -66,18 +67,11 @@ func GenerateToken(userID primitive.ObjectID, tokenType TokenType) (*TokenDetail
 
 // ValidateToken verifies if a token is valid
 func ValidateToken(tokenString string, tokenType TokenType) (*jwt.MapClaims, error) {
-	var secretKey string
 
-	if tokenType == AccessToken {
-		secretKey = os.Getenv("ACCESS_TOKEN_SECRET")
-		if secretKey == "" {
-			secretKey = "default_access_secret"
-		}
-	} else {
-		secretKey = os.Getenv("REFRESH_TOKEN_SECRET")
-		if secretKey == "" {
-			secretKey = "default_refresh_secret"
-		}
+	secretKey := os.Getenv("SSO_SECRET")
+	if secretKey == "" {
+		log.Error().Msg("SSO_SECRET not set")
+		return nil, errors.New("SSO_SECRET not set")
 	}
 
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {

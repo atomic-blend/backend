@@ -2,6 +2,7 @@ package main
 
 import (
 	"atomic_blend_api/auth"
+	"atomic_blend_api/controllers/users"
 	"atomic_blend_api/utils/db"
 	"context"
 	"os"
@@ -51,6 +52,7 @@ func main() {
 
 	// Register all routes
 	auth.SetupRoutes(router, database)
+	users.SetupRoutes(router, database)
 
 	// Define port
 	port := os.Getenv("PORT")

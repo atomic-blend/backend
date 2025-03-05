@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -18,6 +19,7 @@ const userCollection = "users"
 type UserRepository struct {
 	collection *mongo.Collection
 }
+
 
 // NewUserRepository creates a new instance of UserRepository
 func NewUserRepository(database *mongo.Database) *UserRepository {
@@ -99,6 +101,19 @@ func (r *UserRepository) Delete(ctx context.Context, id string) error {
 func (r *UserRepository) FindByEmail(ctx context.Context, email string) (*models.UserEntity, error) {
 	var user models.UserEntity
 	err := r.collection.FindOne(ctx, bson.M{"email": email}).Decode(&user)
+	if err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return nil, errors.New("user not found")
+		}
+		return nil, err
+	}
+
+	return &user, nil
+}
+
+func (r *UserRepository) FindByID(ctx *gin.Context, d primitive.ObjectID) (*models.UserEntity, error) {
+	var user models.UserEntity
+	err := r.collection.FindOne(ctx, bson.M{"_id": d}).Decode(&user)
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
 			return nil, errors.New("user not found")
