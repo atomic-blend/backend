@@ -2,10 +2,13 @@ package jwt
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/lestrrat-go/jwx/jwk"
+	"github.com/rs/zerolog/log"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -33,27 +36,21 @@ func GenerateToken(userID primitive.ObjectID, tokenType TokenType) (*TokenDetail
 	var expTime time.Duration
 
 	// Set different expiry times and secrets based on token type
-	if tokenType == AccessToken {
-		secretKey = os.Getenv("ACCESS_TOKEN_SECRET")
-		if secretKey == "" {
-			secretKey = "default_access_secret" // Fallback for development
-		}
-		expTime = 15 * time.Minute // 15 minutes for access token
-	} else {
-		secretKey = os.Getenv("REFRESH_TOKEN_SECRET")
-		if secretKey == "" {
-			secretKey = "default_refresh_secret" // Fallback for development
-		}
-		expTime = 7 * 24 * time.Hour // 7 days for refresh token
+	secretKey = os.Getenv("SSO_SECRET")
+	if secretKey == "" {
+		secretKey = "default_access_secret" // Fallback for development
 	}
+	expTime = 15 * time.Minute // 15 minutes for access token
 
 	td.ExpiresAt = time.Now().Add(expTime)
 
 	claims := jwt.MapClaims{
-		"user_id": td.UserID,
-		"type":    string(tokenType),
-		"exp":     td.ExpiresAt.Unix(),
-		"iat":     time.Now().Unix(),
+		"sub":  td.UserID,
+		"aud":  "atomic-blend",
+		"iss":  "atomic-blend",
+		"type": string(tokenType),
+		"exp":  td.ExpiresAt.Unix(),
+		"iat":  time.Now().Unix(),
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
@@ -105,4 +102,25 @@ func ValidateToken(tokenString string, tokenType TokenType) (*jwt.MapClaims, err
 	}
 
 	return &claims, nil
+}
+
+func GenerateJWKS(secretType string) (*jwk.Key, error) {
+	secretKey := os.Getenv("SSO_SECRET")
+	if secretKey == "" {
+		return nil, errors.New("SSO_SECRET not set")
+	}
+
+	log.Debug().Msgf("Generating JWK with secret: %s\n", secretKey)
+
+	key, err := jwk.New([]byte(secretKey))
+	log.Debug().Msgf("Generated JWK: %v\n", err)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create JWK: %s", err)
+	}
+	if _, ok := key.(jwk.SymmetricKey); !ok {
+		log.Error().Msgf("expected jwk.SymmetricKey, got %T\n", key)
+		return nil, errors.New("failed to create JWK")
+	}
+
+	return &key, nil
 }
