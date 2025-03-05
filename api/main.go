@@ -2,6 +2,7 @@ package main
 
 import (
 	"atomic_blend_api/auth"
+	"atomic_blend_api/controllers/admin"
 	"atomic_blend_api/controllers/users"
 	"atomic_blend_api/utils/db"
 	"context"
@@ -45,14 +46,14 @@ func main() {
 	}()
 
 	// Get database instance
-	database := client.Database("atomic_blend")
 
 	// Setup router with middleware
 	router := gin.Default()
 
 	// Register all routes
-	auth.SetupRoutes(router, database)
-	users.SetupRoutes(router, database)
+	auth.SetupRoutes(router, db.Database)
+	users.SetupRoutes(router, db.Database)
+	admin.SetupRoutes(router, db.Database)
 
 	// Define port
 	port := os.Getenv("PORT")

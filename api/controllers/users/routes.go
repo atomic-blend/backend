@@ -11,7 +11,8 @@ import (
 // SetupRoutes configures all user-related routes
 func SetupRoutes(router *gin.Engine, database *mongo.Database) {
 	userRepo := repositories.NewUserRepository(database)
-	profileController := NewProfileController(userRepo)
+	userRoleRepo := repositories.NewUserRoleRepository(database)
+	profileController := NewProfileController(userRepo, userRoleRepo)
 
 	// Public user routes (if any)
 	userGroup := router.Group("/users")

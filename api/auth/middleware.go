@@ -1,11 +1,13 @@
 package auth
 
 import (
+	"atomic_blend_api/repositories"
 	"atomic_blend_api/utils/jwt"
 	"net/http"
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/rs/zerolog/log"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -84,11 +86,57 @@ func GetAuthUser(c *gin.Context) *UserAuthInfo {
 	return user
 }
 
-// RequireAuth applies the auth middleware to a specific route group
-// Example usage: RequireAuth(router.Group("/protected"))
-func RequireAuth(group *gin.RouterGroup) *gin.RouterGroup {
-	group.Use(AuthMiddleware())
-	return group
+// requireRoleHandler checks if the authenticated user has the specified role
+// It must be used after RequireAuth or AuthMiddleware
+func requireRoleHandler(roleName string, userRepo *repositories.UserRepository, userRoleRepo *repositories.UserRoleRepository) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// Get authenticated user info
+		authUser := GetAuthUser(c)
+		if authUser == nil {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
+			c.Abort()
+			return
+		}
+
+		// Get user details from database to check roles
+		user, err := userRepo.FindByID(c, authUser.UserID)
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to verify user roles")
+			if err.Error() == "user not found" {
+				c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found"})
+			} else {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to verify user roles"})
+			}
+			c.Abort()
+			return
+		}
+		err = userRoleRepo.PopulateRoles(c, user)
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to verify user roles")
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to verify user roles"})
+			c.Abort()
+			return
+		}
+		log.Info().Msgf("User roles: %v", user.RoleIds)
+
+		// Check if user has the required role
+		hasRole := false
+		for _, role := range user.Roles {
+			if role != nil && role.Name == roleName {
+				hasRole = true
+				break
+			}
+		}
+
+		if !hasRole {
+			c.JSON(http.StatusForbidden, gin.H{"error": "Insufficient permissions"})
+			c.Abort()
+			return
+		}
+
+		// User has the required role, proceed
+		c.Next()
+	}
 }
 
 // OptionalAuth middleware that doesn't abort if auth fails

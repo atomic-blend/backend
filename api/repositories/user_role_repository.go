@@ -159,3 +159,16 @@ func (r *UserRoleRepository) FindOrCreate(ctx context.Context, roleName string) 
 
 	return nil, err
 }
+
+func (r *UserRoleRepository) PopulateRoles(context context.Context, user *models.UserEntity) error {
+	roles := make([]*models.UserRoleEntity, 0)
+	for _, roleID := range user.RoleIds {
+		role, err := r.GetByID(context, *roleID)
+		if err != nil {
+			return err
+		}
+		roles = append(roles, role)
+	}
+	user.Roles = roles
+	return nil
+}
