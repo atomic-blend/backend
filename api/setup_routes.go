@@ -1,4 +1,4 @@
-package auth
+package main
 
 import (
 	"atomic_blend_api/controllers/auth"
@@ -10,6 +10,10 @@ import (
 
 // SetupRoutes configures all auth-related routes
 func SetupRoutes(router *gin.Engine, database *mongo.Database) {
+	setupAuthGroup(router, database)
+}
+
+func setupAuthGroup(router *gin.Engine, database *mongo.Database) {
 	userRepo := repositories.NewUserRepository(database)
 	authController := auth.NewController(userRepo)
 

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"atomic_blend_api/auth"
 	"atomic_blend_api/utils/db"
 	"context"
 	"os"
@@ -26,12 +27,15 @@ func main() {
 	if mongoURI == "" {
 		mongoURI = "mongodb://mongo_user:password@mongodb:27017"
 	}
+
 	log.Info().Msgf("Connecting to MongoDB at %s", mongoURI)
+
 	// Initialize MongoDB connection
 	client, err := db.ConnectMongo(mongoURI)
 	if err != nil {
 		log.Fatal().Err(err).Msg("❌ Error connecting to MongoDB")
 	}
+
 	defer func() {
 		if err := client.Disconnect(context.TODO()); err != nil {
 			log.Fatal().Err(err).Msg("❌ Error disconnecting from MongoDB")
@@ -39,7 +43,21 @@ func main() {
 		log.Fatal().Msg("✅ Disconnected from MongoDB")
 	}()
 
-	Router := gin.Default()
+	// Get database instance
+	database := client.Database("atomic_blend")
 
-	Router.Run() // listen and serve on 0.0.0.0:8080 (for windows "localhost:8080")
+	// Setup router with middleware
+	router := gin.Default()
+
+	// Register all routes
+	auth.SetupRoutes(router, database)
+
+	// Define port
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+
+	log.Info().Msgf("Server starting on port %s", port)
+	router.Run(":" + port) // listen and serve on 0.0.0.0:8080 (for windows "localhost:8080")
 }
