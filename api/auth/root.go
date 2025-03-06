@@ -14,9 +14,6 @@ func SetupRoutes(router *gin.Engine, database *mongo.Database) {
 	userRepo := repositories.NewUserRepository(database)
 	authController := auth.NewController(userRepo)
 
-	// JWKS endpoint for token verification
-	router.GET("/.well-known/jwks.json", authController.GetJWKS)
-
 	authGroup := router.Group("/auth")
 	{
 		authGroup.POST("/register", authController.Register)
