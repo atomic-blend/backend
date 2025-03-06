@@ -8,11 +8,25 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
+// UserController handles user profile related operations
+type UserController struct {
+	userRepo     repositories.UserRepositoryInterface
+	userRoleRepo repositories.UserRoleRepositoryInterface
+}
+
+// NewUserController creates a new profile controller instance
+func NewUserController(userRepo repositories.UserRepositoryInterface, userRoleRepo repositories.UserRoleRepositoryInterface) *UserController {
+	return &UserController{
+		userRepo:     userRepo,
+		userRoleRepo: userRoleRepo,
+	}
+}
+
 // SetupRoutes configures all user-related routes
 func SetupRoutes(router *gin.Engine, database *mongo.Database) {
 	userRepo := repositories.NewUserRepository(database)
 	userRoleRepo := repositories.NewUserRoleRepository(database)
-	profileController := NewProfileController(userRepo, userRoleRepo)
+	userController := NewUserController(userRepo, userRoleRepo)
 
 	// Public user routes (if any)
 	userGroup := router.Group("/users")
@@ -20,7 +34,7 @@ func SetupRoutes(router *gin.Engine, database *mongo.Database) {
 	// Protected user routes (require authentication)
 	protectedUserRoutes := auth.RequireAuth(userGroup)
 	{
-		protectedUserRoutes.GET("/profile", profileController.GetMyProfile)
+		protectedUserRoutes.GET("/profile", userController.GetMyProfile)
 
 		// Add more protected routes here as needed
 		// protectedUserRoutes.PUT("/profile", profileController.UpdateProfile)

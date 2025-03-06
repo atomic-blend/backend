@@ -15,10 +15,25 @@ import (
 
 const userRoleCollection = "user_roles"
 
+// UserRoleRepositoryInterface defines methods that a UserRoleRepository must implement
+type UserRoleRepositoryInterface interface {
+	Create(ctx context.Context, role *models.UserRoleEntity) (*models.UserRoleEntity, error)
+	GetByID(ctx context.Context, id primitive.ObjectID) (*models.UserRoleEntity, error)
+	GetAll(ctx context.Context) ([]*models.UserRoleEntity, error)
+	GetByName(ctx context.Context, name string) (*models.UserRoleEntity, error)
+	Update(ctx context.Context, role *models.UserRoleEntity) (*models.UserRoleEntity, error)
+	Delete(ctx context.Context, id primitive.ObjectID) error
+	FindOrCreate(ctx context.Context, roleName string) (*models.UserRoleEntity, error)
+	PopulateRoles(context context.Context, user *models.UserEntity) error
+}
+
 // UserRoleRepository provides methods to interact with user role data in the database
 type UserRoleRepository struct {
 	collection *mongo.Collection
 }
+
+// Ensure UserRoleRepository implements UserRoleRepositoryInterface
+var _ UserRoleRepositoryInterface = (*UserRoleRepository)(nil)
 
 // NewUserRoleRepository creates a new instance of UserRoleRepository
 func NewUserRoleRepository(database *mongo.Database) *UserRoleRepository {

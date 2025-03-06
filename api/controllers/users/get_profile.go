@@ -5,49 +5,39 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/rs/zerolog/log"
 )
 
-// GetMyProfile returns the current authenticated user's profile
-// @Summary Get authenticated user's profile
-// @Description Returns the user profile for the currently authenticated user
-// @Accept json
-// @Produce json
-// @Security BearerAuth
-// @Success 200 {object} models.UserEntity
-// @Failure 401 {object} map[string]string
-// @Failure 404 {object} map[string]string
-// @Failure 500 {object} map[string]string
-// @Router /users/profile [get]
-func (c *ProfileController) GetMyProfile(ctx *gin.Context) {
+// GetMyProfile fetches the profile of the authenticated user
+func (c *UserController) GetMyProfile(ctx *gin.Context) {
 	// Get authenticated user from context
 	authUser := auth.GetAuthUser(ctx)
 	if authUser == nil {
-		// This shouldn't happen due to middleware, but just in case
-		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Not authenticated"})
+		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
 		return
 	}
 
-	// Fetch user profile from database
+	// Fetch user from database using the ID from auth
 	user, err := c.userRepo.FindByID(ctx, authUser.UserID)
 	if err != nil {
+		log.Error().Err(err).Msg("Failed to retrieve user profile")
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve user profile"})
 		return
 	}
 
+	// Populate user roles
 	err = c.userRoleRepo.PopulateRoles(ctx, user)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve user profile"})
+		log.Error().Err(err).Msg("Failed to populate user roles")
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to populate user roles"})
 		return
 	}
 
-	if user == nil {
-		ctx.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
-		return
-	}
-
-	// For security, don't return the password hash
+	// Remove sensitive data before sending to client
 	user.Password = nil
 
 	// Return user profile
-	ctx.JSON(http.StatusOK, user)
+	ctx.JSON(http.StatusOK, gin.H{
+		"data": user,
+	})
 }

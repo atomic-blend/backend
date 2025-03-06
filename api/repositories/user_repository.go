@@ -15,11 +15,23 @@ import (
 
 const userCollection = "users"
 
+// UserRepositoryInterface defines methods that a UserRepository must implement
+type UserRepositoryInterface interface {
+	Create(ctx context.Context, user *models.UserEntity) (*models.UserEntity, error)
+	GetByID(ctx context.Context, id string) (*models.UserEntity, error)
+	Update(ctx context.Context, user *models.UserEntity) (*models.UserEntity, error)
+	Delete(ctx context.Context, id string) error
+	FindByEmail(ctx context.Context, email string) (*models.UserEntity, error)
+	FindByID(ctx *gin.Context, id primitive.ObjectID) (*models.UserEntity, error)
+}
+
 // UserRepository provides methods to interact with user data in the database
 type UserRepository struct {
 	collection *mongo.Collection
 }
 
+// Ensure UserRepository implements UserRepositoryInterface
+var _ UserRepositoryInterface = (*UserRepository)(nil)
 
 // NewUserRepository creates a new instance of UserRepository
 func NewUserRepository(database *mongo.Database) *UserRepository {
@@ -111,6 +123,7 @@ func (r *UserRepository) FindByEmail(ctx context.Context, email string) (*models
 	return &user, nil
 }
 
+// FindByID finds a user by their ObjectID
 func (r *UserRepository) FindByID(ctx *gin.Context, d primitive.ObjectID) (*models.UserEntity, error) {
 	var user models.UserEntity
 	err := r.collection.FindOne(ctx, bson.M{"_id": d}).Decode(&user)
