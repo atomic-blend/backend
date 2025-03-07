@@ -8,6 +8,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog/log"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 // Register creates a new user and returns tokens
@@ -51,17 +52,36 @@ func (c *Controller) Register(ctx *gin.Context) {
 
 	log.Debug().Msgf("Key salt: %s", keySalt)
 
-	// Create new user
+	// Find default user role
+	defaultRole, err := c.userRoleRepo.GetByName(ctx, "user")
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to find default role"})
+		return
+	}
+	if defaultRole == nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Default role not found"})
+		return
+	}
+
+	// Create new user with default role
 	user := &models.UserEntity{
 		Email:    &req.Email,
 		Password: &hashedPassword,
 		KeySalt:  &keySalt,
+		RoleIds:  []*primitive.ObjectID{defaultRole.ID},
 	}
 
 	// Save user to database
 	newUser, err := c.userRepo.Create(ctx, user)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to register user"})
+		return
+	}
+
+	// Populate user roles
+	err = c.userRoleRepo.PopulateRoles(ctx, newUser)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to populate user roles"})
 		return
 	}
 

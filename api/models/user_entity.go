@@ -11,7 +11,7 @@ type UserEntity struct {
 	Password  *string               `json:"password,omitempty" bson:"password" binding:"required"`
 	KeySalt   *string               `json:"keySalt" bson:"key_salt"`
 	RoleIds   []*primitive.ObjectID `json:"-" bson:"role_ids"`
-	Roles     []*UserRoleEntity     `json:"roles,omitempty" bson:"roles,omitempty"`
+	Roles     []*UserRoleEntity     `json:"roles" bson:"roles,omitempty"`
 	CreatedAt *primitive.DateTime   `json:"createdAt" bson:"created_at"`
 	UpdatedAt *primitive.DateTime   `json:"updatedAt" bson:"updated_at"`
 }

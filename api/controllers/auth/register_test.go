@@ -13,6 +13,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
@@ -51,6 +52,17 @@ func TestRegister(t *testing.T) {
 	router := gin.Default()
 	router.POST("/auth/register", authController.Register)
 
+	// Create default user role before running tests
+	roleID := primitive.NewObjectID()
+	defaultRole := models.UserRoleEntity{
+		ID:   &roleID,
+		Name: "user",
+	}
+	_, err = db.Collection("user_roles").InsertOne(nil, defaultRole)
+	if err != nil {
+		t.Fatalf("Failed to insert default user role: %v", err)
+	}
+
 	// Test cases
 	testCases := []struct {
 		name           string
@@ -67,34 +79,41 @@ func TestRegister(t *testing.T) {
 			},
 			expectedStatus: http.StatusCreated,
 			checkResponse: func(t *testing.T, w *httptest.ResponseRecorder, db *mongo.Database) {
-				// Check JSON response
 				var response AuthResponse
 				err := json.Unmarshal(w.Body.Bytes(), &response)
 				assert.NoError(t, err)
 
-				// Verify tokens are present
+				// Verify tokens and basic user info
 				assert.NotEmpty(t, response.AccessToken)
 				assert.NotEmpty(t, response.RefreshToken)
 				assert.NotZero(t, response.ExpiresAt)
-
-				// Verify user details
 				assert.NotNil(t, response.User)
 				assert.Equal(t, "newuser@example.com", *response.User.Email)
-				assert.Nil(t, response.User.Password, "Password should not be included in response")
-				assert.NotNil(t, response.User.KeySalt, "KeySalt should be included in response")
-				assert.Len(t, *response.User.KeySalt, 32, "KeySalt should be 32 characters long")
 
-				// Verify user was saved to database
+				// Verify role in response
+				assert.NotNil(t, response.User.Roles)
+				assert.Equal(t, 1, len(response.User.Roles))
+				assert.Equal(t, roleID, *response.User.Roles[0].ID)
+				assert.Equal(t, "user", response.User.Roles[0].Name)
+
+				// Verify user in database
 				var savedUser models.UserEntity
 				err = db.Collection("users").FindOne(nil, bson.M{"email": "newuser@example.com"}).Decode(&savedUser)
 				assert.NoError(t, err)
-				assert.NotNil(t, savedUser.Password, "Password should be stored (hashed)")
-				assert.NotEqual(t, "securePassword123", *savedUser.Password, "Password should be hashed")
-				assert.NotNil(t, savedUser.KeySalt, "KeySalt should be stored")
-				assert.Len(t, *savedUser.KeySalt, 32, "Stored KeySalt should be 32 characters long")
+
+				// Verify password and key salt
+				assert.NotNil(t, savedUser.Password)
+				assert.NotEqual(t, "securePassword123", *savedUser.Password)
+				assert.NotNil(t, savedUser.KeySalt)
+				assert.Len(t, *savedUser.KeySalt, 32)
+
+				// Verify role assignment in database
+				assert.NotNil(t, savedUser.RoleIds)
+				assert.Equal(t, 1, len(savedUser.RoleIds))
+				assert.Equal(t, roleID, *savedUser.RoleIds[0])
 			},
 			setupTest: func(t *testing.T, db *mongo.Database) {
-				// No setup needed for this test case
+				// No setup needed
 			},
 		},
 		{
