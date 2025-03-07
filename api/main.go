@@ -4,6 +4,7 @@ import (
 	"atomic_blend_api/auth"
 	"atomic_blend_api/controllers/admin"
 	"atomic_blend_api/controllers/health"
+	"atomic_blend_api/controllers/tasks"
 	"atomic_blend_api/controllers/users"
 	"atomic_blend_api/utils/db"
 	"context"
@@ -55,6 +56,7 @@ func main() {
 	auth.SetupRoutes(router, db.Database)
 	users.SetupRoutes(router, db.Database)
 	admin.SetupRoutes(router, db.Database)
+	tasks.SetupRoutes(router, db.Database)
 	health.SetupRoutes(router, db.Database)
 
 	// Define port
