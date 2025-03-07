@@ -1,6 +1,7 @@
 package tasks
 
 import (
+	"atomic_blend_api/auth"
 	"atomic_blend_api/models"
 	"net/http"
 
@@ -17,16 +18,30 @@ import (
 // @Param task body models.TaskEntity true "Task"
 // @Success 200 {object} models.TaskEntity
 // @Failure 400 {object} map[string]interface{}
+// @Failure 401 {object} map[string]interface{}
+// @Failure 403 {object} map[string]interface{}
 // @Failure 404 {object} map[string]interface{}
 // @Failure 500 {object} map[string]interface{}
 // @Router /tasks/{id} [put]
 func (c *TaskController) UpdateTask(ctx *gin.Context) {
-	id := ctx.Param("id")
+	// Get authenticated user from context
+	authUser := auth.GetAuthUser(ctx)
+	if authUser == nil {
+		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
+		return
+	}
 
-	// Check if task exists
+	// Get task ID from URL
+	id := ctx.Param("id")
+	if id == "" {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Task ID is required"})
+		return
+	}
+
+	// First get the task to check ownership
 	existingTask, err := c.taskRepo.GetByID(ctx, id)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		ctx.JSON(http.StatusNotFound, gin.H{"error": "Task not found"})
 		return
 	}
 
@@ -35,19 +50,28 @@ func (c *TaskController) UpdateTask(ctx *gin.Context) {
 		return
 	}
 
-	// Bind updated task data
-	var updatedTask models.TaskEntity
-	if err := ctx.ShouldBindJSON(&updatedTask); err != nil {
+	// Check if the authenticated user owns this task
+	if existingTask.User != authUser.UserID {
+		ctx.JSON(http.StatusForbidden, gin.H{"error": "You don't have permission to update this task"})
+		return
+	}
+
+	// Bind the updated task data
+	var task models.TaskEntity
+	if err := ctx.ShouldBindJSON(&task); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	// Update the task
-	result, err := c.taskRepo.Update(ctx, id, &updatedTask)
+	// Make sure to preserve the owner and ID
+	task.User = existingTask.User
+	task.ID = existingTask.ID
+
+	updatedTask, err := c.taskRepo.Update(ctx, id, &task)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	ctx.JSON(http.StatusOK, result)
+	ctx.JSON(http.StatusOK, updatedTask)
 }

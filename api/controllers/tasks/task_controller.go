@@ -1,6 +1,7 @@
 package tasks
 
 import (
+	"atomic_blend_api/auth"
 	"atomic_blend_api/repositories"
 
 	"github.com/gin-gonic/gin"
@@ -35,6 +36,7 @@ func SetupRoutesWithMock(router *gin.Engine, taskRepo repositories.TaskRepositor
 // setupTaskRoutes sets up the routes for task controller
 func setupTaskRoutes(router *gin.Engine, taskController *TaskController) {
 	taskRoutes := router.Group("/tasks")
+	auth.RequireAuth(taskRoutes)
 	{
 		taskRoutes.GET("", taskController.GetAllTasks)
 		taskRoutes.GET("/:id", taskController.GetTaskByID)

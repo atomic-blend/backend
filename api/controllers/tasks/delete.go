@@ -1,6 +1,7 @@
 package tasks
 
 import (
+	"atomic_blend_api/auth"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -14,25 +15,40 @@ import (
 // @Param id path string true "Task ID"
 // @Success 200 {object} map[string]interface{}
 // @Failure 400 {object} map[string]interface{}
+// @Failure 401 {object} map[string]interface{}
+// @Failure 403 {object} map[string]interface{}
 // @Failure 404 {object} map[string]interface{}
 // @Failure 500 {object} map[string]interface{}
 // @Router /tasks/{id} [delete]
 func (c *TaskController) DeleteTask(ctx *gin.Context) {
-	id := ctx.Param("id")
-
-	// Check if task exists
-	existingTask, err := c.taskRepo.GetByID(ctx, id)
-	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	// Get authenticated user from context
+	authUser := auth.GetAuthUser(ctx)
+	if authUser == nil {
+		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
 		return
 	}
 
-	if existingTask == nil {
+	// Get task ID from URL
+	id := ctx.Param("id")
+	if id == "" {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Task ID is required"})
+		return
+	}
+
+	// First get the task to check ownership
+	task, err := c.taskRepo.GetByID(ctx, id)
+	// Added nil check
+	if err != nil || task == nil {
 		ctx.JSON(http.StatusNotFound, gin.H{"error": "Task not found"})
 		return
 	}
 
-	// Delete the task
+	// Check if the authenticated user owns this task
+	if task.User != authUser.UserID {
+		ctx.JSON(http.StatusForbidden, gin.H{"error": "You don't have permission to delete this task"})
+		return
+	}
+
 	err = c.taskRepo.Delete(ctx, id)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

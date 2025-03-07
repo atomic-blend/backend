@@ -51,7 +51,7 @@ func TestSetupRoutesWithMock(t *testing.T) {
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest(route.method, route.path, nil)
 		router.ServeHTTP(w, req)
-
+		
 		// We're just checking if routes are registered, not their full functionality
 		assert.NotEqual(t, http.StatusNotFound, w.Code, "Route not found: %s %s", route.method, route.path)
 	}
@@ -80,7 +80,7 @@ func TestRouteRegistration(t *testing.T) {
 	// Verify all expected routes exist by checking if they're handled
 	paths := []string{
 		"/tasks",
-		"/tasks/:id", // Changed from /tasks/123 to /tasks/:id to match actual route pattern
+		"/tasks/:id",  // Changed from /tasks/123 to /tasks/:id to match actual route pattern
 	}
 
 	for _, path := range paths {

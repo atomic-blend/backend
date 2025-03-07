@@ -9,7 +9,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-
 func createTestTask() *models.TaskEntity {
 	desc := "Test Description"
 	completed := false
@@ -20,6 +19,7 @@ func createTestTask() *models.TaskEntity {
 		Title:       "Test Task",
 		Description: &desc,
 		Completed:   &completed,
+		User:        primitive.NewObjectID(),
 		StartDate:   &now,
 		EndDate:     &end,
 		CreatedAt:   time.Now().Format(time.RFC3339),
@@ -29,11 +29,19 @@ func createTestTask() *models.TaskEntity {
 
 func setupTest() (*gin.Engine, *mocks.MockTaskRepository) {
 	gin.SetMode(gin.TestMode)
-	router := gin.Default()
+	router := gin.New()
 	mockRepo := new(mocks.MockTaskRepository)
+	taskController := NewTaskController(mockRepo)
 
-	// Use the new SetupRoutesWithMock function instead of SetupRoutes
-	SetupRoutesWithMock(router, mockRepo)
+	// Set up routes with middleware
+	taskRoutes := router.Group("/tasks")
+	{
+		taskRoutes.GET("", taskController.GetAllTasks)
+		taskRoutes.GET("/:id", taskController.GetTaskByID)
+		taskRoutes.POST("", taskController.CreateTask)
+		taskRoutes.PUT("/:id", taskController.UpdateTask)
+		taskRoutes.DELETE("/:id", taskController.DeleteTask)
+	}
 
 	return router, mockRepo
 }
