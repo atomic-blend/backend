@@ -67,7 +67,12 @@ func (r *UserRepository) Create(ctx context.Context, user *models.UserEntity) (*
 // GetByID retrieves a user by their ID
 func (r *UserRepository) GetByID(ctx context.Context, id string) (*models.UserEntity, error) {
 	var user models.UserEntity
-	err := r.collection.FindOne(ctx, bson.M{"id": id}).Decode(&user)
+	objID, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		return nil, errors.New("invalid ID format")
+	}
+
+	err = r.collection.FindOne(ctx, bson.M{"_id": objID}).Decode(&user)
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
 			return nil, errors.New("user not found")
@@ -86,7 +91,7 @@ func (r *UserRepository) Update(ctx context.Context, user *models.UserEntity) (*
 	now := primitive.NewDateTimeFromTime(time.Now())
 	user.UpdatedAt = &now
 
-	filter := bson.M{"id": user.ID}
+	filter := bson.M{"_id": user.ID}
 	update := bson.M{"$set": user}
 
 	result, err := r.collection.UpdateOne(ctx, filter, update)
@@ -103,7 +108,12 @@ func (r *UserRepository) Update(ctx context.Context, user *models.UserEntity) (*
 
 // Delete removes a user from the database by ID
 func (r *UserRepository) Delete(ctx context.Context, id string) error {
-	result, err := r.collection.DeleteOne(ctx, bson.M{"id": id})
+	objID, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		return errors.New("invalid ID format")
+	}
+
+	result, err := r.collection.DeleteOne(ctx, bson.M{"_id": objID})
 	if err != nil {
 		return err
 	}
