@@ -3,6 +3,7 @@ package repositories
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson"
@@ -50,6 +51,9 @@ func (r *UserRepository) Create(ctx context.Context, user *models.UserEntity) (*
 		id := primitive.NewObjectID()
 		user.ID = &id
 	}
+	now := primitive.NewDateTimeFromTime(time.Now())
+	user.CreatedAt = &now
+	user.UpdatedAt = &now
 
 	// Insert into database
 	_, err := r.collection.InsertOne(ctx, user)
@@ -79,6 +83,8 @@ func (r *UserRepository) Update(ctx context.Context, user *models.UserEntity) (*
 	if user.ID == nil {
 		return nil, errors.New("user ID is required for update")
 	}
+	now := primitive.NewDateTimeFromTime(time.Now())
+	user.UpdatedAt = &now
 
 	filter := bson.M{"id": user.ID}
 	update := bson.M{"$set": user}
