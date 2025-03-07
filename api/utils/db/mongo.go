@@ -15,15 +15,12 @@ import (
 var MongoClient *mongo.Client
 var Database *mongo.Database
 
-var (
-	databaseName = os.Getenv("DATABASE_NAME")
-	env = os.Getenv("ENV")
-)
-
-
 // ConnectMongo initializes and returns a MongoDB client
 func ConnectMongo(uri *string) (*mongo.Client, error) {
-	if (env == "test") {
+	env := os.Getenv("ENV")
+	databaseName := os.Getenv("DATABASE_NAME")
+
+	if env == "test" {
 		// setup in memory mongo for testing
 		log.Debug().Msg("Setting up in memory mongo for testing")
 		return nil, nil
@@ -32,10 +29,10 @@ func ConnectMongo(uri *string) (*mongo.Client, error) {
 		err := fmt.Errorf("MONGO_URI is not set")
 		return nil, err
 	}
-	clientOptions := options.Client().ApplyURI(*uri)
 
 	shortcuts.CheckRequiredEnvVar("DATABASE_NAME", databaseName, "")
 
+	clientOptions := options.Client().ApplyURI(*uri)
 
 	// Set timeout for connection
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
