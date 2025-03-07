@@ -7,8 +7,9 @@ import (
 
 	logger "log"
 
-	"github.com/rs/zerolog/log"
 	"github.com/atomic-blend/memongo"
+	"github.com/atomic-blend/memongo/memongolog"
+	"github.com/rs/zerolog/log"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -26,7 +27,7 @@ func CreateInMemoryMongoDB() (*memongo.Server, error) {
 		MongoVersion:   mongoVersion,
 		StartupTimeout: 15 * time.Second,
 		Logger:         logger.New(os.Stdout, "memongo: ", logger.LstdFlags),
-		// LogLevel:       memongolog.LogLevelDebug,
+		LogLevel:       memongolog.LogLevelSilent,
 	}
 	mongoServer, err := memongo.StartWithOptions(options)
 	if err != nil {
