@@ -10,11 +10,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-// Mock repository for testing
-type mockUserRepository struct {
-	repositories.UserRepository
-}
-
 func TestNewController(t *testing.T) {
 	// Create a mock repository
 	mockRepo := &repositories.UserRepository{}

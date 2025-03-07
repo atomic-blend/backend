@@ -21,13 +21,12 @@ type AuthResponse struct {
 
 // Controller handles auth-related operations
 type Controller struct {
-	userRepo *repositories.UserRepository
+	userRepo repositories.UserRepositoryInterface
 }
 
 // NewController creates a new auth controller
-func NewController(userRepo *repositories.UserRepository) *Controller {
+func NewController(userRepo repositories.UserRepositoryInterface) *Controller {
 	return &Controller{
 		userRepo: userRepo,
 	}
 }
-
