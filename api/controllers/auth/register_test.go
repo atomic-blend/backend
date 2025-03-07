@@ -42,9 +42,10 @@ func TestRegister(t *testing.T) {
 
 	// Create user repository
 	userRepo := repositories.NewUserRepository(db)
+	userRoleRepo := repositories.NewUserRoleRepository(db)
 
 	// Create controller
-	authController := NewController(userRepo)
+	authController := NewController(userRepo, userRoleRepo)
 
 	// Create a test router
 	router := gin.Default()

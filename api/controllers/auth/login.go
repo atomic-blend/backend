@@ -46,6 +46,13 @@ func (c *Controller) Login(ctx *gin.Context) {
 		return
 	}
 
+	// Populate user roles
+	err = c.userRoleRepo.PopulateRoles(ctx, user)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to populate user roles"})
+		return
+	}
+
 	// Generate tokens
 	accessToken, err := jwt.GenerateToken(*user.ID, jwt.AccessToken)
 	if err != nil {
@@ -61,10 +68,10 @@ func (c *Controller) Login(ctx *gin.Context) {
 
 	// For security reasons, remove the password from the response
 	responseSafeUser := &models.UserEntity{
-		ID:    user.ID,
-		Email: user.Email,
-		KeySalt: user.KeySalt,
-		Roles: user.Roles,
+		ID:        user.ID,
+		Email:     user.Email,
+		KeySalt:   user.KeySalt,
+		Roles:     user.Roles,
 		CreatedAt: user.CreatedAt,
 		UpdatedAt: user.UpdatedAt,
 	}

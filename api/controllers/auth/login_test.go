@@ -42,15 +42,27 @@ func TestLogin(t *testing.T) {
 
 	// Create user repository
 	userRepo := repositories.NewUserRepository(db)
+	userRoleRepo := repositories.NewUserRoleRepository(db)
 
 	// Create controller
-	authController := NewController(userRepo)
+	authController := NewController(userRepo, userRoleRepo)
 
 	// Create a test router
 	router := gin.Default()
 	router.POST("/auth/login", authController.Login)
 
-	// Create a test user
+	// Create a test role first
+	roleID := primitive.NewObjectID()
+	userRole := models.UserRoleEntity{
+		ID:   &roleID,
+		Name: "user",
+	}
+	_, err = db.Collection("user_roles").InsertOne(nil, userRole)
+	if err != nil {
+		t.Fatalf("Failed to insert test user role: %v", err)
+	}
+
+	// Create a test user with role reference
 	hashedPassword, _ := password.HashPassword("testPassword123")
 	testUserID := primitive.NewObjectID()
 	keySalt := "0123456789abcdef0123456789abcdef" // Test key salt
@@ -59,6 +71,7 @@ func TestLogin(t *testing.T) {
 		Email:    stringPtr("test@example.com"),
 		Password: &hashedPassword,
 		KeySalt:  &keySalt,
+		RoleIds:  []*primitive.ObjectID{&roleID}, // Add role reference
 	}
 
 	// Insert test user into database
@@ -90,8 +103,14 @@ func TestLogin(t *testing.T) {
 				assert.NotNil(t, response.User)
 				assert.Equal(t, "test@example.com", *response.User.Email)
 				assert.Nil(t, response.User.Password) // Password should not be returned
-				assert.NotNil(t, response.User.KeySalt, "KeySalt should be included in response")
-				assert.Equal(t, keySalt, *response.User.KeySalt, "KeySalt should match the stored value")
+				assert.NotNil(t, response.User.KeySalt)
+				assert.Equal(t, keySalt, *response.User.KeySalt)
+
+				// Verify roles are populated
+				assert.NotNil(t, response.User.Roles)
+				assert.Equal(t, 1, len(response.User.Roles))
+				assert.Equal(t, roleID, *response.User.Roles[0].ID)
+				assert.Equal(t, "user", response.User.Roles[0].Name)
 			},
 		},
 		{

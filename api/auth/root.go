@@ -12,7 +12,8 @@ import (
 // SetupRoutes configures all auth-related routes
 func SetupRoutes(router *gin.Engine, database *mongo.Database) {
 	userRepo := repositories.NewUserRepository(database)
-	authController := auth.NewController(userRepo)
+	userRoleRepo := repositories.NewUserRoleRepository(database)
+	authController := auth.NewController(userRepo, userRoleRepo)
 
 	authGroup := router.Group("/auth")
 	{

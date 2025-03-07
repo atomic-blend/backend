@@ -11,17 +11,19 @@ import (
 )
 
 func TestNewController(t *testing.T) {
-	// Create a mock repository
-	mockRepo := &repositories.UserRepository{}
+	// Create mock repositories
+	mockUserRepo := &repositories.UserRepository{}
+	mockUserRoleRepo := &repositories.UserRoleRepository{}
 
 	// Create a new controller
-	controller := NewController(mockRepo)
+	controller := NewController(mockUserRepo, mockUserRoleRepo)
 
 	// Test that the controller was created successfully
 	assert.NotNil(t, controller, "Controller should not be nil")
 
-	// Test that the repository was correctly assigned
-	assert.Equal(t, mockRepo, controller.userRepo, "User repository should be correctly assigned")
+	// Test that the repositories were correctly assigned
+	assert.Equal(t, mockUserRepo, controller.userRepo, "User repository should be correctly assigned")
+	assert.Equal(t, mockUserRoleRepo, controller.userRoleRepo, "UserRole repository should be correctly assigned")
 
 	// Test the controller type
 	controllerType := reflect.TypeOf(controller)
@@ -83,7 +85,12 @@ func TestControllerStructure(t *testing.T) {
 		// Check userRepo field
 		userRepoField, found := controllerType.FieldByName("userRepo")
 		assert.True(t, found, "userRepo field should exist")
-		assert.Equal(t, "*repositories.UserRepository", userRepoField.Type.String())
+		assert.Equal(t, "repositories.UserRepositoryInterface", userRepoField.Type.String())
+
+		// Check userRoleRepo field
+		userRoleRepoField, found := controllerType.FieldByName("userRoleRepo")
+		assert.True(t, found, "userRoleRepo field should exist")
+		assert.Equal(t, "repositories.UserRoleRepositoryInterface", userRoleRepoField.Type.String())
 	})
 }
 
