@@ -179,7 +179,7 @@ func (suite *RefreshTokenTestSuite) TestRefreshToken() {
 	// Run test cases
 	for _, tc := range testCases {
 		suite.T().Run(tc.name, func(t *testing.T) {
-				// Reset mocks before each test to clear previous expectations
+			// Reset mocks before each test to clear previous expectations
 			suite.userRepo = new(mocks.MockUserRepository)
 			suite.userRoleRepo = new(mocks.MockUserRoleRepository)
 			suite.controller = NewController(
@@ -189,7 +189,7 @@ func (suite *RefreshTokenTestSuite) TestRefreshToken() {
 			suite.router = gin.New()
 			authGroup := suite.router.Group("/auth")
 			authGroup.POST("/refresh", suite.controller.RefreshToken)
-			
+
 			// Setup mocks
 			tc.setupMocks()
 

@@ -2,6 +2,7 @@ package tasks
 
 import (
 	"atomic_blend_api/auth"
+	"atomic_blend_api/models"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -29,6 +30,11 @@ func (c *TaskController) GetAllTasks(ctx *gin.Context) {
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
+	}
+
+	// Ensure tasks is never null (return empty array instead)
+	if tasks == nil {
+		tasks = []*models.TaskEntity{} 
 	}
 
 	ctx.JSON(http.StatusOK, tasks)

@@ -19,6 +19,7 @@ func SetupRoutes(router *gin.Engine, database *mongo.Database) {
 	{
 		authGroup.POST("/register", authController.Register)
 		authGroup.POST("/login", authController.Login)
+		authGroup.POST("/refresh", authController.RefreshToken)
 	}
 }
 

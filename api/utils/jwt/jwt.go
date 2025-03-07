@@ -41,7 +41,6 @@ func GenerateToken(userID primitive.ObjectID, tokenType TokenType) (*TokenDetail
 		secretKey = "default_access_secret" // Fallback for development
 	}
 	expTime = 15 * time.Minute // 15 minutes for access token
-
 	td.ExpiresAt = time.Now().Add(expTime)
 
 	claims := jwt.MapClaims{
@@ -50,8 +49,11 @@ func GenerateToken(userID primitive.ObjectID, tokenType TokenType) (*TokenDetail
 		"aud":  "atomic-blend",
 		"iss":  "atomic-blend",
 		"type": string(tokenType),
-		"exp":  td.ExpiresAt.Unix(),
 		"iat":  time.Now().Unix(),
+	}
+
+	if tokenType == AccessToken {
+		claims["exp"] = td.ExpiresAt.Unix()
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
