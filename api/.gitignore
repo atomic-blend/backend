@@ -2,3 +2,4 @@
 !**.env.example
 
 tmp
+cover.out
