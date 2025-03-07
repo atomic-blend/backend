@@ -35,6 +35,7 @@ func SetupRoutes(router *gin.Engine, database *mongo.Database) {
 	protectedUserRoutes := auth.RequireAuth(userGroup)
 	{
 		protectedUserRoutes.GET("/profile", userController.GetMyProfile)
+		protectedUserRoutes.DELETE("/me", userController.DeleteAccount)
 
 		// Add more protected routes here as needed
 		// protectedUserRoutes.PUT("/profile", profileController.UpdateProfile)
