@@ -53,10 +53,12 @@ func TestLogin(t *testing.T) {
 	// Create a test user
 	hashedPassword, _ := password.HashPassword("testPassword123")
 	testUserID := primitive.NewObjectID()
+	keySalt := "0123456789abcdef0123456789abcdef" // Test key salt
 	testUser := models.UserEntity{
 		ID:       &testUserID,
 		Email:    stringPtr("test@example.com"),
 		Password: &hashedPassword,
+		KeySalt:  &keySalt,
 	}
 
 	// Insert test user into database
@@ -88,6 +90,8 @@ func TestLogin(t *testing.T) {
 				assert.NotNil(t, response.User)
 				assert.Equal(t, "test@example.com", *response.User.Email)
 				assert.Nil(t, response.User.Password) // Password should not be returned
+				assert.NotNil(t, response.User.KeySalt, "KeySalt should be included in response")
+				assert.Equal(t, keySalt, *response.User.KeySalt, "KeySalt should match the stored value")
 			},
 		},
 		{

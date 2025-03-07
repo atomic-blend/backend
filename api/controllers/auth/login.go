@@ -63,6 +63,10 @@ func (c *Controller) Login(ctx *gin.Context) {
 	responseSafeUser := &models.UserEntity{
 		ID:    user.ID,
 		Email: user.Email,
+		KeySalt: user.KeySalt,
+		Roles: user.Roles,
+		CreatedAt: user.CreatedAt,
+		UpdatedAt: user.UpdatedAt,
 	}
 
 	// Return user and tokens

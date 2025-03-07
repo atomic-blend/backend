@@ -80,6 +80,8 @@ func TestRegister(t *testing.T) {
 				assert.NotNil(t, response.User)
 				assert.Equal(t, "newuser@example.com", *response.User.Email)
 				assert.Nil(t, response.User.Password, "Password should not be included in response")
+				assert.NotNil(t, response.User.KeySalt, "KeySalt should be included in response")
+				assert.Len(t, *response.User.KeySalt, 32, "KeySalt should be 32 characters long")
 
 				// Verify user was saved to database
 				var savedUser models.UserEntity
@@ -87,6 +89,8 @@ func TestRegister(t *testing.T) {
 				assert.NoError(t, err)
 				assert.NotNil(t, savedUser.Password, "Password should be stored (hashed)")
 				assert.NotEqual(t, "securePassword123", *savedUser.Password, "Password should be hashed")
+				assert.NotNil(t, savedUser.KeySalt, "KeySalt should be stored")
+				assert.Len(t, *savedUser.KeySalt, 32, "Stored KeySalt should be 32 characters long")
 			},
 			setupTest: func(t *testing.T, db *mongo.Database) {
 				// No setup needed for this test case

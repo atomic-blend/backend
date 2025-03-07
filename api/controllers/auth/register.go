@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/rs/zerolog/log"
 )
 
 // Register creates a new user and returns tokens
@@ -41,10 +42,20 @@ func (c *Controller) Register(ctx *gin.Context) {
 		return
 	}
 
+	// Generate key salt
+	keySalt, err := password.GenerateRandomSalt(32)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate key salt"})
+		return
+	}
+
+	log.Debug().Msgf("Key salt: %s", keySalt)
+
 	// Create new user
 	user := &models.UserEntity{
 		Email:    &req.Email,
 		Password: &hashedPassword,
+		KeySalt:  &keySalt,
 	}
 
 	// Save user to database
@@ -70,8 +81,12 @@ func (c *Controller) Register(ctx *gin.Context) {
 	// For security reasons, remove the password from the response
 	// Create a copy of the user without the password
 	responseSafeUser := &models.UserEntity{
-		ID:    newUser.ID,
-		Email: newUser.Email,
+		ID:        newUser.ID,
+		Email:     newUser.Email,
+		KeySalt:   newUser.KeySalt,
+		Roles:     newUser.Roles,
+		CreatedAt: newUser.CreatedAt,
+		UpdatedAt: newUser.UpdatedAt,
 	}
 
 	// Return user and tokens
