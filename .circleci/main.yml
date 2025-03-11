@@ -144,6 +144,7 @@ jobs:
               git commit -m "[skip ci] chore(release): $(git describe --abbrev=0 --tags)"
             fi
             git push https://${GITHUB_PAT}@github.com/${GITHUB_ORG_NAME}/${GITHUB_REPO_NAME}.git main
+            git push https://${GITHUB_PAT}@github.com/${GITHUB_ORG_NAME}/${GITHUB_REPO_NAME}.git tag $(git describe --abbrev=0 --tags)
 
   # Job to build and push Docker images
   build-docker-images:
@@ -168,7 +169,7 @@ jobs:
           command: |
             TAG=$(git describe --abbrev=0 --tags)
             echo "Pushing Docker image with tag $TAG"
-            docker login ghcr.io -u $GITHUB_USERNAME --p $GITHUB_PAT
+            docker login -u $GITHUB_USERNAME --p $GITHUB_PAT ghcr.io
             docker push ghcr.io/$GITHUB_ORG_NAME/$GITHUB_REPO_NAME:$TAG
             echo "Docker image pushed successfully"
 
