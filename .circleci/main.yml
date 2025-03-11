@@ -7,6 +7,7 @@ jobs:
   test-coverage:
     docker:
       - image: cimg/go:1.23
+    resource_class: small
     working_directory: ~/project
 
     steps:
@@ -41,6 +42,7 @@ jobs:
   bump-version:
     docker:
       - image: ghcr.io/cocogitto/cog:latest
+    resource_class: small
     working_directory: ~/project
     steps:  
       - checkout:
@@ -70,6 +72,7 @@ jobs:
   build-docker-images:
     docker:
       - image: cimg/base:2025.03
+    resource_class: small
     working_directory: ~/project
     steps:
       - checkout:
