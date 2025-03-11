@@ -27,7 +27,7 @@ func TestCreateInMemoryMongoDB(t *testing.T) {
 
 	t.Run("Custom Version", func(t *testing.T) {
 		// Set custom version
-		customVersion := "6.0.0"
+		customVersion := "8.0.0"
 		os.Setenv("MONGO_VERSION", customVersion)
 		defer os.Unsetenv("MONGO_VERSION")
 
