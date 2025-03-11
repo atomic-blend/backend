@@ -88,7 +88,7 @@ jobs:
           command: |
             TAG=$(git describe --abbrev=0 --tags)
             echo "Pushing Docker image with tag $TAG"
-            echo $DOCKER_PASSWORD | docker login -u ghcr.io --password-stdin
+            echo $GITHUB_PAT | docker login -u ghcr.io --password-stdin
             docker push ghcr.io/$GITHUB_ORG_NAME/$GITHUB_REPO_NAME:$TAG
             echo "Docker image pushed successfully"
 
