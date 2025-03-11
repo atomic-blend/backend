@@ -5,6 +5,8 @@ orbs:
 
 jobs:
   build-and-test:
+    docker:
+    - image: cimg/go:1.19
     working_directory: ~/project/backend
 
     steps:
