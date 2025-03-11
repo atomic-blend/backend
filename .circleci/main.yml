@@ -44,13 +44,13 @@ jobs:
       - image: ghcr.io/cocogitto/cog:latest
     resource_class: small
     working_directory: ~/project
-    steps:  
+    steps:
       - checkout:
           path: ~/project
-      
+
       - setup_remote_docker:
           docker_layer_caching: true
-      
+
       - run:
           name: Check conventional commits validity
           command: |
@@ -62,13 +62,12 @@ jobs:
       - run:
           name: Commit and push changes
           command: |
-            git config --global user.email "pro@brandonguigo.com"
-            git config --global user.name "CircleCI"
+            git config --local user.email "pro@brandonguigo.com"
             git add CHANGELOG.md
             git add $(git describe --abbrev=0 --tags)
             git commit -m "chore(release): $(git describe --abbrev=0 --tags)"
             git push origin HEAD:main
-  
+
   build-docker-images:
     docker:
       - image: cimg/base:2025.03
@@ -106,4 +105,3 @@ workflows:
       - build-docker-images:
           requires:
             - bump-version
-      
