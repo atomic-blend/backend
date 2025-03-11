@@ -1,12 +1,15 @@
+# CircleCI configuration file
 version: 2.1
 
+# Import required orbs
 orbs:
-  go: circleci/go@1.7
+  go: circleci/go@1.7 # Go orb for Go-related commands and caching
 
+# Job definitions
 jobs:
+  # Job to run tests and generate coverage reports
   test-coverage:
-    # docker:
-    #   - image: cimg/go:1.23
+    # Using machine executor instead of Docker for more flexibility
     machine:
       image: ubuntu-2204:current
     resource_class: medium
@@ -16,11 +19,11 @@ jobs:
       - checkout:
           path: ~/project
 
-      - go/load-cache
+      - go/load-cache # Load Go module cache if available
 
-      - go/mod-download
+      - go/mod-download # Download Go modules
 
-      - go/save-cache
+      - go/save-cache # Save Go module cache for future runs
 
       - run:
           name: Run linting
@@ -38,6 +41,7 @@ jobs:
           path: coverage.html
           destination: coverage-report
 
+  # Job to automatically bump version using conventional commits
   bump-version:
     machine:
       image: ubuntu-2204:current
@@ -54,17 +58,20 @@ jobs:
             git config user.email "pro@brandonguigo.com"
             git config user.name "CircleCI"
 
+      # Install Rust and Cocogitto for version management
       - run:
           name: Download rustup
           command: |
             wget https://static.rust-lang.org/rustup/dist/x86_64-unknown-linux-gnu/rustup-init
             chmod +x rustup-init
+
       - run:
           name: Install Rust
           command: |
             ./rustup-init -y --no-modify-path --default-toolchain nightly
             rm rustup-init
             echo 'export PATH=$HOME/.cargo/bin:$PATH' >> $BASH_ENV
+
       - run:
           name: Install Cocogitto
           command: cargo install cocogitto
@@ -75,17 +82,25 @@ jobs:
           name: Check conventional commits validity
           command: |
             cog check
+
       - run:
           name: Bump version
           command: |
             cog bump --auto
+
       - run:
           name: Commit and push changes
           command: |
-            git add CHANGELOG.md
-            git commit -m "chore(release): $(git describe --abbrev=0 --tags)"
-            git push -q https://${GITHUB_PAT}@github.com/${GITHUB_ORG_NAME}/${GITHUB_REPO_NAME}.git main
-  
+            # Check if there are changes to commit
+            if git diff --quiet HEAD; then
+              echo "No changes to commit"
+            else
+              git add CHANGELOG.md
+              git commit -m "chore(release): $(git describe --abbrev=0 --tags)"
+            fi
+            git push https://${GITHUB_PAT}@github.com/${GITHUB_ORG_NAME}/${GITHUB_REPO_NAME}.git main
+
+  # Job to build and push Docker images
   build-docker-images:
     machine:
       image: ubuntu-2204:current
@@ -94,6 +109,7 @@ jobs:
     steps:
       - checkout:
           path: ~/project
+
       - run:
           name: Build Docker image
           command: |
@@ -101,15 +117,17 @@ jobs:
             echo "Building Docker image with tag $TAG"
             docker build -t ghcr.io/$GITHUB_ORG_NAME/$GITHUB_REPO_NAME:$TAG .
             echo "Docker image built successfully"
+
       - run:
           name: Push application Docker image
           command: |
             TAG=$(git describe --abbrev=0 --tags)
             echo "Pushing Docker image with tag $TAG"
-            echo $GITHUB_PAT | docker login -u ghcr.io --password-stdin
+            echo $GITHUB_PAT | docker login ghcr.io -u $GITHUB_USERNAME --password-stdin
             docker push ghcr.io/$GITHUB_ORG_NAME/$GITHUB_REPO_NAME:$TAG
             echo "Docker image pushed successfully"
 
+# Workflow definition
 workflows:
   version: 2
   main:
