@@ -48,7 +48,7 @@ jobs:
           name: Generate Swagger Docs
           command: |
             go install github.com/swaggo/swag/cmd/swag@latest
-            swag init -g cmd/server/main.go -o api/docs
+            swag init -g main.go -o api/docs
 
 workflows:
   version: 2
