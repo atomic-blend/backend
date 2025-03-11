@@ -38,7 +38,7 @@ jobs:
       - run:
           name: Build application
           command: |
-            go build -o app ./cmd/server
+            go build -o ./cmd/server
 
       - store_artifacts:
           path: app
