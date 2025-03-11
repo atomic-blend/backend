@@ -6,8 +6,8 @@ orbs:
 jobs:
   build-and-test:
     docker:
-    - image: cimg/go:1.23
-    working_directory: ~/project/backend
+      - image: cimg/go:1.23
+    working_directory: ~/project
 
     steps:
       - checkout:
@@ -18,7 +18,7 @@ jobs:
       - go/mod-download
 
       - go/save-cache
-      
+
       - run:
           name: Run linting
           command: |
