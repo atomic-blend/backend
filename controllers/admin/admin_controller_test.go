@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"atomic_blend_api/tests/utils/in_memory_mongo"
+	"atomic_blend_api/tests/utils/inmemorymongo"
 	"atomic_blend_api/utils/db"
 
 	"github.com/gin-gonic/gin"
@@ -18,12 +18,12 @@ func TestSetupRoutes(t *testing.T) {
 	router := gin.New()
 
 	// Setup in-memory MongoDB
-	mongoServer, err := in_memory_mongo.CreateInMemoryMongoDB()
+	mongoServer, err := inmemorymongo.CreateInMemoryMongoDB()
 	require.NoError(t, err)
 	defer mongoServer.Stop()
 
 	// Connect to the in-memory MongoDB
-	client, err := in_memory_mongo.ConnectToInMemoryDB(mongoServer.URI())
+	client, err := inmemorymongo.ConnectToInMemoryDB(mongoServer.URI())
 	require.NoError(t, err)
 	defer client.Disconnect(context.Background())
 

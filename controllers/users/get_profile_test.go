@@ -29,15 +29,15 @@ func TestGetMyProfile(t *testing.T) {
 		{
 			name: "Successful profile retrieval",
 			setupAuth: func(c *gin.Context) {
-				userId := primitive.NewObjectID()
-				c.Set("authUser", &auth.UserAuthInfo{UserID: userId})
+				userID := primitive.NewObjectID()
+				c.Set("authUser", &auth.UserAuthInfo{UserID: userID})
 			},
 			setupMocks: func(userRepo *mocks.MockUserRepository, userRoleRepo *mocks.MockUserRoleRepository) {
-				userId := primitive.NewObjectID()
+				userID := primitive.NewObjectID()
 				email := "test@example.com"
 				password := "should-be-removed"
 				user := &models.UserEntity{
-					ID:       &userId,
+					ID:       &userID,
 					Email:    &email,
 					Password: &password,
 				}
@@ -69,8 +69,8 @@ func TestGetMyProfile(t *testing.T) {
 		{
 			name: "Error fetching user profile",
 			setupAuth: func(c *gin.Context) {
-				userId := primitive.NewObjectID()
-				c.Set("authUser", &auth.UserAuthInfo{UserID: userId})
+				userID := primitive.NewObjectID()
+				c.Set("authUser", &auth.UserAuthInfo{UserID: userID})
 			},
 			setupMocks: func(userRepo *mocks.MockUserRepository, userRoleRepo *mocks.MockUserRoleRepository) {
 				userRepo.On("FindByID", mock.Anything, mock.AnythingOfType("primitive.ObjectID")).Return(nil, assert.AnError)
@@ -86,12 +86,12 @@ func TestGetMyProfile(t *testing.T) {
 		{
 			name: "Error populating roles",
 			setupAuth: func(c *gin.Context) {
-				userId := primitive.NewObjectID()
-				c.Set("authUser", &auth.UserAuthInfo{UserID: userId})
+				userID := primitive.NewObjectID()
+				c.Set("authUser", &auth.UserAuthInfo{UserID: userID})
 			},
 			setupMocks: func(userRepo *mocks.MockUserRepository, userRoleRepo *mocks.MockUserRoleRepository) {
-				userId := primitive.NewObjectID()
-				user := &models.UserEntity{ID: &userId}
+				userID := primitive.NewObjectID()
+				user := &models.UserEntity{ID: &userID}
 				userRepo.On("FindByID", mock.Anything, mock.AnythingOfType("primitive.ObjectID")).Return(user, nil)
 				userRoleRepo.On("PopulateRoles", mock.Anything, user).Return(assert.AnError)
 			},

@@ -43,9 +43,9 @@ func (suite *RefreshTokenTestSuite) TestRefreshToken() {
 	email := "test@example.com"
 	keySalt := "salt123"
 	now := primitive.NewDateTimeFromTime(time.Now())
-	roleId := primitive.NewObjectID()
+	roleID := primitive.NewObjectID()
 	role := &models.UserRoleEntity{
-		ID:   &roleId,
+		ID:   &roleID,
 		Name: "user",
 	}
 
@@ -77,7 +77,7 @@ func (suite *RefreshTokenTestSuite) TestRefreshToken() {
 			authHeader:         "Bearer test_refresh_token_" + userID.Hex(),
 			expectedStatusCode: http.StatusOK,
 			validateResponse: func(recorder *httptest.ResponseRecorder) {
-				var response AuthResponse
+				var response Response
 				err := json.Unmarshal(recorder.Body.Bytes(), &response)
 
 				assert.Nil(suite.T(), err)

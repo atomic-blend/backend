@@ -2,26 +2,29 @@ package admin
 
 import (
 	"atomic_blend_api/auth"
-	"atomic_blend_api/controllers/admin/user_role"
+	"atomic_blend_api/controllers/admin/userrole"
 	"atomic_blend_api/repositories"
 
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-type AdminController struct {
+// Controller is a controller for admin-related actions
+type Controller struct {
 }
 
-func NewAdminController() *AdminController {
-	return &AdminController{}
+// NewAdminController creates a new admin controller
+func NewAdminController() *Controller {
+	return &Controller{}
 }
 
+// SetupRoutes configures all admin-related routes
 func SetupRoutes(router *gin.Engine, database *mongo.Database) {
 	adminRoutes := router.Group("/admin")
-	auth.RequireRole(adminRoutes, "admin")
+	auth.RequireRoleMiddleware(adminRoutes, "admin")
 	{
 		userRoleRepo := repositories.NewUserRoleRepository(database)
-		userRoleController := user_role.NewUserRoleController(userRoleRepo)
+		userRoleController := userrole.NewUserRoleController(userRoleRepo)
 		userRoleController.SetupRoutes(adminRoutes)
 	}
 }

@@ -16,9 +16,9 @@ type UserAuthInfo struct {
 	UserID primitive.ObjectID
 }
 
-// AuthMiddleware verifies JWT tokens and adds user info to the context
+// Middleware verifies JWT tokens and adds user info to the context
 // Can be applied to specific routes that require authentication
-func AuthMiddleware() gin.HandlerFunc {
+func Middleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Get the Authorization header
 		authHeader := c.GetHeader("Authorization")

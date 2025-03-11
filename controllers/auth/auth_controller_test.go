@@ -51,7 +51,7 @@ func TestControllerStructure(t *testing.T) {
 
 	t.Run("AuthResponse structure", func(t *testing.T) {
 		// Verify the AuthResponse structure has the expected fields with expected tags
-		authResponseType := reflect.TypeOf(AuthResponse{})
+		authResponseType := reflect.TypeOf(Response{})
 
 		// Check User field
 		userField, found := authResponseType.FieldByName("User")
@@ -107,15 +107,15 @@ func TestRegisterRequest(t *testing.T) {
 
 func TestAuthResponse(t *testing.T) {
 	// Create a test user
-	userId := primitive.NewObjectID()
+	userID := primitive.NewObjectID()
 	email := "test@example.com"
 	user := &models.UserEntity{
-		ID:    &userId,
+		ID:    &userID,
 		Email: &email,
 	}
 
 	// Test creating an AuthResponse
-	resp := AuthResponse{
+	resp := Response{
 		User:         user,
 		AccessToken:  "access-token-value",
 		RefreshToken: "refresh-token-value",

@@ -69,7 +69,7 @@ func TestAuthMiddleware(t *testing.T) {
 		c.Request = req
 
 		// Execute middleware
-		AuthMiddleware()(c)
+		Middleware()(c)
 
 		// Assert
 		assert.Equal(t, http.StatusUnauthorized, w.Code)
@@ -86,7 +86,7 @@ func TestAuthMiddleware(t *testing.T) {
 		c.Request = req
 
 		// Execute middleware
-		AuthMiddleware()(c)
+		Middleware()(c)
 
 		// Assert
 		assert.Equal(t, http.StatusUnauthorized, w.Code)
@@ -103,7 +103,7 @@ func TestAuthMiddleware(t *testing.T) {
 		c.Request = req
 
 		// Execute middleware
-		AuthMiddleware()(c)
+		Middleware()(c)
 
 		// Assert
 		assert.Equal(t, http.StatusUnauthorized, w.Code)
@@ -112,8 +112,8 @@ func TestAuthMiddleware(t *testing.T) {
 
 	t.Run("Valid Token", func(t *testing.T) {
 		// Setup
-		userId := primitive.NewObjectID()
-		tokenDetails, err := jwt.GenerateToken(userId, jwt.AccessToken)
+		userID := primitive.NewObjectID()
+		tokenDetails, err := jwt.GenerateToken(userID, jwt.AccessToken)
 		assert.NoError(t, err, "Token generation should not fail")
 		assert.NotEmpty(t, tokenDetails.Token, "Token should not be empty")
 
@@ -126,12 +126,12 @@ func TestAuthMiddleware(t *testing.T) {
 
 		// Create a new engine to use with the middleware
 		router := gin.New()
-		router.Use(AuthMiddleware())
+		router.Use(Middleware())
 		router.GET("/", func(c *gin.Context) {
 			// Assert user was set in context
 			authUser := GetAuthUser(c)
 			assert.NotNil(t, authUser)
-			assert.Equal(t, userId, authUser.UserID)
+			assert.Equal(t, userID, authUser.UserID)
 			c.Status(http.StatusOK)
 		})
 
@@ -164,15 +164,15 @@ func TestGetAuthUser(t *testing.T) {
 		w := httptest.NewRecorder()
 		c, _ := gin.CreateTestContext(w)
 
-		userId := primitive.NewObjectID()
-		c.Set("authUser", &UserAuthInfo{UserID: userId})
+		userID := primitive.NewObjectID()
+		c.Set("authUser", &UserAuthInfo{UserID: userID})
 
 		// Execute
 		authUser := GetAuthUser(c)
 
 		// Assert
 		assert.NotNil(t, authUser)
-		assert.Equal(t, userId, authUser.UserID)
+		assert.Equal(t, userID, authUser.UserID)
 	})
 
 	t.Run("Invalid Auth User Type", func(t *testing.T) {
@@ -266,12 +266,12 @@ func TestRequireRoleHandler(t *testing.T) {
 		userRepo := new(mockUserRepository)
 		userRoleRepo := new(mockUserRoleRepository)
 
-		userId := primitive.NewObjectID()
-		userRepo.On("FindByID", mock.Anything, userId).Return(nil, errors.New("user not found"))
+		userID := primitive.NewObjectID()
+		userRepo.On("FindByID", mock.Anything, userID).Return(nil, errors.New("user not found"))
 
 		w := httptest.NewRecorder()
 		c, _ := gin.CreateTestContext(w)
-		c.Set("authUser", &UserAuthInfo{UserID: userId})
+		c.Set("authUser", &UserAuthInfo{UserID: userID})
 
 		// Execute our test wrapper function
 		mockRoleHandler("admin", userRepo, userRoleRepo)(c)
@@ -287,31 +287,31 @@ func TestRequireRoleHandler(t *testing.T) {
 		userRepo := new(mockUserRepository)
 		userRoleRepo := new(mockUserRoleRepository)
 
-		userId := primitive.NewObjectID()
+		userID := primitive.NewObjectID()
 		email := "test@example.com"
-		roleId := primitive.NewObjectID()
+		roleID := primitive.NewObjectID()
 
 		// Create user with admin role
 		user := &models.UserEntity{
-			ID:      &userId,
+			ID:      &userID,
 			Email:   &email,
-			RoleIds: []*primitive.ObjectID{&roleId},
+			RoleIds: []*primitive.ObjectID{&roleID},
 			Roles: []*models.UserRoleEntity{
 				{
-					ID:   &roleId,
+					ID:   &roleID,
 					Name: "admin",
 				},
 			},
 		}
 
-		userRepo.On("FindByID", mock.Anything, userId).Return(user, nil)
+		userRepo.On("FindByID", mock.Anything, userID).Return(user, nil)
 		userRoleRepo.On("PopulateRoles", mock.Anything, user).Return(nil)
 
 		// Create a new router to test the middleware chain
 		router := gin.New()
 		router.Use(func(c *gin.Context) {
 			// Set auth user in context
-			c.Set("authUser", &UserAuthInfo{UserID: userId})
+			c.Set("authUser", &UserAuthInfo{UserID: userID})
 		})
 		router.Use(mockRoleHandler("admin", userRepo, userRoleRepo))
 		router.GET("/", func(c *gin.Context) {
@@ -336,29 +336,29 @@ func TestRequireRoleHandler(t *testing.T) {
 		userRepo := new(mockUserRepository)
 		userRoleRepo := new(mockUserRoleRepository)
 
-		userId := primitive.NewObjectID()
+		userID := primitive.NewObjectID()
 		email := "test@example.com"
-		roleId := primitive.NewObjectID()
+		roleID := primitive.NewObjectID()
 
 		// Create user with user role (not admin)
 		user := &models.UserEntity{
-			ID:      &userId,
+			ID:      &userID,
 			Email:   &email,
-			RoleIds: []*primitive.ObjectID{&roleId},
+			RoleIds: []*primitive.ObjectID{&roleID},
 			Roles: []*models.UserRoleEntity{
 				{
-					ID:   &roleId,
+					ID:   &roleID,
 					Name: "user",
 				},
 			},
 		}
 
-		userRepo.On("FindByID", mock.Anything, userId).Return(user, nil)
+		userRepo.On("FindByID", mock.Anything, userID).Return(user, nil)
 		userRoleRepo.On("PopulateRoles", mock.Anything, user).Return(nil)
 
 		w := httptest.NewRecorder()
 		c, _ := gin.CreateTestContext(w)
-		c.Set("authUser", &UserAuthInfo{UserID: userId})
+		c.Set("authUser", &UserAuthInfo{UserID: userID})
 
 		// Execute our test wrapper function
 		mockRoleHandler("admin", userRepo, userRoleRepo)(c)
@@ -427,8 +427,8 @@ func TestOptionalAuth(t *testing.T) {
 
 	t.Run("Valid Token", func(t *testing.T) {
 		// Setup
-		userId := primitive.NewObjectID()
-		tokenDetails, err := jwt.GenerateToken(userId, jwt.AccessToken)
+		userID := primitive.NewObjectID()
+		tokenDetails, err := jwt.GenerateToken(userID, jwt.AccessToken)
 		assert.NoError(t, err, "Token generation should not fail")
 
 		router := gin.New()
@@ -439,7 +439,7 @@ func TestOptionalAuth(t *testing.T) {
 			if authUser == nil {
 				t.Fatal("Auth user should not be nil")
 			}
-			assert.Equal(t, userId, authUser.UserID)
+			assert.Equal(t, userID, authUser.UserID)
 			c.Status(http.StatusOK)
 		})
 

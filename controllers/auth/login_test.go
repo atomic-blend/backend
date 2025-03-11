@@ -3,7 +3,7 @@ package auth
 import (
 	"atomic_blend_api/models"
 	"atomic_blend_api/repositories"
-	"atomic_blend_api/tests/utils/in_memory_mongo"
+	"atomic_blend_api/tests/utils/inmemorymongo"
 	"atomic_blend_api/utils/password"
 	"bytes"
 	"encoding/json"
@@ -21,7 +21,7 @@ func TestLogin(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	// Start in-memory MongoDB server
-	mongoServer, err := in_memory_mongo.CreateInMemoryMongoDB()
+	mongoServer, err := inmemorymongo.CreateInMemoryMongoDB()
 	if err != nil {
 		t.Fatalf("Failed to create in-memory MongoDB: %v", err)
 	}
@@ -31,7 +31,7 @@ func TestLogin(t *testing.T) {
 	mongoURI := mongoServer.URI()
 
 	// Connect to the in-memory MongoDB
-	client, err := in_memory_mongo.ConnectToInMemoryDB(mongoURI)
+	client, err := inmemorymongo.ConnectToInMemoryDB(mongoURI)
 	if err != nil {
 		t.Fatalf("Failed to connect to in-memory MongoDB: %v", err)
 	}
@@ -95,7 +95,7 @@ func TestLogin(t *testing.T) {
 			},
 			expectedStatus: http.StatusOK,
 			checkResponse: func(t *testing.T, w *httptest.ResponseRecorder) {
-				var response AuthResponse
+				var response Response
 				err := json.Unmarshal(w.Body.Bytes(), &response)
 				assert.NoError(t, err)
 				assert.NotEmpty(t, response.AccessToken)

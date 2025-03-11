@@ -1,4 +1,4 @@
-package in_memory_mongo
+package inmemorymongo
 
 import (
 	"context"

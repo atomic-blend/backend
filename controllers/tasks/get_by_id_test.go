@@ -19,11 +19,11 @@ func TestGetTaskByID(t *testing.T) {
 
 	t.Run("successful get task by id", func(t *testing.T) {
 		// Create authenticated user
-		userId := primitive.NewObjectID()
+		userID := primitive.NewObjectID()
 		taskID := primitive.NewObjectID().Hex()
 		task := createTestTask()
 		task.ID = taskID
-		task.User = userId // Set the task owner
+		task.User = userID // Set the task owner
 
 		mockRepo.On("GetByID", mock.Anything, taskID).Return(task, nil)
 
@@ -33,7 +33,7 @@ func TestGetTaskByID(t *testing.T) {
 		// Create a new context with the request and set auth user
 		ctx, _ := gin.CreateTestContext(w)
 		ctx.Request = req
-		ctx.Set("authUser", &auth.UserAuthInfo{UserID: userId})
+		ctx.Set("authUser", &auth.UserAuthInfo{UserID: userID})
 		// Copy headers and params from original request to the new context
 		ctx.Params = []gin.Param{{Key: "id", Value: taskID}}
 
@@ -52,7 +52,7 @@ func TestGetTaskByID(t *testing.T) {
 
 	t.Run("task not found", func(t *testing.T) {
 		nonExistentID := primitive.NewObjectID().Hex()
-		userId := primitive.NewObjectID()
+		userID := primitive.NewObjectID()
 
 		mockRepo.On("GetByID", mock.Anything, nonExistentID).Return(nil, nil)
 
@@ -62,7 +62,7 @@ func TestGetTaskByID(t *testing.T) {
 		// Create a new context with the request and set auth user
 		ctx, _ := gin.CreateTestContext(w)
 		ctx.Request = req
-		ctx.Set("authUser", &auth.UserAuthInfo{UserID: userId})
+		ctx.Set("authUser", &auth.UserAuthInfo{UserID: userID})
 		ctx.Params = []gin.Param{{Key: "id", Value: nonExistentID}}
 
 		// Call the controller directly with our context that has auth
@@ -86,13 +86,13 @@ func TestGetTaskByID(t *testing.T) {
 	})
 
 	t.Run("forbidden access - wrong user", func(t *testing.T) {
-		wrongUserId := primitive.NewObjectID()
-		taskOwnerId := primitive.NewObjectID()
+		wrongUserID := primitive.NewObjectID()
+		taskOwnerID := primitive.NewObjectID()
 		taskID := primitive.NewObjectID().Hex()
 
 		task := createTestTask()
 		task.ID = taskID
-		task.User = taskOwnerId // Set a different user as owner
+		task.User = taskOwnerID // Set a different user as owner
 
 		mockRepo.On("GetByID", mock.Anything, taskID).Return(task, nil)
 
@@ -102,7 +102,7 @@ func TestGetTaskByID(t *testing.T) {
 		// Create a new context with the request and set auth user
 		ctx, _ := gin.CreateTestContext(w)
 		ctx.Request = req
-		ctx.Set("authUser", &auth.UserAuthInfo{UserID: wrongUserId})
+		ctx.Set("authUser", &auth.UserAuthInfo{UserID: wrongUserID})
 		// Copy headers and params from original request to the new context
 		ctx.Params = []gin.Param{{Key: "id", Value: taskID}}
 

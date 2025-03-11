@@ -11,8 +11,8 @@ type RegisterRequest struct {
 	Password string `json:"password" binding:"required,min=8"` // Minimum 8 characters
 }
 
-// AuthResponse represents the structure for authentication response data
-type AuthResponse struct {
+// Response represents the structure for authentication response data
+type Response struct {
 	User         *models.UserEntity `json:"user"`
 	AccessToken  string             `json:"accessToken"`
 	RefreshToken string             `json:"refreshToken"`

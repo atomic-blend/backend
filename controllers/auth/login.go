@@ -77,7 +77,7 @@ func (c *Controller) Login(ctx *gin.Context) {
 	}
 
 	// Return user and tokens
-	ctx.JSON(http.StatusOK, AuthResponse{
+	ctx.JSON(http.StatusOK, Response{
 		User:         responseSafeUser,
 		AccessToken:  accessToken.Token,
 		RefreshToken: refreshToken.Token,

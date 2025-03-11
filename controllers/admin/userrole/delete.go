@@ -1,4 +1,4 @@
-package user_role
+package userrole
 
 import (
 	"net/http"
@@ -17,15 +17,15 @@ import (
 // @Failure 404 {object} map[string]interface{}
 // @Failure 500 {object} map[string]interface{}
 // @Router /admin/user-roles/{id} [delete]
-func (c *UserRoleController) DeleteRole(ctx *gin.Context) {
+func (c *Controller) DeleteRole(ctx *gin.Context) {
 	id := ctx.Param("id")
-	
+
 	objID, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
 		return
 	}
-	
+
 	// Delete the role
 	err = c.userRoleRepo.Delete(ctx, objID)
 	if err != nil {
@@ -36,6 +36,6 @@ func (c *UserRoleController) DeleteRole(ctx *gin.Context) {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	ctx.Status(http.StatusNoContent)
 }

@@ -31,12 +31,12 @@ func TestDeleteAccount(t *testing.T) {
 		{
 			name: "Successful account deletion",
 			setupAuth: func(c *gin.Context) {
-				userId := primitive.NewObjectID()
-				c.Set("authUser", &auth.UserAuthInfo{UserID: userId})
+				userID := primitive.NewObjectID()
+				c.Set("authUser", &auth.UserAuthInfo{UserID: userID})
 			},
 			setupMocks: func(userRepo *mocks.MockUserRepository, userRoleRepo *mocks.MockUserRoleRepository, taskRepo *mocks.MockTaskRepository) {
-				userId := primitive.NewObjectID()
-				user := &models.UserEntity{ID: &userId}
+				userID := primitive.NewObjectID()
+				user := &models.UserEntity{ID: &userID}
 				userRepo.On("FindByID", mock.Anything, mock.AnythingOfType("primitive.ObjectID")).Return(user, nil)
 				taskRepo.On("GetAll", mock.Anything, mock.AnythingOfType("*primitive.ObjectID")).Return([]*models.TaskEntity{}, nil)
 				userRepo.On("Delete", mock.Anything, mock.AnythingOfType("string")).Return(nil)
@@ -55,8 +55,8 @@ func TestDeleteAccount(t *testing.T) {
 		{
 			name: "User not found",
 			setupAuth: func(c *gin.Context) {
-				userId := primitive.NewObjectID()
-				c.Set("authUser", &auth.UserAuthInfo{UserID: userId})
+				userID := primitive.NewObjectID()
+				c.Set("authUser", &auth.UserAuthInfo{UserID: userID})
 			},
 			setupMocks: func(userRepo *mocks.MockUserRepository, userRoleRepo *mocks.MockUserRoleRepository, taskRepo *mocks.MockTaskRepository) {
 				userRepo.On("FindByID", mock.Anything, mock.AnythingOfType("primitive.ObjectID")).Return(nil, nil)
@@ -67,12 +67,12 @@ func TestDeleteAccount(t *testing.T) {
 		{
 			name: "Error during personal data deletion",
 			setupAuth: func(c *gin.Context) {
-				userId := primitive.NewObjectID()
-				c.Set("authUser", &auth.UserAuthInfo{UserID: userId})
+				userID := primitive.NewObjectID()
+				c.Set("authUser", &auth.UserAuthInfo{UserID: userID})
 			},
 			setupMocks: func(userRepo *mocks.MockUserRepository, userRoleRepo *mocks.MockUserRoleRepository, taskRepo *mocks.MockTaskRepository) {
-				userId := primitive.NewObjectID()
-				user := &models.UserEntity{ID: &userId}
+				userID := primitive.NewObjectID()
+				user := &models.UserEntity{ID: &userID}
 				userRepo.On("FindByID", mock.Anything, mock.AnythingOfType("primitive.ObjectID")).Return(user, nil)
 				taskRepo.On("GetAll", mock.Anything, mock.AnythingOfType("*primitive.ObjectID")).Return(nil, assert.AnError)
 			},

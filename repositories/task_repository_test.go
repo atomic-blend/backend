@@ -2,7 +2,7 @@ package repositories
 
 import (
 	"atomic_blend_api/models"
-	"atomic_blend_api/tests/utils/in_memory_mongo"
+	"atomic_blend_api/tests/utils/inmemorymongo"
 	"context"
 	"testing"
 	"time"
@@ -14,11 +14,11 @@ import (
 
 func setupTaskTest(t *testing.T) (TaskRepositoryInterface, func()) {
 	// Start in-memory MongoDB server
-	mongoServer, err := in_memory_mongo.CreateInMemoryMongoDB()
+	mongoServer, err := inmemorymongo.CreateInMemoryMongoDB()
 	require.NoError(t, err)
 
 	// Connect to the in-memory MongoDB
-	client, err := in_memory_mongo.ConnectToInMemoryDB(mongoServer.URI())
+	client, err := inmemorymongo.ConnectToInMemoryDB(mongoServer.URI())
 	require.NoError(t, err)
 
 	// Get database reference

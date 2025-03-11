@@ -1,7 +1,7 @@
 package health
 
 import (
-	"atomic_blend_api/tests/utils/in_memory_mongo"
+	"atomic_blend_api/tests/utils/inmemorymongo"
 	"context"
 	"encoding/json"
 	"net/http"
@@ -36,7 +36,7 @@ func TestGetHealth(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			// Start in-memory MongoDB server
-			mongoServer, err := in_memory_mongo.CreateInMemoryMongoDB()
+			mongoServer, err := inmemorymongo.CreateInMemoryMongoDB()
 			if err != nil {
 				t.Fatalf("Failed to create in-memory MongoDB: %v", err)
 			}
@@ -46,7 +46,7 @@ func TestGetHealth(t *testing.T) {
 			mongoURI := mongoServer.URI()
 
 			// Connect to the in-memory MongoDB
-			client, err := in_memory_mongo.ConnectToInMemoryDB(mongoURI)
+			client, err := inmemorymongo.ConnectToInMemoryDB(mongoURI)
 			if err != nil {
 				t.Fatalf("Failed to connect to in-memory MongoDB: %v", err)
 			}
@@ -80,7 +80,7 @@ func TestGetHealth(t *testing.T) {
 			assert.Equal(t, tc.expectedStatus, w.Code)
 
 			// Parse response body
-			var response HealthResponse
+			var response Response
 			err = json.Unmarshal(w.Body.Bytes(), &response)
 			assert.NoError(t, err)
 
@@ -102,14 +102,14 @@ func TestSetupRoutes(t *testing.T) {
 	router := gin.Default()
 
 	// Start in-memory MongoDB server
-	mongoServer, err := in_memory_mongo.CreateInMemoryMongoDB()
+	mongoServer, err := inmemorymongo.CreateInMemoryMongoDB()
 	if err != nil {
 		t.Fatalf("Failed to create in-memory MongoDB: %v", err)
 	}
 	defer mongoServer.Stop()
 
 	// Connect to the in-memory MongoDB
-	client, err := in_memory_mongo.ConnectToInMemoryDB(mongoServer.URI())
+	client, err := inmemorymongo.ConnectToInMemoryDB(mongoServer.URI())
 	if err != nil {
 		t.Fatalf("Failed to connect to in-memory MongoDB: %v", err)
 	}
@@ -132,7 +132,7 @@ func TestSetupRoutes(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 
 	// Parse response to verify it's the expected health response
-	var response HealthResponse
+	var response Response
 	err = json.Unmarshal(w.Body.Bytes(), &response)
 	assert.NoError(t, err)
 	assert.Equal(t, true, response.Up)

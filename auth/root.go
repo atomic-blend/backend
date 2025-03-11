@@ -25,10 +25,10 @@ func SetupRoutes(router *gin.Engine, database *mongo.Database) {
 
 // RequireRoleMiddleware applies the auth middleware followed by role checking to a specific route group
 // Example usage: RequireRoleMiddleware(router.Group("/admin"), "admin", userRepo)
-func RequireRole(group *gin.RouterGroup, roleName string) *gin.RouterGroup {
+func RequireRoleMiddleware(group *gin.RouterGroup, roleName string) *gin.RouterGroup {
 	userRepo := repositories.NewUserRepository(db.Database)
 	userRoleRepo := repositories.NewUserRoleRepository(db.Database)
-	group.Use(AuthMiddleware())
+	group.Use(Middleware())
 	group.Use(requireRoleHandler(roleName, userRepo, userRoleRepo))
 	return group
 }
@@ -36,6 +36,6 @@ func RequireRole(group *gin.RouterGroup, roleName string) *gin.RouterGroup {
 // RequireAuth applies the auth middleware to a specific route group
 // Example usage: RequireAuth(router.Group("/protected"))
 func RequireAuth(group *gin.RouterGroup) *gin.RouterGroup {
-	group.Use(AuthMiddleware())
+	group.Use(Middleware())
 	return group
 }
