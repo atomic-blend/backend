@@ -18,13 +18,13 @@ func TestDeleteTask(t *testing.T) {
 
 	t.Run("successful delete task", func(t *testing.T) {
 		// Create authenticated user
-		userId := primitive.NewObjectID()
+		userID := primitive.NewObjectID()
 		taskID := primitive.NewObjectID().Hex()
 
 		// Ensure task has a properly set User field
 		task := createTestTask()
 		task.ID = taskID
-		task.User = userId // This needs to be a valid ObjectID
+		task.User = userID // This needs to be a valid ObjectID
 
 		mockRepo.On("GetByID", mock.Anything, taskID).Return(task, nil)
 		mockRepo.On("Delete", mock.Anything, taskID).Return(nil)
@@ -35,7 +35,7 @@ func TestDeleteTask(t *testing.T) {
 		// Create a new context with the request and set auth user
 		ctx, _ := gin.CreateTestContext(w)
 		ctx.Request = req
-		ctx.Set("authUser", &auth.UserAuthInfo{UserID: userId})
+		ctx.Set("authUser", &auth.UserAuthInfo{UserID: userID})
 
 		// Copy params from original request to the new context
 		ctx.Params = []gin.Param{{Key: "id", Value: taskID}}
@@ -66,7 +66,7 @@ func TestDeleteTask(t *testing.T) {
 	})
 
 	t.Run("missing task ID", func(t *testing.T) {
-		userId := primitive.NewObjectID()
+		userID := primitive.NewObjectID()
 
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("DELETE", "/tasks/", nil)
@@ -74,7 +74,7 @@ func TestDeleteTask(t *testing.T) {
 		// Create a new context with the request and set auth user
 		ctx, _ := gin.CreateTestContext(w)
 		ctx.Request = req
-		ctx.Set("authUser", &auth.UserAuthInfo{UserID: userId})
+		ctx.Set("authUser", &auth.UserAuthInfo{UserID: userID})
 
 		// Empty task ID
 		ctx.Params = []gin.Param{{Key: "id", Value: ""}}
@@ -87,7 +87,7 @@ func TestDeleteTask(t *testing.T) {
 	})
 
 	t.Run("task not found - nil task", func(t *testing.T) {
-		userId := primitive.NewObjectID()
+		userID := primitive.NewObjectID()
 		taskID := primitive.NewObjectID().Hex()
 
 		mockRepo.On("GetByID", mock.Anything, taskID).Return(nil, nil)
@@ -98,7 +98,7 @@ func TestDeleteTask(t *testing.T) {
 		// Create a new context with the request and set auth user
 		ctx, _ := gin.CreateTestContext(w)
 		ctx.Request = req
-		ctx.Set("authUser", &auth.UserAuthInfo{UserID: userId})
+		ctx.Set("authUser", &auth.UserAuthInfo{UserID: userID})
 
 		// Copy params from original request to the new context
 		ctx.Params = []gin.Param{{Key: "id", Value: taskID}}
@@ -111,7 +111,7 @@ func TestDeleteTask(t *testing.T) {
 	})
 
 	t.Run("task not found - error", func(t *testing.T) {
-		userId := primitive.NewObjectID()
+		userID := primitive.NewObjectID()
 		taskID := primitive.NewObjectID().Hex()
 
 		mockRepo.On("GetByID", mock.Anything, taskID).Return(nil, errors.New("task not found"))
@@ -122,7 +122,7 @@ func TestDeleteTask(t *testing.T) {
 		// Create a new context with the request and set auth user
 		ctx, _ := gin.CreateTestContext(w)
 		ctx.Request = req
-		ctx.Set("authUser", &auth.UserAuthInfo{UserID: userId})
+		ctx.Set("authUser", &auth.UserAuthInfo{UserID: userID})
 
 		// Copy params from original request to the new context
 		ctx.Params = []gin.Param{{Key: "id", Value: taskID}}
@@ -135,13 +135,13 @@ func TestDeleteTask(t *testing.T) {
 	})
 
 	t.Run("forbidden access - wrong user", func(t *testing.T) {
-		wrongUserId := primitive.NewObjectID()
-		taskOwnerId := primitive.NewObjectID()
+		wrongUserID := primitive.NewObjectID()
+		taskOwnerID := primitive.NewObjectID()
 		taskID := primitive.NewObjectID().Hex()
 
 		task := createTestTask()
 		task.ID = taskID
-		task.User = taskOwnerId // Set a different user as owner
+		task.User = taskOwnerID // Set a different user as owner
 
 		mockRepo.On("GetByID", mock.Anything, taskID).Return(task, nil)
 
@@ -151,7 +151,7 @@ func TestDeleteTask(t *testing.T) {
 		// Create a new context with the request and set auth user
 		ctx, _ := gin.CreateTestContext(w)
 		ctx.Request = req
-		ctx.Set("authUser", &auth.UserAuthInfo{UserID: wrongUserId})
+		ctx.Set("authUser", &auth.UserAuthInfo{UserID: wrongUserID})
 
 		// Copy params from original request to the new context
 		ctx.Params = []gin.Param{{Key: "id", Value: taskID}}
@@ -164,12 +164,12 @@ func TestDeleteTask(t *testing.T) {
 	})
 
 	t.Run("internal server error on delete", func(t *testing.T) {
-		userId := primitive.NewObjectID()
+		userID := primitive.NewObjectID()
 		taskID := primitive.NewObjectID().Hex()
 
 		task := createTestTask()
 		task.ID = taskID
-		task.User = userId
+		task.User = userID
 
 		mockRepo.On("GetByID", mock.Anything, taskID).Return(task, nil)
 		mockRepo.On("Delete", mock.Anything, taskID).Return(errors.New("database error"))
@@ -180,7 +180,7 @@ func TestDeleteTask(t *testing.T) {
 		// Create a new context with the request and set auth user
 		ctx, _ := gin.CreateTestContext(w)
 		ctx.Request = req
-		ctx.Set("authUser", &auth.UserAuthInfo{UserID: userId})
+		ctx.Set("authUser", &auth.UserAuthInfo{UserID: userID})
 
 		// Copy params from original request to the new context
 		ctx.Params = []gin.Param{{Key: "id", Value: taskID}}

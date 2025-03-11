@@ -101,7 +101,7 @@ func (c *Controller) RefreshToken(ctx *gin.Context) {
 		UpdatedAt: user.UpdatedAt,
 	}
 
-	ctx.JSON(http.StatusOK, AuthResponse{
+	ctx.JSON(http.StatusOK, Response{
 		User:         responseSafeUser,
 		AccessToken:  accessToken.Token,
 		RefreshToken: refreshToken.Token,

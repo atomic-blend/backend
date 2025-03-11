@@ -1,4 +1,4 @@
-package user_role
+package userrole
 
 import (
 	"net/http"
@@ -14,7 +14,7 @@ import (
 // @Success 200 {array} models.UserRoleEntity
 // @Failure 500 {object} map[string]interface{}
 // @Router /admin/user-roles [get]
-func (c *UserRoleController) GetAllRoles(ctx *gin.Context) {
+func (c *Controller) GetAllRoles(ctx *gin.Context) {
 	roles, err := c.userRoleRepo.GetAll(ctx)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

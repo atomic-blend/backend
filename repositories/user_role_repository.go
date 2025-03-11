@@ -175,6 +175,7 @@ func (r *UserRoleRepository) FindOrCreate(ctx context.Context, roleName string) 
 	return nil, err
 }
 
+// PopulateRoles populates the roles for the given user
 func (r *UserRoleRepository) PopulateRoles(context context.Context, user *models.UserEntity) error {
 	roles := make([]*models.UserRoleEntity, 0)
 	for _, roleID := range user.RoleIds {

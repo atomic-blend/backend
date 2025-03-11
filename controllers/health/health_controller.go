@@ -9,22 +9,26 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/readpref"
 )
 
-type HealthController struct {
+// Controller is a controller for health check actions
+type Controller struct {
 	database *mongo.Database
 }
 
-type HealthResponse struct {
+// Response is a health check response
+type Response struct {
 	Up bool `json:"up"`
 	DB bool `json:"db"`
 }
 
-func NewHealthController(database *mongo.Database) *HealthController {
-	return &HealthController{
+// NewHealthController creates a new health controller
+func NewHealthController(database *mongo.Database) *Controller {
+	return &Controller{
 		database: database,
 	}
 }
 
-func (c *HealthController) GetHealth(ctx *gin.Context) {
+// GetHealth returns the health status of the API
+func (c *Controller) GetHealth(ctx *gin.Context) {
 	// Check database connectivity
 	dbStatus := true
 	client := c.database.Client()
@@ -36,7 +40,7 @@ func (c *HealthController) GetHealth(ctx *gin.Context) {
 		dbStatus = false
 	}
 
-	response := HealthResponse{
+	response := Response{
 		Up: true, // API is up if this code is executing
 		DB: dbStatus,
 	}

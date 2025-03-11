@@ -19,21 +19,21 @@ func TestGetAllTasks(t *testing.T) {
 
 	t.Run("successful get all tasks - with tasks", func(t *testing.T) {
 		// Create authenticated user
-		userId := primitive.NewObjectID()
+		userID := primitive.NewObjectID()
 
 		// Create test tasks
 		task1 := createTestTask()
 		task1.ID = primitive.NewObjectID().Hex()
-		task1.User = userId
+		task1.User = userID
 
 		task2 := createTestTask()
 		task2.ID = primitive.NewObjectID().Hex()
-		task2.User = userId
+		task2.User = userID
 
 		tasks := []*models.TaskEntity{task1, task2}
 
 		mockRepo.On("GetAll", mock.Anything, mock.MatchedBy(func(userID *primitive.ObjectID) bool {
-			return userID.Hex() == userId.Hex()
+			return userID.Hex() == userID.Hex()
 		})).Return(tasks, nil).Once()
 
 		w := httptest.NewRecorder()
@@ -42,7 +42,7 @@ func TestGetAllTasks(t *testing.T) {
 		// Create a new context with the request and set auth user
 		ctx, _ := gin.CreateTestContext(w)
 		ctx.Request = req
-		ctx.Set("authUser", &auth.UserAuthInfo{UserID: userId})
+		ctx.Set("authUser", &auth.UserAuthInfo{UserID: userID})
 
 		// Call the controller directly with our context that has auth
 		controller := NewTaskController(mockRepo)
@@ -59,11 +59,11 @@ func TestGetAllTasks(t *testing.T) {
 
 	t.Run("successful get all tasks - empty list", func(t *testing.T) {
 		// Create authenticated user
-		userId := primitive.NewObjectID()
+		userID := primitive.NewObjectID()
 
 		// Return nil to simulate no tasks
 		mockRepo.On("GetAll", mock.Anything, mock.MatchedBy(func(userID *primitive.ObjectID) bool {
-			return userID.Hex() == userId.Hex()
+			return userID.Hex() == userID.Hex()
 		})).Return(nil, nil).Once()
 
 		w := httptest.NewRecorder()
@@ -72,7 +72,7 @@ func TestGetAllTasks(t *testing.T) {
 		// Create a new context with the request and set auth user
 		ctx, _ := gin.CreateTestContext(w)
 		ctx.Request = req
-		ctx.Set("authUser", &auth.UserAuthInfo{UserID: userId})
+		ctx.Set("authUser", &auth.UserAuthInfo{UserID: userID})
 
 		// Call the controller directly with our context that has auth
 		controller := NewTaskController(mockRepo)

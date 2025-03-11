@@ -1,4 +1,4 @@
-package user_role
+package userrole
 
 import (
 	"atomic_blend_api/repositories"
@@ -6,20 +6,20 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// UserRoleController handles user role related operations
-type UserRoleController struct {
+// Controller handles user role related operations
+type Controller struct {
 	userRoleRepo repositories.UserRoleRepositoryInterface
 }
 
 // NewUserRoleController creates a new user role controller instance
-func NewUserRoleController(userRoleRepo repositories.UserRoleRepositoryInterface) *UserRoleController {
-	return &UserRoleController{
+func NewUserRoleController(userRoleRepo repositories.UserRoleRepositoryInterface) *Controller {
+	return &Controller{
 		userRoleRepo: userRoleRepo,
 	}
 }
 
 // SetupRoutes sets up the user role routes
-func (c *UserRoleController) SetupRoutes(router *gin.RouterGroup) {
+func (c *Controller) SetupRoutes(router *gin.RouterGroup) {
 	userRoleRoutes := router.Group("/user-roles")
 	{
 		userRoleRoutes.GET("", c.GetAllRoles)

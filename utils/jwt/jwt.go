@@ -12,13 +12,18 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
+// TokenType represents the type of token
 type TokenType string
 
 const (
+	// AccessToken is used for authenticating requests
 	AccessToken  TokenType = "access"
+
+	// RefreshToken is used to get a new access token
 	RefreshToken TokenType = "refresh"
 )
 
+// TokenDetails contains the token information
 type TokenDetails struct {
 	Token     string
 	TokenType TokenType
@@ -100,6 +105,7 @@ func ValidateToken(tokenString string, tokenType TokenType) (*jwt.MapClaims, err
 	return &claims, nil
 }
 
+// GenerateJWKS creates a new JSON Web Key Set
 func GenerateJWKS(secretType string) (*jwk.Key, error) {
 	secretKey := os.Getenv("SSO_SECRET")
 	if secretKey == "" {

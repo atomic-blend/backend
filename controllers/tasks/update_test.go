@@ -28,16 +28,16 @@ func TestUpdateTask(t *testing.T) {
 
 	t.Run("successful update task", func(t *testing.T) {
 		// Create authenticated user
-		userId := primitive.NewObjectID()
+		userID := primitive.NewObjectID()
 		taskID := primitive.NewObjectID().Hex()
 
 		existingTask := createTestTask()
 		existingTask.ID = taskID
-		existingTask.User = userId
+		existingTask.User = userID
 
 		updatedTask := createTestTask()
 		updatedTask.ID = taskID
-		updatedTask.User = userId
+		updatedTask.User = userID
 		updatedTask.Title = "Updated Task"
 
 		mockRepo.On("GetByID", mock.Anything, taskID).Return(existingTask, nil)
@@ -51,7 +51,7 @@ func TestUpdateTask(t *testing.T) {
 		// Create a context and set auth user
 		ctx, _ := gin.CreateTestContext(w)
 		ctx.Request = req
-		ctx.Set("authUser", &auth.UserAuthInfo{UserID: userId})
+		ctx.Set("authUser", &auth.UserAuthInfo{UserID: userID})
 		ctx.Params = []gin.Param{{Key: "id", Value: taskID}}
 
 		// Call the handler directly
@@ -65,7 +65,7 @@ func TestUpdateTask(t *testing.T) {
 		assert.Equal(t, updatedTask.Title, response.Title)
 		assert.Equal(t, updatedTask.StartDate, response.StartDate)
 		assert.Equal(t, updatedTask.EndDate, response.EndDate)
-		assert.Equal(t, userId, response.User) // Verify the task owner hasn't changed
+		assert.Equal(t, userID, response.User) // Verify the task owner hasn't changed
 	})
 
 	t.Run("unauthorized access - no auth user", func(t *testing.T) {
@@ -79,7 +79,7 @@ func TestUpdateTask(t *testing.T) {
 
 		// Create a new engine with auth middleware but don't set auth user
 		engine := gin.New()
-		engine.Use(auth.AuthMiddleware())
+		engine.Use(auth.Middleware())
 		engine.PUT("/tasks/:id", func(c *gin.Context) {
 			router.HandleContext(c)
 		})
@@ -91,7 +91,7 @@ func TestUpdateTask(t *testing.T) {
 	})
 
 	t.Run("task not found", func(t *testing.T) {
-		userId := primitive.NewObjectID()
+		userID := primitive.NewObjectID()
 		nonExistentID := primitive.NewObjectID().Hex()
 		task := createTestTask()
 
@@ -105,7 +105,7 @@ func TestUpdateTask(t *testing.T) {
 		// Create a context and set auth user
 		ctx, _ := gin.CreateTestContext(w)
 		ctx.Request = req
-		ctx.Set("authUser", &auth.UserAuthInfo{UserID: userId})
+		ctx.Set("authUser", &auth.UserAuthInfo{UserID: userID})
 		ctx.Params = []gin.Param{{Key: "id", Value: nonExistentID}}
 
 		// Call the handler directly
@@ -116,13 +116,13 @@ func TestUpdateTask(t *testing.T) {
 	})
 
 	t.Run("forbidden access - wrong user", func(t *testing.T) {
-		wrongUserId := primitive.NewObjectID()
-		taskOwnerId := primitive.NewObjectID()
+		wrongUserID := primitive.NewObjectID()
+		taskOwnerID := primitive.NewObjectID()
 		taskID := primitive.NewObjectID().Hex()
 
 		existingTask := createTestTask()
 		existingTask.ID = taskID
-		existingTask.User = taskOwnerId // Set a different user as owner
+		existingTask.User = taskOwnerID // Set a different user as owner
 
 		updatedTask := createTestTask()
 		updatedTask.ID = taskID
@@ -138,7 +138,7 @@ func TestUpdateTask(t *testing.T) {
 		// Create a context and set auth user
 		ctx, _ := gin.CreateTestContext(w)
 		ctx.Request = req
-		ctx.Set("authUser", &auth.UserAuthInfo{UserID: wrongUserId})
+		ctx.Set("authUser", &auth.UserAuthInfo{UserID: wrongUserID})
 		ctx.Params = []gin.Param{{Key: "id", Value: taskID}}
 
 		// Call the handler directly
@@ -149,12 +149,12 @@ func TestUpdateTask(t *testing.T) {
 	})
 
 	t.Run("invalid request body", func(t *testing.T) {
-		userId := primitive.NewObjectID()
+		userID := primitive.NewObjectID()
 		taskID := primitive.NewObjectID().Hex()
 
 		existingTask := createTestTask()
 		existingTask.ID = taskID
-		existingTask.User = userId
+		existingTask.User = userID
 
 		mockRepo.On("GetByID", mock.Anything, taskID).Return(existingTask, nil)
 
@@ -165,7 +165,7 @@ func TestUpdateTask(t *testing.T) {
 		// Create a context and set auth user
 		ctx, _ := gin.CreateTestContext(w)
 		ctx.Request = req
-		ctx.Set("authUser", &auth.UserAuthInfo{UserID: userId})
+		ctx.Set("authUser", &auth.UserAuthInfo{UserID: userID})
 		ctx.Params = []gin.Param{{Key: "id", Value: taskID}}
 
 		// Call the handler directly

@@ -12,7 +12,10 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
+// MongoClient is the MongoDB client
 var MongoClient *mongo.Client
+
+// Database is the MongoDB database instance
 var Database *mongo.Database
 
 // ConnectMongo initializes and returns a MongoDB client

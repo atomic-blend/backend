@@ -20,9 +20,9 @@ func TestCreateTask(t *testing.T) {
 
 	t.Run("successful create task", func(t *testing.T) {
 		// Create authenticated user
-		userId := primitive.NewObjectID()
+		userID := primitive.NewObjectID()
 		task := createTestTask()
-		task.User = userId // This should be overwritten by the handler
+		task.User = userID // This should be overwritten by the handler
 
 		mockRepo.On("Create", mock.Anything, mock.AnythingOfType("*models.TaskEntity")).Return(task, nil)
 
@@ -34,7 +34,7 @@ func TestCreateTask(t *testing.T) {
 		// Create a new context with the request and set auth user
 		ctx, _ := gin.CreateTestContext(w)
 		ctx.Request = req
-		ctx.Set("authUser", &auth.UserAuthInfo{UserID: userId})
+		ctx.Set("authUser", &auth.UserAuthInfo{UserID: userID})
 
 		// Call the controller directly with our context that has auth
 		controller := NewTaskController(mockRepo)
@@ -47,7 +47,7 @@ func TestCreateTask(t *testing.T) {
 		assert.Equal(t, task.Title, response.Title)
 		assert.Equal(t, task.StartDate, response.StartDate)
 		assert.Equal(t, task.EndDate, response.EndDate)
-		assert.Equal(t, userId, response.User) // Verify the task is owned by the authenticated user
+		assert.Equal(t, userID, response.User) // Verify the task is owned by the authenticated user
 	})
 
 	t.Run("unauthorized - no auth user", func(t *testing.T) {
@@ -71,7 +71,7 @@ func TestCreateTask(t *testing.T) {
 
 	t.Run("invalid request body", func(t *testing.T) {
 		// Create authenticated user
-		userId := primitive.NewObjectID()
+		userID := primitive.NewObjectID()
 
 		// Invalid JSON
 		w := httptest.NewRecorder()
@@ -81,7 +81,7 @@ func TestCreateTask(t *testing.T) {
 		// Create a new context with the request and set auth user
 		ctx, _ := gin.CreateTestContext(w)
 		ctx.Request = req
-		ctx.Set("authUser", &auth.UserAuthInfo{UserID: userId})
+		ctx.Set("authUser", &auth.UserAuthInfo{UserID: userID})
 
 		// Call the controller directly
 		controller := NewTaskController(mockRepo)

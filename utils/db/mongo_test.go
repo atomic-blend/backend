@@ -1,7 +1,7 @@
 package db
 
 import (
-	"atomic_blend_api/tests/utils/in_memory_mongo"
+	"atomic_blend_api/tests/utils/inmemorymongo"
 	"context"
 	"os"
 	"testing"
@@ -43,7 +43,7 @@ func TestConnectMongo(t *testing.T) {
 
 	t.Run("should successfully connect to mongodb", func(t *testing.T) {
 		// Setup in-memory MongoDB
-		mongoServer, err := in_memory_mongo.CreateInMemoryMongoDB()
+		mongoServer, err := inmemorymongo.CreateInMemoryMongoDB()
 		assert.NoError(t, err)
 		defer mongoServer.Stop()
 

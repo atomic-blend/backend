@@ -84,8 +84,8 @@ func TestRequireAuth(t *testing.T) {
 	assert.Equal(t, http.StatusUnauthorized, w.Code)
 
 	// Test with valid auth header
-	userId := primitive.NewObjectID()
-	tokenDetails, _ := jwt.GenerateToken(userId, jwt.AccessToken)
+	userID := primitive.NewObjectID()
+	tokenDetails, _ := jwt.GenerateToken(userID, jwt.AccessToken)
 
 	w = httptest.NewRecorder()
 	req, _ = http.NewRequest("GET", "/test/protected", nil)
@@ -140,8 +140,8 @@ func TestRequireRole(t *testing.T) {
 	assert.Equal(t, http.StatusUnauthorized, w.Code)
 
 	// Test with valid auth header (should pass both middlewares)
-	userId := primitive.NewObjectID()
-	tokenDetails, _ := jwt.GenerateToken(userId, jwt.AccessToken)
+	userID := primitive.NewObjectID()
+	tokenDetails, _ := jwt.GenerateToken(userID, jwt.AccessToken)
 
 	w = httptest.NewRecorder()
 	req, _ = http.NewRequest("GET", "/admin/test", nil)

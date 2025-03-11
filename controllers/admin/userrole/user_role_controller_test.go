@@ -1,4 +1,4 @@
-package user_role
+package userrole
 
 import (
 	"atomic_blend_api/tests/mocks"

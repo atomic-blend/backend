@@ -2,7 +2,7 @@ package repositories
 
 import (
 	"atomic_blend_api/models"
-	"atomic_blend_api/tests/utils/in_memory_mongo"
+	"atomic_blend_api/tests/utils/inmemorymongo"
 	"context"
 	"testing"
 
@@ -12,11 +12,11 @@ import (
 )
 
 func setupTestRoleDB(t *testing.T) (*UserRoleRepository, func()) {
-	mongoServer, err := in_memory_mongo.CreateInMemoryMongoDB()
+	mongoServer, err := inmemorymongo.CreateInMemoryMongoDB()
 	require.NoError(t, err)
 
 	mongoURI := mongoServer.URI()
-	client, err := in_memory_mongo.ConnectToInMemoryDB(mongoURI)
+	client, err := inmemorymongo.ConnectToInMemoryDB(mongoURI)
 	require.NoError(t, err)
 
 	db := client.Database("test_db")

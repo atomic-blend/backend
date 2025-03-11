@@ -16,6 +16,8 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+// Router is exported for use in other packages
+// nolint
 var Router *gin.Engine
 
 func main() {

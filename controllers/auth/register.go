@@ -110,7 +110,7 @@ func (c *Controller) Register(ctx *gin.Context) {
 	}
 
 	// Return user and tokens
-	ctx.JSON(http.StatusCreated, AuthResponse{
+	ctx.JSON(http.StatusCreated, Response{
 		User:         responseSafeUser,
 		AccessToken:  accessToken.Token,
 		RefreshToken: refreshToken.Token,
