@@ -63,8 +63,8 @@ jobs:
           git config --global user.email "pro@brandonguigo.com"
           git config --global user.name "CircleCI"
           git add CHANGELOG.md
-          git add VERSION
-          git commit -m "chore(release): $(cat VERSION)"
+          git add $(git describe --abbrev=0 --tags)
+          git commit -m "chore(release): $(git describe --abbrev=0 --tags)"
           git push origin HEAD:main
   
   build-docker-images:
