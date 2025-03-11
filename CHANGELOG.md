@@ -2,6 +2,14 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## v0.1.1 - 2025-03-11
+#### Bug Fixes
+- typo - (ce781a6) - Brandon Guigo
+#### Miscellaneous Chores
+- **(release)** v0.1.0 [skip ci] - (8cadd52) - CircleCI
+
+- - -
+
 ## v0.1.0 - 2025-03-11
 #### Bug Fixes
 - disable bump commit + push tag + fix docker - (f0107fa) - Brandon Guigo
