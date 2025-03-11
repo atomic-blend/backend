@@ -71,7 +71,7 @@ jobs:
       # Check for cached cocogitto installation
       - restore_cache:
           keys:
-            - cocogitto-v<< parameters.cocogitto_version >>-{{ arch }}
+            - cocogitto-v<< parameters.cocogitto_version >>
 
       # Check if cocogitto is installed from cache
       - run:
@@ -116,7 +116,7 @@ jobs:
 
       # Save cache after installation
       - save_cache:
-          key: cocogitto-v<< parameters.cocogitto_version >>-{{ arch }}
+          key: cocogitto-v<< parameters.cocogitto_version >>
           paths:
             - /home/circleci/.cargo/bin/cog
             - /home/circleci/.cargo/registry
@@ -141,7 +141,7 @@ jobs:
               echo "No changes to commit"
             else
               git add CHANGELOG.md
-              git commit -m "[skip ci] chore(release): $(git describe --abbrev=0 --tags)"
+              git commit -m "chore(release): $(git describe --abbrev=0 --tags) [skip ci]"
             fi
             git push https://${GITHUB_PAT}@github.com/${GITHUB_ORG_NAME}/${GITHUB_REPO_NAME}.git main
             git push https://${GITHUB_PAT}@github.com/${GITHUB_ORG_NAME}/${GITHUB_REPO_NAME}.git tag $(git describe --abbrev=0 --tags)
