@@ -52,22 +52,22 @@ jobs:
           docker_layer_caching: true
       
       - run:
-        name: Check conventional commits validity
-        command: |
-          cog --check
+          name: Check conventional commits validity
+          command: |
+            cog --check
       - run:
-        name: Bump version
-        command: |
-          cog bump --auto
+          name: Bump version
+          command: |
+            cog bump --auto
       - run:
-        name: Commit and push changes
-        command: |
-          git config --global user.email "pro@brandonguigo.com"
-          git config --global user.name "CircleCI"
-          git add CHANGELOG.md
-          git add $(git describe --abbrev=0 --tags)
-          git commit -m "chore(release): $(git describe --abbrev=0 --tags)"
-          git push origin HEAD:main
+          name: Commit and push changes
+          command: |
+            git config --global user.email "pro@brandonguigo.com"
+            git config --global user.name "CircleCI"
+            git add CHANGELOG.md
+            git add $(git describe --abbrev=0 --tags)
+            git commit -m "chore(release): $(git describe --abbrev=0 --tags)"
+            git push origin HEAD:main
   
   build-docker-images:
     docker:
@@ -76,7 +76,7 @@ jobs:
     working_directory: ~/project
     steps:
       - checkout:
-        path: ~/project
+          path: ~/project
       - setup_remote_docker:
           docker_layer_caching: true
       - run:
