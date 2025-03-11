@@ -62,11 +62,13 @@ jobs:
       - run:
           name: Commit and push changes
           command: |
-            git config --local user.email "pro@brandonguigo.com"
+            git config credential.helper 'cache --timeout=120'
+            git config user.email "pro@brandonguigo.com"
+            git config user.name "CircleCI"
             git add CHANGELOG.md
             git add $(git describe --abbrev=0 --tags)
             git commit -m "chore(release): $(git describe --abbrev=0 --tags)"
-            git push origin HEAD:main
+            git push -q https://${GITHUB_PAT}@github.com/${GITHUB_ORG_NAME}/${GITHUB_REPO_NAME}.git main
 
   build-docker-images:
     docker:
