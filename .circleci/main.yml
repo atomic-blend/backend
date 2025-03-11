@@ -5,17 +5,16 @@ orbs:
 
 jobs:
   test-coverage:
-    docker:
-      - image: cimg/go:1.23
-    resource_class: small
+    # docker:
+    #   - image: cimg/go:1.23
+    machine:
+      image: ubuntu-2204:current
+    resource_class: medium
     working_directory: ~/project
 
     steps:
       - checkout:
           path: ~/project
-
-      - setup_remote_docker:
-          docker_layer_caching: true
 
       - go/load-cache
 
@@ -40,16 +39,37 @@ jobs:
           destination: coverage-report
 
   bump-version:
-    docker:
-      - image: ghcr.io/cocogitto/cog:latest
-    resource_class: small
+    machine:
+      image: ubuntu-2204:current
+    resource_class: medium
     working_directory: ~/project
     steps:
       - checkout:
           path: ~/project
 
-      - setup_remote_docker:
-          docker_layer_caching: true
+      - run:
+          name: Configure git
+          command: |
+            git config credential.helper 'cache --timeout=120'
+            git config user.email "pro@brandonguigo.com"
+            git config user.name "CircleCI"
+
+      - run:
+          name: Download rustup
+          command: |
+            wget https://static.rust-lang.org/rustup/dist/x86_64-unknown-linux-gnu/rustup-init
+            chmod +x rustup-init
+      - run:
+          name: Install Rust
+          command: |
+            ./rustup-init -y --no-modify-path --default-toolchain nightly
+            rm rustup-init
+            echo 'export PATH=$HOME/.cargo/bin:$PATH' >> $BASH_ENV
+      - run:
+          name: Install Cocogitto
+          command: cargo install cocogitto
+          environment:
+            RUSTFLAGS: --cfg procmacro2_semver_exempt
 
       - run:
           name: Check conventional commits validity
@@ -62,24 +82,18 @@ jobs:
       - run:
           name: Commit and push changes
           command: |
-            git config credential.helper 'cache --timeout=120'
-            git config user.email "pro@brandonguigo.com"
-            git config user.name "CircleCI"
             git add CHANGELOG.md
-            git add $(git describe --abbrev=0 --tags)
             git commit -m "chore(release): $(git describe --abbrev=0 --tags)"
             git push -q https://${GITHUB_PAT}@github.com/${GITHUB_ORG_NAME}/${GITHUB_REPO_NAME}.git main
-
+  
   build-docker-images:
-    docker:
-      - image: cimg/base:2025.03
-    resource_class: small
+    machine:
+      image: ubuntu-2204:current
+    resource_class: medium
     working_directory: ~/project
     steps:
       - checkout:
           path: ~/project
-      - setup_remote_docker:
-          docker_layer_caching: true
       - run:
           name: Build Docker image
           command: |
