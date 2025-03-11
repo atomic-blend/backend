@@ -44,12 +44,6 @@ jobs:
           path: app
           destination: backend-binary
 
-      - run:
-          name: Generate Swagger Docs
-          command: |
-            go install github.com/swaggo/swag/cmd/swag@latest
-            swag init -g main.go -o api/docs
-
 workflows:
   version: 2
   build-test-deploy:
