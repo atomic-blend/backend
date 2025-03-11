@@ -5,6 +5,12 @@ version: 2.1
 orbs:
   go: circleci/go@1.7 # Go orb for Go-related commands and caching
 
+# Parameters
+parameters:
+  cocogitto_version:
+    type: string
+    default: "6.2.0" # Set your desired default version here
+
 # Job definitions
 jobs:
   # Job to run tests and generate coverage reports
@@ -43,6 +49,10 @@ jobs:
 
   # Job to automatically bump version using conventional commits
   bump-version:
+    parameters:
+      cocogitto_version:
+        type: string
+        default: << pipeline.parameters.cocogitto_version >>
     machine:
       image: ubuntu-2204:current
     resource_class: medium
@@ -58,25 +68,60 @@ jobs:
             git config user.email "pro@brandonguigo.com"
             git config user.name "CircleCI"
 
-      # Install Rust and Cocogitto for version management
+      # Check for cached cocogitto installation
+      - restore_cache:
+          keys:
+            - cocogitto-v<< parameters.cocogitto_version >>-{{ arch }}
+
+      # Check if cocogitto is installed from cache
+      - run:
+          name: Check for cached cocogitto
+          command: |
+            if [ -f "/home/circleci/.cargo/bin/cog" ]; then
+              echo "Cocogitto found in cache"
+              /home/circleci/.cargo/bin/cog --version
+              echo 'export PATH=$HOME/.cargo/bin:$PATH' >> $BASH_ENV
+              source $BASH_ENV
+            else
+              echo "Cocogitto not found in cache, will install"
+            fi
+
+      # Install Rust and Cocogitto if not in cache
       - run:
           name: Download rustup
           command: |
-            wget https://static.rust-lang.org/rustup/dist/x86_64-unknown-linux-gnu/rustup-init
-            chmod +x rustup-init
+            if [ ! -f "/home/circleci/.cargo/bin/cog" ]; then
+              wget https://static.rust-lang.org/rustup/dist/x86_64-unknown-linux-gnu/rustup-init
+              chmod +x rustup-init
+            fi
 
       - run:
           name: Install Rust
           command: |
-            ./rustup-init -y --no-modify-path --default-toolchain nightly
-            rm rustup-init
-            echo 'export PATH=$HOME/.cargo/bin:$PATH' >> $BASH_ENV
+            if [ ! -f "/home/circleci/.cargo/bin/cog" ]; then
+              ./rustup-init -y --no-modify-path --default-toolchain nightly
+              rm rustup-init
+              echo 'export PATH=$HOME/.cargo/bin:$PATH' >> $BASH_ENV
+              source $BASH_ENV
+            fi
 
       - run:
           name: Install Cocogitto
-          command: cargo install cocogitto
+          command: |
+            if [ ! -f "/home/circleci/.cargo/bin/cog" ]; then
+              cargo install cocogitto --version << parameters.cocogitto_version >>
+            fi
           environment:
             RUSTFLAGS: --cfg procmacro2_semver_exempt
+
+      # Save cache after installation
+      - save_cache:
+          key: cocogitto-v<< parameters.cocogitto_version >>-{{ arch }}
+          paths:
+            - /home/circleci/.cargo/bin/cog
+            - /home/circleci/.cargo/registry
+            - /home/circleci/.cargo/bin/cargo-install-update
+            - /home/circleci/.cargo/bin/cargo-update
 
       - run:
           name: Check conventional commits validity
@@ -96,7 +141,7 @@ jobs:
               echo "No changes to commit"
             else
               git add CHANGELOG.md
-              git commit -m "chore(release): $(git describe --abbrev=0 --tags)"
+              git commit -m "[skip ci] chore(release): $(git describe --abbrev=0 --tags)"
             fi
             git push https://${GITHUB_PAT}@github.com/${GITHUB_ORG_NAME}/${GITHUB_REPO_NAME}.git main
 
@@ -123,7 +168,7 @@ jobs:
           command: |
             TAG=$(git describe --abbrev=0 --tags)
             echo "Pushing Docker image with tag $TAG"
-            echo $GITHUB_PAT | docker login ghcr.io -u $GITHUB_USERNAME --password-stdin
+            docker login ghcr.io -u $GITHUB_USERNAME --p $GITHUB_PAT
             docker push ghcr.io/$GITHUB_ORG_NAME/$GITHUB_REPO_NAME:$TAG
             echo "Docker image pushed successfully"
 
