@@ -24,10 +24,7 @@ func main() {
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatal().Msg("Error loading .env file")
-	}
+	_ = godotenv.Load()
 
 	mongoURI := os.Getenv("MONGO_URI")
 	if mongoURI == "" {

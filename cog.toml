@@ -6,7 +6,6 @@ generate_mono_repository_global_tag = true
 generate_mono_repository_package_tags = true
 branch_whitelist = []
 skip_ci = "[skip ci]"
-tag_prefix = "v"
 skip_untracked = false
 pre_bump_hooks = []
 post_bump_hooks = []
