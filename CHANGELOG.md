@@ -2,6 +2,15 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## 0.1.2 - 2025-03-15
+#### Bug Fixes
+- remove panic the env file is not present + remove tag_prefix - (e2f5f68) - Brandon Guigo
+#### Miscellaneous Chores
+- **(release)** v0.1.1 [skip ci] - (08ecdc8) - CircleCI
+- move the skip ci tag [skip ci] - (16f33da) - Brandon Guigo
+
+- - -
+
 ## v0.1.1 - 2025-03-11
 #### Bug Fixes
 - typo - (ce781a6) - Brandon Guigo
