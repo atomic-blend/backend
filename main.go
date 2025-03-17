@@ -27,7 +27,17 @@ func main() {
 	_ = godotenv.Load()
 
 	mongoURI := os.Getenv("MONGO_URI")
-	if mongoURI == "" {
+
+	mongoUsername := os.Getenv("MONGO_USERNAME")
+	mongoPassword := os.Getenv("MONGO_PASSWORD")
+	mongoHost := os.Getenv("MONGO_HOST")
+	mongoPort := os.Getenv("MONGO_PORT")
+	if mongoUsername != "" && mongoPassword != "" && mongoHost != ""{
+		mongoURI = "mongodb://" + mongoUsername + ":" + mongoPassword + "@" + mongoHost
+		if mongoPort != "" {
+			mongoURI = mongoURI + ":" + mongoPort
+		}
+	} else if mongoURI == "" {
 		mongoURI = "mongodb://mongo_user:password@mongodb:27017"
 	}
 
