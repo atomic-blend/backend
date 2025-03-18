@@ -184,13 +184,13 @@ jobs:
       - run:
           name: Update manifest
           command: |
-            echo "Fetching submodule"
-            git submodule sync
-            git submodule update --init
-            echo "Setting up GitHub credentials"
-            echo "machine github.com login brandonguigo password $GITHUB_PAT" > ~/.netrc
-            chmod 600 ~/.netrc
+            echo "Fetching infra"
+            cd ..
+            git clone https://${GITHUB_PAT}@github.com/${GITHUB_ORG_NAME}/infra.git
+            
+            cd ../project
             TAG=$(git describe --abbrev=0 --tags)
+            cd ../infra
             echo "Installing yq"
             sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64  
             sudo chmod a+x /usr/local/bin/yq
