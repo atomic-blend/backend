@@ -2,6 +2,14 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## 0.1.4 - 2025-03-18
+#### Bug Fixes
+- add database name to url - (1ae21a5) - Brandon Guigo
+#### Miscellaneous Chores
+- **(release)** 0.1.3 [skip ci] - (579b81d) - CircleCI
+
+- - -
+
 ## 0.1.3 - 2025-03-18
 #### Bug Fixes
 - add some logs - (8fea7e5) - Brandon Guigo
