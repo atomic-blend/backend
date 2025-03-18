@@ -31,7 +31,7 @@ func ConnectMongo(uri *string) (*mongo.Client, error) {
 	if uri == nil {
 		err := fmt.Errorf("MONGO_URI is not set")
 		return nil, err
-	}
+	} 
 
 	shortcuts.CheckRequiredEnvVar("DATABASE_NAME", databaseName, "")
 
