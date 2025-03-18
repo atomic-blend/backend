@@ -2,6 +2,14 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## 0.1.9 - 2025-03-18
+#### Bug Fixes
+- try to use relative url so auth might works ? - (c530ef8) - Brandon Guigo
+#### Miscellaneous Chores
+- **(release)** 0.1.8 [skip ci] - (9c1adde) - CircleCI
+
+- - -
+
 ## 0.1.8 - 2025-03-18
 #### Bug Fixes
 - move submodule init - (24e6e90) - Brandon Guigo
