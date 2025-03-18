@@ -2,6 +2,15 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## 0.1.3 - 2025-03-18
+#### Bug Fixes
+- add some logs - (8fea7e5) - Brandon Guigo
+- parse mongo config from separate env vars - (1abcbd3) - Brandon Guigo
+#### Miscellaneous Chores
+- **(release)** 0.1.2 [skip ci] - (9f7251c) - CircleCI
+
+- - -
+
 ## 0.1.2 - 2025-03-15
 #### Bug Fixes
 - remove panic the env file is not present + remove tag_prefix - (e2f5f68) - Brandon Guigo
