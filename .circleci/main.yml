@@ -195,10 +195,10 @@ jobs:
             yq --version
             echo "Updating manifest with tag $TAG"
             cd kubernetes/values
-            yq eval '.backend.version = "'$TAG'"' -i backend-values.yaml
+            yq eval '.backend.version = "'$TAG'"' -i manifest.yaml
             git config user.email "pro@brandonguigo.com"
             git config user.name "CircleCI"
-            git add backend-values.yaml
+            git add manifest.yaml
             git commit -m "chore(release): update backend version to $TAG [skip ci]"
             git push https://${GITHUB_PAT}@github.com/${GITHUB_ORG_NAME}/infra.git main
             echo "Manifest updated successfully"
