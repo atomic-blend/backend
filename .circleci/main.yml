@@ -173,6 +173,33 @@ jobs:
             docker push ghcr.io/$GITHUB_ORG_NAME/$GITHUB_REPO_NAME:$TAG
             echo "Docker image pushed successfully"
 
+  update-manifest:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: medium
+    working_directory: ~/project
+    steps:
+      - checkout:
+          path: ~/project
+          post:
+            - git submodule init 
+            - git submodule update
+      - run:
+          name: Update manifest
+          command: |
+            TAG=$(git describe --abbrev=0 --tags)
+            echo "Installing yq"
+            sudo apt update && sudo apt install -y yq
+            echo "Updating manifest with tag $TAG"
+            cd infra/kubernetes/values
+            yq eval '.backend.version = "'$TAG'"' -i backend-values.yaml
+            git config user.email "pro@brandonguigo.com"
+            git config user.name "CircleCI"
+            git add backend-values.yaml
+            git commit -m "chore(release): update backend version to $TAG [skip ci]"
+            git push https://${GITHUB_PAT}@github.com/${GITHUB_ORG_NAME}/infra.git main
+            echo "Manifest updated successfully"
+
 # Workflow definition
 workflows:
   version: 2
@@ -185,3 +212,6 @@ workflows:
       - build-docker-images:
           requires:
             - bump-version
+      - update-manifest:
+          requires:
+            - build-docker-images
