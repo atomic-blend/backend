@@ -2,6 +2,14 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## 0.1.14 - 2025-03-18
+#### Bug Fixes
+- manifest file name - (d5bc5ac) - Brandon Guigo
+#### Miscellaneous Chores
+- **(release)** 0.1.13 [skip ci] - (9c6578f) - CircleCI
+
+- - -
+
 ## 0.1.13 - 2025-03-18
 #### Bug Fixes
 - bad path - (e28cd1a) - Brandon Guigo
