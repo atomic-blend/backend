@@ -32,6 +32,9 @@ func main() {
 	mongoPassword := os.Getenv("MONGO_PASSWORD")
 	mongoHost := os.Getenv("MONGO_HOST")
 	mongoPort := os.Getenv("MONGO_PORT")
+	log.Info().Msgf("MONGO_USERNAME: %s", mongoUsername)
+	log.Info().Msgf("MONGO_HOST: %s", mongoHost)
+	log.Info().Msgf("MONGO_PORT: %s", mongoPort)
 	if mongoUsername != "" && mongoPassword != "" && mongoHost != ""{
 		mongoURI = "mongodb://" + mongoUsername + ":" + mongoPassword + "@" + mongoHost
 		if mongoPort != "" {
