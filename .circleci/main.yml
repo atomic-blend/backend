@@ -182,14 +182,16 @@ jobs:
       - checkout:
           path: ~/project
           post:
-            - git submodule init 
+            - git submodule init
             - git submodule update
       - run:
           name: Update manifest
           command: |
             TAG=$(git describe --abbrev=0 --tags)
             echo "Installing yq"
-            sudo apt update && sudo apt install -y yq
+            sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64  
+            sudo chmod a+x /usr/local/bin/yq
+            yq --version
             echo "Updating manifest with tag $TAG"
             cd infra/kubernetes/values
             yq eval '.backend.version = "'$TAG'"' -i backend-values.yaml
