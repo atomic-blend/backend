@@ -2,6 +2,14 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## 0.1.12 - 2025-03-18
+#### Bug Fixes
+- order of the steps in the script - (b174f62) - Brandon Guigo
+#### Miscellaneous Chores
+- **(release)** 0.1.11 [skip ci] - (e2601ce) - CircleCI
+
+- - -
+
 ## 0.1.11 - 2025-03-18
 #### Bug Fixes
 - try manual clone in script with PAT - (60e7fa6) - Brandon Guigo
