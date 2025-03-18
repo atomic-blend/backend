@@ -181,12 +181,12 @@ jobs:
     steps:
       - checkout:
           path: ~/project
-          post:
-            - git submodule sync
-            - git submodule update --init
       - run:
           name: Update manifest
           command: |
+            echo "Fetching submodule"
+            git submodule sync
+            git submodule update --init
             TAG=$(git describe --abbrev=0 --tags)
             echo "Installing yq"
             sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64  
