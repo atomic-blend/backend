@@ -2,6 +2,14 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## 0.1.8 - 2025-03-18
+#### Bug Fixes
+- move submodule init - (24e6e90) - Brandon Guigo
+#### Miscellaneous Chores
+- **(release)** 0.1.7 [skip ci] - (6702307) - CircleCI
+
+- - -
+
 ## 0.1.7 - 2025-03-18
 #### Bug Fixes
 - try new submodule clone - (54436c1) - Brandon Guigo
