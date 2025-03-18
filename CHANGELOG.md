@@ -2,6 +2,14 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## 0.1.10 - 2025-03-18
+#### Bug Fixes
+- try with a netrc - (141c217) - Brandon Guigo
+#### Miscellaneous Chores
+- **(release)** 0.1.9 [skip ci] - (706aaf6) - CircleCI
+
+- - -
+
 ## 0.1.9 - 2025-03-18
 #### Bug Fixes
 - try to use relative url so auth might works ? - (c530ef8) - Brandon Guigo
