@@ -2,6 +2,14 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## 0.1.7 - 2025-03-18
+#### Bug Fixes
+- try new submodule clone - (54436c1) - Brandon Guigo
+#### Miscellaneous Chores
+- **(release)** 0.1.6 [skip ci] - (728b33b) - CircleCI
+
+- - -
+
 ## 0.1.6 - 2025-03-18
 #### Bug Fixes
 - yq install - (019a317) - Brandon Guigo
