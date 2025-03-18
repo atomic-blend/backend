@@ -2,6 +2,15 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## 0.1.5 - 2025-03-18
+#### Bug Fixes
+- try to release new version of API with circleCI - (c605775) - Brandon Guigo
+#### Miscellaneous Chores
+- **(release)** 0.1.4 [skip ci] - (a9c9377) - CircleCI
+- add infra submodule [skip ci] - (667b4f0) - Brandon Guigo
+
+- - -
+
 ## 0.1.4 - 2025-03-18
 #### Bug Fixes
 - add database name to url - (1ae21a5) - Brandon Guigo
