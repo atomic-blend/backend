@@ -2,6 +2,14 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## 0.1.6 - 2025-03-18
+#### Bug Fixes
+- yq install - (019a317) - Brandon Guigo
+#### Miscellaneous Chores
+- **(release)** 0.1.5 [skip ci] - (b7cbb2e) - CircleCI
+
+- - -
+
 ## 0.1.5 - 2025-03-18
 #### Bug Fixes
 - try to release new version of API with circleCI - (c605775) - Brandon Guigo
