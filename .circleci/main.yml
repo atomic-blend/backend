@@ -195,7 +195,7 @@ jobs:
             yq --version
             echo "Updating manifest with tag $TAG"
             cd kubernetes/values
-            yq eval '.backend.version = "'$TAG'"' -i manifest.yaml
+            yq eval '.manifest.backend.version = "'$TAG'"' -i manifest.yaml
             git config user.email "pro@brandonguigo.com"
             git config user.name "CircleCI"
             git add manifest.yaml
