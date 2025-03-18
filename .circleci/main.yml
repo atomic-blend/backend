@@ -182,8 +182,8 @@ jobs:
       - checkout:
           path: ~/project
           post:
-            - git submodule init
-            - git submodule update
+            - git submodule sync
+            - git submodule update --init
       - run:
           name: Update manifest
           command: |
