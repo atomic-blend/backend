@@ -11,6 +11,6 @@ type TaskEntity struct {
 	StartDate   *primitive.DateTime `json:"startDate" bson:"start_date"`
 	EndDate     *primitive.DateTime `json:"endDate,omitempty" bson:"end_date"`
 	Completed   *bool               `json:"completed" bson:"completed"`
-	CreatedAt   string              `json:"createdAt" bson:"created_at"`
-	UpdatedAt   string              `json:"updatedAt" bson:"updated_at"`
+	CreatedAt   primitive.DateTime  `json:"createdAt" bson:"created_at"`
+	UpdatedAt   primitive.DateTime  `json:"updatedAt" bson:"updated_at"`
 }

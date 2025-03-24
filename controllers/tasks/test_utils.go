@@ -22,8 +22,8 @@ func createTestTask() *models.TaskEntity {
 		User:        primitive.NewObjectID(),
 		StartDate:   &now,
 		EndDate:     &end,
-		CreatedAt:   time.Now().Format(time.RFC3339),
-		UpdatedAt:   time.Now().Format(time.RFC3339),
+		CreatedAt:   primitive.NewDateTimeFromTime(time.Now()),
+		UpdatedAt:   primitive.NewDateTimeFromTime(time.Now()),
 	}
 }
 
