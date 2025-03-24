@@ -42,9 +42,10 @@ func (suite *RefreshTokenTestSuite) TestRefreshToken() {
 	userID := primitive.NewObjectID()
 	email := "test@example.com"
 	keySet := models.EncryptionKey{
-		UserKey:   "testUserKey123",
-		BackupKey: "testBackupKey123",
-		UserSalt:  "testUserSalt123",
+		UserKey:      "testUserKey123",
+		BackupKey:    "testBackupKey123",
+		Salt:         "testSalt123",
+		MnemonicSalt: "testMnemonicSalt123",
 	}
 	now := primitive.NewDateTimeFromTime(time.Now())
 	roleID := primitive.NewObjectID()
@@ -91,13 +92,14 @@ func (suite *RefreshTokenTestSuite) TestRefreshToken() {
 				assert.NotNil(suite.T(), response.User)
 				assert.Equal(suite.T(), *response.User.ID, userID)
 				assert.Equal(suite.T(), *response.User.Email, email)
-				
+
 				// Verify KeySet
 				assert.NotNil(suite.T(), response.User.KeySet)
 				assert.Equal(suite.T(), "testUserKey123", response.User.KeySet.UserKey)
 				assert.Equal(suite.T(), "testBackupKey123", response.User.KeySet.BackupKey)
-				assert.Equal(suite.T(), "testUserSalt123", response.User.KeySet.UserSalt)
-				
+				assert.Equal(suite.T(), "testSalt123", response.User.KeySet.Salt)
+				assert.Equal(suite.T(), "testMnemonicSalt123", response.User.KeySet.MnemonicSalt)
+
 				assert.Equal(suite.T(), response.User.Roles[0], role)
 			},
 		},

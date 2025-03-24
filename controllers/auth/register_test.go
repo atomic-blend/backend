@@ -77,9 +77,10 @@ func TestRegister(t *testing.T) {
 				"email":    "newuser@example.com",
 				"password": "securePassword123",
 				"keySet": map[string]interface{}{
-					"userKey":   "encryptedUserKey123",
-					"backupKey": "encryptedBackupKey123",
-					"userSalt":  "userSalt123",
+					"userKey":      "encryptedUserKey123",
+					"backupKey":    "encryptedBackupKey123",
+					"salt":         "salt123",
+					"mnemonicSalt": "mnemonicSalt123",
 				},
 			},
 			expectedStatus: http.StatusCreated,
@@ -109,12 +110,13 @@ func TestRegister(t *testing.T) {
 				// Verify password is hashed
 				assert.NotNil(t, savedUser.Password)
 				assert.NotEqual(t, "securePassword123", *savedUser.Password)
-				
+
 				// Verify KeySet
 				assert.NotNil(t, savedUser.KeySet)
 				assert.Equal(t, "encryptedUserKey123", savedUser.KeySet.UserKey)
 				assert.Equal(t, "encryptedBackupKey123", savedUser.KeySet.BackupKey)
-				assert.Equal(t, "userSalt123", savedUser.KeySet.UserSalt)
+				assert.Equal(t, "salt123", savedUser.KeySet.Salt)
+				assert.Equal(t, "mnemonicSalt123", savedUser.KeySet.MnemonicSalt)
 
 				// Verify role assignment in database
 				assert.NotNil(t, savedUser.RoleIds)
@@ -131,9 +133,10 @@ func TestRegister(t *testing.T) {
 				"email":    "existing@example.com",
 				"password": "securePassword123",
 				"keySet": map[string]interface{}{
-					"userKey":   "encryptedUserKey123",
-					"backupKey": "encryptedBackupKey123",
-					"userSalt":  "userSalt123",
+					"userKey":      "encryptedUserKey123",
+					"backupKey":    "encryptedBackupKey123",
+					"salt":         "salt123",
+					"mnemonicSalt": "mnemonicSalt123",
 				},
 			},
 			expectedStatus: http.StatusConflict,
@@ -161,9 +164,10 @@ func TestRegister(t *testing.T) {
 				"email":    "invalidemail",
 				"password": "securePassword123",
 				"keySet": map[string]interface{}{
-					"userKey":   "encryptedUserKey123",
-					"backupKey": "encryptedBackupKey123",
-					"userSalt":  "userSalt123",
+					"userKey":      "encryptedUserKey123",
+					"backupKey":    "encryptedBackupKey123",
+					"salt":         "salt123",
+					"mnemonicSalt": "mnemonicSalt123",
 				},
 			},
 			expectedStatus: http.StatusBadRequest,
@@ -183,9 +187,10 @@ func TestRegister(t *testing.T) {
 				"email":    "valid@example.com",
 				"password": "short",
 				"keySet": map[string]interface{}{
-					"userKey":   "encryptedUserKey123",
-					"backupKey": "encryptedBackupKey123",
-					"userSalt":  "userSalt123",
+					"userKey":      "encryptedUserKey123",
+					"backupKey":    "encryptedBackupKey123",
+					"salt":         "salt123",
+					"mnemonicSalt": "mnemonicSalt123",
 				},
 			},
 			expectedStatus: http.StatusBadRequest,
@@ -204,9 +209,10 @@ func TestRegister(t *testing.T) {
 			requestBody: map[string]interface{}{
 				"password": "securePassword123",
 				"keySet": map[string]interface{}{
-					"userKey":   "encryptedUserKey123",
-					"backupKey": "encryptedBackupKey123",
-					"userSalt":  "userSalt123",
+					"userKey":      "encryptedUserKey123",
+					"backupKey":    "encryptedBackupKey123",
+					"salt":         "salt123",
+					"mnemonicSalt": "mnemonicSalt123",
 				},
 			},
 			expectedStatus: http.StatusBadRequest,
@@ -225,9 +231,10 @@ func TestRegister(t *testing.T) {
 			requestBody: map[string]interface{}{
 				"email": "valid@example.com",
 				"keySet": map[string]interface{}{
-					"userKey":   "encryptedUserKey123",
-					"backupKey": "encryptedBackupKey123",
-					"userSalt":  "userSalt123",
+					"userKey":      "encryptedUserKey123",
+					"backupKey":    "encryptedBackupKey123",
+					"salt":         "salt123",
+					"mnemonicSalt": "mnemonicSalt123",
 				},
 			},
 			expectedStatus: http.StatusBadRequest,
