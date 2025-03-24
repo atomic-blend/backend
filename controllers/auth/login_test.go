@@ -65,12 +65,16 @@ func TestLogin(t *testing.T) {
 	// Create a test user with role reference
 	hashedPassword, _ := password.HashPassword("testPassword123")
 	testUserID := primitive.NewObjectID()
-	keySalt := "0123456789abcdef0123456789abcdef" // Test key salt
+	keySet := models.EncryptionKey{
+		UserKey:   "testUserKey123",
+		BackupKey: "testBackupKey123",
+		UserSalt:  "testUserSalt123",
+	}
 	testUser := models.UserEntity{
 		ID:       &testUserID,
 		Email:    stringPtr("test@example.com"),
 		Password: &hashedPassword,
-		KeySalt:  &keySalt,
+		KeySet:   &keySet,
 		RoleIds:  []*primitive.ObjectID{&roleID}, // Add role reference
 	}
 
@@ -103,8 +107,12 @@ func TestLogin(t *testing.T) {
 				assert.NotNil(t, response.User)
 				assert.Equal(t, "test@example.com", *response.User.Email)
 				assert.Nil(t, response.User.Password) // Password should not be returned
-				assert.NotNil(t, response.User.KeySalt)
-				assert.Equal(t, keySalt, *response.User.KeySalt)
+				
+				// Verify KeySet
+				assert.NotNil(t, response.User.KeySet)
+				assert.Equal(t, "testUserKey123", response.User.KeySet.UserKey)
+				assert.Equal(t, "testBackupKey123", response.User.KeySet.BackupKey)
+				assert.Equal(t, "testUserSalt123", response.User.KeySet.UserSalt)
 
 				// Verify roles are populated
 				assert.NotNil(t, response.User.Roles)

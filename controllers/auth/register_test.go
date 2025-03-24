@@ -76,6 +76,11 @@ func TestRegister(t *testing.T) {
 			requestBody: map[string]interface{}{
 				"email":    "newuser@example.com",
 				"password": "securePassword123",
+				"keySet": map[string]interface{}{
+					"userKey":   "encryptedUserKey123",
+					"backupKey": "encryptedBackupKey123",
+					"userSalt":  "userSalt123",
+				},
 			},
 			expectedStatus: http.StatusCreated,
 			checkResponse: func(t *testing.T, w *httptest.ResponseRecorder, db *mongo.Database) {
@@ -101,11 +106,15 @@ func TestRegister(t *testing.T) {
 				err = db.Collection("users").FindOne(nil, bson.M{"email": "newuser@example.com"}).Decode(&savedUser)
 				assert.NoError(t, err)
 
-				// Verify password and key salt
+				// Verify password is hashed
 				assert.NotNil(t, savedUser.Password)
 				assert.NotEqual(t, "securePassword123", *savedUser.Password)
-				assert.NotNil(t, savedUser.KeySalt)
-				assert.Len(t, *savedUser.KeySalt, 32)
+				
+				// Verify KeySet
+				assert.NotNil(t, savedUser.KeySet)
+				assert.Equal(t, "encryptedUserKey123", savedUser.KeySet.UserKey)
+				assert.Equal(t, "encryptedBackupKey123", savedUser.KeySet.BackupKey)
+				assert.Equal(t, "userSalt123", savedUser.KeySet.UserSalt)
 
 				// Verify role assignment in database
 				assert.NotNil(t, savedUser.RoleIds)
@@ -121,6 +130,11 @@ func TestRegister(t *testing.T) {
 			requestBody: map[string]interface{}{
 				"email":    "existing@example.com",
 				"password": "securePassword123",
+				"keySet": map[string]interface{}{
+					"userKey":   "encryptedUserKey123",
+					"backupKey": "encryptedBackupKey123",
+					"userSalt":  "userSalt123",
+				},
 			},
 			expectedStatus: http.StatusConflict,
 			checkResponse: func(t *testing.T, w *httptest.ResponseRecorder, db *mongo.Database) {
@@ -146,6 +160,11 @@ func TestRegister(t *testing.T) {
 			requestBody: map[string]interface{}{
 				"email":    "invalidemail",
 				"password": "securePassword123",
+				"keySet": map[string]interface{}{
+					"userKey":   "encryptedUserKey123",
+					"backupKey": "encryptedBackupKey123",
+					"userSalt":  "userSalt123",
+				},
 			},
 			expectedStatus: http.StatusBadRequest,
 			checkResponse: func(t *testing.T, w *httptest.ResponseRecorder, db *mongo.Database) {
@@ -163,6 +182,11 @@ func TestRegister(t *testing.T) {
 			requestBody: map[string]interface{}{
 				"email":    "valid@example.com",
 				"password": "short",
+				"keySet": map[string]interface{}{
+					"userKey":   "encryptedUserKey123",
+					"backupKey": "encryptedBackupKey123",
+					"userSalt":  "userSalt123",
+				},
 			},
 			expectedStatus: http.StatusBadRequest,
 			checkResponse: func(t *testing.T, w *httptest.ResponseRecorder, db *mongo.Database) {
@@ -179,6 +203,11 @@ func TestRegister(t *testing.T) {
 			name: "Missing Email",
 			requestBody: map[string]interface{}{
 				"password": "securePassword123",
+				"keySet": map[string]interface{}{
+					"userKey":   "encryptedUserKey123",
+					"backupKey": "encryptedBackupKey123",
+					"userSalt":  "userSalt123",
+				},
 			},
 			expectedStatus: http.StatusBadRequest,
 			checkResponse: func(t *testing.T, w *httptest.ResponseRecorder, db *mongo.Database) {
@@ -195,6 +224,28 @@ func TestRegister(t *testing.T) {
 			name: "Missing Password",
 			requestBody: map[string]interface{}{
 				"email": "valid@example.com",
+				"keySet": map[string]interface{}{
+					"userKey":   "encryptedUserKey123",
+					"backupKey": "encryptedBackupKey123",
+					"userSalt":  "userSalt123",
+				},
+			},
+			expectedStatus: http.StatusBadRequest,
+			checkResponse: func(t *testing.T, w *httptest.ResponseRecorder, db *mongo.Database) {
+				var response map[string]string
+				err := json.Unmarshal(w.Body.Bytes(), &response)
+				assert.NoError(t, err)
+				assert.Contains(t, response, "error")
+			},
+			setupTest: func(t *testing.T, db *mongo.Database) {
+				// No setup needed for this test case
+			},
+		},
+		{
+			name: "Missing KeySet",
+			requestBody: map[string]interface{}{
+				"email":    "valid@example.com",
+				"password": "securePassword123",
 			},
 			expectedStatus: http.StatusBadRequest,
 			checkResponse: func(t *testing.T, w *httptest.ResponseRecorder, db *mongo.Database) {

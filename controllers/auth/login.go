@@ -70,7 +70,7 @@ func (c *Controller) Login(ctx *gin.Context) {
 	responseSafeUser := &models.UserEntity{
 		ID:        user.ID,
 		Email:     user.Email,
-		KeySalt:   user.KeySalt,
+		KeySet:   user.KeySet,
 		Roles:     user.Roles,
 		CreatedAt: user.CreatedAt,
 		UpdatedAt: user.UpdatedAt,

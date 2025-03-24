@@ -9,7 +9,7 @@ type UserEntity struct {
 	ID        *primitive.ObjectID   `json:"id" bson:"_id"`
 	Email     *string               `json:"email" bson:"email" binding:"required"`
 	Password  *string               `json:"password,omitempty" bson:"password" binding:"required"`
-	KeySalt   *string               `json:"keySalt" bson:"key_salt"`
+	KeySet    *EncryptionKey        `json:"keySet,omitempty" bson:"key_set" binding:"required"`
 	RoleIds   []*primitive.ObjectID `json:"-" bson:"role_ids"`
 	Roles     []*UserRoleEntity     `json:"roles" bson:"roles,omitempty"`
 	CreatedAt *primitive.DateTime   `json:"createdAt" bson:"created_at"`

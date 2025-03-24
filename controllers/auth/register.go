@@ -67,7 +67,7 @@ func (c *Controller) Register(ctx *gin.Context) {
 	user := &models.UserEntity{
 		Email:    &req.Email,
 		Password: &hashedPassword,
-		KeySalt:  &keySalt,
+		KeySet: req.KeySet,
 		RoleIds:  []*primitive.ObjectID{defaultRole.ID},
 	}
 
@@ -103,7 +103,7 @@ func (c *Controller) Register(ctx *gin.Context) {
 	responseSafeUser := &models.UserEntity{
 		ID:        newUser.ID,
 		Email:     newUser.Email,
-		KeySalt:   newUser.KeySalt,
+		KeySet:   newUser.KeySet,
 		Roles:     newUser.Roles,
 		CreatedAt: newUser.CreatedAt,
 		UpdatedAt: newUser.UpdatedAt,
