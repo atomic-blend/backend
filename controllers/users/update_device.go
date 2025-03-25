@@ -76,6 +76,13 @@ func (c *UserController) UpdateDeviceInfo(ctx *gin.Context) {
 		return
 	}
 
+	err = c.userRoleRepo.PopulateRoles(ctx, updatedUser)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to populate user roles")
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to populate user roles"})
+		return
+	}
+
 	// Remove sensitive data before sending response
 	updatedUser.Password = nil
 
