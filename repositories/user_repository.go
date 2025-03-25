@@ -44,6 +44,15 @@ func NewUserRepository(database *mongo.Database) *UserRepository {
 	}
 }
 
+// GetAllIterable retrieves all users from the database
+func (r *UserRepository) GetAllIterable(ctx context.Context) (*mongo.Cursor, error) {
+	cursor, err := r.collection.Find(ctx, bson.M{})
+	if err != nil {
+		return nil, err
+	}
+	return cursor, nil
+}
+
 // Create adds a new user to the database
 func (r *UserRepository) Create(ctx context.Context, user *models.UserEntity) (*models.UserEntity, error) {
 	// Generate an ID if not provided

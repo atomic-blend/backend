@@ -72,6 +72,9 @@ func TestUpdateDeviceInfo(t *testing.T) {
 
 				// Mock updating user
 				userRepo.On("Update", mock.Anything, mock.AnythingOfType("*models.UserEntity")).Return(updatedUser, nil)
+
+				// Mock PopulateRoles call
+				userRoleRepo.On("PopulateRoles", mock.Anything, updatedUser).Return(nil)
 			},
 			expectedStatus: http.StatusOK,
 			checkResponse: func(t *testing.T, w *httptest.ResponseRecorder) {
@@ -143,6 +146,9 @@ func TestUpdateDeviceInfo(t *testing.T) {
 
 				// Mock updating user
 				userRepo.On("Update", mock.Anything, mock.AnythingOfType("*models.UserEntity")).Return(updatedUser, nil)
+
+				// Mock PopulateRoles call
+				userRoleRepo.On("PopulateRoles", mock.Anything, updatedUser).Return(nil)
 			},
 			expectedStatus: http.StatusOK,
 			checkResponse: func(t *testing.T, w *httptest.ResponseRecorder) {
@@ -251,6 +257,9 @@ func TestUpdateDeviceInfo(t *testing.T) {
 
 				// Mock error when updating user
 				userRepo.On("Update", mock.Anything, mock.AnythingOfType("*models.UserEntity")).Return(nil, errors.New("update failed"))
+
+				// We don't mock PopulateRoles here because Update returns an error,
+				// so PopulateRoles should never be called
 			},
 			expectedStatus: http.StatusInternalServerError,
 			checkResponse: func(t *testing.T, w *httptest.ResponseRecorder) {
@@ -258,6 +267,58 @@ func TestUpdateDeviceInfo(t *testing.T) {
 				err := json.Unmarshal(w.Body.Bytes(), &response)
 				assert.NoError(t, err)
 				assert.Equal(t, "Failed to update device information", response["error"])
+			},
+		},
+		{
+			name: "Error populating roles",
+			setupAuth: func(c *gin.Context) {
+				userID := primitive.NewObjectID()
+				c.Set("authUser", &auth.UserAuthInfo{UserID: userID})
+			},
+			reqBody: map[string]interface{}{
+				"deviceId":   "device123",
+				"deviceName": "My Device",
+				"fcmToken":   "fcm-token",
+			},
+			setupMocks: func(userRepo *mocks.MockUserRepository, userRoleRepo *mocks.MockUserRoleRepository) {
+				userID := primitive.NewObjectID()
+				email := "test@example.com"
+				password := "password-hash"
+				user := &models.UserEntity{
+					ID:       &userID,
+					Email:    &email,
+					Password: &password,
+					Devices:  []*models.UserDevice{},
+				}
+
+				// Mock finding user successfully
+				userRepo.On("FindByID", mock.Anything, mock.AnythingOfType("primitive.ObjectID")).Return(user, nil)
+
+				updatedUser := &models.UserEntity{
+					ID:       &userID,
+					Email:    &email,
+					Password: &password,
+					Devices: []*models.UserDevice{
+						{
+							DeviceID:   "device123",
+							DeviceName: "My Device",
+							FcmToken:   "fcm-token",
+						},
+					},
+				}
+
+				// Mock updating user successfully
+				userRepo.On("Update", mock.Anything, mock.AnythingOfType("*models.UserEntity")).Return(updatedUser, nil)
+
+				// Mock error when populating roles
+				userRoleRepo.On("PopulateRoles", mock.Anything, updatedUser).Return(errors.New("role population error"))
+			},
+			expectedStatus: http.StatusInternalServerError,
+			checkResponse: func(t *testing.T, w *httptest.ResponseRecorder) {
+				var response map[string]string
+				err := json.Unmarshal(w.Body.Bytes(), &response)
+				assert.NoError(t, err)
+				assert.Equal(t, "Failed to populate user roles", response["error"])
 			},
 		},
 	}
