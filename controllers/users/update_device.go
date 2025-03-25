@@ -9,13 +9,6 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// UpdateDeviceRequest represents the data needed to update a user device
-type UpdateDeviceRequest struct {
-	DeviceID   string `json:"deviceId" binding:"required"`
-	DeviceName string `json:"deviceName" binding:"required"`
-	FcmToken   string `json:"fcmToken" binding:"required"`
-}
-
 // UpdateDeviceInfo allows users to add or update device information
 func (c *UserController) UpdateDeviceInfo(ctx *gin.Context) {
 	// Get authenticated user from context
@@ -26,7 +19,7 @@ func (c *UserController) UpdateDeviceInfo(ctx *gin.Context) {
 	}
 
 	// Parse and validate device update request
-	var deviceReq UpdateDeviceRequest
+	var deviceReq models.UserDevice
 	if err := ctx.ShouldBindJSON(&deviceReq); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request format", "details": err.Error()})
 		return
@@ -40,13 +33,6 @@ func (c *UserController) UpdateDeviceInfo(ctx *gin.Context) {
 		return
 	}
 
-	// Create device object from request
-	newDevice := &models.UserDevice{
-		DeviceID:   deviceReq.DeviceID,
-		DeviceName: deviceReq.DeviceName,
-		FcmToken:   deviceReq.FcmToken,
-	}
-
 	// Check if devices array is initialized
 	if user.Devices == nil {
 		user.Devices = make([]*models.UserDevice, 0)
@@ -57,7 +43,7 @@ func (c *UserController) UpdateDeviceInfo(ctx *gin.Context) {
 	for i, device := range user.Devices {
 		if device.DeviceID == deviceReq.DeviceID {
 			// Update existing device
-			user.Devices[i] = newDevice
+			user.Devices[i] = &deviceReq
 			deviceFound = true
 			break
 		}
@@ -65,7 +51,7 @@ func (c *UserController) UpdateDeviceInfo(ctx *gin.Context) {
 
 	// If device not found, add it
 	if !deviceFound {
-		user.Devices = append(user.Devices, newDevice)
+		user.Devices = append(user.Devices, &deviceReq)
 	}
 
 	// Update user in database
