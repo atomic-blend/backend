@@ -1,9 +1,7 @@
 version: "3.8"
-
 services:
-  api:
+  api-ab:
     build:
-      context: ./api
       dockerfile: Dockerfile.dev  # Use a dev-specific Dockerfile
     container_name: api-atomic-blend
     ports:
