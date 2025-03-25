@@ -64,7 +64,6 @@ func (c *UserController) UpdateProfile(ctx *gin.Context) {
 
 	// Remove sensitive data before sending response
 	updatedUser.Password = nil
-	updatedUser.KeySet = nil
 
 	// Return updated user profile
 	ctx.JSON(http.StatusOK, gin.H{

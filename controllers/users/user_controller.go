@@ -37,7 +37,7 @@ func SetupRoutes(router *gin.Engine, database *mongo.Database) {
 		protectedUserRoutes.GET("/profile", userController.GetMyProfile)
 		protectedUserRoutes.PUT("/profile", userController.UpdateProfile)
 		protectedUserRoutes.DELETE("/me", userController.DeleteAccount)
-
+		protectedUserRoutes.PUT("/device", userController.UpdateDeviceInfo)
 		// Add more protected routes here as needed
 	}
 }

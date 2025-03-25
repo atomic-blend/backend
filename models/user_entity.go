@@ -12,6 +12,7 @@ type UserEntity struct {
 	KeySet    *EncryptionKey        `json:"keySet,omitempty" bson:"key_set" binding:"required"`
 	RoleIds   []*primitive.ObjectID `json:"-" bson:"role_ids"`
 	Roles     []*UserRoleEntity     `json:"roles" bson:"roles,omitempty"`
+	Devices   []*UserDevice         `json:"devices" bson:"devices,omitempty"`
 	CreatedAt *primitive.DateTime   `json:"createdAt" bson:"created_at"`
 	UpdatedAt *primitive.DateTime   `json:"updatedAt" bson:"updated_at"`
 }
