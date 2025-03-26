@@ -48,6 +48,8 @@ func TestGetTaskByID(t *testing.T) {
 		assert.Equal(t, task.Title, response.Title)
 		assert.Equal(t, task.StartDate, response.StartDate)
 		assert.Equal(t, task.EndDate, response.EndDate)
+		assert.NotNil(t, response.Reminders)
+		assert.Len(t, response.Reminders, 2) // Verify reminders are included in the response
 	})
 
 	t.Run("task not found", func(t *testing.T) {

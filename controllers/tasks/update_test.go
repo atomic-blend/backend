@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
@@ -40,6 +41,12 @@ func TestUpdateTask(t *testing.T) {
 		updatedTask.User = userID
 		updatedTask.Title = "Updated Task"
 
+		// Update reminders for testing
+		reminder1 := primitive.NewDateTimeFromTime(time.Now().Add(6 * time.Hour))
+		reminder2 := primitive.NewDateTimeFromTime(time.Now().Add(8 * time.Hour))
+		reminder3 := primitive.NewDateTimeFromTime(time.Now().Add(10 * time.Hour))
+		updatedTask.Reminders = []*primitive.DateTime{&reminder1, &reminder2, &reminder3}
+
 		mockRepo.On("GetByID", mock.Anything, taskID).Return(existingTask, nil)
 		mockRepo.On("Update", mock.Anything, taskID, mock.AnythingOfType("*models.TaskEntity")).Return(updatedTask, nil)
 
@@ -66,6 +73,8 @@ func TestUpdateTask(t *testing.T) {
 		assert.Equal(t, updatedTask.StartDate, response.StartDate)
 		assert.Equal(t, updatedTask.EndDate, response.EndDate)
 		assert.Equal(t, userID, response.User) // Verify the task owner hasn't changed
+		assert.NotNil(t, response.Reminders)
+		assert.Len(t, response.Reminders, 3) // Verify updated reminders are included
 	})
 
 	t.Run("unauthorized access - no auth user", func(t *testing.T) {

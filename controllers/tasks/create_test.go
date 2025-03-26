@@ -48,12 +48,13 @@ func TestCreateTask(t *testing.T) {
 		assert.Equal(t, task.StartDate, response.StartDate)
 		assert.Equal(t, task.EndDate, response.EndDate)
 		assert.Equal(t, userID, response.User) // Verify the task is owned by the authenticated user
+		assert.NotNil(t, response.Reminders)
+		assert.Len(t, response.Reminders, 2) // Verify reminders were preserved
 	})
 
 	t.Run("unauthorized - no auth user", func(t *testing.T) {
 		task := createTestTask()
 		taskJSON, _ := json.Marshal(task)
-
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("POST", "/tasks", bytes.NewBuffer(taskJSON))
 		req.Header.Set("Content-Type", "application/json")

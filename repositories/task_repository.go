@@ -100,6 +100,7 @@ func (r *TaskRepository) Create(ctx context.Context, task *models.TaskEntity) (*
 		"start_date":  task.StartDate,
 		"end_date":    task.EndDate,
 		"completed":   task.Completed,
+		"reminders":   task.Reminders,
 		"created_at":  task.CreatedAt,
 		"updated_at":  task.UpdatedAt,
 	})
@@ -127,6 +128,7 @@ func (r *TaskRepository) Update(ctx context.Context, id string, task *models.Tas
 			"start_date":  task.StartDate,
 			"end_date":    task.EndDate,
 			"completed":   task.Completed,
+			"reminders":   task.Reminders,
 			"updated_at":  task.UpdatedAt,
 		},
 	}
