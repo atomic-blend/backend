@@ -9,8 +9,9 @@ import (
 	"atomic_blend_api/cron"
 	"atomic_blend_api/utils/db"
 	"context"
-	"github.com/jasonlvhit/gocron"
 	"os"
+
+	"github.com/jasonlvhit/gocron"
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
@@ -67,7 +68,7 @@ func main() {
 
 	// start cron
 	go func() {
-		err := gocron.Every(1).Minutes().Do(cron.MainCron)
+		err := gocron.Every(60).Seconds().Do(cron.MainCron)
 		if err != nil {
 			log.Error().Err(err).Msg("Error defining cron job")
 		}
