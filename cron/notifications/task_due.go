@@ -81,6 +81,9 @@ func TaskDueNotificationCron() {
 			// - task is due and the due date is equal to the current date
 			// - task have a reminder set and the reminder is hour and minute equal to the current time
 			now := time.Now()
+			log.Debug().Msgf("Current time: %s", now.Format(time.RFC3339))
+			log.Debug().Msgf("Task start date: %s", task.StartDate)
+			log.Debug().Msgf("Task due date: %s", task.EndDate)
 			if task.StartDate == nil && task.EndDate.Time().Hour() == now.Hour() && task.EndDate.Time().Minute() == now.Minute() {
 				log.Debug().Msg("Task is due now")
 				payload := payloads.NewTaskDuePayload(

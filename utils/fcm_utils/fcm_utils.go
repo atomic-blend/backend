@@ -13,10 +13,21 @@ func SendMulticast(client *fcm.Client, ctx context.Context, data map[string]stri
 		ctx,
 		&messaging.MulticastMessage{
 			Data: data,
-			Notification: &messaging.Notification{
-				Title: data["title"],
-			},
 			Tokens: deviceTokens,
+			Android: &messaging.AndroidConfig{
+				Priority: "high",
+			},
+			APNS: &messaging.APNSConfig{
+				Payload: &messaging.APNSPayload{
+					Aps: &messaging.Aps{
+						ContentAvailable: true, // 🔥 This is the magic field
+					},
+				},
+				Headers: map[string]string{
+					"apns-push-type": "background",
+					"apns-priority": "5", // Must be `5` when `contentAvailable` is set to true.
+				},
+			},
 		},
 	)
 	if err != nil {
