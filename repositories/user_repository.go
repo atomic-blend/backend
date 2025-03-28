@@ -61,16 +61,21 @@ func (r *UserRepository) Create(ctx context.Context, user *models.UserEntity) (*
 		id := primitive.NewObjectID()
 		user.ID = &id
 	}
+
+	// Sanitize email if present
+	if user.Email != nil {
+		sanitizedEmail := regexutils.SanitizeString(*user.Email)
+		user.Email = &sanitizedEmail
+	}
+
 	now := primitive.NewDateTimeFromTime(time.Now())
 	user.CreatedAt = &now
 	user.UpdatedAt = &now
-
 	// Insert into database
 	_, err := r.collection.InsertOne(ctx, user)
 	if err != nil {
 		return nil, err
 	}
-
 	return user, nil
 }
 
@@ -98,6 +103,13 @@ func (r *UserRepository) Update(ctx context.Context, user *models.UserEntity) (*
 	if user.ID == nil {
 		return nil, errors.New("user ID is required for update")
 	}
+
+	// Sanitize email if present
+	if user.Email != nil {
+		sanitizedEmail := regexutils.SanitizeString(*user.Email)
+		user.Email = &sanitizedEmail
+	}
+
 	now := primitive.NewDateTimeFromTime(time.Now())
 	user.UpdatedAt = &now
 

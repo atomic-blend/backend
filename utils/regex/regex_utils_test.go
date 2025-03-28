@@ -26,14 +26,14 @@ func TestSanitizeString(t *testing.T) {
 			expected: "mixed case",
 		},
 		{
-			name:     "String with regex special characters",
+			name:     "String with special characters",
 			input:    "hello.world*^$+?()",
-			expected: "hello\\.world\\*\\^\\$\\+\\?\\(\\)",
+			expected: "hello.world*^$+?()",
 		},
 		{
 			name:     "Combined case: mixed case with spaces and special characters",
 			input:    "  Hello.World* [Test]  ",
-			expected: "hello\\.world\\* \\[test\\]",
+			expected: "hello.world* [test]",
 		},
 		{
 			name:     "Only whitespace",
