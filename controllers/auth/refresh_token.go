@@ -34,37 +34,25 @@ func (c *Controller) RefreshToken(ctx *gin.Context) {
 	var userID primitive.ObjectID
 	var err error
 
-	// Check if this is a test token
-	if strings.HasPrefix(tokenString, "test_refresh_token_") {
-		// Parse the user ID from the test token format
-		idStr := strings.TrimPrefix(tokenString, "test_refresh_token_")
-		userID, err = primitive.ObjectIDFromHex(idStr)
-		if err != nil {
-			ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid test token"})
-			return
-		}
-	} else {
-		// Validate refresh token normally
-		claims, err := jwt.ValidateToken(tokenString, jwt.RefreshToken)
-		if err != nil {
-			ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid refresh token"})
-			return
-		}
-
-		// Extract user ID from claims
-		userIDStr, ok := (*claims)["user_id"].(string)
-		if !ok {
-			ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token claims"})
-			return
-		}
-
-		userID, err = primitive.ObjectIDFromHex(userIDStr)
-		if err != nil {
-			ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid user ID in token"})
-			return
-		}
+	// Validate refresh token normally
+	claims, err := jwt.ValidateToken(tokenString, jwt.RefreshToken)
+	if err != nil {
+		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid refresh token"})
+		return
 	}
 
+	// Extract user ID from claims
+	userIDStr, ok := (*claims)["user_id"].(string)
+	if !ok {
+		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token claims"})
+		return
+	}
+
+	userID, err = primitive.ObjectIDFromHex(userIDStr)
+	if err != nil {
+		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid user ID in token"})
+		return
+	}
 	// Find user to ensure they still exist and get their current data
 	user, err := c.userRepo.FindByID(ctx, userID)
 	if err != nil || user == nil {
@@ -95,7 +83,7 @@ func (c *Controller) RefreshToken(ctx *gin.Context) {
 	responseSafeUser := &models.UserEntity{
 		ID:        user.ID,
 		Email:     user.Email,
-		KeySalt:   user.KeySalt,
+		KeySet:   user.KeySet,
 		Roles:     user.Roles,
 		CreatedAt: user.CreatedAt,
 		UpdatedAt: user.UpdatedAt,

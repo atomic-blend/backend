@@ -75,7 +75,7 @@ func (r *TaskRepository) GetByID(ctx context.Context, id string) (*models.TaskEn
 
 // Create creates a new task
 func (r *TaskRepository) Create(ctx context.Context, task *models.TaskEntity) (*models.TaskEntity, error) {
-	now := time.Now().Format(time.RFC3339)
+	now := primitive.NewDateTimeFromTime(time.Now())
 
 	// Generate a new ID if not provided
 	if task.ID == "" {
@@ -100,6 +100,7 @@ func (r *TaskRepository) Create(ctx context.Context, task *models.TaskEntity) (*
 		"start_date":  task.StartDate,
 		"end_date":    task.EndDate,
 		"completed":   task.Completed,
+		"reminders":   task.Reminders,
 		"created_at":  task.CreatedAt,
 		"updated_at":  task.UpdatedAt,
 	})
@@ -118,7 +119,7 @@ func (r *TaskRepository) Update(ctx context.Context, id string, task *models.Tas
 		return nil, err
 	}
 
-	task.UpdatedAt = time.Now().Format(time.RFC3339)
+	task.UpdatedAt = primitive.NewDateTimeFromTime(time.Now())
 
 	update := bson.M{
 		"$set": bson.M{
@@ -127,6 +128,7 @@ func (r *TaskRepository) Update(ctx context.Context, id string, task *models.Tas
 			"start_date":  task.StartDate,
 			"end_date":    task.EndDate,
 			"completed":   task.Completed,
+			"reminders":   task.Reminders,
 			"updated_at":  task.UpdatedAt,
 		},
 	}

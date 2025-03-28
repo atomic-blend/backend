@@ -8,6 +8,7 @@ import (
 // RegisterRequest represents the structure for registration request data
 type RegisterRequest struct {
 	Email    string `json:"email" binding:"required,email"`
+	KeySet   *models.EncryptionKey `json:"keySet" binding:"required"`
 	Password string `json:"password" binding:"required,min=8"` // Minimum 8 characters
 }
 

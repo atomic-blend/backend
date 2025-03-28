@@ -6,9 +6,12 @@ import (
 	"atomic_blend_api/controllers/health"
 	"atomic_blend_api/controllers/tasks"
 	"atomic_blend_api/controllers/users"
+	"atomic_blend_api/cron"
 	"atomic_blend_api/utils/db"
 	"context"
 	"os"
+
+	"github.com/jasonlvhit/gocron"
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
@@ -36,7 +39,7 @@ func main() {
 	log.Info().Msgf("MONGO_USERNAME: %s", mongoUsername)
 	log.Info().Msgf("MONGO_HOST: %s", mongoHost)
 	log.Info().Msgf("MONGO_PORT: %s", mongoPort)
-	if mongoUsername != "" && mongoPassword != "" && mongoHost != ""{
+	if mongoUsername != "" && mongoPassword != "" && mongoHost != "" {
 		mongoURI = "mongodb://" + mongoUsername + ":" + mongoPassword + "@" + mongoHost
 		if mongoPort != "" {
 			mongoURI = mongoURI + ":" + mongoPort
@@ -63,7 +66,14 @@ func main() {
 		log.Fatal().Msg("✅ Disconnected from MongoDB")
 	}()
 
-	// Get database instance
+	// start cron
+	go func() {
+		err := gocron.Every(60).Seconds().Do(cron.MainCron)
+		if err != nil {
+			log.Error().Err(err).Msg("Error defining cron job")
+		}
+		<-gocron.Start()
+	}()
 
 	// Setup router with middleware
 	router := gin.Default()

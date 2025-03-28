@@ -40,13 +40,15 @@ func createTestTask() *models.TaskEntity {
 	completed := false
 	now := primitive.NewDateTimeFromTime(time.Now())
 	end := primitive.NewDateTimeFromTime(time.Now().Add(24 * time.Hour))
-
+	reminder1 := primitive.NewDateTimeFromTime(time.Now().Add(12 * time.Hour))
+	reminder2 := primitive.NewDateTimeFromTime(time.Now().Add(18 * time.Hour))
 	return &models.TaskEntity{
 		Title:       "Test Task",
 		Description: &desc,
 		Completed:   &completed,
 		StartDate:   &now,
 		EndDate:     &end,
+		Reminders:   []*primitive.DateTime{&reminder1, &reminder2},
 	}
 }
 
@@ -65,6 +67,8 @@ func TestTaskRepository_Create(t *testing.T) {
 		assert.NotEmpty(t, created.UpdatedAt)
 		assert.NotNil(t, created.StartDate)
 		assert.NotNil(t, created.EndDate)
+		assert.NotNil(t, created.Reminders)
+		assert.Len(t, created.Reminders, 2)
 	})
 }
 
@@ -84,6 +88,9 @@ func TestTaskRepository_GetByID(t *testing.T) {
 		assert.Equal(t, task.Title, found.Title)
 		assert.Equal(t, task.StartDate, found.StartDate)
 		assert.Equal(t, task.EndDate, found.EndDate)
+		assert.NotNil(t, found.Reminders)
+		assert.Len(t, found.Reminders, 2)
+		assert.Equal(t, task.Reminders, found.Reminders)
 	})
 
 	t.Run("task not found", func(t *testing.T) {
@@ -109,10 +116,15 @@ func TestTaskRepository_Update(t *testing.T) {
 		assert.Equal(t, updatedTitle, updated.Title)
 		assert.Equal(t, task.StartDate, updated.StartDate)
 		assert.Equal(t, task.EndDate, updated.EndDate)
+		assert.NotNil(t, updated.Reminders)
+		assert.Len(t, updated.Reminders, 2)
+		assert.Equal(t, task.Reminders, updated.Reminders)
 
 		found, err := repo.GetByID(context.Background(), created.ID)
 		require.NoError(t, err)
 		assert.Equal(t, updatedTitle, found.Title)
+		assert.NotNil(t, found.Reminders)
+		assert.Len(t, found.Reminders, 2)
 	})
 }
 
@@ -140,6 +152,10 @@ func TestTaskRepository_GetAll(t *testing.T) {
 
 	t.Run("successful get all tasks", func(t *testing.T) {
 		userID := primitive.NewObjectID()
+		// Create reminder dates for testing
+		reminder1 := primitive.NewDateTimeFromTime(time.Now().Add(6 * time.Hour))
+		reminder2 := primitive.NewDateTimeFromTime(time.Now().Add(12 * time.Hour))
+
 		tasks := []*models.TaskEntity{
 			{
 				Title:       "Task 1",
@@ -148,6 +164,7 @@ func TestTaskRepository_GetAll(t *testing.T) {
 				StartDate:   createTestTask().StartDate,
 				EndDate:     createTestTask().EndDate,
 				Completed:   createTestTask().Completed,
+				Reminders:   []*primitive.DateTime{&reminder1},
 			},
 			{
 				Title:       "Task 2",
@@ -156,6 +173,7 @@ func TestTaskRepository_GetAll(t *testing.T) {
 				StartDate:   createTestTask().StartDate,
 				EndDate:     createTestTask().EndDate,
 				Completed:   createTestTask().Completed,
+				Reminders:   []*primitive.DateTime{&reminder1, &reminder2},
 			},
 		}
 
@@ -167,6 +185,23 @@ func TestTaskRepository_GetAll(t *testing.T) {
 		found, err := repo.GetAll(context.Background(), &userID)
 		require.NoError(t, err)
 		assert.Len(t, found, 2)
+		// Ensure reminders were saved correctly
+		assert.NotNil(t, found[0].Reminders)
+		assert.NotNil(t, found[1].Reminders)
+
+		// Validate reminders lengths
+		var taskWithOneReminder, taskWithTwoReminders *models.TaskEntity
+		for _, task := range found {
+			if task.Title == "Task 1" {
+				taskWithOneReminder = task
+			} else if task.Title == "Task 2" {
+				taskWithTwoReminders = task
+			}
+		}
+		assert.NotNil(t, taskWithOneReminder)
+		assert.NotNil(t, taskWithTwoReminders)
+		assert.Len(t, taskWithOneReminder.Reminders, 1)
+		assert.Len(t, taskWithTwoReminders.Reminders, 2)
 
 		allTasks, err := repo.GetAll(context.Background(), nil)
 		require.NoError(t, err)

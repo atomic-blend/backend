@@ -14,6 +14,8 @@ func createTestTask() *models.TaskEntity {
 	completed := false
 	now := primitive.NewDateTimeFromTime(time.Now())
 	end := primitive.NewDateTimeFromTime(time.Now().Add(24 * time.Hour))
+	reminder1 := primitive.NewDateTimeFromTime(time.Now().Add(12 * time.Hour))
+	reminder2 := primitive.NewDateTimeFromTime(time.Now().Add(18 * time.Hour))
 
 	return &models.TaskEntity{
 		Title:       "Test Task",
@@ -22,8 +24,9 @@ func createTestTask() *models.TaskEntity {
 		User:        primitive.NewObjectID(),
 		StartDate:   &now,
 		EndDate:     &end,
-		CreatedAt:   time.Now().Format(time.RFC3339),
-		UpdatedAt:   time.Now().Format(time.RFC3339),
+		Reminders:   []*primitive.DateTime{&reminder1, &reminder2},
+		CreatedAt:   primitive.NewDateTimeFromTime(time.Now()),
+		UpdatedAt:   primitive.NewDateTimeFromTime(time.Now()),
 	}
 }
 

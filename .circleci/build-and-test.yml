@@ -2,20 +2,18 @@ version: 2.1
 
 orbs:
   go: circleci/go@1.7
+  codecov: codecov/codecov@5.3.0
 
 jobs:
   build-and-test:
-    docker:
-      - image: cimg/go:1.23
-    resource_class: small
+    machine:
+      image: ubuntu-2204:current
+    resource_class: medium
     working_directory: ~/project
 
     steps:
       - checkout:
           path: ~/project
-
-      - setup_remote_docker:
-          docker_layer_caching: true
 
       - go/load-cache
 
@@ -47,6 +45,10 @@ jobs:
       - store_artifacts:
           path: app
           destination: backend-binary
+
+      - codecov/upload:
+          files: "coverage.out"
+          slug: atomic-blend/backend
 
 workflows:
   version: 2

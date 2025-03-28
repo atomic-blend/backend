@@ -33,7 +33,7 @@ func TestGetAllTasks(t *testing.T) {
 		tasks := []*models.TaskEntity{task1, task2}
 
 		mockRepo.On("GetAll", mock.Anything, mock.MatchedBy(func(userID *primitive.ObjectID) bool {
-			return userID.Hex() == userID.Hex()
+			return true
 		})).Return(tasks, nil).Once()
 
 		w := httptest.NewRecorder()
@@ -55,6 +55,12 @@ func TestGetAllTasks(t *testing.T) {
 		assert.Equal(t, 2, len(response))
 		assert.Equal(t, task1.Title, response[0].Title)
 		assert.Equal(t, task2.Title, response[1].Title)
+
+		// Verify reminders are included in the response
+		assert.NotNil(t, response[0].Reminders)
+		assert.NotNil(t, response[1].Reminders)
+		assert.Len(t, response[0].Reminders, 2)
+		assert.Len(t, response[1].Reminders, 2)
 	})
 
 	t.Run("successful get all tasks - empty list", func(t *testing.T) {
@@ -63,7 +69,7 @@ func TestGetAllTasks(t *testing.T) {
 
 		// Return nil to simulate no tasks
 		mockRepo.On("GetAll", mock.Anything, mock.MatchedBy(func(userID *primitive.ObjectID) bool {
-			return userID.Hex() == userID.Hex()
+			return true
 		})).Return(nil, nil).Once()
 
 		w := httptest.NewRecorder()

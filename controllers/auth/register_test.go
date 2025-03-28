@@ -5,6 +5,7 @@ import (
 	"atomic_blend_api/repositories"
 	"atomic_blend_api/tests/utils/inmemorymongo"
 	"bytes"
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -36,7 +37,7 @@ func TestRegister(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to connect to in-memory MongoDB: %v", err)
 	}
-	defer client.Disconnect(nil)
+	defer client.Disconnect(context.TODO())
 
 	// Get database reference
 	db := client.Database("test_db")
@@ -58,7 +59,7 @@ func TestRegister(t *testing.T) {
 		ID:   &roleID,
 		Name: "user",
 	}
-	_, err = db.Collection("user_roles").InsertOne(nil, defaultRole)
+	_, err = db.Collection("user_roles").InsertOne(context.TODO(), defaultRole)
 	if err != nil {
 		t.Fatalf("Failed to insert default user role: %v", err)
 	}
@@ -76,6 +77,12 @@ func TestRegister(t *testing.T) {
 			requestBody: map[string]interface{}{
 				"email":    "newuser@example.com",
 				"password": "securePassword123",
+				"keySet": map[string]interface{}{
+					"userKey":      "encryptedUserKey123",
+					"backupKey":    "encryptedBackupKey123",
+					"salt":         "salt123",
+					"mnemonicSalt": "mnemonicSalt123",
+				},
 			},
 			expectedStatus: http.StatusCreated,
 			checkResponse: func(t *testing.T, w *httptest.ResponseRecorder, db *mongo.Database) {
@@ -98,14 +105,19 @@ func TestRegister(t *testing.T) {
 
 				// Verify user in database
 				var savedUser models.UserEntity
-				err = db.Collection("users").FindOne(nil, bson.M{"email": "newuser@example.com"}).Decode(&savedUser)
+				err = db.Collection("users").FindOne(context.TODO(), bson.M{"email": "newuser@example.com"}).Decode(&savedUser)
 				assert.NoError(t, err)
 
-				// Verify password and key salt
+				// Verify password is hashed
 				assert.NotNil(t, savedUser.Password)
 				assert.NotEqual(t, "securePassword123", *savedUser.Password)
-				assert.NotNil(t, savedUser.KeySalt)
-				assert.Len(t, *savedUser.KeySalt, 32)
+
+				// Verify KeySet
+				assert.NotNil(t, savedUser.KeySet)
+				assert.Equal(t, "encryptedUserKey123", savedUser.KeySet.UserKey)
+				assert.Equal(t, "encryptedBackupKey123", savedUser.KeySet.BackupKey)
+				assert.Equal(t, "salt123", savedUser.KeySet.Salt)
+				assert.Equal(t, "mnemonicSalt123", savedUser.KeySet.MnemonicSalt)
 
 				// Verify role assignment in database
 				assert.NotNil(t, savedUser.RoleIds)
@@ -121,6 +133,12 @@ func TestRegister(t *testing.T) {
 			requestBody: map[string]interface{}{
 				"email":    "existing@example.com",
 				"password": "securePassword123",
+				"keySet": map[string]interface{}{
+					"userKey":      "encryptedUserKey123",
+					"backupKey":    "encryptedBackupKey123",
+					"salt":         "salt123",
+					"mnemonicSalt": "mnemonicSalt123",
+				},
 			},
 			expectedStatus: http.StatusConflict,
 			checkResponse: func(t *testing.T, w *httptest.ResponseRecorder, db *mongo.Database) {
@@ -134,7 +152,7 @@ func TestRegister(t *testing.T) {
 				// Create an existing user
 				email := "existing@example.com"
 				password := "hashedPassword" // In a real scenario this would be hashed
-				_, err := db.Collection("users").InsertOne(nil, models.UserEntity{
+				_, err := db.Collection("users").InsertOne(context.TODO(), models.UserEntity{
 					Email:    &email,
 					Password: &password,
 				})
@@ -146,6 +164,12 @@ func TestRegister(t *testing.T) {
 			requestBody: map[string]interface{}{
 				"email":    "invalidemail",
 				"password": "securePassword123",
+				"keySet": map[string]interface{}{
+					"userKey":      "encryptedUserKey123",
+					"backupKey":    "encryptedBackupKey123",
+					"salt":         "salt123",
+					"mnemonicSalt": "mnemonicSalt123",
+				},
 			},
 			expectedStatus: http.StatusBadRequest,
 			checkResponse: func(t *testing.T, w *httptest.ResponseRecorder, db *mongo.Database) {
@@ -163,6 +187,12 @@ func TestRegister(t *testing.T) {
 			requestBody: map[string]interface{}{
 				"email":    "valid@example.com",
 				"password": "short",
+				"keySet": map[string]interface{}{
+					"userKey":      "encryptedUserKey123",
+					"backupKey":    "encryptedBackupKey123",
+					"salt":         "salt123",
+					"mnemonicSalt": "mnemonicSalt123",
+				},
 			},
 			expectedStatus: http.StatusBadRequest,
 			checkResponse: func(t *testing.T, w *httptest.ResponseRecorder, db *mongo.Database) {
@@ -179,6 +209,12 @@ func TestRegister(t *testing.T) {
 			name: "Missing Email",
 			requestBody: map[string]interface{}{
 				"password": "securePassword123",
+				"keySet": map[string]interface{}{
+					"userKey":      "encryptedUserKey123",
+					"backupKey":    "encryptedBackupKey123",
+					"salt":         "salt123",
+					"mnemonicSalt": "mnemonicSalt123",
+				},
 			},
 			expectedStatus: http.StatusBadRequest,
 			checkResponse: func(t *testing.T, w *httptest.ResponseRecorder, db *mongo.Database) {
@@ -195,6 +231,29 @@ func TestRegister(t *testing.T) {
 			name: "Missing Password",
 			requestBody: map[string]interface{}{
 				"email": "valid@example.com",
+				"keySet": map[string]interface{}{
+					"userKey":      "encryptedUserKey123",
+					"backupKey":    "encryptedBackupKey123",
+					"salt":         "salt123",
+					"mnemonicSalt": "mnemonicSalt123",
+				},
+			},
+			expectedStatus: http.StatusBadRequest,
+			checkResponse: func(t *testing.T, w *httptest.ResponseRecorder, db *mongo.Database) {
+				var response map[string]string
+				err := json.Unmarshal(w.Body.Bytes(), &response)
+				assert.NoError(t, err)
+				assert.Contains(t, response, "error")
+			},
+			setupTest: func(t *testing.T, db *mongo.Database) {
+				// No setup needed for this test case
+			},
+		},
+		{
+			name: "Missing KeySet",
+			requestBody: map[string]interface{}{
+				"email":    "valid@example.com",
+				"password": "securePassword123",
 			},
 			expectedStatus: http.StatusBadRequest,
 			checkResponse: func(t *testing.T, w *httptest.ResponseRecorder, db *mongo.Database) {

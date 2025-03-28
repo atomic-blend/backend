@@ -4,6 +4,7 @@ version: 2.1
 # Import required orbs
 orbs:
   go: circleci/go@1.7 # Go orb for Go-related commands and caching
+  codecov: codecov/codecov@5.3.0 # Codecov orb for uploading coverage reports
 
 # Parameters
 parameters:
@@ -46,6 +47,10 @@ jobs:
       - store_artifacts:
           path: coverage.html
           destination: coverage-report
+      
+      - codecov/upload:
+          files: "coverage.out"
+          slug: atomic-blend/backend
 
   # Job to automatically bump version using conventional commits
   bump-version:

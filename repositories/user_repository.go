@@ -12,6 +12,7 @@ import (
 
 	"atomic_blend_api/models"
 	"atomic_blend_api/utils/db"
+	regexutils "atomic_blend_api/utils/regex"
 )
 
 const userCollection = "users"
@@ -44,6 +45,15 @@ func NewUserRepository(database *mongo.Database) *UserRepository {
 	}
 }
 
+// GetAllIterable retrieves all users from the database
+func (r *UserRepository) GetAllIterable(ctx context.Context) (*mongo.Cursor, error) {
+	cursor, err := r.collection.Find(ctx, bson.M{})
+	if err != nil {
+		return nil, err
+	}
+	return cursor, nil
+}
+
 // Create adds a new user to the database
 func (r *UserRepository) Create(ctx context.Context, user *models.UserEntity) (*models.UserEntity, error) {
 	// Generate an ID if not provided
@@ -51,16 +61,21 @@ func (r *UserRepository) Create(ctx context.Context, user *models.UserEntity) (*
 		id := primitive.NewObjectID()
 		user.ID = &id
 	}
+
+	// Sanitize email if present
+	if user.Email != nil {
+		sanitizedEmail := regexutils.SanitizeString(*user.Email)
+		user.Email = &sanitizedEmail
+	}
+
 	now := primitive.NewDateTimeFromTime(time.Now())
 	user.CreatedAt = &now
 	user.UpdatedAt = &now
-
 	// Insert into database
 	_, err := r.collection.InsertOne(ctx, user)
 	if err != nil {
 		return nil, err
 	}
-
 	return user, nil
 }
 
@@ -88,6 +103,13 @@ func (r *UserRepository) Update(ctx context.Context, user *models.UserEntity) (*
 	if user.ID == nil {
 		return nil, errors.New("user ID is required for update")
 	}
+
+	// Sanitize email if present
+	if user.Email != nil {
+		sanitizedEmail := regexutils.SanitizeString(*user.Email)
+		user.Email = &sanitizedEmail
+	}
+
 	now := primitive.NewDateTimeFromTime(time.Now())
 	user.UpdatedAt = &now
 
@@ -128,7 +150,7 @@ func (r *UserRepository) Delete(ctx context.Context, id string) error {
 // FindByEmail finds a user by their email address
 func (r *UserRepository) FindByEmail(ctx context.Context, email string) (*models.UserEntity, error) {
 	var user models.UserEntity
-	err := r.collection.FindOne(ctx, bson.M{"email": email}).Decode(&user)
+	err := r.collection.FindOne(ctx, bson.M{"email": regexutils.SanitizeString(email)}).Decode(&user)
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
 			return nil, errors.New("user not found")
