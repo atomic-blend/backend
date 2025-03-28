@@ -48,8 +48,9 @@ jobs:
           path: coverage.html
           destination: coverage-report
       
-      - codecov/upload
-
+      - codecov/upload:
+          files: "coverage.out"
+          slug: atomic-blend/backend
 
   # Job to automatically bump version using conventional commits
   bump-version:
