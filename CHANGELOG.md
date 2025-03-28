@@ -2,6 +2,36 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## 0.2.0 - 2025-03-28
+#### Bug Fixes
+- machine change for pr build - (0900a66) - Brandon Guigo
+- unit test bis - (999475d) - Brandon Guigo
+- UT - (1a60d28) - Brandon Guigo
+- add test for regex_utils and comment for linter - (4fdf1c1) - Brandon Guigo
+- codeQL injection warning - (05b9ec7) - Brandon Guigo
+- linter - (5173592) - Brandon Guigo
+- refresh token mock for jwtin the test - (9b4942c) - Brandon Guigo
+- populate user roles after device update - (2ad1453) - Brandon Guigo
+- linter - (346b615) - Brandon Guigo
+- trigger stuck CICD - (25de501) - Brandon Guigo
+- change CreatedAt and UpdatedAt fields to use primitive.DateTime - (7486c9b) - Brandon Guigo
+- right yq path [skip ci] - (a55825e) - Brandon Guigo
+#### Features
+- enhance task due notification logging and update FCM multicast message structure - (23709f2) - Brandon Guigo
+- add notif payloads + send multicast to user device when task is due - (73644c3) - Brandon Guigo
+- add reminders field to TaskEntity and update related tests - (18c53ba) - Brandon Guigo
+- update device information handling and add DeviceTimezone field - (66371a7) - Brandon Guigo
+- implement cron job for task due notifications and user retrieval - (586d043) - Brandon Guigo
+- add device update functionality and related tests - (43ffa2c) - Brandon Guigo
+- add user profile update functionality and related tests - (92351f1) - Brandon Guigo
+- mnemonic and user salt - (65178f5) - Brandon Guigo
+- store the keyset to backup data key with a seed phrase - (1f49747) - Brandon Guigo
+#### Miscellaneous Chores
+- **(release)** 0.1.14 [skip ci] - (6011c03) - CircleCI
+- add codecov in cicd - (3c42a00) - Brandon Guigo
+
+- - -
+
 ## 0.1.14 - 2025-03-18
 #### Bug Fixes
 - manifest file name - (d5bc5ac) - Brandon Guigo
