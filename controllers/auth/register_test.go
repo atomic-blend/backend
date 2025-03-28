@@ -5,6 +5,7 @@ import (
 	"atomic_blend_api/repositories"
 	"atomic_blend_api/tests/utils/inmemorymongo"
 	"bytes"
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -36,7 +37,7 @@ func TestRegister(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to connect to in-memory MongoDB: %v", err)
 	}
-	defer client.Disconnect(nil)
+	defer client.Disconnect(context.TODO())
 
 	// Get database reference
 	db := client.Database("test_db")
@@ -58,7 +59,7 @@ func TestRegister(t *testing.T) {
 		ID:   &roleID,
 		Name: "user",
 	}
-	_, err = db.Collection("user_roles").InsertOne(nil, defaultRole)
+	_, err = db.Collection("user_roles").InsertOne(context.TODO(), defaultRole)
 	if err != nil {
 		t.Fatalf("Failed to insert default user role: %v", err)
 	}
@@ -104,7 +105,7 @@ func TestRegister(t *testing.T) {
 
 				// Verify user in database
 				var savedUser models.UserEntity
-				err = db.Collection("users").FindOne(nil, bson.M{"email": "newuser@example.com"}).Decode(&savedUser)
+				err = db.Collection("users").FindOne(context.TODO(), bson.M{"email": "newuser@example.com"}).Decode(&savedUser)
 				assert.NoError(t, err)
 
 				// Verify password is hashed
@@ -151,7 +152,7 @@ func TestRegister(t *testing.T) {
 				// Create an existing user
 				email := "existing@example.com"
 				password := "hashedPassword" // In a real scenario this would be hashed
-				_, err := db.Collection("users").InsertOne(nil, models.UserEntity{
+				_, err := db.Collection("users").InsertOne(context.TODO(), models.UserEntity{
 					Email:    &email,
 					Password: &password,
 				})

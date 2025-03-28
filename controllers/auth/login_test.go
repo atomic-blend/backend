@@ -6,6 +6,7 @@ import (
 	"atomic_blend_api/tests/utils/inmemorymongo"
 	"atomic_blend_api/utils/password"
 	"bytes"
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -35,7 +36,7 @@ func TestLogin(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to connect to in-memory MongoDB: %v", err)
 	}
-	defer client.Disconnect(nil)
+	defer client.Disconnect(context.TODO())
 
 	// Get database reference
 	db := client.Database("test_db")
@@ -57,7 +58,7 @@ func TestLogin(t *testing.T) {
 		ID:   &roleID,
 		Name: "user",
 	}
-	_, err = db.Collection("user_roles").InsertOne(nil, userRole)
+	_, err = db.Collection("user_roles").InsertOne(context.TODO(), userRole)
 	if err != nil {
 		t.Fatalf("Failed to insert test user role: %v", err)
 	}
@@ -80,7 +81,7 @@ func TestLogin(t *testing.T) {
 	}
 
 	// Insert test user into database
-	_, err = db.Collection("users").InsertOne(nil, testUser)
+	_, err = db.Collection("users").InsertOne(context.TODO(), testUser)
 	if err != nil {
 		t.Fatalf("Failed to insert test user: %v", err)
 	}

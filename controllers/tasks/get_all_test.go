@@ -33,7 +33,7 @@ func TestGetAllTasks(t *testing.T) {
 		tasks := []*models.TaskEntity{task1, task2}
 
 		mockRepo.On("GetAll", mock.Anything, mock.MatchedBy(func(userID *primitive.ObjectID) bool {
-			return userID.Hex() == userID.Hex()
+			return true
 		})).Return(tasks, nil).Once()
 
 		w := httptest.NewRecorder()
@@ -69,7 +69,7 @@ func TestGetAllTasks(t *testing.T) {
 
 		// Return nil to simulate no tasks
 		mockRepo.On("GetAll", mock.Anything, mock.MatchedBy(func(userID *primitive.ObjectID) bool {
-			return userID.Hex() == userID.Hex()
+			return true
 		})).Return(nil, nil).Once()
 
 		w := httptest.NewRecorder()
