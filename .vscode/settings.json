@@ -1,0 +1,7 @@
+{
+    "go.lintOnSave": "package",
+    "gopls": {
+        "ui.semanticTokens": true,
+        "staticcheck": true
+    }
+}

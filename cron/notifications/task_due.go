@@ -16,9 +16,11 @@ import (
 )
 
 var (
-	FIREBASE_PROJECT_ID = os.Getenv("FIREBASE_PROJECT_ID")
+	// firebaseProjectID is the Firebase project ID used for FCM
+	firebaseProjectID = os.Getenv("FIREBASE_PROJECT_ID")
 )
 
+// TaskDueNotificationCron initializes and starts the task due notification cron job.
 func TaskDueNotificationCron() {
 	log.Debug().Msg("Starting task due notification cron job")
 	ctx := context.TODO()
@@ -26,12 +28,12 @@ func TaskDueNotificationCron() {
 	userRepo := repositories.NewUserRepository(db.Database)
 
 	log.Debug().Msg("Initializing the FCM client")
-	shortcuts.CheckRequiredEnvVar("FIREBASE_PROJECT_ID", FIREBASE_PROJECT_ID, "FIREBASE_PROJECT_ID is required for FCM")
-	log.Debug().Msgf("Firebase project ID: %s", FIREBASE_PROJECT_ID)
+	shortcuts.CheckRequiredEnvVar("FIREBASE_PROJECT_ID", firebaseProjectID, "FIREBASE_PROJECT_ID is required for FCM")
+	log.Debug().Msgf("Firebase project ID: %s", firebaseProjectID)
 	fcmClient, err := fcm.NewClient(
 		ctx,
 		fcm.WithProjectID(
-			FIREBASE_PROJECT_ID,
+			firebaseProjectID,
 		),
 		// initial with service account
 		// fcm.WithServiceAccount("my-client-id@my-project-id.iam.gserviceaccount.com"),
@@ -91,7 +93,7 @@ func TaskDueNotificationCron() {
 				)
 
 				data := payload.GetData()
-				fcmutils.SendMulticast(fcmClient, ctx, data, deviceTokens)
+				fcmutils.SendMulticast(ctx, fcmClient, data, deviceTokens)
 				continue
 			}
 
@@ -102,7 +104,7 @@ func TaskDueNotificationCron() {
 				)
 
 				data := payload.GetData()
-				fcmutils.SendMulticast(fcmClient, ctx, data, deviceTokens)
+				fcmutils.SendMulticast(ctx, fcmClient, data, deviceTokens)
 				continue
 			}
 
@@ -115,7 +117,7 @@ func TaskDueNotificationCron() {
 					)
 
 					data := payload.GetData()
-					fcmutils.SendMulticast(fcmClient, ctx, data, deviceTokens)
+					fcmutils.SendMulticast(ctx, fcmClient, data, deviceTokens)
 					continue
 				}
 			}

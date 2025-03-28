@@ -8,11 +8,12 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-func SendMulticast(client *fcm.Client, ctx context.Context, data map[string]string, deviceTokens []string) {
+// SendMulticast sends a multicast message to multiple device tokens.
+func SendMulticast(ctx context.Context, client *fcm.Client, data map[string]string, deviceTokens []string) {
 	_, err := client.SendMulticast(
 		ctx,
 		&messaging.MulticastMessage{
-			Data: data,
+			Data:   data,
 			Tokens: deviceTokens,
 			Android: &messaging.AndroidConfig{
 				Priority: "high",
@@ -25,7 +26,7 @@ func SendMulticast(client *fcm.Client, ctx context.Context, data map[string]stri
 				},
 				Headers: map[string]string{
 					"apns-push-type": "background",
-					"apns-priority": "5", // Must be `5` when `contentAvailable` is set to true.
+					"apns-priority":  "5", // Must be `5` when `contentAvailable` is set to true.
 				},
 			},
 		},
