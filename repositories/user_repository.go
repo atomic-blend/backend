@@ -12,6 +12,7 @@ import (
 
 	"atomic_blend_api/models"
 	"atomic_blend_api/utils/db"
+	regexutils "atomic_blend_api/utils/regex"
 )
 
 const userCollection = "users"
@@ -137,7 +138,7 @@ func (r *UserRepository) Delete(ctx context.Context, id string) error {
 // FindByEmail finds a user by their email address
 func (r *UserRepository) FindByEmail(ctx context.Context, email string) (*models.UserEntity, error) {
 	var user models.UserEntity
-	err := r.collection.FindOne(ctx, bson.M{"email": email}).Decode(&user)
+	err := r.collection.FindOne(ctx, bson.M{"email": regexutils.SanitizeString(email)}).Decode(&user)
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
 			return nil, errors.New("user not found")
