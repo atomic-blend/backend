@@ -58,6 +58,7 @@ func TaskDueNotificationCron() {
 			log.Error().Err(err).Msg("Failed to decode user")
 			continue
 		}
+		
 		log.Debug().Msgf("Processing user: %s", user.ID)
 		// get the tasks for the user
 		//TODO: replace with a cursor here
@@ -73,8 +74,6 @@ func TaskDueNotificationCron() {
 			deviceTokens = append(deviceTokens, device.FcmToken)
 		}
 
-		print("Device tokens: ", deviceTokens[0])
-
 		for _, task := range tasks {
 			//TODO: implement task due notification logic
 			log.Debug().Msgf("Processing task: %s", task.ID)
@@ -83,11 +82,7 @@ func TaskDueNotificationCron() {
 			// - task is due and the due date is equal to the current date
 			// - task have a reminder set and the reminder is hour and minute equal to the current time
 			now := time.Now()
-			log.Debug().Msgf("Current time: %s", now.Format(time.RFC3339))
-			log.Debug().Msgf("Task start date: %s", task.StartDate.Time())
-			log.Debug().Msgf("Task due date: %s", task.EndDate.Time())
 			if task.StartDate == nil && task.EndDate.Time().Hour() == now.Hour() && task.EndDate.Time().Minute() == now.Minute() {
-				log.Debug().Msg("Task is due now")
 				payload := payloads.NewTaskDuePayload(
 					task.Title,
 				)
@@ -98,7 +93,6 @@ func TaskDueNotificationCron() {
 			}
 
 			if task.StartDate != nil && task.StartDate.Time().Hour() == now.Hour() && task.StartDate.Time().Minute() == now.Minute() {
-				log.Debug().Msg("Task is starting now")
 				payload := payloads.NewTaskStartingPayload(
 					task.Title,
 				)
@@ -110,7 +104,6 @@ func TaskDueNotificationCron() {
 
 			for _, reminder := range task.Reminders {
 				if reminder.Time().Hour() == now.Hour() && reminder.Time().Minute() == now.Minute() {
-					print("Task is due now")
 					payload := payloads.NewTaskReminderPayload(
 						task.Title,
 						reminder.Time().UTC().Format(time.RFC3339),
