@@ -10,7 +10,7 @@ import (
 
 // SendMulticast sends a multicast message to multiple device tokens.
 func SendMulticast(ctx context.Context, client *fcm.Client, data map[string]string, deviceTokens []string) {
-	_, err := client.SendMulticast(
+	res, err := client.SendMulticast(
 		ctx,
 		&messaging.MulticastMessage{
 			Data:   data,
@@ -32,6 +32,14 @@ func SendMulticast(ctx context.Context, client *fcm.Client, data map[string]stri
 		},
 	)
 	if err != nil {
-		log.Fatal().Err(err).Msg("Failed to send message to FCM")
+		log.Error().Err(err).Msg("Failed to send message to FCM")
+	}
+	log.Debug().Msgf("Sent message to %d devices, %d errors", res.SuccessCount, res.FailureCount)
+	for i, respo := range res.Responses {
+		if respo.Error != nil {
+			log.Error().Err(respo.Error).Msgf("Failed to send message to device %s", deviceTokens[i])
+		} else {
+			log.Debug().Msgf("Successfully sent message to device %s", deviceTokens[i])
+		}
 	}
 }
