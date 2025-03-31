@@ -13,6 +13,7 @@ import (
 
 	fcm "github.com/appleboy/go-fcm"
 	"github.com/rs/zerolog/log"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 var (
@@ -58,7 +59,7 @@ func TaskDueNotificationCron() {
 			log.Error().Err(err).Msg("Failed to decode user")
 			continue
 		}
-		
+
 		log.Debug().Msgf("Processing user: %s", user.ID)
 		// get the tasks for the user
 		//TODO: replace with a cursor here
@@ -83,7 +84,7 @@ func TaskDueNotificationCron() {
 			// - task have a reminder set and the reminder is hour and minute equal to the current time
 			now := time.Now()
 			log.Debug().Msgf("Current time: %s", now.Format(time.RFC3339))
-			if task.StartDate == nil && task.EndDate != nil && task.EndDate.Time().Hour() == now.Hour() && task.EndDate.Time().Minute() == now.Minute() {
+			if isDateNow(task.EndDate, task.Completed) {
 				log.Debug().Msgf("Task is due: %s", task.EndDate.Time().Format(time.RFC3339))
 				payload := payloads.NewTaskDuePayload(
 					task.Title,
@@ -94,7 +95,7 @@ func TaskDueNotificationCron() {
 				continue
 			}
 
-			if task.StartDate != nil && task.StartDate.Time().Hour() == now.Hour() && task.StartDate.Time().Minute() == now.Minute() {
+			if isDateNow(task.StartDate, task.Completed) {
 				log.Debug().Msgf("Task is starting: %s", task.StartDate.Time().Format(time.RFC3339))
 				payload := payloads.NewTaskStartingPayload(
 					task.Title,
@@ -106,7 +107,7 @@ func TaskDueNotificationCron() {
 			}
 
 			for _, reminder := range task.Reminders {
-				if reminder.Time().Hour() == now.Hour() && reminder.Time().Minute() == now.Minute() {
+				if isDateNow(reminder, task.Completed) {
 					log.Debug().Msgf("Task reminder: %s", reminder.Time().Format(time.RFC3339))
 					payload := payloads.NewTaskReminderPayload(
 						task.Title,
@@ -120,4 +121,19 @@ func TaskDueNotificationCron() {
 			}
 		}
 	}
+}
+
+func isDateNow(date *primitive.DateTime, completed *bool) bool {
+	now := time.Now()
+	if date == nil {
+		return false
+	}
+
+	dateTime := date.Time()
+	return dateTime.Year() == now.Year() &&
+		dateTime.Month() == now.Month() &&
+		dateTime.Day() == now.Day() &&
+		dateTime.Hour() == now.Hour() &&
+		dateTime.Minute() == now.Minute() &&
+		completed != nil && !*completed
 }
