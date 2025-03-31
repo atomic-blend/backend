@@ -83,7 +83,7 @@ func TaskDueNotificationCron() {
 			// - task have a reminder set and the reminder is hour and minute equal to the current time
 			now := time.Now()
 			log.Debug().Msgf("Current time: %s", now.Format(time.RFC3339))
-			if task.StartDate == nil && task.EndDate != nil && task.EndDate.Time().Hour() == now.Hour() && task.EndDate.Time().Minute() == now.Minute() {
+			if isDateNow(task.EndDate.Time(), task.Completed) {
 				log.Debug().Msgf("Task is due: %s", task.EndDate.Time().Format(time.RFC3339))
 				payload := payloads.NewTaskDuePayload(
 					task.Title,
@@ -94,7 +94,7 @@ func TaskDueNotificationCron() {
 				continue
 			}
 
-			if task.StartDate != nil && task.StartDate.Time().Hour() == now.Hour() && task.StartDate.Time().Minute() == now.Minute() {
+			if isDateNow(task.StartDate.Time(), task.Completed) {
 				log.Debug().Msgf("Task is starting: %s", task.StartDate.Time().Format(time.RFC3339))
 				payload := payloads.NewTaskStartingPayload(
 					task.Title,
@@ -106,7 +106,7 @@ func TaskDueNotificationCron() {
 			}
 
 			for _, reminder := range task.Reminders {
-				if reminder.Time().Hour() == now.Hour() && reminder.Time().Minute() == now.Minute() {
+				if isDateNow(reminder.Time(), task.Completed) {
 					log.Debug().Msgf("Task reminder: %s", reminder.Time().Format(time.RFC3339))
 					payload := payloads.NewTaskReminderPayload(
 						task.Title,
@@ -120,4 +120,14 @@ func TaskDueNotificationCron() {
 			}
 		}
 	}
+}
+
+func isDateNow(date time.Time, completed *bool) bool {
+	now := time.Now()
+	return date.Year() == now.Year() &&
+		date.Month() == now.Month() &&
+		date.Day() == now.Day() &&	
+		date.Hour() == now.Hour() &&
+		date.Minute() == now.Minute() && 
+		completed != nil && !*completed
 }
