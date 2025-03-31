@@ -2,6 +2,14 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## 0.2.4 - 2025-03-31
+#### Bug Fixes
+- test getting the sac directly from env - (d462fae) - Brandon Guigo
+#### Miscellaneous Chores
+- **(release)** 0.2.3 [skip ci] - (7dc8178) - CircleCI
+
+- - -
+
 ## 0.2.3 - 2025-03-31
 #### Bug Fixes
 - read the google application credentials from disk and pass it to the client as byte array - (f635638) - Brandon Guigo
