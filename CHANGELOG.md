@@ -2,6 +2,14 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## 0.2.7 - 2025-03-31
+#### Bug Fixes
+- test withCredentials - (c98e58a) - Brandon Guigo
+#### Miscellaneous Chores
+- **(release)** 0.2.6 [skip ci] - (90f5936) - CircleCI
+
+- - -
+
 ## 0.2.6 - 2025-03-31
 #### Bug Fixes
 - revert to original - (bfc695b) - Brandon Guigo
