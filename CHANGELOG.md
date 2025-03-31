@@ -2,6 +2,15 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## 0.2.11 - 2025-03-31
+#### Bug Fixes
+- handling of nil values - (d72c2ee) - Brandon Guigo
+- enhance checks for task notifications - (4634412) - Brandon Guigo
+#### Miscellaneous Chores
+- **(release)** 0.2.10 [skip ci] - (59395ef) - CircleCI
+
+- - -
+
 ## 0.2.10 - 2025-03-31
 #### Bug Fixes
 - dockerfile for CA cert causing API error in k8s - (a4037cb) - Brandon Guigo
