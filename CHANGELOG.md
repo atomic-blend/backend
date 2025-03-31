@@ -2,6 +2,14 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## 0.2.3 - 2025-03-31
+#### Bug Fixes
+- read the google application credentials from disk and pass it to the client as byte array - (f635638) - Brandon Guigo
+#### Miscellaneous Chores
+- **(release)** 0.2.2 [skip ci] - (464ccc3) - CircleCI
+
+- - -
+
 ## 0.2.2 - 2025-03-31
 #### Bug Fixes
 - add some logs - (9f7f9fb) - Brandon Guigo
