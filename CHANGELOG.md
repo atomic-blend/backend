@@ -2,6 +2,14 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## 0.2.5 - 2025-03-31
+#### Bug Fixes
+- add firebase sac to options - (c885769) - Brandon Guigo
+#### Miscellaneous Chores
+- **(release)** 0.2.4 [skip ci] - (5e6b36b) - CircleCI
+
+- - -
+
 ## 0.2.4 - 2025-03-31
 #### Bug Fixes
 - test getting the sac directly from env - (d462fae) - Brandon Guigo
