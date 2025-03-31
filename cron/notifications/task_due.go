@@ -34,9 +34,6 @@ func TaskDueNotificationCron() {
 
 	fcmClient, err := fcm.NewClient(
 		ctx,
-		fcm.WithProjectID(
-			firebaseProjectID,
-		),
 		fcm.WithCredentialsFile(os.Getenv("GOOGLE_APPLICATION_CREDENTIALS")),
 		// initial with service account
 		// fcm.WithServiceAccount("my-client-id@my-project-id.iam.gserviceaccount.com"),
