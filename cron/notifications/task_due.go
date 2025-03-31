@@ -18,7 +18,6 @@ import (
 var (
 	// firebaseProjectID is the Firebase project ID used for FCM
 	firebaseProjectID = os.Getenv("FIREBASE_PROJECT_ID")
-	firebaseSac = os.Getenv("FIREBASE_SAC")
 )
 
 // TaskDueNotificationCron initializes and starts the task due notification cron job.
@@ -30,20 +29,14 @@ func TaskDueNotificationCron() {
 
 	log.Debug().Msg("Initializing the FCM client")
 	shortcuts.CheckRequiredEnvVar("FIREBASE_PROJECT_ID", firebaseProjectID, "FIREBASE_PROJECT_ID is required for FCM")
-	shortcuts.CheckRequiredEnvVar("FIREBASE_SAC", firebaseSac, "FIREBASE_SAC is required for FCM")
 
 	log.Debug().Msgf("Firebase project ID: %s", firebaseProjectID)
-
-	// get credentialsJSON from the environment variable
-	credentialsJSON := os.Getenv("GOOGLE_APPLICATION_CREDENTIALS")
 
 	fcmClient, err := fcm.NewClient(
 		ctx,
 		fcm.WithProjectID(
 			firebaseProjectID,
 		),
-		fcm.WithCredentialsJSON([]byte(credentialsJSON)),
-		fcm.WithServiceAccount(firebaseSac),
 		// initial with service account
 		// fcm.WithServiceAccount("my-client-id@my-project-id.iam.gserviceaccount.com"),
 	)
