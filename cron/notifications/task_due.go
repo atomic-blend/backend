@@ -29,12 +29,29 @@ func TaskDueNotificationCron() {
 
 	log.Debug().Msg("Initializing the FCM client")
 	shortcuts.CheckRequiredEnvVar("FIREBASE_PROJECT_ID", firebaseProjectID, "FIREBASE_PROJECT_ID is required for FCM")
+
 	log.Debug().Msgf("Firebase project ID: %s", firebaseProjectID)
+	
+	// get credentialsJSON from the environment variable
+	credentialsJSON := os.Getenv("GOOGLE_APPLICATION_CREDENTIALS")
+	if credentialsJSON == "" {
+		log.Error().Msg("GOOGLE_APPLICATION_CREDENTIALS is required for FCM")
+		return
+	}
+
+	// read the credentials JSON file
+	creds, err := os.ReadFile(os.Getenv("GOOGLE_APPLICATION_CREDENTIALS"))
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to read credentials JSON file")
+		return
+	}
+
 	fcmClient, err := fcm.NewClient(
 		ctx,
 		fcm.WithProjectID(
 			firebaseProjectID,
 		),
+		fcm.WithCredentialsJSON(creds),
 		// initial with service account
 		// fcm.WithServiceAccount("my-client-id@my-project-id.iam.gserviceaccount.com"),
 	)
