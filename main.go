@@ -36,9 +36,10 @@ func main() {
 	mongoHost := os.Getenv("MONGO_HOST")
 	mongoPort := os.Getenv("MONGO_PORT")
 	databaseName := os.Getenv("DATABASE_NAME")
-	log.Info().Msgf("MONGO_USERNAME: %s", mongoUsername)
-	log.Info().Msgf("MONGO_HOST: %s", mongoHost)
-	log.Info().Msgf("MONGO_PORT: %s", mongoPort)
+	ssl := os.Getenv("MONGO_SSL")
+	tls := os.Getenv("MONGO_TLS")
+	retryWrites := os.Getenv("MONGO_RETRY_WRITES")
+
 	if mongoUsername != "" && mongoPassword != "" && mongoHost != "" {
 		mongoURI = "mongodb://" + mongoUsername + ":" + mongoPassword + "@" + mongoHost
 		if mongoPort != "" {
@@ -51,7 +52,38 @@ func main() {
 		mongoURI = "mongodb://mongo_user:password@mongodb:27017"
 	}
 
-	log.Info().Msgf("Connecting to MongoDB at %s", mongoURI)
+	if ssl == "true" {
+		log.Debug().Msg("Setting SSL to true")
+		mongoURI += "?ssl=true"
+	}
+	if tls == "true" {
+		if ssl != "true" {
+			log.Debug().Msg("Setting TLS to true")
+			mongoURI += "?tls=true"
+		} else {
+			log.Debug().Msg("Setting TLS to true with SSL")
+			mongoURI += "&tls=true"
+		}
+	}
+	if retryWrites == "true" {
+		if ssl != "true" && tls != "true" {
+			log.Debug().Msg("Setting retryWrites to true")
+			mongoURI += "?retryWrites=true"
+		} else {
+			log.Debug().Msg("Setting retryWrites to true with SSL/TLS")
+			mongoURI += "&retryWrites=true"
+		}
+	}
+
+	log.Debug().Msgf("MONGO_USERNAME: %s", mongoUsername)
+	log.Debug().Msgf("MONGO_PASSWORD: %s", mongoPassword)
+	log.Debug().Msgf("MONGO_HOST: %s", mongoHost)
+	log.Debug().Msgf("MONGO_PORT: %s", mongoPort)
+	log.Debug().Msgf("DATABASE_NAME: %s", databaseName)
+	log.Debug().Msgf("MONGO_SSL: %s", ssl)
+	log.Debug().Msgf("MONGO_TLS: %s", tls)
+	log.Debug().Msgf("MONGO_RETRY_WRITES: %s", retryWrites)
+	log.Debug().Msgf("ENV: %s", os.Getenv("ENV"))
 
 	// Initialize MongoDB connection
 	client, err := db.ConnectMongo(&mongoURI)
