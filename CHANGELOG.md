@@ -2,6 +2,14 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## 0.2.13 - 2025-04-01
+#### Bug Fixes
+- mongo ssl in main also - (b7a343a) - Brandon Guigo
+#### Miscellaneous Chores
+- **(release)** 0.2.12 [skip ci] - (2e46156) - CircleCI
+
+- - -
+
 ## 0.2.12 - 2025-04-01
 #### Bug Fixes
 - add support for optional ssl, tls and retryWrites - (bbf4654) - Brandon Guigo
