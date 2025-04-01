@@ -2,6 +2,14 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## 0.2.12 - 2025-04-01
+#### Bug Fixes
+- add support for optional ssl, tls and retryWrites - (bbf4654) - Brandon Guigo
+#### Miscellaneous Chores
+- **(release)** 0.2.11 [skip ci] - (02f22ed) - CircleCI
+
+- - -
+
 ## 0.2.11 - 2025-03-31
 #### Bug Fixes
 - handling of nil values - (d72c2ee) - Brandon Guigo
