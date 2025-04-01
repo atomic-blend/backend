@@ -65,4 +65,113 @@ func TestConnectMongo(t *testing.T) {
 		// Cleanup
 		client.Disconnect(context.TODO())
 	})
+
+	t.Run("should add ssl=true to uri when MONGO_SSL is true", func(t *testing.T) {
+		// Setup test environment
+		os.Setenv("ENV", "test") // Using test to avoid actual connection attempts
+		os.Setenv("DATABASE_NAME", "test_db")
+		os.Setenv("MONGO_SSL", "true")
+		defer func() {
+			os.Unsetenv("ENV")
+			os.Unsetenv("DATABASE_NAME")
+			os.Unsetenv("MONGO_SSL")
+		}()
+
+		uri := "mongodb://localhost:27017"
+		originalURI := uri
+		_, _ = ConnectMongo(&uri)
+
+		// Test that SSL parameter was added
+		assert.NotEqual(t, originalURI, uri)
+		assert.Contains(t, uri, "?ssl=true")
+	})
+
+	t.Run("should add tls=true to uri when MONGO_TLS is true", func(t *testing.T) {
+		// Setup test environment
+		os.Setenv("ENV", "test")
+		os.Setenv("DATABASE_NAME", "test_db")
+		os.Setenv("MONGO_TLS", "true")
+		defer func() {
+			os.Unsetenv("ENV")
+			os.Unsetenv("DATABASE_NAME")
+			os.Unsetenv("MONGO_TLS")
+		}()
+
+		uri := "mongodb://localhost:27017"
+		originalURI := uri
+		_, _ = ConnectMongo(&uri)
+
+		// Test that TLS parameter was added
+		assert.NotEqual(t, originalURI, uri)
+		assert.Contains(t, uri, "?tls=true")
+	})
+
+	t.Run("should add ssl=true and tls=true to uri when both are true", func(t *testing.T) {
+		// Setup test environment
+		os.Setenv("ENV", "test")
+		os.Setenv("DATABASE_NAME", "test_db")
+		os.Setenv("MONGO_SSL", "true")
+		os.Setenv("MONGO_TLS", "true")
+		defer func() {
+			os.Unsetenv("ENV")
+			os.Unsetenv("DATABASE_NAME")
+			os.Unsetenv("MONGO_SSL")
+			os.Unsetenv("MONGO_TLS")
+		}()
+
+		uri := "mongodb://localhost:27017"
+		originalURI := uri
+		_, _ = ConnectMongo(&uri)
+
+		// Test that both parameters were added
+		assert.NotEqual(t, originalURI, uri)
+		assert.Contains(t, uri, "ssl=true")
+		assert.Contains(t, uri, "tls=true")
+	})
+
+	t.Run("should add retryWrites=true to uri when MONGO_RETRY_WRITES is true", func(t *testing.T) {
+		// Setup test environment
+		os.Setenv("ENV", "test")
+		os.Setenv("DATABASE_NAME", "test_db")
+		os.Setenv("MONGO_RETRY_WRITES", "true")
+		defer func() {
+			os.Unsetenv("ENV")
+			os.Unsetenv("DATABASE_NAME")
+			os.Unsetenv("MONGO_RETRY_WRITES")
+		}()
+
+		uri := "mongodb://localhost:27017"
+		originalURI := uri
+		_, _ = ConnectMongo(&uri)
+
+		// Test that retryWrites parameter was added
+		assert.NotEqual(t, originalURI, uri)
+		assert.Contains(t, uri, "?retryWrites=true")
+	})
+
+	t.Run("should add ssl, tls and retryWrites to uri when all are true", func(t *testing.T) {
+		// Setup test environment
+		os.Setenv("ENV", "test")
+		os.Setenv("DATABASE_NAME", "test_db")
+		os.Setenv("MONGO_SSL", "true")
+		os.Setenv("MONGO_TLS", "true")
+		os.Setenv("MONGO_RETRY_WRITES", "true")
+		defer func() {
+			os.Unsetenv("ENV")
+			os.Unsetenv("DATABASE_NAME")
+			os.Unsetenv("MONGO_SSL")
+			os.Unsetenv("MONGO_TLS")
+			os.Unsetenv("MONGO_RETRY_WRITES")
+		}()
+
+		uri := "mongodb://localhost:27017"
+		originalURI := uri
+		_, _ = ConnectMongo(&uri)
+
+		// Test that all parameters were added
+		assert.NotEqual(t, originalURI, uri)
+		assert.Contains(t, uri, "ssl=true")
+		assert.Contains(t, uri, "tls=true")
+		assert.Contains(t, uri, "retryWrites=true")
+	})
 }

@@ -22,6 +22,34 @@ var Database *mongo.Database
 func ConnectMongo(uri *string) (*mongo.Client, error) {
 	env := os.Getenv("ENV")
 	databaseName := os.Getenv("DATABASE_NAME")
+	ssl := os.Getenv("MONGO_SSL")
+	tls := os.Getenv("MONGO_TLS")
+	retryWrites := os.Getenv("MONGO_RETRY_WRITES")
+
+	// optionally set ssl and tls and retryWrites if they are set to true
+	if ssl == "true" {
+		log.Debug().Msg("Setting SSL to true")
+		*uri += "?ssl=true"
+	}
+	if tls == "true" {
+		if ssl != "true" {
+			log.Debug().Msg("Setting TLS to true")
+			*uri += "?tls=true"
+		} else {
+			log.Debug().Msg("Setting TLS to true with SSL")
+			*uri += "&tls=true"
+		}
+	}
+	if retryWrites == "true" {
+		if ssl != "true" && tls != "true" {
+			log.Debug().Msg("Setting retryWrites to true")
+			*uri += "?retryWrites=true"
+		} else {
+			log.Debug().Msg("Setting retryWrites to true with SSL/TLS")
+			*uri += "&retryWrites=true"
+		}
+	}
+	
 
 	if env == "test" {
 		// setup in memory mongo for testing
