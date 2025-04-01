@@ -2,6 +2,14 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## 0.2.14 - 2025-04-01
+#### Bug Fixes
+- revert fix: mongo ssl in main also - (85a6ad0) - Brandon Guigo
+#### Miscellaneous Chores
+- **(release)** 0.2.13 [skip ci] - (d4dc346) - CircleCI
+
+- - -
+
 ## 0.2.13 - 2025-04-01
 #### Bug Fixes
 - mongo ssl in main also - (b7a343a) - Brandon Guigo
