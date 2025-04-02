@@ -2,6 +2,14 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## 0.2.23 - 2025-04-02
+#### Bug Fixes
+- typo in verify deploy - (7d880b5) - Brandon Guigo
+#### Miscellaneous Chores
+- **(release)** 0.2.22 [skip ci] - (c12579f) - CircleCI
+
+- - -
+
 ## 0.2.22 - 2025-04-02
 #### Bug Fixes
 - remove newline - (770b30d) - Brandon Guigo
