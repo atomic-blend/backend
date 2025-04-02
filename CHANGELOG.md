@@ -2,6 +2,14 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## 0.2.19 - 2025-04-02
+#### Bug Fixes
+- add region to pipeline - (415c688) - Brandon Guigo
+#### Miscellaneous Chores
+- **(release)** 0.2.18 [skip ci] - (39ebd2f) - CircleCI
+
+- - -
+
 ## 0.2.18 - 2025-04-02
 #### Bug Fixes
 - deploy to ecs - (7cad098) - Brandon Guigo
