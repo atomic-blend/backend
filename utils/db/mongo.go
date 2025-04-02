@@ -7,6 +7,9 @@ import (
 	"os"
 	"time"
 
+	tls "crypto/tls"
+	"crypto/x509"
+
 	"github.com/rs/zerolog/log"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -23,7 +26,8 @@ func ConnectMongo(uri *string) (*mongo.Client, error) {
 	env := os.Getenv("ENV")
 	databaseName := os.Getenv("DATABASE_NAME")
 	ssl := os.Getenv("MONGO_SSL")
-	tls := os.Getenv("MONGO_TLS")
+	tlsConfig := os.Getenv("MONGO_TLS")
+	sslCaCert := os.Getenv("MONGO_SSL_CA_CERT_PATH")
 	retryWrites := os.Getenv("MONGO_RETRY_WRITES")
 
 	// optionally set ssl and tls and retryWrites if they are set to true
@@ -31,7 +35,7 @@ func ConnectMongo(uri *string) (*mongo.Client, error) {
 		log.Debug().Msg("Setting SSL to true")
 		*uri += "?ssl=true"
 	}
-	if tls == "true" {
+	if tlsConfig == "true" {
 		if ssl != "true" {
 			log.Debug().Msg("Setting TLS to true")
 			*uri += "?tls=true"
@@ -41,7 +45,7 @@ func ConnectMongo(uri *string) (*mongo.Client, error) {
 		}
 	}
 	if retryWrites == "true" {
-		if ssl != "true" && tls != "true" {
+		if ssl != "true" && tlsConfig != "true" {
 			log.Debug().Msg("Setting retryWrites to true")
 			*uri += "?retryWrites=true"
 		} else {
@@ -59,11 +63,29 @@ func ConnectMongo(uri *string) (*mongo.Client, error) {
 	if uri == nil {
 		err := fmt.Errorf("MONGO_URI is not set")
 		return nil, err
-	} 
+	}
 
 	shortcuts.CheckRequiredEnvVar("DATABASE_NAME", databaseName, "")
 
 	clientOptions := options.Client().ApplyURI(*uri)
+	if sslCaCert != "" {
+		// Load CA cert if provided
+		caCert, err := os.ReadFile(sslCaCert)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read CA certificate: %w", err)
+		}
+		
+		certPool := x509.NewCertPool()
+		if !certPool.AppendCertsFromPEM(caCert) {
+			return nil, fmt.Errorf("failed to append CA certificate")
+		}
+		
+		tlsConfig := &tls.Config{
+			MinVersion: tls.VersionTLS12,
+			RootCAs:    certPool,
+		}
+		clientOptions.SetTLSConfig(tlsConfig)
+	}
 
 	// Set timeout for connection
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
