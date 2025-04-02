@@ -2,6 +2,14 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## 0.2.21 - 2025-04-02
+#### Bug Fixes
+- tag not propagated between steps, so empty in resource upgrade - (88fdc65) - Brandon Guigo
+#### Miscellaneous Chores
+- **(release)** 0.2.20 [skip ci] - (43529ec) - CircleCI
+
+- - -
+
 ## 0.2.20 - 2025-04-02
 #### Bug Fixes
 - missing $ in region - (b1cf9dc) - Brandon Guigo
