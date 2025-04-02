@@ -230,10 +230,10 @@ jobs:
       #     session_duration: '3600'
       - aws-cli/setup:
           profile_name: default
-          region: AWS_REGION
+          region: $AWS_REGION
       - aws-ecs/update_service:
           cluster: "prod"
-          region: AWS_REGION
+          region: $AWS_REGION
           container_image_name_updates: container=backend,tag=$TAG
           family: prod
 
@@ -252,6 +252,7 @@ jobs:
             echo "Deploying to ECS with tag "'$TAG'"
       - aws-cli/setup:
           profile_name: default
+          region: $AWS_REGION
       - run:
           name: Get last task definition
           command: >
@@ -263,6 +264,7 @@ jobs:
             "$BASH_ENV"
       - aws-ecs/verify_revision_is_deployed:
           family: "prod"
+          region: $AWS_REGION
           cluster: "prod"
           task_definition_arn: "${TASK_DEFINITION_ARN}"
 
