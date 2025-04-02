@@ -2,6 +2,14 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## 0.2.20 - 2025-04-02
+#### Bug Fixes
+- missing $ in region - (b1cf9dc) - Brandon Guigo
+#### Miscellaneous Chores
+- **(release)** 0.2.19 [skip ci] - (a7e028a) - CircleCI
+
+- - -
+
 ## 0.2.19 - 2025-04-02
 #### Bug Fixes
 - add region to pipeline - (415c688) - Brandon Guigo
