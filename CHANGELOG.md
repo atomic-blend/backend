@@ -2,6 +2,14 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## 0.2.22 - 2025-04-02
+#### Bug Fixes
+- remove newline - (770b30d) - Brandon Guigo
+#### Miscellaneous Chores
+- **(release)** 0.2.21 [skip ci] - (b399a31) - CircleCI
+
+- - -
+
 ## 0.2.21 - 2025-04-02
 #### Bug Fixes
 - tag not propagated between steps, so empty in resource upgrade - (88fdc65) - Brandon Guigo
