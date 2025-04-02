@@ -230,8 +230,10 @@ jobs:
       #     session_duration: '3600'
       - aws-cli/setup:
           profile_name: default
+          region: AWS_REGION
       - aws-ecs/update_service:
           cluster: "prod"
+          region: AWS_REGION
           container_image_name_updates: container=backend,tag=$TAG
           family: prod
 
