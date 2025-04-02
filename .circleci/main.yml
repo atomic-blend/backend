@@ -222,8 +222,7 @@ jobs:
           command: |
             TAG=$(git describe --abbrev=0 --tags)
             echo "Deploying to ECS with tag $TAG"
-            echo "export TAG='${TAG}'" >>
-            "$BASH_ENV"
+            echo "export TAG='${TAG}'" >> "$BASH_ENV"
       # - aws-cli/setup:
       #     profile_name: OIDC-PROFILE
       #     region: AWS_REGION
@@ -252,8 +251,7 @@ jobs:
           command: |
             TAG=$(git describe --abbrev=0 --tags)
             echo "Deploying to ECS with tag "'$TAG'"
-            echo "export TAG='${TAG}'" >>
-            "$BASH_ENV"
+            echo "export TAG='${TAG}'" >> "$BASH_ENV"
       - aws-cli/setup:
           profile_name: default
           region: $AWS_REGION
@@ -264,8 +262,7 @@ jobs:
                 --task-definition prod \
                 --output text \
                 --query 'taskDefinition.taskDefinitionArn')
-            echo "export TASK_DEFINITION_ARN='${TASK_DEFINITION_ARN}'" >>
-            "$BASH_ENV"
+            echo "export TASK_DEFINITION_ARN='${TASK_DEFINITION_ARN}'" >> "$BASH_ENV"
       - aws-ecs/verify_revision_is_deployed:
           family: "prod"
           region: $AWS_REGION
