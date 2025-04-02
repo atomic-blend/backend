@@ -11,6 +11,5 @@ FROM alpine:3.21
 # Install root certs for TLS validation
 RUN apk add --no-cache ca-certificates curl
 
-
 COPY --from=dev go/bin/app /
 CMD ["/app"]
