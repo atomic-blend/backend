@@ -2,6 +2,14 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## 0.2.16 - 2025-04-02
+#### Bug Fixes
+- add curl to dockerfile - (259b6ee) - Brandon Guigo
+#### Miscellaneous Chores
+- **(release)** 0.2.15 [skip ci] - (72d034b) - CircleCI
+
+- - -
+
 ## 0.2.15 - 2025-04-02
 #### Bug Fixes
 - add the possibility to set a TLS CA cert for mongo - (dd62ac4) - Brandon Guigo
