@@ -2,6 +2,14 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## 0.2.15 - 2025-04-02
+#### Bug Fixes
+- add the possibility to set a TLS CA cert for mongo - (dd62ac4) - Brandon Guigo
+#### Miscellaneous Chores
+- **(release)** 0.2.14 [skip ci] - (7f79b2c) - CircleCI
+
+- - -
+
 ## 0.2.14 - 2025-04-01
 #### Bug Fixes
 - revert fix: mongo ssl in main also - (85a6ad0) - Brandon Guigo
