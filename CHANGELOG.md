@@ -2,6 +2,14 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## 0.2.18 - 2025-04-02
+#### Bug Fixes
+- deploy to ecs - (7cad098) - Brandon Guigo
+#### Miscellaneous Chores
+- **(release)** 0.2.17 [skip ci] - (4c0ed32) - CircleCI
+
+- - -
+
 ## 0.2.17 - 2025-04-02
 #### Bug Fixes
 - add missing withProjectId back - (60f9436) - Brandon Guigo
