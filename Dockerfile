@@ -9,7 +9,7 @@ RUN CGO_ENABLED=0 go build -o /go/bin/app
 FROM alpine:3.21
 
 # Install root certs for TLS validation
-RUN apk add --no-cache ca-certificates
+RUN apk add --no-cache ca-certificates curl
 
 
 COPY --from=dev go/bin/app /
