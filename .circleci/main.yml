@@ -250,7 +250,7 @@ jobs:
           name: Get tag
           command: |
             TAG=$(git describe --abbrev=0 --tags)
-            echo "Deploying to ECS with tag "'$TAG'"
+            echo "Deploying to ECS with tag $TAG"
             echo "export TAG='${TAG}'" >> "$BASH_ENV"
       - aws-cli/setup:
           profile_name: default
