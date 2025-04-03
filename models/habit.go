@@ -16,7 +16,7 @@ var ValidFrequencies = []string{FrequencyDaily, FrequencyWeekly, FrequencyMonthl
 
 type Habit struct {
 	ID            primitive.ObjectID `bson:"_id,omitempty" json:"id"`
-	UserID 	  primitive.ObjectID `bson:"user_id" json:"user_id"`
+	UserID        primitive.ObjectID `bson:"user_id" json:"user_id"`
 	Name          *string            `bson:"name" json:"name" binding:"required"`
 	Emoji         *string            `bson:"emoji" json:"emoji"`
 	Frequency     *string            `bson:"frequency" json:"frequency" binding:"required,validFrequency"`
@@ -28,4 +28,5 @@ type Habit struct {
 	UpdatedAt     *string            `bson:"updated_at" json:"updated_at"`
 	Reminders     []string           `bson:"reminders" json:"reminders"`
 	Citation      *string            `bson:"citation" json:"citation"`
+	Entries       []HabitEntry       `json:"entries"`
 }

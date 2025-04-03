@@ -49,11 +49,17 @@ func setupTest() (*gin.Engine, *mocks.MockHabitRepository) {
 	// Set up routes with middleware
 	habitRoutes := router.Group("/habits")
 	{
+		// Main habit endpoints
 		habitRoutes.GET("", habitController.GetAllHabits)
 		habitRoutes.GET("/:id", habitController.GetHabitByID)
 		habitRoutes.POST("", habitController.CreateHabit)
 		habitRoutes.PUT("/:id", habitController.UpdateHabit)
 		habitRoutes.DELETE("/:id", habitController.DeleteHabit)
+
+		// Habit entry endpoints
+		habitRoutes.POST("/entry/add", habitController.AddHabitEntry)
+		habitRoutes.PUT("/entry/edit/:id", habitController.EditHabitEntry)
+		habitRoutes.DELETE("/entry/delete/:id", habitController.DeleteHabitEntry)
 	}
 
 	return router, mockRepo

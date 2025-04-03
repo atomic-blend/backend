@@ -27,6 +27,19 @@ func TestGetHabitByID(t *testing.T) {
 
 		mockRepo.On("GetByID", mock.Anything, habitID).Return(habit, nil)
 
+		// Mock the entries for this habit
+		mockEntries := []models.HabitEntry{
+			{
+				ID:        primitive.NewObjectID(),
+				HabitID:   habitID,
+				UserID:    userID,
+				EntryDate: "2025-04-01T12:00:00Z",
+				CreatedAt: "2025-04-01T12:00:00Z",
+				UpdatedAt: "2025-04-01T12:00:00Z",
+			},
+		}
+		mockRepo.On("GetEntriesByHabitID", mock.Anything, habitID).Return(mockEntries, nil)
+
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("GET", "/habits/"+habitID.Hex(), nil)
 
@@ -49,6 +62,9 @@ func TestGetHabitByID(t *testing.T) {
 		assert.Equal(t, *habit.Emoji, *response.Emoji)
 		assert.Equal(t, *habit.Frequency, *response.Frequency)
 		assert.Equal(t, habit.Reminders, response.Reminders)
+		// Check that entries were included in the response
+		assert.Equal(t, 1, len(response.Entries))
+		assert.Equal(t, mockEntries[0].ID, response.Entries[0].ID)
 	})
 
 	t.Run("habit not found", func(t *testing.T) {
@@ -56,6 +72,7 @@ func TestGetHabitByID(t *testing.T) {
 		userID := primitive.NewObjectID()
 
 		mockRepo.On("GetByID", mock.Anything, nonExistentID).Return(nil, nil)
+		// No need to mock GetEntriesByHabitID here since habit doesn't exist
 
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("GET", "/habits/"+nonExistentID.Hex(), nil)
@@ -96,6 +113,7 @@ func TestGetHabitByID(t *testing.T) {
 		habit.UserID = habitOwnerID // Set a different user as owner
 
 		mockRepo.On("GetByID", mock.Anything, habitID).Return(habit, nil)
+		// GetEntriesByHabitID won't be called due to permission check failing
 
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("GET", "/habits/"+habitID.Hex(), nil)
