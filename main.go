@@ -7,6 +7,7 @@ import (
 	"atomic_blend_api/controllers/tasks"
 	"atomic_blend_api/controllers/users"
 	"atomic_blend_api/cron"
+	"atomic_blend_api/models"
 	"atomic_blend_api/utils/db"
 	"context"
 	"os"
@@ -65,6 +66,8 @@ func main() {
 		}
 		log.Fatal().Msg("✅ Disconnected from MongoDB")
 	}()
+
+	models.RegisterValidators()
 
 	// start cron
 	go func() {
