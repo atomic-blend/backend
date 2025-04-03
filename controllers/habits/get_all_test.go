@@ -38,6 +38,10 @@ func TestGetAllHabits(t *testing.T) {
 			return true
 		})).Return(habits, nil).Once()
 
+		// Mock the GetEntriesByHabitID calls for each habit
+		mockRepo.On("GetEntriesByHabitID", mock.Anything, habit1.ID).Return([]models.HabitEntry{}, nil).Once()
+		mockRepo.On("GetEntriesByHabitID", mock.Anything, habit2.ID).Return([]models.HabitEntry{}, nil).Once()
+
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("GET", "/habits", nil)
 
@@ -67,6 +71,8 @@ func TestGetAllHabits(t *testing.T) {
 		mockRepo.On("GetAll", mock.Anything, mock.MatchedBy(func(userID *primitive.ObjectID) bool {
 			return true
 		})).Return(nil, nil).Once()
+
+		// No need to mock GetEntriesByHabitID here since there are no habits
 
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("GET", "/habits", nil)

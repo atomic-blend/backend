@@ -62,5 +62,15 @@ func (c *HabitController) GetHabitByID(ctx *gin.Context) {
 		return
 	}
 
+	// Get entries for this habit
+	entries, err := c.habitRepo.GetEntriesByHabitID(ctx, habit.ID)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load habit entries: " + err.Error()})
+		return
+	}
+
+	// Assign entries to the habit
+	habit.Entries = entries
+
 	ctx.JSON(http.StatusOK, habit)
 }

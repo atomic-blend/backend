@@ -38,10 +38,16 @@ func setupHabitRoutes(router *gin.Engine, habitController *HabitController) {
 	habitRoutes := router.Group("/habits")
 	auth.RequireAuth(habitRoutes)
 	{
+		// Main habit endpoints
 		habitRoutes.POST("", habitController.CreateHabit)
 		habitRoutes.GET("", habitController.GetAllHabits)
 		habitRoutes.GET("/:id", habitController.GetHabitByID)
 		habitRoutes.PUT("/:id", habitController.UpdateHabit)
 		habitRoutes.DELETE("/:id", habitController.DeleteHabit)
+
+		// Habit entry endpoints
+		habitRoutes.POST("/entry/add", habitController.AddHabitEntry)
+		habitRoutes.PUT("/entry/edit/:id", habitController.EditHabitEntry)
+		habitRoutes.DELETE("/entry/delete/:id", habitController.DeleteHabitEntry)
 	}
 }

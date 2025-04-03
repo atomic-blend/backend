@@ -37,5 +37,13 @@ func (c *HabitController) GetAllHabits(ctx *gin.Context) {
 		habits = []*models.Habit{}
 	}
 
+	// Load entries for each habit
+	for _, habit := range habits {
+		entries, err := c.habitRepo.GetEntriesByHabitID(ctx, habit.ID)
+		if err == nil { // Only assign if no error
+			habit.Entries = entries
+		}
+	}
+
 	ctx.JSON(http.StatusOK, habits)
 }

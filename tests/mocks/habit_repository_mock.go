@@ -54,3 +54,36 @@ func (m *MockHabitRepository) Delete(ctx context.Context, id primitive.ObjectID)
 	args := m.Called(ctx, id)
 	return args.Error(0)
 }
+
+// AddEntry adds a new habit entry
+func (m *MockHabitRepository) AddEntry(ctx context.Context, entry *models.HabitEntry) (*models.HabitEntry, error) {
+	args := m.Called(ctx, entry)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*models.HabitEntry), args.Error(1)
+}
+
+// GetEntriesByHabitID gets all entries for a habit
+func (m *MockHabitRepository) GetEntriesByHabitID(ctx context.Context, habitID primitive.ObjectID) ([]models.HabitEntry, error) {
+	args := m.Called(ctx, habitID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]models.HabitEntry), args.Error(1)
+}
+
+// UpdateEntry updates a habit entry
+func (m *MockHabitRepository) UpdateEntry(ctx context.Context, entry *models.HabitEntry) (*models.HabitEntry, error) {
+	args := m.Called(ctx, entry)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*models.HabitEntry), args.Error(1)
+}
+
+// DeleteEntry deletes a habit entry
+func (m *MockHabitRepository) DeleteEntry(ctx context.Context, id primitive.ObjectID) error {
+	args := m.Called(ctx, id)
+	return args.Error(0)
+}
