@@ -21,6 +21,7 @@ type Habit struct {
 	Emoji         *string             `bson:"emoji" json:"emoji"`
 	Frequency     *string             `bson:"frequency" json:"frequency" binding:"required,validFrequency"`
 	NumberOfTimes *int                `bson:"number_of_times" json:"numberOfTimes"`
+	Duration      *int                `bson:"duration" json:"duration"`
 	DaysOfWeek    *[]int              `bson:"days_of_week" json:"daysOfWeek"`
 	StartDate     *primitive.DateTime `bson:"start_date" json:"startDate" binding:"required"`
 	EndDate       *primitive.DateTime `bson:"end_date" json:"endDate"`

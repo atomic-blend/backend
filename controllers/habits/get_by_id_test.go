@@ -61,6 +61,7 @@ func TestGetHabitByID(t *testing.T) {
 		assert.Equal(t, *habit.Name, *response.Name)
 		assert.Equal(t, *habit.Emoji, *response.Emoji)
 		assert.Equal(t, *habit.Frequency, *response.Frequency)
+		assert.Equal(t, *habit.Duration, *response.Duration)
 		assert.Equal(t, habit.Reminders, response.Reminders)
 		// Check that entries were included in the response
 		assert.Equal(t, 1, len(response.Entries))

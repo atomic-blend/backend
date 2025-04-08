@@ -15,6 +15,7 @@ func createTestHabit() *models.Habit {
 	emoji := "🏃‍♂️"
 	frequency := models.FrequencyDaily
 	numberOfTimes := 3
+	duration := 30               // 30 minutes
 	daysOfWeek := []int{1, 3, 5} // Monday, Wednesday, Friday
 	startDate := primitive.NewDateTimeFromTime(time.Now())
 	endDate := primitive.NewDateTimeFromTime(time.Now().AddDate(0, 1, 0)) // One month later
@@ -29,6 +30,7 @@ func createTestHabit() *models.Habit {
 		Emoji:         &emoji,
 		Frequency:     &frequency,
 		NumberOfTimes: &numberOfTimes,
+		Duration:      &duration,
 		DaysOfWeek:    &daysOfWeek,
 		StartDate:     &startDate,
 		EndDate:       &endDate,
