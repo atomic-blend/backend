@@ -5,3 +5,4 @@ tmp
 cover.out
 .idea/**
 **/*_sac*.json
+.DS_Store
