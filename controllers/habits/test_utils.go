@@ -17,6 +17,14 @@ func createTestHabit() *models.Habit {
 	numberOfTimes := 3
 	duration := 30               // 30 minutes
 	daysOfWeek := []int{1, 3, 5} // Monday, Wednesday, Friday
+
+	// Create days of month - 1st, 15th and 28th of month
+	daysOfMonth := []primitive.DateTime{
+		primitive.NewDateTimeFromTime(time.Date(time.Now().Year(), time.Now().Month(), 1, 0, 0, 0, 0, time.Local)),
+		primitive.NewDateTimeFromTime(time.Date(time.Now().Year(), time.Now().Month(), 15, 0, 0, 0, 0, time.Local)),
+		primitive.NewDateTimeFromTime(time.Date(time.Now().Year(), time.Now().Month(), 28, 0, 0, 0, 0, time.Local)),
+	}
+
 	startDate := primitive.NewDateTimeFromTime(time.Now())
 	endDate := primitive.NewDateTimeFromTime(time.Now().AddDate(0, 1, 0)) // One month later
 	now := time.Now().Format(time.RFC3339)
@@ -32,6 +40,7 @@ func createTestHabit() *models.Habit {
 		NumberOfTimes: &numberOfTimes,
 		Duration:      &duration,
 		DaysOfWeek:    &daysOfWeek,
+		DaysOfMonth:   &daysOfMonth,
 		StartDate:     &startDate,
 		EndDate:       &endDate,
 		CreatedAt:     &now,
