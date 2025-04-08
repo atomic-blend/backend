@@ -16,8 +16,8 @@ func createTestHabit() *models.Habit {
 	frequency := models.FrequencyDaily
 	numberOfTimes := 3
 	daysOfWeek := []int{1, 3, 5} // Monday, Wednesday, Friday
-	startDate := time.Now().Format(time.RFC3339)
-	endDate := time.Now().AddDate(0, 1, 0).Format(time.RFC3339) // One month later
+	startDate := primitive.NewDateTimeFromTime(time.Now())
+	endDate := primitive.NewDateTimeFromTime(time.Now().AddDate(0, 1, 0)) // One month later
 	now := time.Now().Format(time.RFC3339)
 	reminders := []string{"09:00", "18:00"}
 	citation := "Test citation"

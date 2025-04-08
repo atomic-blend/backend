@@ -3,6 +3,7 @@ package main
 import (
 	"atomic_blend_api/auth"
 	"atomic_blend_api/controllers/admin"
+	"atomic_blend_api/controllers/habits"
 	"atomic_blend_api/controllers/health"
 	"atomic_blend_api/controllers/tasks"
 	"atomic_blend_api/controllers/users"
@@ -87,6 +88,7 @@ func main() {
 	admin.SetupRoutes(router, db.Database)
 	tasks.SetupRoutes(router, db.Database)
 	health.SetupRoutes(router, db.Database)
+	habits.SetupRoutes(router, db.Database)
 
 	// Define port
 	port := os.Getenv("PORT")
