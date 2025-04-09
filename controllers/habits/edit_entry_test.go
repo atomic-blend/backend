@@ -31,7 +31,7 @@ func TestEditHabitEntry(t *testing.T) {
 		habit.UserID = userID
 
 		// Create test entry with updated data
-		newEntryDate := time.Now().Format(time.RFC3339)
+		newEntryDate := primitive.NewDateTimeFromTime(time.Now().Add(24 * time.Hour)) // 1 day later
 		updatedEntry := models.HabitEntry{
 			ID:        entryID,
 			HabitID:   habitID,

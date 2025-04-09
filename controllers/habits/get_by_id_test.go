@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
@@ -28,12 +29,16 @@ func TestGetHabitByID(t *testing.T) {
 		mockRepo.On("GetByID", mock.Anything, habitID).Return(habit, nil)
 
 		// Mock the entries for this habit
+		newEntryDate, err := time.Parse(time.RFC3339, "2025-04-01T12:00:00Z")
+		if err != nil {
+			t.Fatalf("Failed to parse time: %v", err)
+		}
 		mockEntries := []models.HabitEntry{
 			{
 				ID:        primitive.NewObjectID(),
 				HabitID:   habitID,
 				UserID:    userID,
-				EntryDate: "2025-04-01T12:00:00Z",
+				EntryDate: primitive.NewDateTimeFromTime(newEntryDate),
 				CreatedAt: "2025-04-01T12:00:00Z",
 				UpdatedAt: "2025-04-01T12:00:00Z",
 			},
@@ -56,7 +61,7 @@ func TestGetHabitByID(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, w.Code)
 		var response models.Habit
-		err := json.Unmarshal(w.Body.Bytes(), &response)
+		err = json.Unmarshal(w.Body.Bytes(), &response)
 		assert.NoError(t, err)
 		assert.Equal(t, *habit.Name, *response.Name)
 		assert.Equal(t, *habit.Emoji, *response.Emoji)

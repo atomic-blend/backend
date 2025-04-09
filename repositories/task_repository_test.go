@@ -192,9 +192,10 @@ func TestTaskRepository_GetAll(t *testing.T) {
 		// Validate reminders lengths
 		var taskWithOneReminder, taskWithTwoReminders *models.TaskEntity
 		for _, task := range found {
-			if task.Title == "Task 1" {
+			switch task.Title {
+			case "Task 1":
 				taskWithOneReminder = task
-			} else if task.Title == "Task 2" {
+			case "Task 2":
 				taskWithTwoReminders = task
 			}
 		}

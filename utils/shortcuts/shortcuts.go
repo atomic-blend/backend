@@ -1,7 +1,10 @@
 package shortcuts
 
 import (
+	"time"
+
 	"github.com/rs/zerolog/log"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 // CheckRequiredEnvVar checks if a required environment variable is set
@@ -41,6 +44,24 @@ func LogOnError(err error, msg string) bool {
 	if err != nil {
 		log.Error().Err(err).Msg(msg)
 		return true
+	}
+	return false
+}
+
+func ContainsDateTime(slice []primitive.DateTime, item time.Time) bool {
+	for _, a := range slice {
+		if a.Time().Equal(item) {
+			return true
+		}
+	}
+	return false
+}
+
+func ContainsInt(slice []int, item int) bool {
+	for _, a := range slice {
+		if a == item {
+			return true
+		}
 	}
 	return false
 }

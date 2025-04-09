@@ -30,7 +30,7 @@ func TestAddHabitEntry(t *testing.T) {
 		habit.UserID = userID
 
 		// Create test entry
-		entryDate := time.Now().Format(time.RFC3339)
+		entryDate := primitive.NewDateTimeFromTime(time.Now())
 		entry := models.HabitEntry{
 			HabitID:   habitID,
 			EntryDate: entryDate,

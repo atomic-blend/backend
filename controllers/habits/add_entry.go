@@ -4,7 +4,6 @@ import (
 	"atomic_blend_api/auth"
 	"atomic_blend_api/models"
 	"net/http"
-	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -56,11 +55,6 @@ func (c *HabitController) AddHabitEntry(ctx *gin.Context) {
 	if habit.UserID != authUser.UserID {
 		ctx.JSON(http.StatusForbidden, gin.H{"error": "You don't have permission to add entries to this habit"})
 		return
-	}
-
-	// Set entry date if not provided
-	if entry.EntryDate == "" {
-		entry.EntryDate = time.Now().Format(time.RFC3339)
 	}
 
 	// Create entry in database
