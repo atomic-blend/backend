@@ -50,8 +50,9 @@ func LogOnError(err error, msg string) bool {
 
 // ContainsDateTime checks if a slice of primitive.DateTime contains a specific time.Time
 func ContainsDateTime(slice []primitive.DateTime, item time.Time) bool {
+	itemDateTime := primitive.NewDateTimeFromTime(item)
 	for _, a := range slice {
-		if a.Time().Equal(item) {
+		if a == itemDateTime {
 			return true
 		}
 	}
