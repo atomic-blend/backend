@@ -4,6 +4,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
+// Habit frequencies
 const (
 	FrequencyDaily     = "daily"
 	FrequencyWeekly    = "weekly"
@@ -11,9 +12,10 @@ const (
 	FrequencyRepeating = "repeatition" // every x days
 )
 
-// used in validators.go
+// ValidFrequencies is used in validators.go
 var ValidFrequencies = []string{FrequencyDaily, FrequencyWeekly, FrequencyMonthly, FrequencyRepeating}
 
+// Habit represents a habit.
 type Habit struct {
 	ID            primitive.ObjectID    `bson:"_id,omitempty" json:"id"`
 	UserID        primitive.ObjectID    `bson:"user_id" json:"userId"`

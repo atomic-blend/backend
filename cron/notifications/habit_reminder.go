@@ -15,6 +15,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+// HabitReminderNotificationCron is a cron job that sends notifications to users for their habits
 func HabitReminderNotificationCron() {
 	log.Debug().Msg("Starting habit due notification cron job")
 	ctx := context.TODO()

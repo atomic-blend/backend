@@ -1,6 +1,6 @@
 package payloads
 
-// TaskStartingPayload represents the payload for task starting notifications.
+// HabitReminderPayload represents the payload for task starting notifications.
 type HabitReminderPayload struct {
 	Type  string `json:"type"`
 	Title string `json:"title"`
@@ -8,7 +8,7 @@ type HabitReminderPayload struct {
 	Emoji *string `json:"emoji"`
 }
 
-// NewTaskStartingPayload creates a new TaskStartingPayload with the given title.
+// NewHabitReminderPayload creates a new HabitReminderPayload with the given title.
 func NewHabitReminderPayload(title string, citation string, emoji *string) *HabitReminderPayload {
 	return &HabitReminderPayload{
 		Type:  "HABIT_REMINDER",
