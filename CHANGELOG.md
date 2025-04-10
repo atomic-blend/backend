@@ -2,6 +2,25 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## 0.3.0 - 2025-04-10
+#### Bug Fixes
+- add missing tests - (24de254) - Brandon Guigo
+- linter - (0aa3d89) - Brandon Guigo
+- retrigger circleci - (0d0b79c) - Brandon Guigo
+- models and tests - (cd8702f) - Brandon Guigo
+#### Features
+- habit reminder notification - (5b05872) - Brandon Guigo
+- add days of months field to habit - (725915a) - Brandon Guigo
+- add duration into habit entity - (e31ad18) - Brandon Guigo
+- implement habit entry management with add, edit, and delete functionalities - (1404384) - Brandon Guigo
+- add habit controller and model - (e45fe36) - Brandon Guigo
+#### Miscellaneous Chores
+- **(release)** 0.2.23 [skip ci] - (2ab3af1) - CircleCI
+- replace wrong repo url [skip ci] - (8667388) - Brandon Guigo
+- add contirbuting and code of conduct [skip ci] - (d93fcf6) - Brandon Guigo
+
+- - -
+
 ## 0.2.23 - 2025-04-02
 #### Bug Fixes
 - typo in verify deploy - (7d880b5) - Brandon Guigo
