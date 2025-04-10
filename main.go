@@ -3,10 +3,12 @@ package main
 import (
 	"atomic_blend_api/auth"
 	"atomic_blend_api/controllers/admin"
+	"atomic_blend_api/controllers/habits"
 	"atomic_blend_api/controllers/health"
 	"atomic_blend_api/controllers/tasks"
 	"atomic_blend_api/controllers/users"
 	"atomic_blend_api/cron"
+	"atomic_blend_api/models"
 	"atomic_blend_api/utils/db"
 	"context"
 	"os"
@@ -66,6 +68,8 @@ func main() {
 		log.Fatal().Msg("✅ Disconnected from MongoDB")
 	}()
 
+	models.RegisterValidators()
+
 	// start cron
 	go func() {
 		err := gocron.Every(60).Seconds().Do(cron.MainCron)
@@ -84,6 +88,7 @@ func main() {
 	admin.SetupRoutes(router, db.Database)
 	tasks.SetupRoutes(router, db.Database)
 	health.SetupRoutes(router, db.Database)
+	habits.SetupRoutes(router, db.Database)
 
 	// Define port
 	port := os.Getenv("PORT")
