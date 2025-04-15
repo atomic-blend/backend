@@ -289,11 +289,11 @@ jobs:
       - go/mod-download # Download Go modules
 
       - go/save-cache # Save Go module cache for future runs
-      
+
       - run:
           name: Install ghr
           command: |
-            go get github.com/tcnksm/ghr
+            go install github.com/tcnksm/ghr@latest
       - run:
           name: Create GitHub Release
           command: |
