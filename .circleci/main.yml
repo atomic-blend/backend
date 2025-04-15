@@ -297,18 +297,15 @@ jobs:
       - run:
           name: Create GitHub Release
           command: |
-            # Extract changelog for the current version
             CHANGELOG=""
             if [ -f "CHANGELOG.md" ]; then
               CHANGELOG=$(awk "/## \[$TAG\]/,/## \[/" CHANGELOG.md | grep -v "## \[" | sed '/^$/d')
             fi
             
-            # Create release notes file
             echo "Release $TAG" > release_notes.md
             echo "" >> release_notes.md
             echo "$CHANGELOG" >> release_notes.md
             
-            # Create GitHub release
             ghr -t ${GITHUB_PAT} \
                 -u ${GITHUB_ORG_NAME} \
                 -r ${GITHUB_REPO_NAME} \
