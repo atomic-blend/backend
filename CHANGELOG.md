@@ -2,6 +2,14 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## 0.3.9 - 2025-04-15
+#### Bug Fixes
+- last fixes on gh release script - (0d20072) - Brandon Guigo
+#### Miscellaneous Chores
+- **(release)** 0.3.8 [skip ci] - (1d380aa) - CircleCI
+
+- - -
+
 ## 0.3.8 - 2025-04-15
 #### Bug Fixes
 - script to parse changelog - (9c1923b) - Brandon Guigo
