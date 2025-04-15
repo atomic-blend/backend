@@ -268,7 +268,7 @@ jobs:
           region: $AWS_REGION
           cluster: "prod"
           task_definition_arn: "${TASK_DEFINITION_ARN}"
-  
+
   create_github_release:
     machine:
       image: ubuntu-2204:current
@@ -293,12 +293,12 @@ jobs:
             echo "Creating GitHub release"
             TAG=$(git describe --abbrev=0 --tags)
             echo "Release tag: $TAG"
-            
+
             # Extract changelog for the current version - improved approach
             # Handle tags with or without 'v' prefix
             CLEAN_TAG=$(echo "$TAG" | sed 's/^v//')
             echo "Clean tag for changelog matching: $CLEAN_TAG"
-            
+
             CHANGELOG=""
             if [ -f "CHANGELOG.md" ]; then
               # First try exact match with the tag format in the file
@@ -314,14 +314,14 @@ jobs:
                 CHANGELOG=$(sed -n "/^## \[$CLEAN_TAG\] - /,/^## /p" CHANGELOG.md | sed '1d;$d')
               fi
             fi
-            
+
             echo "CHANGELOG content:"
             echo "$CHANGELOG"
-            
-            echo "Release $TAG" > release_notes.md
+
+            echo "v$TAG" > release_notes.md
             echo "" >> release_notes.md
             echo "$CHANGELOG" >> release_notes.md
-            
+
             echo "Release notes: $(cat release_notes.md)"
 
             echo "Creating GitHub release with tag $TAG"
@@ -331,7 +331,7 @@ jobs:
                 -n "Release $TAG" \
                 -b "$(cat release_notes.md)" \
                 -c $(git rev-parse HEAD) \
-                $TAG ./
+                $TAG 
             echo "GitHub release created successfully"
 
 # Workflow definition
