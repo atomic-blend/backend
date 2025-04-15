@@ -2,6 +2,14 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## 0.3.5 - 2025-04-15
+#### Bug Fixes
+- remove comments - (fec1e52) - Brandon Guigo
+#### Miscellaneous Chores
+- **(release)** 0.3.4 [skip ci] - (ae3513e) - CircleCI
+
+- - -
+
 ## 0.3.4 - 2025-04-15
 #### Bug Fixes
 - use valid ghr install command - (ff19e0b) - Brandon Guigo
