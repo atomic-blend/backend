@@ -2,6 +2,15 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## 0.3.1 - 2025-04-15
+#### Bug Fixes
+- unit tests - (451d6cc) - Brandon Guigo
+- populate roles in update profile before returning updated user - (ec0e3fb) - Brandon Guigo
+#### Miscellaneous Chores
+- **(release)** 0.3.0 [skip ci] - (b4c282f) - CircleCI
+
+- - -
+
 ## 0.3.0 - 2025-04-10
 #### Bug Fixes
 - add missing tests - (24de254) - Brandon Guigo
