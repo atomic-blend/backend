@@ -2,6 +2,14 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## 0.3.6 - 2025-04-15
+#### Bug Fixes
+- test tag in script - (ca44593) - Brandon Guigo
+#### Miscellaneous Chores
+- **(release)** 0.3.5 [skip ci] - (3a300ef) - CircleCI
+
+- - -
+
 ## 0.3.5 - 2025-04-15
 #### Bug Fixes
 - remove comments - (fec1e52) - Brandon Guigo
