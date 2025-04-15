@@ -2,6 +2,15 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## 0.3.2 - 2025-04-15
+#### Bug Fixes
+- create github release in cicd - (546c532) - Brandon Guigo
+#### Miscellaneous Chores
+- **(release)** 0.3.1 [skip ci] - (c96530f) - CircleCI
+- add license [skip ci] - (46846e8) - Brandon Guigo
+
+- - -
+
 ## 0.3.1 - 2025-04-15
 #### Bug Fixes
 - unit tests - (451d6cc) - Brandon Guigo
