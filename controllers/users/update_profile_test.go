@@ -64,6 +64,9 @@ func TestUpdateProfile(t *testing.T) {
 				updatedUser.Email = &newEmail
 
 				userRepo.On("Update", mock.Anything, mock.AnythingOfType("*models.UserEntity")).Return(updatedUser, nil)
+
+				// Mock populating roles
+				userRoleRepo.On("PopulateRoles", mock.Anything, updatedUser).Return(nil)
 			},
 			expectedStatus: http.StatusOK,
 			checkResponse: func(t *testing.T, w *httptest.ResponseRecorder) {
@@ -106,6 +109,8 @@ func TestUpdateProfile(t *testing.T) {
 				}
 
 				userRepo.On("FindByEmail", mock.Anything, "existing@example.com").Return(otherUser, nil)
+
+				// No need to mock PopulateRoles since the update is never performed due to conflict
 			},
 			expectedStatus: http.StatusConflict,
 			checkResponse: func(t *testing.T, w *httptest.ResponseRecorder) {
@@ -116,10 +121,13 @@ func TestUpdateProfile(t *testing.T) {
 			},
 		},
 		{
-			name:           "Unauthorized - no auth user",
-			setupAuth:      func(c *gin.Context) {},
-			reqBody:        map[string]interface{}{"email": "test@example.com"},
-			setupMocks:     func(userRepo *mocks.MockUserRepository, userRoleRepo *mocks.MockUserRoleRepository) {},
+			name:      "Unauthorized - no auth user",
+			setupAuth: func(c *gin.Context) {},
+			reqBody:   map[string]interface{}{"email": "test@example.com"},
+			setupMocks: func(userRepo *mocks.MockUserRepository, userRoleRepo *mocks.MockUserRoleRepository) {
+				// No mock calls expected for userRepo
+				// No mock calls expected for userRoleRepo
+			},
 			expectedStatus: http.StatusUnauthorized,
 			checkResponse: func(t *testing.T, w *httptest.ResponseRecorder) {
 				var response map[string]string
@@ -166,6 +174,8 @@ func TestUpdateProfile(t *testing.T) {
 
 				// Mock update failure
 				userRepo.On("Update", mock.Anything, mock.AnythingOfType("*models.UserEntity")).Return(nil, errors.New("update failed"))
+
+				// No need to mock PopulateRoles since Update fails
 			},
 			expectedStatus: http.StatusInternalServerError,
 			checkResponse: func(t *testing.T, w *httptest.ResponseRecorder) {

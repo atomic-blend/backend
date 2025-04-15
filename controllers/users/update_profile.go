@@ -62,6 +62,8 @@ func (c *UserController) UpdateProfile(ctx *gin.Context) {
 		return
 	}
 
+	c.userRoleRepo.PopulateRoles(ctx, updatedUser)
+
 	// Remove sensitive data before sending response
 	updatedUser.Password = nil
 
