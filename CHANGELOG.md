@@ -2,6 +2,14 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## 0.3.3 - 2025-04-15
+#### Bug Fixes
+- boostrap go before doing the release - (9931acc) - Brandon Guigo
+#### Miscellaneous Chores
+- **(release)** 0.3.2 [skip ci] - (b8c3b95) - CircleCI
+
+- - -
+
 ## 0.3.2 - 2025-04-15
 #### Bug Fixes
 - create github release in cicd - (546c532) - Brandon Guigo
