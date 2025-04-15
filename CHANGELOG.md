@@ -2,6 +2,14 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## 0.3.8 - 2025-04-15
+#### Bug Fixes
+- script to parse changelog - (9c1923b) - Brandon Guigo
+#### Miscellaneous Chores
+- **(release)** 0.3.7 [skip ci] - (b342d4d) - CircleCI
+
+- - -
+
 ## 0.3.7 - 2025-04-15
 #### Bug Fixes
 - add logs - (66f29f8) - Brandon Guigo
