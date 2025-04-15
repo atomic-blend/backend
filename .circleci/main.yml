@@ -293,13 +293,30 @@ jobs:
             echo "Creating GitHub release"
             TAG=$(git describe --abbrev=0 --tags)
             echo "Release tag: $TAG"
+            
+            # Extract changelog for the current version - improved approach
+            # Handle tags with or without 'v' prefix
+            CLEAN_TAG=$(echo "$TAG" | sed 's/^v//')
+            echo "Clean tag for changelog matching: $CLEAN_TAG"
+            
             CHANGELOG=""
-            echo "Checking for CHANGELOG.md"
             if [ -f "CHANGELOG.md" ]; then
-              CHANGELOG=$(awk "/## \[$TAG\]/,/## \[/" CHANGELOG.md | grep -v "## \[" | sed '/^$/d')
+              # First try exact match with the tag format in the file
+              CHANGELOG=$(sed -n "/^## $TAG - /,/^## /p" CHANGELOG.md | sed '1d;$d')
+              
+              # If nothing found, try without the 'v' prefix
+              if [ -z "$CHANGELOG" ]; then
+                CHANGELOG=$(sed -n "/^## $CLEAN_TAG - /,/^## /p" CHANGELOG.md | sed '1d;$d')
+              fi
+              
+              # If still nothing, look for formats like [x.y.z]
+              if [ -z "$CHANGELOG" ]; then
+                CHANGELOG=$(sed -n "/^## \[$CLEAN_TAG\] - /,/^## /p" CHANGELOG.md | sed '1d;$d')
+              fi
             fi
-
-            echo "CHANGELOG: $CHANGELOG"
+            
+            echo "CHANGELOG content:"
+            echo "$CHANGELOG"
             
             echo "Release $TAG" > release_notes.md
             echo "" >> release_notes.md
