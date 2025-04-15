@@ -277,13 +277,6 @@ jobs:
     steps:
       - checkout:
           path: ~/project
-      - run:
-          name: Get tag
-          command: |
-            TAG=$(git describe --abbrev=0 --tags)
-            echo "Deploying to ECS with tag $TAG"
-            echo "export TAG='${TAG}'" >> "$BASH_ENV"
-
       - go/load-cache # Load Go module cache if available
 
       - go/mod-download # Download Go modules
@@ -297,6 +290,7 @@ jobs:
       - run:
           name: Create GitHub Release
           command: |
+            TAG=$(git describe --abbrev=0 --tags)
             CHANGELOG=""
             if [ -f "CHANGELOG.md" ]; then
               CHANGELOG=$(awk "/## \[$TAG\]/,/## \[/" CHANGELOG.md | grep -v "## \[" | sed '/^$/d')
@@ -312,7 +306,7 @@ jobs:
                 -n "Release $TAG" \
                 -b "$(cat release_notes.md)" \
                 -c $(git rev-parse HEAD) \
-                $TAG
+                $TAG ./
 
 # Workflow definition
 workflows:
