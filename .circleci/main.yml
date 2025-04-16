@@ -151,6 +151,10 @@ jobs:
             fi
             git push https://${GITHUB_PAT}@github.com/${GITHUB_ORG_NAME}/${GITHUB_REPO_NAME}.git main
             git push https://${GITHUB_PAT}@github.com/${GITHUB_ORG_NAME}/${GITHUB_REPO_NAME}.git tag $(git describe --abbrev=0 --tags)
+      - persist_to_workspace:
+            root: ~/project
+            paths:
+              - CHANGELOG.md
 
   # Job to build and push Docker images
   build-docker-images:
@@ -277,6 +281,8 @@ jobs:
     steps:
       - checkout:
           path: ~/project
+      - attach_workspace:
+          at: ~/project
       - go/load-cache # Load Go module cache if available
 
       - go/mod-download # Download Go modules
@@ -318,8 +324,6 @@ jobs:
             echo "CHANGELOG content:"
             echo "$CHANGELOG"
 
-            echo "Release $TAG" > release_notes.md
-            echo "" >> release_notes.md
             echo "$CHANGELOG" >> release_notes.md
 
             echo "Release notes: $(cat release_notes.md)"
