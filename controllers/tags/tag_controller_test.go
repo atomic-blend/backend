@@ -13,19 +13,22 @@ import (
 )
 
 func TestNewTagController(t *testing.T) {
-	mockRepo := new(mocks.MockTagRepository)
-	controller := NewTagController(mockRepo)
+	mockTagRepo := new(mocks.MockTagRepository)
+	mockTaskRepo := new(mocks.MockTaskRepository)
+	controller := NewTagController(mockTagRepo, mockTaskRepo)
 
 	assert.NotNil(t, controller)
-	assert.Equal(t, mockRepo, controller.tagRepo)
+	assert.Equal(t, mockTagRepo, controller.tagRepo)
+	assert.Equal(t, mockTaskRepo, controller.taskRepo)
 }
 
 func TestSetupRoutesWithMock(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
-	mockRepo := new(mocks.MockTagRepository)
+	mockTagRepo := new(mocks.MockTagRepository)
+	mockTaskRepo := new(mocks.MockTaskRepository)
 
-	SetupRoutesWithMock(router, mockRepo)
+	SetupRoutesWithMock(router, mockTagRepo, mockTaskRepo)
 
 	// Test that routes are properly registered by making test requests
 	testRoutes := []struct {
@@ -40,11 +43,11 @@ func TestSetupRoutesWithMock(t *testing.T) {
 	}
 
 	// Setup mock expectations for each route
-	mockRepo.On("GetAll", mock.Anything, mock.AnythingOfType("*primitive.ObjectID")).Return([]*models.Tag{}, nil)
-	mockRepo.On("GetByID", mock.Anything, mock.AnythingOfType("primitive.ObjectID")).Return(createTestTag(), nil)
-	mockRepo.On("Create", mock.Anything, mock.AnythingOfType("*models.Tag")).Return(createTestTag(), nil)
-	mockRepo.On("Update", mock.Anything, mock.AnythingOfType("*models.Tag")).Return(createTestTag(), nil)
-	mockRepo.On("Delete", mock.Anything, mock.AnythingOfType("primitive.ObjectID")).Return(nil)
+	mockTagRepo.On("GetAll", mock.Anything, mock.AnythingOfType("*primitive.ObjectID")).Return([]*models.Tag{}, nil)
+	mockTagRepo.On("GetByID", mock.Anything, mock.AnythingOfType("primitive.ObjectID")).Return(createTestTag(), nil)
+	mockTagRepo.On("Create", mock.Anything, mock.AnythingOfType("*models.Tag")).Return(createTestTag(), nil)
+	mockTagRepo.On("Update", mock.Anything, mock.AnythingOfType("*models.Tag")).Return(createTestTag(), nil)
+	mockTagRepo.On("Delete", mock.Anything, mock.AnythingOfType("primitive.ObjectID")).Return(nil)
 
 	for _, route := range testRoutes {
 		w := httptest.NewRecorder()
@@ -59,22 +62,24 @@ func TestSetupRoutesWithMock(t *testing.T) {
 func TestSetupRoutes(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
-	mockRepo := new(mocks.MockTagRepository)
+	mockTagRepo := new(mocks.MockTagRepository)
+	mockTaskRepo := new(mocks.MockTaskRepository)
 
 	// Use SetupRoutesWithMock instead of SetupRoutes to avoid database dependency
 	assert.NotPanics(t, func() {
-		SetupRoutesWithMock(router, mockRepo)
+		SetupRoutesWithMock(router, mockTagRepo, mockTaskRepo)
 	})
 }
 
 func TestRouteRegistration(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
-	mockRepo := new(mocks.MockTagRepository)
-	controller := NewTagController(mockRepo)
+	mockTagRepo := new(mocks.MockTagRepository)
+	mockTaskRepo := new(mocks.MockTaskRepository)
+	_ = NewTagController(mockTagRepo, mockTaskRepo)
 
 	// Call the function through public function
-	SetupRoutesWithMock(router, mockRepo)
+	SetupRoutesWithMock(router, mockTagRepo, mockTaskRepo)
 
 	// Verify all expected routes exist by checking if they're handled
 	paths := []string{
@@ -96,8 +101,4 @@ func TestRouteRegistration(t *testing.T) {
 
 		assert.True(t, found, "Expected route not registered: %s", path)
 	}
-
-	// Also verify controller is properly constructed
-	assert.NotNil(t, controller)
-	assert.Equal(t, mockRepo, controller.tagRepo)
 }

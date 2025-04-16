@@ -16,7 +16,7 @@ import (
 )
 
 func TestUpdateTag(t *testing.T) {
-	_, mockRepo := setupTest()
+	_, mockTagRepo, mockTaskRepo := setupTest()
 
 	t.Run("successful update tag", func(t *testing.T) {
 		// Create authenticated user
@@ -34,8 +34,8 @@ func TestUpdateTag(t *testing.T) {
 		newColor := "#00FF00"
 		updatedTag.Color = &newColor
 
-		mockRepo.On("GetByID", mock.Anything, tagID).Return(existingTag, nil).Once()
-		mockRepo.On("Update", mock.Anything, mock.AnythingOfType("*models.Tag")).Return(updatedTag, nil).Once()
+		mockTagRepo.On("GetByID", mock.Anything, tagID).Return(existingTag, nil).Once()
+		mockTagRepo.On("Update", mock.Anything, mock.AnythingOfType("*models.Tag")).Return(updatedTag, nil).Once()
 
 		tagJSON, _ := json.Marshal(updatedTag)
 		w := httptest.NewRecorder()
@@ -49,7 +49,7 @@ func TestUpdateTag(t *testing.T) {
 		ctx.Params = []gin.Param{{Key: "id", Value: tagID.Hex()}}
 
 		// Call the handler directly
-		controller := NewTagController(mockRepo)
+		controller := NewTagController(mockTagRepo, mockTaskRepo)
 		controller.UpdateTag(ctx)
 
 		assert.Equal(t, http.StatusOK, w.Code)
@@ -76,7 +76,7 @@ func TestUpdateTag(t *testing.T) {
 		ctx.Params = []gin.Param{{Key: "id", Value: tagID}}
 
 		// Call the controller directly
-		controller := NewTagController(mockRepo)
+		controller := NewTagController(mockTagRepo, mockTaskRepo)
 		controller.UpdateTag(ctx)
 
 		assert.Equal(t, http.StatusUnauthorized, w.Code)
@@ -87,7 +87,7 @@ func TestUpdateTag(t *testing.T) {
 		nonExistentID := primitive.NewObjectID()
 		tag := createTestTag()
 
-		mockRepo.On("GetByID", mock.Anything, nonExistentID).Return(nil, nil).Once()
+		mockTagRepo.On("GetByID", mock.Anything, nonExistentID).Return(nil, nil).Once()
 
 		tagJSON, _ := json.Marshal(tag)
 		w := httptest.NewRecorder()
@@ -101,7 +101,7 @@ func TestUpdateTag(t *testing.T) {
 		ctx.Params = []gin.Param{{Key: "id", Value: nonExistentID.Hex()}}
 
 		// Call the handler directly
-		controller := NewTagController(mockRepo)
+		controller := NewTagController(mockTagRepo, mockTaskRepo)
 		controller.UpdateTag(ctx)
 
 		assert.Equal(t, http.StatusNotFound, w.Code)
@@ -120,7 +120,7 @@ func TestUpdateTag(t *testing.T) {
 		updatedTag.ID = &tagID
 		updatedTag.Name = "Updated Tag"
 
-		mockRepo.On("GetByID", mock.Anything, tagID).Return(existingTag, nil).Once()
+		mockTagRepo.On("GetByID", mock.Anything, tagID).Return(existingTag, nil).Once()
 
 		tagJSON, _ := json.Marshal(updatedTag)
 		w := httptest.NewRecorder()
@@ -134,7 +134,7 @@ func TestUpdateTag(t *testing.T) {
 		ctx.Params = []gin.Param{{Key: "id", Value: tagID.Hex()}}
 
 		// Call the handler directly
-		controller := NewTagController(mockRepo)
+		controller := NewTagController(mockTagRepo, mockTaskRepo)
 		controller.UpdateTag(ctx)
 
 		assert.Equal(t, http.StatusForbidden, w.Code)
@@ -148,7 +148,7 @@ func TestUpdateTag(t *testing.T) {
 		existingTag.ID = &tagID
 		existingTag.UserID = &userID
 
-		mockRepo.On("GetByID", mock.Anything, tagID).Return(existingTag, nil).Once()
+		mockTagRepo.On("GetByID", mock.Anything, tagID).Return(existingTag, nil).Once()
 
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("PUT", "/tags/"+tagID.Hex(), bytes.NewBuffer([]byte("invalid json")))
@@ -161,7 +161,7 @@ func TestUpdateTag(t *testing.T) {
 		ctx.Params = []gin.Param{{Key: "id", Value: tagID.Hex()}}
 
 		// Call the handler directly
-		controller := NewTagController(mockRepo)
+		controller := NewTagController(mockTagRepo, mockTaskRepo)
 		controller.UpdateTag(ctx)
 
 		assert.Equal(t, http.StatusBadRequest, w.Code)
@@ -180,7 +180,7 @@ func TestUpdateTag(t *testing.T) {
 		updatedTag.UserID = &userID
 		updatedTag.Name = "" // Missing required name
 
-		mockRepo.On("GetByID", mock.Anything, tagID).Return(existingTag, nil).Once()
+		mockTagRepo.On("GetByID", mock.Anything, tagID).Return(existingTag, nil).Once()
 
 		tagJSON, _ := json.Marshal(updatedTag)
 		w := httptest.NewRecorder()
@@ -194,7 +194,7 @@ func TestUpdateTag(t *testing.T) {
 		ctx.Params = []gin.Param{{Key: "id", Value: tagID.Hex()}}
 
 		// Call the handler directly
-		controller := NewTagController(mockRepo)
+		controller := NewTagController(mockTagRepo, mockTaskRepo)
 		controller.UpdateTag(ctx)
 
 		assert.Equal(t, http.StatusBadRequest, w.Code)

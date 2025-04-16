@@ -4,6 +4,7 @@ import (
 	"atomic_blend_api/auth"
 	"atomic_blend_api/models"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -15,27 +16,29 @@ import (
 )
 
 func TestGetAllTags(t *testing.T) {
-	_, mockRepo := setupTest()
+	_, mockTagRepo, mockTaskRepo := setupTest()
 
-	t.Run("successful get all tags - with tags", func(t *testing.T) {
+	t.Run("successful get all tags", func(t *testing.T) {
 		// Create authenticated user
 		userID := primitive.NewObjectID()
 
-		// Create test tags
+		// Generate a few tags
 		tag1 := createTestTag()
-		tag1ID := primitive.NewObjectID()
-		tag1.ID = &tag1ID
+		tag1.Name = "Tag 1"
+		id1 := primitive.NewObjectID()
+		tag1.ID = &id1
 		tag1.UserID = &userID
 
 		tag2 := createTestTag()
-		tag2ID := primitive.NewObjectID()
-		tag2.ID = &tag2ID
+		tag2.Name = "Tag 2"
+		id2 := primitive.NewObjectID()
+		tag2.ID = &id2
 		tag2.UserID = &userID
 
 		tags := []*models.Tag{tag1, tag2}
 
-		mockRepo.On("GetAll", mock.Anything, mock.MatchedBy(func(userID *primitive.ObjectID) bool {
-			return true
+		mockTagRepo.On("GetAll", mock.Anything, mock.MatchedBy(func(u *primitive.ObjectID) bool {
+			return u != nil && *u == userID
 		})).Return(tags, nil).Once()
 
 		w := httptest.NewRecorder()
@@ -47,43 +50,19 @@ func TestGetAllTags(t *testing.T) {
 		ctx.Set("authUser", &auth.UserAuthInfo{UserID: userID})
 
 		// Call the controller directly with our context that has auth
-		controller := NewTagController(mockRepo)
+		controller := NewTagController(mockTagRepo, mockTaskRepo)
 		controller.GetAllTags(ctx)
 
 		assert.Equal(t, http.StatusOK, w.Code)
 		var response []*models.Tag
 		err := json.Unmarshal(w.Body.Bytes(), &response)
 		assert.NoError(t, err)
-		assert.Equal(t, 2, len(response))
+		assert.Len(t, response, 2)
+		assert.Equal(t, "Tag 1", response[0].Name)
+		assert.Equal(t, "Tag 2", response[1].Name)
 	})
 
-	t.Run("successful get all tags - empty list", func(t *testing.T) {
-		// Create authenticated user
-		userID := primitive.NewObjectID()
-
-		// Return nil to simulate no tags
-		mockRepo.On("GetAll", mock.Anything, mock.MatchedBy(func(userID *primitive.ObjectID) bool {
-			return true
-		})).Return(nil, nil).Once()
-
-		w := httptest.NewRecorder()
-		req, _ := http.NewRequest("GET", "/tags", nil)
-
-		// Create a new context with the request and set auth user
-		ctx, _ := gin.CreateTestContext(w)
-		ctx.Request = req
-		ctx.Set("authUser", &auth.UserAuthInfo{UserID: userID})
-
-		// Call the controller directly with our context that has auth
-		controller := NewTagController(mockRepo)
-		controller.GetAllTags(ctx)
-
-		assert.Equal(t, http.StatusOK, w.Code)
-		// Check that the response is an empty array, not null
-		assert.Equal(t, "[]", w.Body.String())
-	})
-
-	t.Run("unauthorized access - no auth user", func(t *testing.T) {
+	t.Run("unauthorized - no auth user", func(t *testing.T) {
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("GET", "/tags", nil)
 
@@ -92,7 +71,7 @@ func TestGetAllTags(t *testing.T) {
 		ctx.Request = req
 
 		// Call the controller directly
-		controller := NewTagController(mockRepo)
+		controller := NewTagController(mockTagRepo, mockTaskRepo)
 		controller.GetAllTags(ctx)
 
 		assert.Equal(t, http.StatusUnauthorized, w.Code)
@@ -102,10 +81,7 @@ func TestGetAllTags(t *testing.T) {
 		// Create authenticated user
 		userID := primitive.NewObjectID()
 
-		// Simulate database error
-		mockRepo.On("GetAll", mock.Anything, mock.MatchedBy(func(userID *primitive.ObjectID) bool {
-			return true
-		})).Return(nil, assert.AnError).Once()
+		mockTagRepo.On("GetAll", mock.Anything, mock.Anything).Return(nil, errors.New("database error")).Once()
 
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("GET", "/tags", nil)
@@ -116,9 +92,34 @@ func TestGetAllTags(t *testing.T) {
 		ctx.Set("authUser", &auth.UserAuthInfo{UserID: userID})
 
 		// Call the controller directly
-		controller := NewTagController(mockRepo)
+		controller := NewTagController(mockTagRepo, mockTaskRepo)
 		controller.GetAllTags(ctx)
 
 		assert.Equal(t, http.StatusInternalServerError, w.Code)
+	})
+
+	t.Run("no content - empty tags", func(t *testing.T) {
+		// Create authenticated user
+		userID := primitive.NewObjectID()
+
+		mockTagRepo.On("GetAll", mock.Anything, mock.Anything).Return([]*models.Tag{}, nil).Once()
+
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/tags", nil)
+
+		// Create a new context with the request and set auth user
+		ctx, _ := gin.CreateTestContext(w)
+		ctx.Request = req
+		ctx.Set("authUser", &auth.UserAuthInfo{UserID: userID})
+
+		// Call the controller directly
+		controller := NewTagController(mockTagRepo, mockTaskRepo)
+		controller.GetAllTags(ctx)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+		var response []*models.Tag
+		err := json.Unmarshal(w.Body.Bytes(), &response)
+		assert.NoError(t, err)
+		assert.Len(t, response, 0)
 	})
 }

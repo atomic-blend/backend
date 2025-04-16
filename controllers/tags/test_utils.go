@@ -21,11 +21,12 @@ func createTestTag() *models.Tag {
 	}
 }
 
-func setupTest() (*gin.Engine, *mocks.MockTagRepository) {
+func setupTest() (*gin.Engine, *mocks.MockTagRepository, *mocks.MockTaskRepository) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
-	mockRepo := new(mocks.MockTagRepository)
-	tagController := NewTagController(mockRepo)
+	mockTagRepo := new(mocks.MockTagRepository)
+	mockTaskRepo := new(mocks.MockTaskRepository)
+	tagController := NewTagController(mockTagRepo, mockTaskRepo)
 
 	// Set up routes with middleware
 	tagRoutes := router.Group("/tags")
@@ -37,5 +38,5 @@ func setupTest() (*gin.Engine, *mocks.MockTagRepository) {
 		tagRoutes.DELETE("/:id", tagController.DeleteTag)
 	}
 
-	return router, mockRepo
+	return router, mockTagRepo, mockTaskRepo
 }

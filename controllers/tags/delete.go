@@ -55,6 +55,32 @@ func (c *TagController) DeleteTag(ctx *gin.Context) {
 		return
 	}
 
+	// Get all tasks for the user
+	tasks, err := c.taskRepo.GetAll(ctx, &authUser.UserID)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Error retrieving tasks: " + err.Error()})
+		return
+	}
+
+	// Remove the tag from all tasks of this user
+	for _, task := range tasks {
+		if task.Tags != nil && len(*task.Tags) > 0 {
+			// Check if the task contains the tag to be deleted
+			updatedTags := removeTagFromSlice(*task.Tags, objID)
+			if len(updatedTags) != len(*task.Tags) {
+				// Tag was found and removed
+				task.Tags = &updatedTags
+				// Update the task in the database
+				_, err := c.taskRepo.Update(ctx, task.ID, task)
+				if err != nil {
+					ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Error updating task: " + err.Error()})
+					return
+				}
+			}
+		}
+	}
+
+	// Finally delete the tag itself
 	err = c.tagRepo.Delete(ctx, objID)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

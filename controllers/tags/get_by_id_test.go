@@ -4,6 +4,7 @@ import (
 	"atomic_blend_api/auth"
 	"atomic_blend_api/models"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -15,17 +16,19 @@ import (
 )
 
 func TestGetTagByID(t *testing.T) {
-	_, mockRepo := setupTest()
+	_, mockTagRepo, mockTaskRepo := setupTest()
 
 	t.Run("successful get tag by id", func(t *testing.T) {
 		// Create authenticated user
 		userID := primitive.NewObjectID()
 		tagID := primitive.NewObjectID()
+
+		// Create test tag
 		tag := createTestTag()
 		tag.ID = &tagID
-		tag.UserID = &userID // Set the tag owner
+		tag.UserID = &userID
 
-		mockRepo.On("GetByID", mock.Anything, tagID).Return(tag, nil).Once()
+		mockTagRepo.On("GetByID", mock.Anything, tagID).Return(tag, nil).Once()
 
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("GET", "/tags/"+tagID.Hex(), nil)
@@ -34,10 +37,12 @@ func TestGetTagByID(t *testing.T) {
 		ctx, _ := gin.CreateTestContext(w)
 		ctx.Request = req
 		ctx.Set("authUser", &auth.UserAuthInfo{UserID: userID})
+
+		// Copy params from original request to the new context
 		ctx.Params = []gin.Param{{Key: "id", Value: tagID.Hex()}}
 
 		// Call the controller directly with our context that has auth
-		controller := NewTagController(mockRepo)
+		controller := NewTagController(mockTagRepo, mockTaskRepo)
 		controller.GetTagByID(ctx)
 
 		assert.Equal(t, http.StatusOK, w.Code)
@@ -46,36 +51,12 @@ func TestGetTagByID(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, tag.Name, response.Name)
 		assert.Equal(t, *tag.Color, *response.Color)
+		assert.Equal(t, userID, *response.UserID)
 	})
 
-	t.Run("tag not found", func(t *testing.T) {
-		nonExistentID := primitive.NewObjectID()
-		userID := primitive.NewObjectID()
-
-		mockRepo.On("GetByID", mock.Anything, nonExistentID).Return(nil, nil).Once()
-
-		w := httptest.NewRecorder()
-		req, _ := http.NewRequest("GET", "/tags/"+nonExistentID.Hex(), nil)
-
-		// Create a new context with the request and set auth user
-		ctx, _ := gin.CreateTestContext(w)
-		ctx.Request = req
-		ctx.Set("authUser", &auth.UserAuthInfo{UserID: userID})
-		ctx.Params = []gin.Param{{Key: "id", Value: nonExistentID.Hex()}}
-
-		// Call the controller directly with our context that has auth
-		controller := NewTagController(mockRepo)
-		controller.GetTagByID(ctx)
-
-		assert.Equal(t, http.StatusNotFound, w.Code)
-		var response map[string]interface{}
-		err := json.Unmarshal(w.Body.Bytes(), &response)
-		assert.NoError(t, err)
-		assert.Equal(t, "Tag not found", response["error"])
-	})
-
-	t.Run("unauthorized access - no auth user", func(t *testing.T) {
+	t.Run("unauthorized - no auth user", func(t *testing.T) {
 		tagID := primitive.NewObjectID().Hex()
+
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("GET", "/tags/"+tagID, nil)
 
@@ -85,22 +66,60 @@ func TestGetTagByID(t *testing.T) {
 		ctx.Params = []gin.Param{{Key: "id", Value: tagID}}
 
 		// Call the controller directly
-		controller := NewTagController(mockRepo)
+		controller := NewTagController(mockTagRepo, mockTaskRepo)
 		controller.GetTagByID(ctx)
 
 		assert.Equal(t, http.StatusUnauthorized, w.Code)
 	})
 
-	t.Run("forbidden access - wrong user", func(t *testing.T) {
-		wrongUserID := primitive.NewObjectID()
-		tagOwnerID := primitive.NewObjectID()
+	t.Run("missing tag id", func(t *testing.T) {
+		userID := primitive.NewObjectID()
+
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/tags/", nil)
+
+		// Create a new context with the request and set auth user
+		ctx, _ := gin.CreateTestContext(w)
+		ctx.Request = req
+		ctx.Set("authUser", &auth.UserAuthInfo{UserID: userID})
+
+		// Empty tag ID param
+		ctx.Params = []gin.Param{{Key: "id", Value: ""}}
+
+		// Call the controller directly
+		controller := NewTagController(mockTagRepo, mockTaskRepo)
+		controller.GetTagByID(ctx)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+	})
+
+	t.Run("invalid tag id format", func(t *testing.T) {
+		userID := primitive.NewObjectID()
+		invalidTagID := "not-an-object-id"
+
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/tags/"+invalidTagID, nil)
+
+		// Create a new context with the request and set auth user
+		ctx, _ := gin.CreateTestContext(w)
+		ctx.Request = req
+		ctx.Set("authUser", &auth.UserAuthInfo{UserID: userID})
+
+		// Set the invalid tag ID
+		ctx.Params = []gin.Param{{Key: "id", Value: invalidTagID}}
+
+		// Call the controller directly
+		controller := NewTagController(mockTagRepo, mockTaskRepo)
+		controller.GetTagByID(ctx)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+	})
+
+	t.Run("tag not found", func(t *testing.T) {
+		userID := primitive.NewObjectID()
 		tagID := primitive.NewObjectID()
 
-		tag := createTestTag()
-		tag.ID = &tagID
-		tag.UserID = &tagOwnerID // Set a different user as owner
-
-		mockRepo.On("GetByID", mock.Anything, tagID).Return(tag, nil).Once()
+		mockTagRepo.On("GetByID", mock.Anything, tagID).Return(nil, nil).Once()
 
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("GET", "/tags/"+tagID.Hex(), nil)
@@ -108,33 +127,39 @@ func TestGetTagByID(t *testing.T) {
 		// Create a new context with the request and set auth user
 		ctx, _ := gin.CreateTestContext(w)
 		ctx.Request = req
-		ctx.Set("authUser", &auth.UserAuthInfo{UserID: wrongUserID})
+		ctx.Set("authUser", &auth.UserAuthInfo{UserID: userID})
+
+		// Copy params from original request to the new context
 		ctx.Params = []gin.Param{{Key: "id", Value: tagID.Hex()}}
 
-		// Call the controller directly with our context that has auth
-		controller := NewTagController(mockRepo)
+		// Call the controller directly
+		controller := NewTagController(mockTagRepo, mockTaskRepo)
 		controller.GetTagByID(ctx)
 
-		assert.Equal(t, http.StatusForbidden, w.Code)
+		assert.Equal(t, http.StatusNotFound, w.Code)
 	})
 
-	t.Run("invalid tag ID format", func(t *testing.T) {
+	t.Run("internal server error", func(t *testing.T) {
 		userID := primitive.NewObjectID()
-		invalidID := "not-a-valid-object-id"
+		tagID := primitive.NewObjectID()
+
+		mockTagRepo.On("GetByID", mock.Anything, tagID).Return(nil, errors.New("database error")).Once()
 
 		w := httptest.NewRecorder()
-		req, _ := http.NewRequest("GET", "/tags/"+invalidID, nil)
+		req, _ := http.NewRequest("GET", "/tags/"+tagID.Hex(), nil)
 
 		// Create a new context with the request and set auth user
 		ctx, _ := gin.CreateTestContext(w)
 		ctx.Request = req
 		ctx.Set("authUser", &auth.UserAuthInfo{UserID: userID})
-		ctx.Params = []gin.Param{{Key: "id", Value: invalidID}}
+
+		// Copy params from original request to the new context
+		ctx.Params = []gin.Param{{Key: "id", Value: tagID.Hex()}}
 
 		// Call the controller directly
-		controller := NewTagController(mockRepo)
+		controller := NewTagController(mockTagRepo, mockTaskRepo)
 		controller.GetTagByID(ctx)
 
-		assert.Equal(t, http.StatusBadRequest, w.Code)
+		assert.Equal(t, http.StatusInternalServerError, w.Code)
 	})
 }

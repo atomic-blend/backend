@@ -16,7 +16,7 @@ import (
 )
 
 func TestCreateTag(t *testing.T) {
-	_, mockRepo := setupTest()
+	_, mockTagRepo, mockTaskRepo := setupTest()
 
 	t.Run("successful create tag", func(t *testing.T) {
 		// Create authenticated user
@@ -24,7 +24,7 @@ func TestCreateTag(t *testing.T) {
 		tag := createTestTag()
 		tag.UserID = &userID // This should be overwritten by the handler
 
-		mockRepo.On("Create", mock.Anything, mock.AnythingOfType("*models.Tag")).Return(tag, nil).Once()
+		mockTagRepo.On("Create", mock.Anything, mock.AnythingOfType("*models.Tag")).Return(tag, nil).Once()
 
 		tagJSON, _ := json.Marshal(tag)
 		w := httptest.NewRecorder()
@@ -37,7 +37,7 @@ func TestCreateTag(t *testing.T) {
 		ctx.Set("authUser", &auth.UserAuthInfo{UserID: userID})
 
 		// Call the controller directly with our context that has auth
-		controller := NewTagController(mockRepo)
+		controller := NewTagController(mockTagRepo, mockTaskRepo)
 		controller.CreateTag(ctx)
 
 		assert.Equal(t, http.StatusCreated, w.Code)
@@ -61,7 +61,7 @@ func TestCreateTag(t *testing.T) {
 		ctx.Request = req
 
 		// Call the controller directly
-		controller := NewTagController(mockRepo)
+		controller := NewTagController(mockTagRepo, mockTaskRepo)
 		controller.CreateTag(ctx)
 
 		assert.Equal(t, http.StatusUnauthorized, w.Code)
@@ -82,7 +82,7 @@ func TestCreateTag(t *testing.T) {
 		ctx.Set("authUser", &auth.UserAuthInfo{UserID: userID})
 
 		// Call the controller directly
-		controller := NewTagController(mockRepo)
+		controller := NewTagController(mockTagRepo, mockTaskRepo)
 		controller.CreateTag(ctx)
 
 		assert.Equal(t, http.StatusBadRequest, w.Code)
@@ -106,7 +106,7 @@ func TestCreateTag(t *testing.T) {
 		ctx.Set("authUser", &auth.UserAuthInfo{UserID: userID})
 
 		// Call the controller directly
-		controller := NewTagController(mockRepo)
+		controller := NewTagController(mockTagRepo, mockTaskRepo)
 		controller.CreateTag(ctx)
 
 		assert.Equal(t, http.StatusBadRequest, w.Code)
