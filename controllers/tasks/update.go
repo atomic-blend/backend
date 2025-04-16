@@ -67,6 +67,27 @@ func (c *TaskController) UpdateTask(ctx *gin.Context) {
 	task.User = existingTask.User
 	task.ID = existingTask.ID
 
+	// Validate tags if any are provided
+	if task.Tags != nil && len(*task.Tags) > 0 {
+		// Check if all tags exist and belong to the user
+		for _, tagID := range *task.Tags {
+			tag, err := c.tagRepo.GetByID(ctx, tagID)
+			if err != nil {
+				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Error validating tags: " + err.Error()})
+				return
+			}
+			if tag == nil {
+				ctx.JSON(http.StatusBadRequest, gin.H{"error": "Tag not found: " + tagID.Hex()})
+				return
+			}
+			// Make sure the tag belongs to the user
+			if tag.UserID == nil || *tag.UserID != authUser.UserID {
+				ctx.JSON(http.StatusForbidden, gin.H{"error": "You don't have permission to use this tag: " + tagID.Hex()})
+				return
+			}
+		}
+	}
+
 	updatedTask, err := c.taskRepo.Update(ctx, id, &task)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

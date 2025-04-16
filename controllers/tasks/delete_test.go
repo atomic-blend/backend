@@ -1,3 +1,4 @@
+// filepath: /Users/brandonguigo/workspace/atomic-blend/backend/controllers/tasks/delete_test.go
 package tasks
 
 import (
@@ -14,7 +15,7 @@ import (
 )
 
 func TestDeleteTask(t *testing.T) {
-	_, mockRepo := setupTest()
+	_, mockTaskRepo, mockTagRepo := setupTest()
 
 	t.Run("successful delete task", func(t *testing.T) {
 		// Create authenticated user
@@ -26,8 +27,8 @@ func TestDeleteTask(t *testing.T) {
 		task.ID = taskID
 		task.User = userID // This needs to be a valid ObjectID
 
-		mockRepo.On("GetByID", mock.Anything, taskID).Return(task, nil)
-		mockRepo.On("Delete", mock.Anything, taskID).Return(nil)
+		mockTaskRepo.On("GetByID", mock.Anything, taskID).Return(task, nil)
+		mockTaskRepo.On("Delete", mock.Anything, taskID).Return(nil)
 
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("DELETE", "/tasks/"+taskID, nil)
@@ -41,7 +42,7 @@ func TestDeleteTask(t *testing.T) {
 		ctx.Params = []gin.Param{{Key: "id", Value: taskID}}
 
 		// Call the controller directly with our context that has auth
-		controller := NewTaskController(mockRepo)
+		controller := NewTaskController(mockTaskRepo, mockTagRepo)
 		controller.DeleteTask(ctx)
 
 		assert.Equal(t, http.StatusOK, w.Code)
@@ -59,7 +60,7 @@ func TestDeleteTask(t *testing.T) {
 		ctx.Params = []gin.Param{{Key: "id", Value: taskID}}
 
 		// Call the controller directly
-		controller := NewTaskController(mockRepo)
+		controller := NewTaskController(mockTaskRepo, mockTagRepo)
 		controller.DeleteTask(ctx)
 
 		assert.Equal(t, http.StatusUnauthorized, w.Code)
@@ -80,7 +81,7 @@ func TestDeleteTask(t *testing.T) {
 		ctx.Params = []gin.Param{{Key: "id", Value: ""}}
 
 		// Call the controller directly
-		controller := NewTaskController(mockRepo)
+		controller := NewTaskController(mockTaskRepo, mockTagRepo)
 		controller.DeleteTask(ctx)
 
 		assert.Equal(t, http.StatusBadRequest, w.Code)
@@ -90,7 +91,7 @@ func TestDeleteTask(t *testing.T) {
 		userID := primitive.NewObjectID()
 		taskID := primitive.NewObjectID().Hex()
 
-		mockRepo.On("GetByID", mock.Anything, taskID).Return(nil, nil)
+		mockTaskRepo.On("GetByID", mock.Anything, taskID).Return(nil, nil)
 
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("DELETE", "/tasks/"+taskID, nil)
@@ -104,7 +105,7 @@ func TestDeleteTask(t *testing.T) {
 		ctx.Params = []gin.Param{{Key: "id", Value: taskID}}
 
 		// Call the controller directly
-		controller := NewTaskController(mockRepo)
+		controller := NewTaskController(mockTaskRepo, mockTagRepo)
 		controller.DeleteTask(ctx)
 
 		assert.Equal(t, http.StatusNotFound, w.Code)
@@ -114,7 +115,7 @@ func TestDeleteTask(t *testing.T) {
 		userID := primitive.NewObjectID()
 		taskID := primitive.NewObjectID().Hex()
 
-		mockRepo.On("GetByID", mock.Anything, taskID).Return(nil, errors.New("task not found"))
+		mockTaskRepo.On("GetByID", mock.Anything, taskID).Return(nil, errors.New("task not found"))
 
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("DELETE", "/tasks/"+taskID, nil)
@@ -128,7 +129,7 @@ func TestDeleteTask(t *testing.T) {
 		ctx.Params = []gin.Param{{Key: "id", Value: taskID}}
 
 		// Call the controller directly
-		controller := NewTaskController(mockRepo)
+		controller := NewTaskController(mockTaskRepo, mockTagRepo)
 		controller.DeleteTask(ctx)
 
 		assert.Equal(t, http.StatusNotFound, w.Code)
@@ -143,7 +144,7 @@ func TestDeleteTask(t *testing.T) {
 		task.ID = taskID
 		task.User = taskOwnerID // Set a different user as owner
 
-		mockRepo.On("GetByID", mock.Anything, taskID).Return(task, nil)
+		mockTaskRepo.On("GetByID", mock.Anything, taskID).Return(task, nil)
 
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("DELETE", "/tasks/"+taskID, nil)
@@ -157,7 +158,7 @@ func TestDeleteTask(t *testing.T) {
 		ctx.Params = []gin.Param{{Key: "id", Value: taskID}}
 
 		// Call the controller directly
-		controller := NewTaskController(mockRepo)
+		controller := NewTaskController(mockTaskRepo, mockTagRepo)
 		controller.DeleteTask(ctx)
 
 		assert.Equal(t, http.StatusForbidden, w.Code)
@@ -171,8 +172,8 @@ func TestDeleteTask(t *testing.T) {
 		task.ID = taskID
 		task.User = userID
 
-		mockRepo.On("GetByID", mock.Anything, taskID).Return(task, nil)
-		mockRepo.On("Delete", mock.Anything, taskID).Return(errors.New("database error"))
+		mockTaskRepo.On("GetByID", mock.Anything, taskID).Return(task, nil)
+		mockTaskRepo.On("Delete", mock.Anything, taskID).Return(errors.New("database error"))
 
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("DELETE", "/tasks/"+taskID, nil)
@@ -186,7 +187,7 @@ func TestDeleteTask(t *testing.T) {
 		ctx.Params = []gin.Param{{Key: "id", Value: taskID}}
 
 		// Call the controller directly
-		controller := NewTaskController(mockRepo)
+		controller := NewTaskController(mockTaskRepo, mockTagRepo)
 		controller.DeleteTask(ctx)
 
 		assert.Equal(t, http.StatusInternalServerError, w.Code)

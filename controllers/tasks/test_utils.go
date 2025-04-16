@@ -17,6 +17,9 @@ func createTestTask() *models.TaskEntity {
 	reminder1 := primitive.NewDateTimeFromTime(time.Now().Add(12 * time.Hour))
 	reminder2 := primitive.NewDateTimeFromTime(time.Now().Add(18 * time.Hour))
 
+	// Add a sample tag array
+	tags := []primitive.ObjectID{primitive.NewObjectID(), primitive.NewObjectID()}
+
 	return &models.TaskEntity{
 		Title:       "Test Task",
 		Description: &desc,
@@ -25,16 +28,18 @@ func createTestTask() *models.TaskEntity {
 		StartDate:   &now,
 		EndDate:     &end,
 		Reminders:   []*primitive.DateTime{&reminder1, &reminder2},
+		Tags:        &tags,
 		CreatedAt:   primitive.NewDateTimeFromTime(time.Now()),
 		UpdatedAt:   primitive.NewDateTimeFromTime(time.Now()),
 	}
 }
 
-func setupTest() (*gin.Engine, *mocks.MockTaskRepository) {
+func setupTest() (*gin.Engine, *mocks.MockTaskRepository, *mocks.MockTagRepository) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
-	mockRepo := new(mocks.MockTaskRepository)
-	taskController := NewTaskController(mockRepo)
+	mockTaskRepo := new(mocks.MockTaskRepository)
+	mockTagRepo := new(mocks.MockTagRepository)
+	taskController := NewTaskController(mockTaskRepo, mockTagRepo)
 
 	// Set up routes with middleware
 	taskRoutes := router.Group("/tasks")
@@ -46,5 +51,5 @@ func setupTest() (*gin.Engine, *mocks.MockTaskRepository) {
 		taskRoutes.DELETE("/:id", taskController.DeleteTask)
 	}
 
-	return router, mockRepo
+	return router, mockTaskRepo, mockTagRepo
 }

@@ -12,6 +12,7 @@ type TaskEntity struct {
 	EndDate     *primitive.DateTime   `json:"endDate,omitempty" bson:"end_date"`
 	Reminders   []*primitive.DateTime `json:"reminders,omitempty" bson:"reminders"`
 	Completed   *bool                 `json:"completed" bson:"completed"`
+	Tags        *[]primitive.ObjectID `json:"tags" bson:"tags"`
 	CreatedAt   primitive.DateTime    `json:"createdAt" bson:"created_at"`
 	UpdatedAt   primitive.DateTime    `json:"updatedAt" bson:"updated_at"`
 }
