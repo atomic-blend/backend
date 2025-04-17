@@ -2,6 +2,7 @@ package models
 
 import "go.mongodb.org/mongo-driver/bson/primitive"
 
+// Tag represents a tag associated with a task
 type Tag struct {
 	ID        *primitive.ObjectID `json:"id" bson:"_id,omitempty"`
 	UserID    *primitive.ObjectID `json:"userId" bson:"user_id,omitempty"`
