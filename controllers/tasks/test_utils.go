@@ -17,14 +17,31 @@ func createTestTask() *models.TaskEntity {
 	reminder1 := primitive.NewDateTimeFromTime(time.Now().Add(12 * time.Hour))
 	reminder2 := primitive.NewDateTimeFromTime(time.Now().Add(18 * time.Hour))
 
-	// Add a sample tag array
-	tags := []primitive.ObjectID{primitive.NewObjectID(), primitive.NewObjectID()}
+	// Create sample tags
+	tagID1 := primitive.NewObjectID()
+	tagID2 := primitive.NewObjectID()
+	userID := primitive.NewObjectID()
+	name1 := "Tag 1"
+	name2 := "Tag 2"
+
+	tags := []*models.Tag{
+		{
+			ID:     &tagID1,
+			UserID: &userID,
+			Name:   name1,
+		},
+		{
+			ID:     &tagID2,
+			UserID: &userID,
+			Name:   name2,
+		},
+	}
 
 	return &models.TaskEntity{
 		Title:       "Test Task",
 		Description: &desc,
 		Completed:   &completed,
-		User:        primitive.NewObjectID(),
+		User:        userID,
 		StartDate:   &now,
 		EndDate:     &end,
 		Reminders:   []*primitive.DateTime{&reminder1, &reminder2},

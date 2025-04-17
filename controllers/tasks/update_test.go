@@ -49,18 +49,25 @@ func TestUpdateTask(t *testing.T) {
 		updatedTask.Reminders = []*primitive.DateTime{&reminder1, &reminder2, &reminder3}
 
 		// Configure task with tags
-		tagIDs := []primitive.ObjectID{primitive.NewObjectID(), primitive.NewObjectID()}
-		updatedTask.Tags = &tagIDs
+		tagID1 := primitive.NewObjectID()
+		tagID2 := primitive.NewObjectID()
+		tags := []*models.Tag{
+			{
+				ID:     &tagID1,
+				UserID: &userID,
+				Name:   "Test Tag 1",
+			},
+			{
+				ID:     &tagID2,
+				UserID: &userID,
+				Name:   "Test Tag 2",
+			},
+		}
+		updatedTask.Tags = &tags
 
 		// Mock tag validation - for each tag, return a valid tag owned by the user
-		for _, tagID := range tagIDs {
-			tag := &models.Tag{
-				ID:     &tagID,
-				UserID: &userID,
-				Name:   "Test Tag",
-			}
-			mockTagRepo.On("GetByID", mock.Anything, tagID).Return(tag, nil).Once()
-		}
+		mockTagRepo.On("GetByID", mock.Anything, tagID1).Return(tags[0], nil).Once()
+		mockTagRepo.On("GetByID", mock.Anything, tagID2).Return(tags[1], nil).Once()
 
 		mockTaskRepo.On("GetByID", mock.Anything, taskID).Return(existingTask, nil)
 		mockTaskRepo.On("Update", mock.Anything, taskID, mock.AnythingOfType("*models.TaskEntity")).Return(updatedTask, nil)
@@ -131,9 +138,15 @@ func TestUpdateTask(t *testing.T) {
 		updatedTask.User = userID
 		updatedTask.Title = "Updated Task with Invalid Tag"
 
-		// Set up an invalid tag ID
-		tagIDs := []primitive.ObjectID{invalidTagID}
-		updatedTask.Tags = &tagIDs
+		// Set up an invalid tag
+		tags := []*models.Tag{
+			{
+				ID:     &invalidTagID,
+				UserID: &userID,
+				Name:   "Invalid Tag",
+			},
+		}
+		updatedTask.Tags = &tags
 
 		// Mock tag validation to return nil for the invalid tag ID
 		mockTagRepo.On("GetByID", mock.Anything, invalidTagID).Return(nil, nil).Once()
@@ -177,17 +190,23 @@ func TestUpdateTask(t *testing.T) {
 		updatedTask.User = userID
 		updatedTask.Title = "Updated Task with Tag from Another User"
 
-		// Set up a tag ID that will be set as belonging to another user
-		tagIDs := []primitive.ObjectID{tagID}
-		updatedTask.Tags = &tagIDs
+		// Set up a tag that belongs to another user
+		tags := []*models.Tag{
+			{
+				ID:     &tagID,
+				UserID: &userID, // Initially with correct user ID, but DB will return a different owner
+				Name:   "Tag From Another User",
+			},
+		}
+		updatedTask.Tags = &tags
 
 		// Mock tag validation to return a tag owned by another user
-		tag := &models.Tag{
+		dbTag := &models.Tag{
 			ID:     &tagID,
 			UserID: &anotherUserID, // Tag belongs to another user
 			Name:   "Test Tag",
 		}
-		mockTagRepo.On("GetByID", mock.Anything, tagID).Return(tag, nil).Once()
+		mockTagRepo.On("GetByID", mock.Anything, tagID).Return(dbTag, nil).Once()
 		mockTaskRepo.On("GetByID", mock.Anything, taskID).Return(existingTask, nil)
 
 		taskJSON, _ := json.Marshal(updatedTask)

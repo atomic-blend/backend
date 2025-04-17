@@ -28,15 +28,31 @@ func TestDeleteTag(t *testing.T) {
 		tag.UserID = &userID // This needs to be a valid ObjectID
 
 		// Create mock tasks with the tag
+		tagID1 := tagID
+		tagID2 := primitive.NewObjectID()
+		tag1 := &models.Tag{
+			ID:     &tagID1,
+			UserID: &userID,
+			Name:   "Test Tag 1",
+		}
+		tag2 := &models.Tag{
+			ID:     &tagID2,
+			UserID: &userID,
+			Name:   "Test Tag 2",
+		}
+
+		tags1 := []*models.Tag{tag1, tag2}
+		tags2 := []*models.Tag{tag2}
+
 		task1 := &models.TaskEntity{
 			ID:   primitive.NewObjectID().Hex(),
 			User: userID,
-			Tags: &[]primitive.ObjectID{tagID, primitive.NewObjectID()},
+			Tags: &tags1,
 		}
 		task2 := &models.TaskEntity{
 			ID:   primitive.NewObjectID().Hex(),
 			User: userID,
-			Tags: &[]primitive.ObjectID{primitive.NewObjectID()},
+			Tags: &tags2,
 		}
 		tasks := []*models.TaskEntity{task1, task2}
 
@@ -52,8 +68,10 @@ func TestDeleteTag(t *testing.T) {
 			if t.Tags == nil {
 				return false
 			}
+
+			// Check that the tag with tagID was removed
 			for _, tag := range *t.Tags {
-				if tag == tagID {
+				if tag.ID != nil && *tag.ID == tagID {
 					return false
 				}
 			}
@@ -93,15 +111,40 @@ func TestDeleteTag(t *testing.T) {
 		tag.UserID = &userID
 
 		// Create tasks with different tag scenarios
+		tagID1 := tagID
+		otherTagID := primitive.NewObjectID()
+		anotherTagID := primitive.NewObjectID()
+
+		tag1 := &models.Tag{
+			ID:     &tagID1,
+			UserID: &userID,
+			Name:   "Tag to delete",
+		}
+		otherTag := &models.Tag{
+			ID:     &otherTagID,
+			UserID: &userID,
+			Name:   "Other Tag",
+		}
+		anotherTag := &models.Tag{
+			ID:     &anotherTagID,
+			UserID: &userID,
+			Name:   "Another Tag",
+		}
+
+		// Task1 has the tag to be deleted and another tag
+		tags1 := []*models.Tag{tag1, otherTag}
+		// Task2 has a different tag
+		tags2 := []*models.Tag{anotherTag}
+
 		task1 := &models.TaskEntity{
 			ID:   primitive.NewObjectID().Hex(),
 			User: userID,
-			Tags: &[]primitive.ObjectID{tagID, primitive.NewObjectID()}, // Has the tag being deleted
+			Tags: &tags1, // Has the tag being deleted
 		}
 		task2 := &models.TaskEntity{
 			ID:   primitive.NewObjectID().Hex(),
 			User: userID,
-			Tags: &[]primitive.ObjectID{primitive.NewObjectID()}, // Doesn't have the tag
+			Tags: &tags2, // Doesn't have the tag
 		}
 		task3 := &models.TaskEntity{
 			ID:   primitive.NewObjectID().Hex(),
@@ -122,8 +165,10 @@ func TestDeleteTag(t *testing.T) {
 			if t.Tags == nil {
 				return false
 			}
+
+			// Check that the tag with tagID was removed
 			for _, tag := range *t.Tags {
-				if tag == tagID {
+				if tag.ID != nil && *tag.ID == tagID {
 					return false
 				}
 			}
@@ -310,10 +355,28 @@ func TestDeleteTag(t *testing.T) {
 		tag.ID = &tagID
 		tag.UserID = &userID
 
+		// Create a Tag object for the task
+		taskTag := &models.Tag{
+			ID:     &tagID,
+			UserID: &userID,
+			Name:   "Test Tag",
+		}
+
+		// Create another Tag object
+		otherTagID := primitive.NewObjectID()
+		otherTag := &models.Tag{
+			ID:     &otherTagID,
+			UserID: &userID,
+			Name:   "Other Tag",
+		}
+
+		// Create a slice of Tag objects
+		tags := []*models.Tag{taskTag, otherTag}
+
 		task := &models.TaskEntity{
 			ID:   primitive.NewObjectID().Hex(),
 			User: userID,
-			Tags: &[]primitive.ObjectID{tagID, primitive.NewObjectID()},
+			Tags: &tags,
 		}
 		tasks := []*models.TaskEntity{task}
 

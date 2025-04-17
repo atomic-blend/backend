@@ -45,23 +45,38 @@ func (c *TaskController) CreateTask(ctx *gin.Context) {
 
 	// Validate tags if any are provided
 	if task.Tags != nil && len(*task.Tags) > 0 {
+		var validatedTags []*models.Tag
+
 		// Check if all tags exist and belong to the user
-		for _, tagID := range *task.Tags {
-			tag, err := c.tagRepo.GetByID(ctx, tagID)
+		for _, tag := range *task.Tags {
+			if tag.ID == nil {
+				ctx.JSON(http.StatusBadRequest, gin.H{"error": "Tag ID is required"})
+				return
+			}
+
+			// Fetch the tag from the database to verify it exists
+			dbTag, err := c.tagRepo.GetByID(ctx, *tag.ID)
 			if err != nil {
 				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Error validating tags: " + err.Error()})
 				return
 			}
-			if tag == nil {
-				ctx.JSON(http.StatusBadRequest, gin.H{"error": "Tag not found: " + tagID.Hex()})
+			if dbTag == nil {
+				ctx.JSON(http.StatusBadRequest, gin.H{"error": "Tag not found: " + tag.ID.Hex()})
 				return
 			}
+
 			// Make sure the tag belongs to the user
-			if tag.UserID == nil || *tag.UserID != authUser.UserID {
-				ctx.JSON(http.StatusForbidden, gin.H{"error": "You don't have permission to use this tag: " + tagID.Hex()})
+			if dbTag.UserID == nil || *dbTag.UserID != authUser.UserID {
+				ctx.JSON(http.StatusForbidden, gin.H{"error": "You don't have permission to use this tag: " + tag.ID.Hex()})
 				return
 			}
+
+			// Add the validated tag from the database
+			validatedTags = append(validatedTags, dbTag)
 		}
+
+		// Replace the tags with validated tags from the database
+		task.Tags = &validatedTags
 	}
 
 	createdTask, err := c.taskRepo.Create(ctx, &task)
