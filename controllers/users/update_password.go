@@ -13,6 +13,7 @@ type UpdatePasswordRequest struct {
 	OldPassword string `json:"old_password" binding:"required"`
 	NewPassword string `json:"new_password" binding:"required"`
 	UserKey     string `json:"user_key" binding:"required"`
+	Salt        string `json:"salt" binding:"required"`
 }
 
 // UpdatePassword allows users to update their password
@@ -55,6 +56,7 @@ func (c *UserController) UpdatePassword(ctx *gin.Context) {
 
 	user.Password = &newPasswordHash
 	user.KeySet.UserKey = updateReq.UserKey
+	user.KeySet.Salt = updateReq.Salt
 
 	// Update user in database
 	if _, err := c.userRepo.Update(ctx, user); err != nil {
