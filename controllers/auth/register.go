@@ -7,7 +7,6 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/rs/zerolog/log"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -43,15 +42,6 @@ func (c *Controller) Register(ctx *gin.Context) {
 		return
 	}
 
-	// Generate key salt
-	keySalt, err := password.GenerateRandomSalt(32)
-	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate key salt"})
-		return
-	}
-
-	log.Debug().Msgf("Key salt: %s", keySalt)
-
 	// Find default user role
 	defaultRole, err := c.userRoleRepo.GetByName(ctx, "user")
 	if err != nil {
@@ -67,7 +57,7 @@ func (c *Controller) Register(ctx *gin.Context) {
 	user := &models.UserEntity{
 		Email:    &req.Email,
 		Password: &hashedPassword,
-		KeySet: req.KeySet,
+		KeySet:   req.KeySet,
 		RoleIds:  []*primitive.ObjectID{defaultRole.ID},
 	}
 
@@ -103,7 +93,7 @@ func (c *Controller) Register(ctx *gin.Context) {
 	responseSafeUser := &models.UserEntity{
 		ID:        newUser.ID,
 		Email:     newUser.Email,
-		KeySet:   newUser.KeySet,
+		KeySet:    newUser.KeySet,
 		Roles:     newUser.Roles,
 		CreatedAt: newUser.CreatedAt,
 		UpdatedAt: newUser.UpdatedAt,
