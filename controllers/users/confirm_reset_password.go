@@ -17,6 +17,7 @@ type ConfirmResetPasswordRequest struct {
 	Salt         string `json:"salt" binding:"required"`
 	MnemonicKey  string `json:"mnemonic_key" binding:"required"`
 	MnemonicSalt string `json:"mnemonic_hash" binding:"required"`
+	ResetData    bool   `json:"reset_data" binding:"required"`
 }
 
 // ConfirmResetPassword allows users to update their password
@@ -68,6 +69,16 @@ func (c *UserController) ConfirmResetPassword(ctx *gin.Context) {
 		log.Error().Err(err).Msg("Failed to update user password")
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user password"})
 		return
+	}
+
+	// if reset data is true, delete all user data
+	if updateReq.ResetData {
+		err := c.DeletePersonalData(ctx, *user.ID)
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to delete personal data")
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete personal data"})
+			return
+		}
 	}
 
 	ctx.JSON(http.StatusOK, gin.H{"message": "Password reseted successfully"})
