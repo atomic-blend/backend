@@ -11,7 +11,7 @@ func TestGenerateRandomSalt(t *testing.T) {
 	lengths := []int{8, 16, 32, 64}
 
 	for _, length := range lengths {
-		salt, err := GenerateRandomSalt(length)
+		salt, err := GenerateRandomString(length)
 		assert.NoError(t, err)
 		assert.Len(t, salt, length)
 
@@ -20,7 +20,7 @@ func TestGenerateRandomSalt(t *testing.T) {
 	}
 
 	// Test uniqueness
-	salt1, _ := GenerateRandomSalt(32)
-	salt2, _ := GenerateRandomSalt(32)
+	salt1, _ := GenerateRandomString(32)
+	salt2, _ := GenerateRandomString(32)
 	assert.NotEqual(t, salt1, salt2)
 }
