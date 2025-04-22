@@ -3,16 +3,26 @@ package users
 import (
 	"atomic_blend_api/auth"
 	"atomic_blend_api/utils/password"
+	"bytes"
+	"html/template"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/rs/zerolog/log"
 )
 
-func (c *UserController) startResetPassword(ctx *gin.Context) {
+func (c *UserController) StartResetPassword(ctx *gin.Context) {
 	// Get authenticated user from context
 	authUser := auth.GetAuthUser(ctx)
 	if authUser == nil {
 		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
+		return
+	}
+
+	user, err := c.userRepo.FindByID(ctx, authUser.UserID)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to retrieve user profile for password update")
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve user profile"})
 		return
 	}
 
@@ -23,7 +33,51 @@ func (c *UserController) startResetPassword(ctx *gin.Context) {
 		return
 	}
 
-	// send email to account email
+	// template the html with gotemplate
+	htmlTemplate, err := template.ParseFiles("../../email_templates/reset_password/reset_password.html")
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to parse HTML template")
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse HTML template"})
+		return
+	}
+
+	textTemplate, err := template.ParseFiles("../../email_templates/reset_password/reset_password.txt")
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to parse text template")
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse text template"})
+		return
+	}
+
+	// template the plain text with gotemplate
+	var htmlContent bytes.Buffer
+	err = htmlTemplate.Execute(&htmlContent, map[string]string{
+		"code": resetCode,
+	})
+
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to execute HTML template")
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to execute HTML template"})
+		return
+	}
+
+	var textContent bytes.Buffer
+	err = textTemplate.Execute(&textContent, map[string]string{
+		"code": resetCode,
+	})
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to execute text template")
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to execute text template"})
+		return
+	}
 
 	// store the reset code in the database
+	user.ResetPasswordCode = &resetCode
+	if _, err := c.userRepo.Update(ctx, user); err != nil {
+		log.Error().Err(err).Msg("Failed to update user reset password code")
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user reset password code"})
+		return
+	}
+
+	// send the email using the resend sdk
+
 }
