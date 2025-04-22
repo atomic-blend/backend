@@ -1,30 +1,43 @@
-package users
+package auth
 
 import (
-	"atomic_blend_api/auth"
+	"atomic_blend_api/models"
 	"atomic_blend_api/utils/password"
 	"atomic_blend_api/utils/resend"
 	"bytes"
 	"html/template"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog/log"
 )
 
-func (c *UserController) StartResetPassword(ctx *gin.Context) {
+type ResetPasswordRequest struct {
+	Email string `json:"email" binding:"required,email"`
+}
+
+func (c *Controller) StartResetPassword(ctx *gin.Context) {
 	// Get authenticated user from context
-	authUser := auth.GetAuthUser(ctx)
-	if authUser == nil {
-		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
+	// authUser := auth.GetAuthUser(ctx)
+	// if authUser == nil {
+	// 	ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
+	// 	return
+	// }
+
+	// Parse the request body
+	var request ResetPasswordRequest
+	if err := ctx.ShouldBindJSON(&request); err != nil {
+		log.Error().Err(err).Msg("Failed to bind JSON request")
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
 		return
 	}
 
-	user, err := c.userRepo.FindByID(ctx, authUser.UserID)
+	user, err := c.userRepo.FindByEmail(ctx, request.Email)
 	if err != nil {
-		log.Error().Err(err).Msg("Failed to retrieve user profile for password update")
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve user profile"})
+		log.Error().Err(err).Msg("User not found")
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "User not found"})
 		return
 	}
 
@@ -73,14 +86,22 @@ func (c *UserController) StartResetPassword(ctx *gin.Context) {
 	}
 
 	// store the reset code in the database
-	user.ResetPasswordCode = &resetCode
-	if _, err := c.userRepo.Update(ctx, user); err != nil {
-		log.Error().Err(err).Msg("Failed to update user reset password code")
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user reset password code"})
+	userResetPasswordRequest := &models.UserResetPasswordRequest{
+		UserID:    user.ID,
+		ResetCode: resetCode,
+		CreatedAt: time.Now().Format(time.RFC3339),
+		UpdatedAt: time.Now().Format(time.RFC3339),
+	}
+
+	//TODO store in db
+	_, err = c.resetPasswordRepo.Create(ctx, userResetPasswordRequest)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to create reset password request")
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create reset password request"})
 		return
 	}
 
-	// send the email using the resend sdk
+	// // send the email using the resend sdk
 	emailClient := resend.NewResendClient(os.Getenv("RESEND_API_KEY"))
 	sent, error := emailClient.Send(
 		[]string{*user.Email},
