@@ -3,9 +3,11 @@ package users
 import (
 	"atomic_blend_api/auth"
 	"atomic_blend_api/utils/password"
+	"atomic_blend_api/utils/resend"
 	"bytes"
 	"html/template"
 	"net/http"
+	"os"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog/log"
@@ -27,21 +29,21 @@ func (c *UserController) StartResetPassword(ctx *gin.Context) {
 	}
 
 	// generate reset code
-	resetCode, err := password.GenerateRandomString(4)
+	resetCode, err := password.GenerateRandomString(8)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate reset code"})
 		return
 	}
 
 	// template the html with gotemplate
-	htmlTemplate, err := template.ParseFiles("../../email_templates/reset_password/reset_password.html")
+	htmlTemplate, err := template.ParseFiles("./email_templates/reset_password/reset_password.html")
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to parse HTML template")
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse HTML template"})
 		return
 	}
 
-	textTemplate, err := template.ParseFiles("../../email_templates/reset_password/reset_password.txt")
+	textTemplate, err := template.ParseFiles("./email_templates/reset_password/reset_password.txt")
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to parse text template")
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse text template"})
@@ -79,5 +81,19 @@ func (c *UserController) StartResetPassword(ctx *gin.Context) {
 	}
 
 	// send the email using the resend sdk
+	emailClient := resend.NewResendClient(os.Getenv("RESEND_API_KEY"))
+	sent, error := emailClient.Send(
+		[]string{*user.Email},
+		"Atomic Blend - Reset Password",
+		htmlContent.String(),
+		textContent.String(),
+	)
 
+	if error != nil {
+		log.Error().Err(error).Msg("Failed to send email")
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to send email"})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"message": "Reset password email sent successfully", "sent": sent})
 }
