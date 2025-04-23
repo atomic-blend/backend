@@ -12,6 +12,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog/log"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type ResetPasswordRequest struct {
@@ -19,13 +20,6 @@ type ResetPasswordRequest struct {
 }
 
 func (c *Controller) StartResetPassword(ctx *gin.Context) {
-	// Get authenticated user from context
-	// authUser := auth.GetAuthUser(ctx)
-	// if authUser == nil {
-	// 	ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
-	// 	return
-	// }
-
 	// Parse the request body
 	var request ResetPasswordRequest
 	if err := ctx.ShouldBindJSON(&request); err != nil {
@@ -86,11 +80,11 @@ func (c *Controller) StartResetPassword(ctx *gin.Context) {
 	}
 
 	// store the reset code in the database
-	userResetPasswordRequest := &models.UserResetPasswordRequest{
+	userResetPasswordRequest := &models.UserResetPassword{
 		UserID:    user.ID,
 		ResetCode: resetCode,
-		CreatedAt: time.Now().Format(time.RFC3339),
-		UpdatedAt: time.Now().Format(time.RFC3339),
+		CreatedAt: primitive.NewDateTimeFromTime(time.Now()),
+		UpdatedAt: primitive.NewDateTimeFromTime(time.Now()),
 	}
 
 	//TODO store in db

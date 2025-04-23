@@ -22,6 +22,7 @@ func SetupRoutes(router *gin.Engine, database *mongo.Database) {
 		authGroup.POST("/login", authController.Login)
 		authGroup.POST("/refresh", authController.RefreshToken)
 		authGroup.POST("/reset-password", authController.StartResetPassword)
+		authGroup.POST("/reset-password/confirm", authController.ConfirmResetPassword)
 	}
 }
 

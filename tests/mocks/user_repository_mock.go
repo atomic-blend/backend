@@ -64,3 +64,8 @@ func (m *MockUserRepository) FindByID(ctx *gin.Context, id primitive.ObjectID) (
 	}
 	return args.Get(0).(*models.UserEntity), args.Error(1)
 }
+
+func (m *MockUserRepository) ResetAllUserData(ctx *gin.Context, userID primitive.ObjectID) error {
+	args := m.Called(ctx, userID)
+	return args.Error(0)
+}

@@ -11,8 +11,8 @@ import (
 )
 
 type UserResetPasswordRequestRepositoryInterface interface {
-	Create(ctx context.Context, request *models.UserResetPasswordRequest) (*models.UserResetPasswordRequest, error)
-	FindByResetCode(ctx context.Context, resetCode string) (*models.UserResetPasswordRequest, error)
+	Create(ctx context.Context, request *models.UserResetPassword) (*models.UserResetPassword, error)
+	FindByResetCode(ctx context.Context, resetCode string) (*models.UserResetPassword, error)
 	Delete(ctx context.Context, id string) error
 }
 
@@ -31,9 +31,9 @@ func NewUserResetPasswordRequestRepository(db *mongo.Database) *UserResetPasswor
 }
 
 // Create inserts a new reset password request into the database
-func (r *UserResetPasswordRequestRepository) Create(ctx context.Context, request *models.UserResetPasswordRequest) (*models.UserResetPasswordRequest, error) {
+func (r *UserResetPasswordRequestRepository) Create(ctx context.Context, request *models.UserResetPassword) (*models.UserResetPassword, error) {
 	// Set the created and updated timestamps
-	request.CreatedAt = time.Now().Format(time.RFC3339)
+	request.CreatedAt = primitive.NewDateTimeFromTime(time.Now())
 	request.UpdatedAt = request.CreatedAt
 
 	// Insert the request into the database
@@ -42,15 +42,13 @@ func (r *UserResetPasswordRequestRepository) Create(ctx context.Context, request
 		return nil, err
 	}
 
-
 	return request, nil
 }
 
-
 // FindByResetCode retrieves a reset password request by its reset code
-func (r *UserResetPasswordRequestRepository) FindByResetCode(ctx context.Context, resetCode string) (*models.UserResetPasswordRequest, error) {
+func (r *UserResetPasswordRequestRepository) FindByResetCode(ctx context.Context, resetCode string) (*models.UserResetPassword, error) {
 	filter := bson.M{"reset_code": resetCode}
-	var request models.UserResetPasswordRequest
+	var request models.UserResetPassword
 	err := r.collection.FindOne(ctx, filter).Decode(&request)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
@@ -78,4 +76,3 @@ func (r *UserResetPasswordRequestRepository) Delete(ctx context.Context, id stri
 
 	return nil
 }
-
