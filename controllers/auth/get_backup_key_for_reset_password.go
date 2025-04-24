@@ -56,7 +56,7 @@ func (c *Controller) GetBackupKeyForResetPassword(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, gin.H{
-		"backupKey":   user.KeySet.BackupKey,
-		"backupSalt":  user.KeySet.MnemonicSalt,
+		"backup_key":   user.KeySet.BackupKey,
+		"backup_salt":  user.KeySet.MnemonicSalt,
 	})
 }

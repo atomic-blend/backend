@@ -13,14 +13,14 @@ type ConfirmResetPasswordRequest struct {
 	// ResetCode is the code sent to the user for resetting their password
 	ResetCode string `json:"reset_code" binding:"required"`
 	// ResetData indicates whether the user wants to reset their data
-	ResetData bool `json:"reset_data" binding:"required"`
+	ResetData *bool `json:"reset_data" binding:"required"`
 	// NewPassword is the new password the user wants to set
 	NewPassword string `json:"new_password" binding:"required"`
 
 	// updated keyset for the user
-	UserKey string `json:"user_key" binding:"required"`
-	UserSalt string `json:"user_salt" binding:"required"`
-	BackupKey string `json:"backup_key" binding:"required"`
+	UserKey    string `json:"user_key" binding:"required"`
+	UserSalt   string `json:"user_salt" binding:"required"`
+	BackupKey  string `json:"backup_key" binding:"required"`
 	BackupSalt string `json:"backup_salt" binding:"required"`
 }
 
@@ -81,7 +81,7 @@ func (c *Controller) ConfirmResetPassword(ctx *gin.Context) {
 	user.KeySet.BackupKey = request.BackupKey
 	user.KeySet.MnemonicSalt = request.BackupSalt
 
-	_, err = c.userRepo.Update(ctx, user); 
+	_, err = c.userRepo.Update(ctx, user)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to update user")
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user"})
@@ -89,7 +89,7 @@ func (c *Controller) ConfirmResetPassword(ctx *gin.Context) {
 	}
 
 	// If ResetData is true, reset the user's data
-	if request.ResetData {
+	if *request.ResetData {
 		err = c.userRepo.ResetAllUserData(ctx, *user.ID)
 		if err != nil {
 			log.Error().Err(err).Msg("Failed to reset user data")
