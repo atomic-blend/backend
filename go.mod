@@ -10,6 +10,8 @@ require (
 	github.com/stretchr/testify v1.10.0
 )
 
+require github.com/resend/resend-go/v2 v2.17.0 // indirect
+
 require (
 	cel.dev/expr v0.19.1 // indirect
 	cloud.google.com/go v0.117.0 // indirect

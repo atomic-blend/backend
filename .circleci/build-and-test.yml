@@ -3,6 +3,7 @@ version: 2.1
 orbs:
   go: circleci/go@1.7
   codecov: codecov/codecov@5.3.0
+  node: circleci/node@7.1.0
 
 jobs:
   build-and-test:
@@ -49,9 +50,39 @@ jobs:
       - codecov/upload:
           files: "coverage.out"
           slug: atomic-blend/backend
+    
+  build-mails:
+    parameters:
+      node_version:
+        type: string
+        default: "23.9"
+    machine:
+      image: ubuntu-2204:current
+    resource_class: medium
+    working_directory: ~/project
+
+    steps:
+      - checkout:
+          path: ~/project
+      
+      - node/install:
+          node-version: << parameters.node_version >>
+      
+      - node/install-packages:
+          app-dir: ~/project/maizzle
+          cache-path: ~/project/maizzle/node_modules
+          override-ci-command: npm install
+      
+      - run:
+          name: Build mails
+          command: |
+            cd ./maizzle
+            npm run build
+
 
 workflows:
   version: 2
   build-test-deploy:
     jobs:
       - build-and-test
+      - build-mails

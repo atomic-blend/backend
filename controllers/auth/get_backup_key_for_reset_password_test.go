@@ -11,13 +11,14 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-func TestLogin(t *testing.T) {
+func TestGetBackupKeyForResetPassword(t *testing.T) {
 	// Set Gin to test mode
 	gin.SetMode(gin.TestMode)
 
@@ -41,7 +42,7 @@ func TestLogin(t *testing.T) {
 	// Get database reference
 	db := client.Database("test_db")
 
-	// Create user repository
+	// Create repositories
 	userRepo := repositories.NewUserRepository(db)
 	userRoleRepo := repositories.NewUserRoleRepository(db)
 	resetPasswordRepo := repositories.NewUserResetPasswordRequestRepository(db)
@@ -51,7 +52,7 @@ func TestLogin(t *testing.T) {
 
 	// Create a test router
 	router := gin.Default()
-	router.POST("/auth/login", authController.Login)
+	router.POST("/auth/get-backup-key", authController.GetBackupKeyForResetPassword)
 
 	// Create a test role first
 	roleID := primitive.NewObjectID()
@@ -78,13 +79,65 @@ func TestLogin(t *testing.T) {
 		Email:    stringPtr("test@example.com"),
 		Password: &hashedPassword,
 		KeySet:   &keySet,
-		RoleIds:  []*primitive.ObjectID{&roleID}, // Add role reference
+		RoleIds:  []*primitive.ObjectID{&roleID},
 	}
 
 	// Insert test user into database
 	_, err = db.Collection("users").InsertOne(context.TODO(), testUser)
 	if err != nil {
 		t.Fatalf("Failed to insert test user: %v", err)
+	}
+
+	// Create a valid reset password request
+	validResetCode := "valid-reset-code"
+	resetPasswordRequest := models.UserResetPassword{
+		UserID:    testUser.ID,
+		ResetCode: validResetCode,
+		CreatedAt: primitive.NewDateTimeFromTime(time.Now()),
+		UpdatedAt: primitive.NewDateTimeFromTime(time.Now()),
+	}
+
+	// Insert reset password request into database
+	_, err = db.Collection("user_reset_password_requests").InsertOne(context.TODO(), resetPasswordRequest)
+	if err != nil {
+		t.Fatalf("Failed to insert reset password request: %v", err)
+	}
+
+	// create another user for expired reset code test
+	user2ID := primitive.NewObjectID()
+	keySet2 := models.EncryptionKey{
+		UserKey:      "testUserKey456",
+		BackupKey:    "testBackupKey456",
+		Salt:         "testSalt456",
+		MnemonicSalt: "testMnemonicSalt456",
+	}
+	user2 := models.UserEntity{
+		ID:       &user2ID,
+		Email:    stringPtr("test2@example.com"),
+		Password: &hashedPassword,
+		KeySet:   &keySet2,
+		RoleIds:  []*primitive.ObjectID{&roleID},
+	}
+
+	// Insert second test user into database
+	_, err = db.Collection("users").InsertOne(context.TODO(), user2)
+	if err != nil {
+		t.Fatalf("Failed to insert second test user: %v", err)
+	}
+
+	// Create an expired reset password request
+	expiredResetCode := "expired-reset-code"
+	expiredResetPasswordRequest := models.UserResetPassword{
+		UserID:    user2.ID,
+		ResetCode: expiredResetCode,
+		CreatedAt: primitive.NewDateTimeFromTime(time.Now().Add(-6 * time.Minute)), // 6 minutes ago (expired)
+		UpdatedAt: primitive.NewDateTimeFromTime(time.Now().Add(-6 * time.Minute)),
+	}
+
+	// Insert expired reset password request into database
+	_, err = db.Collection("user_reset_password_requests").InsertOne(context.TODO(), expiredResetPasswordRequest)
+	if err != nil {
+		t.Fatalf("Failed to insert expired reset password request: %v", err)
 	}
 
 	// Test cases
@@ -95,90 +148,60 @@ func TestLogin(t *testing.T) {
 		checkResponse  func(*testing.T, *httptest.ResponseRecorder)
 	}{
 		{
-			name: "Successful Login",
+			name: "Successful Retrieval of Backup Key",
 			requestBody: map[string]interface{}{
-				"email":    "test@example.com",
-				"password": "testPassword123",
+				"reset_code": validResetCode,
 			},
 			expectedStatus: http.StatusOK,
 			checkResponse: func(t *testing.T, w *httptest.ResponseRecorder) {
-				var response Response
+				var response map[string]interface{}
 				err := json.Unmarshal(w.Body.Bytes(), &response)
 				assert.NoError(t, err)
-				assert.NotEmpty(t, response.AccessToken)
-				assert.NotEmpty(t, response.RefreshToken)
-				assert.NotNil(t, response.User)
-				assert.Equal(t, "test@example.com", *response.User.Email)
-				assert.Nil(t, response.User.Password) // Password should not be returned
 
-				// Verify KeySet
-				assert.NotNil(t, response.User.KeySet)
-				assert.Equal(t, "testUserKey123", response.User.KeySet.UserKey)
-				assert.Equal(t, "testBackupKey123", response.User.KeySet.BackupKey)
-				assert.Equal(t, "testSalt123", response.User.KeySet.Salt)
-				assert.Equal(t, "testMnemonicSalt123", response.User.KeySet.MnemonicSalt)
-
-				// Verify roles are populated
-				assert.NotNil(t, response.User.Roles)
-				assert.Equal(t, 1, len(response.User.Roles))
-				assert.Equal(t, roleID, *response.User.Roles[0].ID)
-				assert.Equal(t, "user", response.User.Roles[0].Name)
+				// Check if backup_key and backup_salt are present in the response
+				assert.Equal(t, "testBackupKey123", response["backup_key"])
+				assert.Equal(t, "testMnemonicSalt123", response["backup_salt"])
 			},
 		},
 		{
-			name: "Invalid Password",
+			name:        "Invalid Request Format",
 			requestBody: map[string]interface{}{
-				"email":    "test@example.com",
-				"password": "wrongPassword",
-			},
-			expectedStatus: http.StatusUnauthorized,
-			checkResponse: func(t *testing.T, w *httptest.ResponseRecorder) {
-				var response map[string]string
-				err := json.Unmarshal(w.Body.Bytes(), &response)
-				assert.NoError(t, err)
-				assert.Contains(t, response, "error")
-				assert.Equal(t, "Invalid email or password", response["error"])
-			},
-		},
-		{
-			name: "User Not Found",
-			requestBody: map[string]interface{}{
-				"email":    "nonexistent@example.com",
-				"password": "testPassword123",
-			},
-			expectedStatus: http.StatusUnauthorized,
-			checkResponse: func(t *testing.T, w *httptest.ResponseRecorder) {
-				var response map[string]string
-				err := json.Unmarshal(w.Body.Bytes(), &response)
-				assert.NoError(t, err)
-				assert.Contains(t, response, "error")
-				assert.Equal(t, "Invalid email or password", response["error"])
-			},
-		},
-		{
-			name: "Missing Email",
-			requestBody: map[string]interface{}{
-				"password": "testPassword123",
+				// Missing reset_code
 			},
 			expectedStatus: http.StatusBadRequest,
 			checkResponse: func(t *testing.T, w *httptest.ResponseRecorder) {
-				var response map[string]string
+				var response map[string]interface{}
 				err := json.Unmarshal(w.Body.Bytes(), &response)
 				assert.NoError(t, err)
 				assert.Contains(t, response, "error")
 			},
 		},
 		{
-			name: "Missing Password",
+			name: "Reset Code Not Found",
 			requestBody: map[string]interface{}{
-				"email": "test@example.com",
+				"reset_code": "non-existent-code",
 			},
 			expectedStatus: http.StatusBadRequest,
 			checkResponse: func(t *testing.T, w *httptest.ResponseRecorder) {
-				var response map[string]string
+				var response map[string]interface{}
 				err := json.Unmarshal(w.Body.Bytes(), &response)
 				assert.NoError(t, err)
 				assert.Contains(t, response, "error")
+				assert.Equal(t, "Reset code not found", response["error"])
+			},
+		},
+		{
+			name: "Expired Reset Code",
+			requestBody: map[string]interface{}{
+				"reset_code": expiredResetCode,
+			},
+			expectedStatus: http.StatusBadRequest,
+			checkResponse: func(t *testing.T, w *httptest.ResponseRecorder) {
+				var response map[string]interface{}
+				err := json.Unmarshal(w.Body.Bytes(), &response)
+				assert.NoError(t, err)
+				assert.Contains(t, response, "error")
+				assert.Equal(t, "Reset code expired", response["error"])
 			},
 		},
 	}
@@ -186,9 +209,13 @@ func TestLogin(t *testing.T) {
 	// Run test cases
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			// Create request body
-			jsonBody, _ := json.Marshal(tc.requestBody)
-			req, _ := http.NewRequest("POST", "/auth/login", bytes.NewBuffer(jsonBody))
+			// Convert request body to JSON
+			jsonBody, err := json.Marshal(tc.requestBody)
+			assert.NoError(t, err)
+
+			// Create HTTP request
+			req, err := http.NewRequest("POST", "/auth/get-backup-key", bytes.NewBuffer(jsonBody))
+			assert.NoError(t, err)
 			req.Header.Set("Content-Type", "application/json")
 
 			// Create response recorder
@@ -201,12 +228,9 @@ func TestLogin(t *testing.T) {
 			assert.Equal(t, tc.expectedStatus, w.Code)
 
 			// Check response
-			tc.checkResponse(t, w)
+			if tc.checkResponse != nil {
+				tc.checkResponse(t, w)
+			}
 		})
 	}
-}
-
-// Helper function to create string pointer
-func stringPtr(s string) *string {
-	return &s
 }

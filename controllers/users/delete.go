@@ -7,7 +7,6 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 // TaskRepositoryFactory is a function type to create task repositories
@@ -51,7 +50,7 @@ func (c *UserController) DeleteAccount(ctx *gin.Context) {
 	}
 
 	// Delete all personal data first
-	if err := c.deletePersonalData(ctx, userID); err != nil {
+	if err := c.DeletePersonalData(ctx, userID); err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete personal data: " + err.Error()})
 		return
 	}
@@ -69,27 +68,7 @@ func (c *UserController) DeleteAccount(ctx *gin.Context) {
 	})
 }
 
-// deletePersonalData handles the deletion of all user personal data
-// This includes tasks and any other personal data associated with the user
-func (c *UserController) deletePersonalData(ctx *gin.Context, userID primitive.ObjectID) error {
-	// Use the task repository factory to create a task repository
-	taskRepo := c.getTaskRepository()
 
-	// Get all tasks for the user
-	tasks, err := taskRepo.GetAll(ctx, &userID)
-	if err != nil {
-		return err
-	}
-
-	// Delete each task
-	for _, task := range tasks {
-		if err := taskRepo.Delete(ctx, task.ID); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
 
 // getTaskRepository returns a task repository instance using the factory
 func (c *UserController) getTaskRepository() repositories.TaskRepositoryInterface {

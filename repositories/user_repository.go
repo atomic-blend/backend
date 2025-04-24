@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/rs/zerolog/log"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -25,11 +26,16 @@ type UserRepositoryInterface interface {
 	Delete(ctx context.Context, id string) error
 	FindByEmail(ctx context.Context, email string) (*models.UserEntity, error)
 	FindByID(ctx *gin.Context, id primitive.ObjectID) (*models.UserEntity, error)
+	ResetAllUserData(ctx *gin.Context, userID primitive.ObjectID) error
 }
 
 // UserRepository provides methods to interact with user data in the database
 type UserRepository struct {
 	collection *mongo.Collection
+	taskCollection *mongo.Collection
+	habitCollection *mongo.Collection
+	habitEntryCollection *mongo.Collection
+	tagCollection *mongo.Collection
 }
 
 // Ensure UserRepository implements UserRepositoryInterface
@@ -42,6 +48,10 @@ func NewUserRepository(database *mongo.Database) *UserRepository {
 	}
 	return &UserRepository{
 		collection: database.Collection(userCollection),
+		taskCollection: database.Collection(taskCollection),
+		habitCollection: database.Collection(habitCollection),
+		habitEntryCollection: database.Collection(habitEntryCollection),
+		tagCollection: database.Collection(tagCollection),
 	}
 }
 
@@ -173,4 +183,37 @@ func (r *UserRepository) FindByID(ctx *gin.Context, d primitive.ObjectID) (*mode
 	}
 
 	return &user, nil
+}
+
+// ResetAllUserData deletes all personal data associated with a user
+func (r *UserRepository) ResetAllUserData(ctx *gin.Context, userID primitive.ObjectID) error {
+	// Delete all tasks for the user
+	_, err := r.taskCollection.DeleteMany(ctx, bson.M{"user": userID})
+	if err != nil {	
+		log.Error().Err(err).Msg("Failed to delete user tasks")
+		return err
+	}
+
+	// Delete all habits for the user
+	_, err = r.habitCollection.DeleteMany(ctx, bson.M{"user_id": userID})
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to delete user habits")
+		return err
+	}
+
+	// Delete all habit entries for the user
+	_, err = r.habitEntryCollection.DeleteMany(ctx, bson.M{"user_id": userID})
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to delete user habit entries")
+		return err
+	}
+
+	// Delete all tags for the user
+	_, err = r.tagCollection.DeleteMany(ctx, bson.M{"user_id": userID})
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to delete user tags")
+		return err
+	}
+
+	return nil
 }

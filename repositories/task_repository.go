@@ -11,6 +11,8 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
+const taskCollection = "tasks"
+
 // TaskRepositoryInterface defines the interface for task repository operations
 type TaskRepositoryInterface interface {
 	GetAll(ctx context.Context, userID *primitive.ObjectID) ([]*models.TaskEntity, error)
