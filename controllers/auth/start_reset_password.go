@@ -87,6 +87,26 @@ func (c *Controller) StartResetPassword(ctx *gin.Context) {
 		UpdatedAt: primitive.NewDateTimeFromTime(time.Now()),
 	}
 
+	// check if a reset password request already exists for this user
+	existingRequest, err := c.resetPasswordRepo.FindByUserID(ctx, user.ID.Hex())
+	if err != nil {	
+		log.Error().Err(err).Msg("Failed to find existing reset password request")
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to find existing reset password request"})
+		return
+	}
+
+	log.Info().Msgf("Existing request: %v", existingRequest)
+
+	if existingRequest != nil {
+		// delete the existing request
+		err = c.resetPasswordRepo.Delete(ctx, existingRequest.UserID.Hex())
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to delete existing reset password request")
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete existing reset password request"})
+			return
+		}
+	}
+
 	//TODO store in db
 	_, err = c.resetPasswordRepo.Create(ctx, userResetPasswordRequest)
 	if err != nil {

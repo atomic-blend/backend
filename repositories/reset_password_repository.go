@@ -14,6 +14,7 @@ type UserResetPasswordRequestRepositoryInterface interface {
 	Create(ctx context.Context, request *models.UserResetPassword) (*models.UserResetPassword, error)
 	FindByResetCode(ctx context.Context, resetCode string) (*models.UserResetPassword, error)
 	Delete(ctx context.Context, id string) error
+	FindByUserID(ctx context.Context, userID string) (*models.UserResetPassword, error)
 }
 
 type UserResetPasswordRequestRepository struct {
@@ -75,4 +76,25 @@ func (r *UserResetPasswordRequestRepository) Delete(ctx context.Context, id stri
 	}
 
 	return nil
+}
+
+// FindByUserID retrieves a reset password request by its user ID
+func (r *UserResetPasswordRequestRepository) FindByUserID(ctx context.Context, userID string) (*models.UserResetPassword, error) {
+	// Convert the string user ID to an ObjectID
+	objectID, err := primitive.ObjectIDFromHex(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	filter := bson.M{"_id": objectID}
+	var request models.UserResetPassword
+	err = r.collection.FindOne(ctx, filter).Decode(&request)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return nil, nil // No document found
+		}
+		return nil, err // Other error
+	}
+
+	return &request, nil
 }
