@@ -8,11 +8,13 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+// GetBackupKeyForResetPasswordRequest represents the request body for getting the backup key for resetting a password
 type GetBackupKeyForResetPasswordRequest struct {
 	// ResetCode is the code sent to the user for resetting their password
 	ResetCode string `json:"reset_code" binding:"required"`
 }
 
+// GetBackupKeyForResetPassword handles the retrieval of the backup key for resetting a password
 func (c *Controller) GetBackupKeyForResetPassword(ctx *gin.Context) {
 	// Parse the request body
 	var request GetBackupKeyForResetPasswordRequest

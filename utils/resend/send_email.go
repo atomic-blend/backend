@@ -5,10 +5,10 @@ import (
 	"os"
 )
 
-// Factory function type for creating email clients
+// ClientFactory function type for creating email clients
 type ClientFactory func(apiKey string) EmailClient
 
-// Default factory that creates real ResendClient instances
+// DefaultClientFactory that creates real ResendClient instances
 var DefaultClientFactory ClientFactory = func(apiKey string) EmailClient {
 	return NewResendClient(apiKey)
 }

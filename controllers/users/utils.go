@@ -5,7 +5,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-// deletePersonalData handles the deletion of all user personal data
+// DeletePersonalData handles the deletion of all user personal data
 // This includes tasks and any other personal data associated with the user
 func (c *UserController) DeletePersonalData(ctx *gin.Context, userID primitive.ObjectID) error {
 	// Use the task repository factory to create a task repository

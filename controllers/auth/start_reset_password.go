@@ -15,13 +15,15 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-type ResetPasswordRequest struct {
+// StartResetPasswordRequest represents the request body for starting a password reset
+type StartResetPasswordRequest struct {
 	Email string `json:"email" binding:"required,email"`
 }
 
+// StartResetPassword handles the initiation of a password reset
 func (c *Controller) StartResetPassword(ctx *gin.Context) {
 	// Parse the request body
-	var request ResetPasswordRequest
+	var request StartResetPasswordRequest
 	if err := ctx.ShouldBindJSON(&request); err != nil {
 		log.Error().Err(err).Msg("Failed to bind JSON request")
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})

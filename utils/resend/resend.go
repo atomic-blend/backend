@@ -9,20 +9,20 @@ type EmailClient interface {
 	Send(to []string, subject string, html string, text string) (string, error)
 }
 
-// ResendClient implements EmailClient using the actual Resend API
-type ResendClient struct {
+// Client implements EmailClient using the actual Resend API
+type Client struct {
 	client *resend.Client
 }
 
 // NewResendClient creates a new ResendClient
-func NewResendClient(apiKey string) *ResendClient {
-	return &ResendClient{
+func NewResendClient(apiKey string) *Client {
+	return &Client{
 		client: resend.NewClient(apiKey),
 	}
 }
 
 // Send sends an email using the Resend API
-func (c *ResendClient) Send(to []string, subject string, html string, text string) (string, error) {
+func (c *Client) Send(to []string, subject string, html string, text string) (string, error) {
 	params := &resend.SendEmailRequest{
 		From:    "noreply@brandonguigo.com",
 		To:      to,

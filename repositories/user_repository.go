@@ -185,6 +185,7 @@ func (r *UserRepository) FindByID(ctx *gin.Context, d primitive.ObjectID) (*mode
 	return &user, nil
 }
 
+// ResetAllUserData deletes all personal data associated with a user
 func (r *UserRepository) ResetAllUserData(ctx *gin.Context, userID primitive.ObjectID) error {
 	// Delete all tasks for the user
 	_, err := r.taskCollection.DeleteMany(ctx, bson.M{"user": userID})

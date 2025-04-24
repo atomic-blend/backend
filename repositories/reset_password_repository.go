@@ -10,6 +10,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
+// UserResetPasswordRequestRepositoryInterface defines the methods for the UserResetPasswordRequestRepository
 type UserResetPasswordRequestRepositoryInterface interface {
 	Create(ctx context.Context, request *models.UserResetPassword) (*models.UserResetPassword, error)
 	FindByResetCode(ctx context.Context, resetCode string) (*models.UserResetPassword, error)
@@ -17,6 +18,7 @@ type UserResetPasswordRequestRepositoryInterface interface {
 	FindByUserID(ctx context.Context, userID string) (*models.UserResetPassword, error)
 }
 
+// UserResetPasswordRequestRepository is the implementation of UserResetPasswordRequestRepositoryInterface
 type UserResetPasswordRequestRepository struct {
 	collection *mongo.Collection
 }

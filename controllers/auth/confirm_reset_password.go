@@ -9,6 +9,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+// ConfirmResetPasswordRequest represents the request body for confirming a password reset
 type ConfirmResetPasswordRequest struct {
 	// ResetCode is the code sent to the user for resetting their password
 	ResetCode string `json:"reset_code" binding:"required"`
@@ -24,6 +25,7 @@ type ConfirmResetPasswordRequest struct {
 	BackupSalt string `json:"backup_salt" binding:"required"`
 }
 
+// ConfirmResetPassword handles the confirmation of a password reset
 func (c *Controller) ConfirmResetPassword(ctx *gin.Context) {
 	// Parse the request body
 	var request ConfirmResetPasswordRequest
