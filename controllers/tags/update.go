@@ -78,6 +78,12 @@ func (c *TagController) UpdateTag(ctx *gin.Context) {
 		return
 	}
 
+	// check if user is allowed to update the tag
+	if updatedTag.UserID != nil && *updatedTag.UserID != authUser.UserID {
+		ctx.JSON(http.StatusForbidden, gin.H{"error": "You don't have permission to update this tag"})
+		return
+	}
+
 	// Preserve important fields from existing tag
 	updatedTag.ID = existingTag.ID
 	updatedTag.UserID = existingTag.UserID
