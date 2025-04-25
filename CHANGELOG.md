@@ -2,6 +2,14 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## 0.4.2 - 2025-04-25
+#### Bug Fixes
+- retry writes parameter badly set - (0eb17b7) - Brandon Guigo
+#### Miscellaneous Chores
+- **(release)** 0.4.1 [skip ci] - (c493074) - CircleCI
+
+- - -
+
 ## 0.4.1 - 2025-04-25
 #### Bug Fixes
 - use findOrCreate in register endpoint - (bc4a025) - Brandon Guigo
