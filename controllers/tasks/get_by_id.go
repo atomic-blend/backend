@@ -54,5 +54,19 @@ func (c *TaskController) GetTaskByID(ctx *gin.Context) {
 		return
 	}
 
+	// // get tags for the task
+	// tags := []models.Tag{}
+	// for _, tag := range *task.Tags {
+	// 	tag, err := c.tagRepo.GetByID(ctx, *tag.ID)
+	// 	if err != nil {
+	// 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	// 		return
+	// 	}
+	// 	if tag != nil {
+	// 		tags = append(tags, *tag)
+	// 	}
+	// }
+	// task.Tags = &tags;
+
 	ctx.JSON(http.StatusOK, task)
 }

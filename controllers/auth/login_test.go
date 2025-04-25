@@ -44,9 +44,10 @@ func TestLogin(t *testing.T) {
 	// Create user repository
 	userRepo := repositories.NewUserRepository(db)
 	userRoleRepo := repositories.NewUserRoleRepository(db)
+	resetPasswordRepo := repositories.NewUserResetPasswordRequestRepository(db)
 
 	// Create controller
-	authController := NewController(userRepo, userRoleRepo)
+	authController := NewController(userRepo, userRoleRepo, resetPasswordRepo)
 
 	// Create a test router
 	router := gin.Default()

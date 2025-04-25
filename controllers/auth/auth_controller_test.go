@@ -14,9 +14,10 @@ func TestNewController(t *testing.T) {
 	// Create mock repositories
 	mockUserRepo := &repositories.UserRepository{}
 	mockUserRoleRepo := &repositories.UserRoleRepository{}
+	mockResetPasswordRepo := &repositories.UserResetPasswordRequestRepository{}
 
 	// Create a new controller
-	controller := NewController(mockUserRepo, mockUserRoleRepo)
+	controller := NewController(mockUserRepo, mockUserRoleRepo, mockResetPasswordRepo)
 
 	// Test that the controller was created successfully
 	assert.NotNil(t, controller, "Controller should not be nil")

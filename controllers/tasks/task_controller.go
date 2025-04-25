@@ -11,25 +11,28 @@ import (
 // TaskController handles task related operations
 type TaskController struct {
 	taskRepo repositories.TaskRepositoryInterface
+	tagRepo  repositories.TagRepositoryInterface
 }
 
 // NewTaskController creates a new task controller instance
-func NewTaskController(taskRepo repositories.TaskRepositoryInterface) *TaskController {
+func NewTaskController(taskRepo repositories.TaskRepositoryInterface, tagRepo repositories.TagRepositoryInterface) *TaskController {
 	return &TaskController{
 		taskRepo: taskRepo,
+		tagRepo:  tagRepo,
 	}
 }
 
 // SetupRoutes sets up the task routes
 func SetupRoutes(router *gin.Engine, database *mongo.Database) {
 	taskRepo := repositories.NewTaskRepository(database)
-	taskController := NewTaskController(taskRepo)
+	tagRepo := repositories.NewTagRepository(database)
+	taskController := NewTaskController(taskRepo, tagRepo)
 	setupTaskRoutes(router, taskController)
 }
 
 // SetupRoutesWithMock sets up the task routes with a mock repository for testing
-func SetupRoutesWithMock(router *gin.Engine, taskRepo repositories.TaskRepositoryInterface) {
-	taskController := NewTaskController(taskRepo)
+func SetupRoutesWithMock(router *gin.Engine, taskRepo repositories.TaskRepositoryInterface, tagRepo repositories.TagRepositoryInterface) {
+	taskController := NewTaskController(taskRepo, tagRepo)
 	setupTaskRoutes(router, taskController)
 }
 

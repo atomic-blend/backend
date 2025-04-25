@@ -13,13 +13,17 @@ import (
 func SetupRoutes(router *gin.Engine, database *mongo.Database) {
 	userRepo := repositories.NewUserRepository(database)
 	userRoleRepo := repositories.NewUserRoleRepository(database)
-	authController := auth.NewController(userRepo, userRoleRepo)
+	resetPasswordRepo := repositories.NewUserResetPasswordRequestRepository(database)
+	authController := auth.NewController(userRepo, userRoleRepo, resetPasswordRepo)
 
 	authGroup := router.Group("/auth")
 	{
 		authGroup.POST("/register", authController.Register)
 		authGroup.POST("/login", authController.Login)
 		authGroup.POST("/refresh", authController.RefreshToken)
+		authGroup.POST("/reset-password", authController.StartResetPassword)
+		authGroup.POST("/reset-password/backup-key", authController.GetBackupKeyForResetPassword)
+		authGroup.POST("/reset-password/confirm", authController.ConfirmResetPassword)
 	}
 }
 

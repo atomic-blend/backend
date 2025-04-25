@@ -11,6 +11,8 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
+const taskCollection = "tasks"
+
 // TaskRepositoryInterface defines the interface for task repository operations
 type TaskRepositoryInterface interface {
 	GetAll(ctx context.Context, userID *primitive.ObjectID) ([]*models.TaskEntity, error)
@@ -129,6 +131,7 @@ func (r *TaskRepository) Update(ctx context.Context, id string, task *models.Tas
 			"end_date":    task.EndDate,
 			"completed":   task.Completed,
 			"reminders":   task.Reminders,
+			"tags":        task.Tags,
 			"updated_at":  task.UpdatedAt,
 		},
 	}
