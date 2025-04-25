@@ -2,6 +2,15 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## 0.4.1 - 2025-04-25
+#### Bug Fixes
+- use findOrCreate in register endpoint - (bc4a025) - Brandon Guigo
+- add logs to the register so we know when data's missing - (094f7f8) - Brandon Guigo
+#### Miscellaneous Chores
+- **(release)** 0.4.0 [skip ci] - (5712ab1) - CircleCI
+
+- - -
+
 ## 0.4.0 - 2025-04-25
 #### Bug Fixes
 - check that user is owner of the tag for update - (96cc6b8) - Brandon Guigo
