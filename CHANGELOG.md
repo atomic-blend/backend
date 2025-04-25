@@ -2,6 +2,40 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## 0.4.0 - 2025-04-25
+#### Bug Fixes
+- check that user is owner of the tag for update - (96cc6b8) - Brandon Guigo
+- linter issues - (ec38cd1) - Brandon Guigo
+- test for get backup key reset - (44de1d6) - Brandon Guigo
+- bug with required and false booleans - (be7ec20) - Brandon Guigo
+- unauthenticated start reset password in independant table instead of in authenticated user controller - (0d24a0d) - Brandon Guigo
+- add tests for user utils - (da5a4fc) - Brandon Guigo
+- add tests for start reset password - (2f8264f) - Brandon Guigo
+- linter issues - (a9113ae) - Brandon Guigo
+- add salt in update password payload - (2165047) - Brandon Guigo
+- remove unused keySalt in register - (adc761e) - Brandon Guigo
+- linter - (001b482) - Brandon Guigo
+- change type of tag in task entity model - (8fe9122) - Brandon Guigo
+- delete tag from tasks when tag is deleted - (b56a4aa) - Brandon Guigo
+#### Features
+- add maizzle email generation to cicd - (e26586e) - Brandon Guigo
+- get backup key endpoint + some adjustments - (48f7d9c) - Brandon Guigo
+- reset pwd endpoints the right wat, in public auth - (d5cecc7) - Brandon Guigo
+- reset user data is mnemonic is lost - (8cd5f52) - Brandon Guigo
+- add confirm reset password - (1eeb1c2) - Brandon Guigo
+- send email with code via resend - (9b008bb) - Brandon Guigo
+- add the templating of the email content from maizzle + store reset code in database - (1bd5f48) - Brandon Guigo
+- add maizzle for emails + start reset pwd endpoint - (972d06c) - Brandon Guigo
+- add update_password endpoint - (4247832) - Brandon Guigo
+- add tags route to main application and update tag model JSON keys - (31f2c96) - Brandon Guigo
+- add optional list of tags to a task - (649ccb8) - Brandon Guigo
+- add tag controller - (2247d04) - Brandon Guigo
+#### Miscellaneous Chores
+- **(release)** 0.3.10 [skip ci] - (a907634) - CircleCI
+- fix the release changelog content [skip ci] - (5204d22) - Brandon Guigo
+
+- - -
+
 ## 0.3.10 - 2025-04-15
 #### Bug Fixes
 - changelog format - (21c92db) - Brandon Guigo
