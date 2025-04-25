@@ -2,6 +2,14 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## 0.4.3 - 2025-04-25
+#### Bug Fixes
+- retry writes was only set when true, set the param every time it's defined - (7745c3d) - Brandon Guigo
+#### Miscellaneous Chores
+- **(release)** 0.4.2 [skip ci] - (c1d655d) - CircleCI
+
+- - -
+
 ## 0.4.2 - 2025-04-25
 #### Bug Fixes
 - retry writes parameter badly set - (0eb17b7) - Brandon Guigo
