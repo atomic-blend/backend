@@ -44,7 +44,7 @@ func (c *Controller) Register(ctx *gin.Context) {
 	}
 
 	// Find default user role
-	defaultRole, err := c.userRoleRepo.GetByName(ctx, "user")
+	defaultRole, err := c.userRoleRepo.FindOrCreate(ctx, "user")
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to find default role")
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to find default role"})
