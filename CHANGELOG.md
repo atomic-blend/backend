@@ -2,6 +2,14 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## 0.4.4 - 2025-04-25
+#### Bug Fixes
+- wrong mongo uri composition - (d44dd37) - Brandon Guigo
+#### Miscellaneous Chores
+- **(release)** 0.4.3 [skip ci] - (d9cc8cb) - CircleCI
+
+- - -
+
 ## 0.4.3 - 2025-04-25
 #### Bug Fixes
 - retry writes was only set when true, set the param every time it's defined - (7745c3d) - Brandon Guigo
