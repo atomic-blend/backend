@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/rs/zerolog/log"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -45,10 +46,12 @@ func (c *Controller) Register(ctx *gin.Context) {
 	// Find default user role
 	defaultRole, err := c.userRoleRepo.GetByName(ctx, "user")
 	if err != nil {
+		log.Error().Err(err).Msg("Failed to find default role")
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to find default role"})
 		return
 	}
 	if defaultRole == nil {
+		log.Error().Msg("Default role not found")
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Default role not found"})
 		return
 	}
