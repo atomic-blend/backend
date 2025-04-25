@@ -45,13 +45,8 @@ func ConnectMongo(uri *string) (*mongo.Client, error) {
 		}
 	}
 	if retryWrites == "true" {
-		if ssl != "true" && tlsConfig != "true" {
-			log.Debug().Msg("Setting retryWrites to true")
-			*uri += "?retryWrites=true"
-		} else {
-			log.Debug().Msg("Setting retryWrites to true with SSL/TLS")
-			*uri += "&retryWrites=true"
-		}
+		log.Debug().Msg("Setting retryWrites to param")
+		*uri += "?retryWrites="+retryWrites
 	}
 	
 
