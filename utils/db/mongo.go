@@ -44,11 +44,11 @@ func ConnectMongo(uri *string) (*mongo.Client, error) {
 			*uri += "&tls=true"
 		}
 	}
-	if retryWrites == "true" {
+
+	if retryWrites != "" {
 		log.Debug().Msg("Setting retryWrites to param")
-		*uri += "?retryWrites="+retryWrites
+		*uri += "?retryWrites=" + retryWrites
 	}
-	
 
 	if env == "test" {
 		// setup in memory mongo for testing
@@ -69,12 +69,12 @@ func ConnectMongo(uri *string) (*mongo.Client, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to read CA certificate: %w", err)
 		}
-		
+
 		certPool := x509.NewCertPool()
 		if !certPool.AppendCertsFromPEM(caCert) {
 			return nil, fmt.Errorf("failed to append CA certificate")
 		}
-		
+
 		tlsConfig := &tls.Config{
 			MinVersion: tls.VersionTLS12,
 			RootCAs:    certPool,
