@@ -43,3 +43,8 @@ func RequireAuth(group *gin.RouterGroup) *gin.RouterGroup {
 	group.Use(Middleware())
 	return group
 }
+
+func RequireStaticStringMiddleware(group *gin.RouterGroup, staticString string) *gin.RouterGroup {
+	group.Use(StaticStringMiddleware(staticString))
+	return group
+}

@@ -9,6 +9,7 @@ import (
 func RegisterValidators() {
     if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
         v.RegisterValidation("validFrequency", ValidateFrequency)
+        v.RegisterValidation("validPurchaseType", ValidatePurchaseType)
     }
 }
 
@@ -17,6 +18,17 @@ func ValidateFrequency(fl validator.FieldLevel) bool {
     frequency := fl.Field().String()
     for _, validFreq := range ValidFrequencies {
         if frequency == validFreq {
+            return true
+        }
+    }
+    return false
+}
+
+func ValidatePurchaseType(fl validator.FieldLevel) bool {
+    purchaseType := fl.Field().String()
+    validPurchaseTypes := []string{}
+    for _, validType := range validPurchaseTypes {
+        if purchaseType == validType {
             return true
         }
     }
