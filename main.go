@@ -12,7 +12,9 @@ import (
 	"atomic_blend_api/models"
 	"atomic_blend_api/utils/db"
 	"context"
+	"github.com/gin-contrib/cors"
 	"os"
+	"time"
 
 	"github.com/jasonlvhit/gocron"
 
@@ -82,6 +84,17 @@ func main() {
 
 	// Setup router with middleware
 	router := gin.Default()
+	appUrls := []string{
+		os.Getenv("TASK_APP_URL"),
+	}
+	router.Use(cors.New(cors.Config{
+		AllowOrigins:     appUrls,
+		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+		MaxAge:           12 * time.Hour,
+	}))
 
 	// Register all routes
 	auth.SetupRoutes(router, db.Database)
