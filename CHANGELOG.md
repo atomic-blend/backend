@@ -2,6 +2,14 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## 0.4.8 - 2025-05-14
+#### Bug Fixes
+- add right image into update step - (a4d691f) - Brandon Guigo
+#### Miscellaneous Chores
+- **(release)** 0.4.7 [skip ci] - (fda60e3) - GitHub Actions
+
+- - -
+
 ## 0.4.7 - 2025-05-14
 #### Bug Fixes
 - use github actions made for aws to release - (438c284) - Brandon Guigo
