@@ -164,7 +164,7 @@ jobs:
         with:
           task-definition: task-definition.json
           container-name: backend
-          image: ${{ steps.get-tag.outputs.tag }}
+          image: ghcr.io/atomic-blend/backend:${{ steps.get-tag.outputs.tag }}
 
       - name: Deploy to ECS service
         uses: aws-actions/amazon-ecs-deploy-task-definition@v1
