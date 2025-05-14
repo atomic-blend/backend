@@ -2,6 +2,14 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## 0.4.9 - 2025-05-14
+#### Bug Fixes
+- add missing headers to cors - (7f2b7b7) - Brandon Guigo
+#### Miscellaneous Chores
+- **(release)** 0.4.8 [skip ci] - (843298c) - GitHub Actions
+
+- - -
+
 ## 0.4.8 - 2025-05-14
 #### Bug Fixes
 - add right image into update step - (a4d691f) - Brandon Guigo
