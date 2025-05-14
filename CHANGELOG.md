@@ -2,6 +2,15 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## 0.4.5 - 2025-05-14
+#### Bug Fixes
+- add cors - (e679ed2) - Brandon Guigo
+#### Miscellaneous Chores
+- **(release)** 0.4.4 [skip ci] - (b8bd9da) - CircleCI
+- add cicd for github - (0a3f44a) - Brandon Guigo
+
+- - -
+
 ## 0.4.4 - 2025-04-25
 #### Bug Fixes
 - wrong mongo uri composition - (d44dd37) - Brandon Guigo
