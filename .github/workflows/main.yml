@@ -155,14 +155,14 @@ jobs:
         run: |
           aws ecs update-service \
             --cluster prod \
-            --service backend \
+            --service prod \
             --force-new-deployment \
             --region ${{ secrets.AWS_REGION }}
 
           # Wait for service to stabilize
           aws ecs wait services-stable \
             --cluster prod \
-            --services backend \
+            --services prod \
             --region ${{ secrets.AWS_REGION }}
 
   verify-deployment:
@@ -187,7 +187,7 @@ jobs:
           # Check if tasks are running with the latest task definition
           RUNNING_TASK_COUNT=$(aws ecs list-tasks \
             --cluster prod \
-            --service backend \
+            --service prod \
             --output json \
             --query 'length(taskArns)' \
           )
