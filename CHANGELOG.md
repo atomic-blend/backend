@@ -2,6 +2,14 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## 0.4.6 - 2025-05-14
+#### Bug Fixes
+- update aws ecs service name - (9e16060) - Brandon Guigo
+#### Miscellaneous Chores
+- **(release)** 0.4.5 [skip ci] - (ac946e3) - GitHub Actions
+
+- - -
+
 ## 0.4.5 - 2025-05-14
 #### Bug Fixes
 - add cors - (e679ed2) - Brandon Guigo
