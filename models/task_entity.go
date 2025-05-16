@@ -13,6 +13,7 @@ type TaskEntity struct {
 	Reminders   []*primitive.DateTime `json:"reminders,omitempty" bson:"reminders"`
 	Completed   *bool                 `json:"completed" bson:"completed"`
 	Tags        *[]*Tag               `json:"tags" bson:"tags"`
+	Priority    *int                  `json:"priority" bson:"priority"`
 	CreatedAt   primitive.DateTime    `json:"createdAt" bson:"created_at"`
 	UpdatedAt   primitive.DateTime    `json:"updatedAt" bson:"updated_at"`
 }
