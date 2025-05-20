@@ -26,7 +26,7 @@ func TestRemoveTimeEntry(t *testing.T) {
 		task.ID = primitive.NewObjectID().Hex() // Make sure task has a valid ID
 
 		// Create a time entry
-		timeEntryID := "test-time-entry-id"
+		timeEntryID := primitive.NewObjectID()
 		startDate := time.Now().Format(time.RFC3339)
 		endDate := time.Now().Add(1 * time.Hour).Format(time.RFC3339)
 		timeEntry := &models.TimeEntry{
@@ -45,11 +45,11 @@ func TestRemoveTimeEntry(t *testing.T) {
 
 		// Mock repository calls
 		mockTaskRepo.On("GetByID", mock.Anything, task.ID).Return(&taskWithTimeEntry, nil).Once()
-		mockTaskRepo.On("RemoveTimeEntry", mock.Anything, task.ID, timeEntryID).Return(&taskAfterRemoval, nil).Once()
+		mockTaskRepo.On("RemoveTimeEntry", mock.Anything, task.ID, timeEntryID.Hex()).Return(&taskAfterRemoval, nil).Once()
 
 		// Create test request
 		w := httptest.NewRecorder()
-		req, _ := http.NewRequest("DELETE", "/tasks/"+task.ID+"/time-entries/"+timeEntryID, nil)
+		req, _ := http.NewRequest("DELETE", "/tasks/"+task.ID+"/time-entries/"+timeEntryID.Hex(), nil)
 
 		// Create a new context with the request
 		ctx, _ := gin.CreateTestContext(w)
@@ -79,7 +79,7 @@ func TestRemoveTimeEntry(t *testing.T) {
 		// Create authenticated user
 		userID := primitive.NewObjectID()
 		taskID := primitive.NewObjectID().Hex()
-		timeEntryID := "test-time-entry-id"
+		timeEntryID := primitive.NewObjectID().Hex()
 
 		// Mock repository calls
 		mockTaskRepo.On("GetByID", mock.Anything, taskID).Return(nil, nil).Once()

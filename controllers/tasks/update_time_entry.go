@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 // UpdateTimeEntry updates a time entry in a task
@@ -70,7 +71,12 @@ func (c *TaskController) UpdateTimeEntry(ctx *gin.Context) {
 	}
 
 	// Set the time entry ID from path parameter
-	timeEntry.ID = &timeEntryID
+	parsedTimeEntryID, err := primitive.ObjectIDFromHex(timeEntryID)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid Time Entry ID"})
+		return
+	}
+	timeEntry.ID = &parsedTimeEntryID
 
 	// Update the updated timestamp
 	timeEntry.UpdatedAt = time.Now().Format(time.RFC3339)

@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 // AddTimeEntry adds a time entry to a task
@@ -65,7 +65,7 @@ func (c *TaskController) AddTimeEntry(ctx *gin.Context) {
 
 	// Generate ID if not provided
 	if timeEntry.ID == nil {
-		id := uuid.New().String()
+		id := primitive.NewObjectID()
 		timeEntry.ID = &id
 	}
 

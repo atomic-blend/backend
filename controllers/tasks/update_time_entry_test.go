@@ -28,7 +28,7 @@ func TestUpdateTimeEntry(t *testing.T) {
 		task.ID = primitive.NewObjectID().Hex() // Make sure task has a valid ID
 
 		// Create initial time entry
-		timeEntryID := "test-time-entry-id"
+		timeEntryID := primitive.NewObjectID()
 		startDate := time.Now().Format(time.RFC3339)
 		endDate := time.Now().Add(1 * time.Hour).Format(time.RFC3339)
 		timeEntry := &models.TimeEntry{
@@ -56,7 +56,7 @@ func TestUpdateTimeEntry(t *testing.T) {
 
 		// Mock repository calls
 		mockTaskRepo.On("GetByID", mock.Anything, task.ID).Return(&taskWithTimeEntry, nil).Once()
-		mockTaskRepo.On("UpdateTimeEntry", mock.Anything, task.ID, timeEntryID, mock.AnythingOfType("*models.TimeEntry")).
+		mockTaskRepo.On("UpdateTimeEntry", mock.Anything, task.ID, timeEntryID.Hex(), mock.AnythingOfType("*models.TimeEntry")).
 			Return(&taskAfterUpdate, nil).Once()
 
 		// Create request body
@@ -64,7 +64,7 @@ func TestUpdateTimeEntry(t *testing.T) {
 
 		// Create test request
 		w := httptest.NewRecorder()
-		req, _ := http.NewRequest("PUT", "/tasks/"+task.ID+"/time-entries/"+timeEntryID, bytes.NewBuffer(updatedTimeEntryJSON))
+		req, _ := http.NewRequest("PUT", "/tasks/"+task.ID+"/time-entries/"+timeEntryID.Hex(), bytes.NewBuffer(updatedTimeEntryJSON))
 		req.Header.Set("Content-Type", "application/json")
 
 		// Create a new context with the request
@@ -104,7 +104,7 @@ func TestUpdateTimeEntry(t *testing.T) {
 		// Create authenticated user
 		userID := primitive.NewObjectID()
 		taskID := primitive.NewObjectID().Hex()
-		timeEntryID := "test-time-entry-id"
+		timeEntryID := primitive.NewObjectID()
 
 		// Updated time entry values
 		updatedStartDate := time.Now().Add(30 * time.Minute).Format(time.RFC3339)
@@ -123,7 +123,7 @@ func TestUpdateTimeEntry(t *testing.T) {
 
 		// Create test request
 		w := httptest.NewRecorder()
-		req, _ := http.NewRequest("PUT", "/tasks/"+taskID+"/time-entries/"+timeEntryID, bytes.NewBuffer(updatedTimeEntryJSON))
+		req, _ := http.NewRequest("PUT", "/tasks/"+taskID+"/time-entries/"+timeEntryID.Hex(), bytes.NewBuffer(updatedTimeEntryJSON))
 		req.Header.Set("Content-Type", "application/json")
 
 		// Create a new context with the request
@@ -157,7 +157,7 @@ func TestUpdateTimeEntry(t *testing.T) {
 		task := createTestTask()
 		task.User = differentUserID             // Task owned by different user
 		task.ID = primitive.NewObjectID().Hex() // Make sure task has a valid ID
-		timeEntryID := "test-time-entry-id"
+		timeEntryID := primitive.NewObjectID()
 
 		// Updated time entry values
 		updatedStartDate := time.Now().Add(30 * time.Minute).Format(time.RFC3339)
@@ -176,7 +176,7 @@ func TestUpdateTimeEntry(t *testing.T) {
 
 		// Create test request
 		w := httptest.NewRecorder()
-		req, _ := http.NewRequest("PUT", "/tasks/"+task.ID+"/time-entries/"+timeEntryID, bytes.NewBuffer(updatedTimeEntryJSON))
+		req, _ := http.NewRequest("PUT", "/tasks/"+task.ID+"/time-entries/"+timeEntryID.Hex(), bytes.NewBuffer(updatedTimeEntryJSON))
 		req.Header.Set("Content-Type", "application/json")
 
 		// Create a new context with the request
@@ -209,7 +209,7 @@ func TestUpdateTimeEntry(t *testing.T) {
 		task := createTestTask()
 		task.User = userID
 		task.ID = primitive.NewObjectID().Hex() // Make sure task has a valid ID
-		timeEntryID := "non-existent-time-entry-id"
+		timeEntryID := primitive.NewObjectID()
 
 		// Updated time entry values
 		updatedStartDate := time.Now().Add(30 * time.Minute).Format(time.RFC3339)
@@ -222,7 +222,7 @@ func TestUpdateTimeEntry(t *testing.T) {
 
 		// Mock repository calls
 		mockTaskRepo.On("GetByID", mock.Anything, task.ID).Return(task, nil).Once()
-		mockTaskRepo.On("UpdateTimeEntry", mock.Anything, task.ID, timeEntryID, mock.AnythingOfType("*models.TimeEntry")).
+		mockTaskRepo.On("UpdateTimeEntry", mock.Anything, task.ID, timeEntryID.Hex(), mock.AnythingOfType("*models.TimeEntry")).
 			Return(nil, errors.New("no time entries found")).Once()
 
 		// Create request body
@@ -230,7 +230,7 @@ func TestUpdateTimeEntry(t *testing.T) {
 
 		// Create test request
 		w := httptest.NewRecorder()
-		req, _ := http.NewRequest("PUT", "/tasks/"+task.ID+"/time-entries/"+timeEntryID, bytes.NewBuffer(updatedTimeEntryJSON))
+		req, _ := http.NewRequest("PUT", "/tasks/"+task.ID+"/time-entries/"+timeEntryID.Hex(), bytes.NewBuffer(updatedTimeEntryJSON))
 		req.Header.Set("Content-Type", "application/json")
 
 		// Create a new context with the request
@@ -263,7 +263,7 @@ func TestUpdateTimeEntry(t *testing.T) {
 		task := createTestTask()
 		task.User = userID
 		task.ID = primitive.NewObjectID().Hex() // Make sure task has a valid ID
-		timeEntryID := "test-time-entry-id"
+		timeEntryID := primitive.NewObjectID()
 
 		// Updated time entry values
 		updatedStartDate := time.Now().Add(30 * time.Minute).Format(time.RFC3339)
@@ -276,7 +276,7 @@ func TestUpdateTimeEntry(t *testing.T) {
 
 		// Mock repository calls
 		mockTaskRepo.On("GetByID", mock.Anything, task.ID).Return(task, nil).Once()
-		mockTaskRepo.On("UpdateTimeEntry", mock.Anything, task.ID, timeEntryID, mock.AnythingOfType("*models.TimeEntry")).
+		mockTaskRepo.On("UpdateTimeEntry", mock.Anything, task.ID, timeEntryID.Hex(), mock.AnythingOfType("*models.TimeEntry")).
 			Return(nil, errors.New("database error")).Once()
 
 		// Create request body
@@ -284,7 +284,7 @@ func TestUpdateTimeEntry(t *testing.T) {
 
 		// Create test request
 		w := httptest.NewRecorder()
-		req, _ := http.NewRequest("PUT", "/tasks/"+task.ID+"/time-entries/"+timeEntryID, bytes.NewBuffer(updatedTimeEntryJSON))
+		req, _ := http.NewRequest("PUT", "/tasks/"+task.ID+"/time-entries/"+timeEntryID.Hex(), bytes.NewBuffer(updatedTimeEntryJSON))
 		req.Header.Set("Content-Type", "application/json")
 
 		// Create a new context with the request

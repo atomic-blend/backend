@@ -4,8 +4,9 @@ import (
 	"atomic_blend_api/models"
 	"context"
 	"errors"
-	"go.mongodb.org/mongo-driver/mongo/options"
 	"time"
+
+	"go.mongodb.org/mongo-driver/mongo/options"
 
 	bson "go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -176,9 +177,15 @@ func (r *TaskRepository) RemoveTimeEntry(ctx context.Context, taskID string, tim
 		return nil, errors.New("no time entries found")
 	}
 
+	// Convert timeEntryID string to ObjectID
+	timeEntryObjID, err := primitive.ObjectIDFromHex(timeEntryID)
+	if err != nil {
+		return nil, err
+	}
+
 	update := bson.M{
 		"$pull": bson.M{
-			"time_entries": bson.M{"_id": timeEntryID},
+			"time_entries": bson.M{"_id": timeEntryObjID},
 		},
 	}
 
@@ -219,9 +226,16 @@ func (r *TaskRepository) UpdateTimeEntry(ctx context.Context, taskID string, tim
 	}
 
 	filter := bson.M{"_id": objID}
+
+	// Convert timeEntryID string to ObjectID
+	timeEntryObjID, err := primitive.ObjectIDFromHex(timeEntryID)
+	if err != nil {
+		return nil, err
+	}
+
 	arrayFilters := options.ArrayFilters{
 		Filters: []interface{}{
-			bson.M{"entry._id": timeEntryID},
+			bson.M{"entry._id": timeEntryObjID},
 		},
 	}
 

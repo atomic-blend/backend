@@ -28,7 +28,7 @@ func TestAddTimeEntry(t *testing.T) {
 		task.ID = primitive.NewObjectID().Hex() // Make sure task has a valid ID
 
 		// Create a time entry
-		timeEntryID := "test-time-entry-id"
+		timeEntryID := primitive.NewObjectID()
 		startDate := time.Now().Format(time.RFC3339)
 		endDate := time.Now().Add(1 * time.Hour).Format(time.RFC3339)
 		timeEntry := &models.TimeEntry{
@@ -90,7 +90,7 @@ func TestAddTimeEntry(t *testing.T) {
 		taskID := primitive.NewObjectID().Hex()
 
 		// Create a time entry
-		timeEntryID := "test-time-entry-id"
+		timeEntryID := primitive.NewObjectID()
 		startDate := time.Now().Format(time.RFC3339)
 		endDate := time.Now().Add(1 * time.Hour).Format(time.RFC3339)
 		timeEntry := &models.TimeEntry{
@@ -143,7 +143,7 @@ func TestAddTimeEntry(t *testing.T) {
 		task.ID = primitive.NewObjectID().Hex() // Make sure task has a valid ID
 
 		// Create a time entry
-		timeEntryID := "test-time-entry-id"
+		timeEntryID := primitive.NewObjectID()
 		startDate := time.Now().Format(time.RFC3339)
 		endDate := time.Now().Add(1 * time.Hour).Format(time.RFC3339)
 		timeEntry := &models.TimeEntry{
@@ -195,7 +195,7 @@ func TestAddTimeEntry(t *testing.T) {
 		task.ID = primitive.NewObjectID().Hex() // Make sure task has a valid ID
 
 		// Create a time entry
-		timeEntryID := "test-time-entry-id"
+		timeEntryID := primitive.NewObjectID()
 		startDate := time.Now().Format(time.RFC3339)
 		endDate := time.Now().Add(1 * time.Hour).Format(time.RFC3339)
 		timeEntry := &models.TimeEntry{
