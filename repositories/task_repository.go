@@ -95,17 +95,18 @@ func (r *TaskRepository) Create(ctx context.Context, task *models.TaskEntity) (*
 	}
 
 	_, err = r.collection.InsertOne(ctx, bson.M{
-		"_id":         objID,
-		"title":       task.Title,
-		"user":        task.User,
-		"description": task.Description,
-		"start_date":  task.StartDate,
-		"end_date":    task.EndDate,
-		"completed":   task.Completed,
-		"reminders":   task.Reminders,
-		"priority":    task.Priority,
-		"created_at":  task.CreatedAt,
-		"updated_at":  task.UpdatedAt,
+		"_id":          objID,
+		"title":        task.Title,
+		"user":         task.User,
+		"description":  task.Description,
+		"start_date":   task.StartDate,
+		"end_date":     task.EndDate,
+		"completed":    task.Completed,
+		"reminders":    task.Reminders,
+		"priority":     task.Priority,
+		"time_entries": task.TimeEntries,
+		"created_at":   task.CreatedAt,
+		"updated_at":   task.UpdatedAt,
 	})
 
 	if err != nil {

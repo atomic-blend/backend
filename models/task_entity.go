@@ -14,6 +14,7 @@ type TaskEntity struct {
 	Completed   *bool                 `json:"completed" bson:"completed"`
 	Tags        *[]*Tag               `json:"tags" bson:"tags"`
 	Priority    *int                  `json:"priority" bson:"priority"`
+	TimeEntries []*TimeEntry          `json:"timeEntries" bson:"time_entries"`
 	CreatedAt   primitive.DateTime    `json:"createdAt" bson:"created_at"`
 	UpdatedAt   primitive.DateTime    `json:"updatedAt" bson:"updated_at"`
 }
