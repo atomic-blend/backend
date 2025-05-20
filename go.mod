@@ -5,14 +5,11 @@ go 1.23.5
 require (
 	github.com/appleboy/go-fcm v1.2.3
 	github.com/atomic-blend/memongo v0.0.0-20250305155718-adada7465e0f
+	github.com/gin-contrib/cors v1.7.5
 	github.com/gin-gonic/gin v1.10.0
 	github.com/jasonlvhit/gocron v0.0.1
+	github.com/resend/resend-go/v2 v2.17.0
 	github.com/stretchr/testify v1.10.0
-)
-
-require (
-	github.com/gin-contrib/cors v1.7.5 // indirect
-	github.com/resend/resend-go/v2 v2.17.0 // indirect
 )
 
 require (
@@ -45,7 +42,7 @@ require (
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/s2a-go v0.1.9 // indirect
-	github.com/google/uuid v1.6.0 // indirect
+	github.com/google/uuid v1.6.0
 	github.com/googleapis/enterprise-certificate-proxy v0.3.6 // indirect
 	github.com/googleapis/gax-go/v2 v2.14.1 // indirect
 	github.com/klauspost/compress v1.16.7 // indirect
@@ -89,7 +86,6 @@ require (
 	github.com/bytedance/sonic v1.13.2 // indirect
 	github.com/bytedance/sonic/loader v0.2.4 // indirect
 	github.com/cloudwego/base64x v0.1.5 // indirect
-	github.com/cloudwego/iasm v0.2.0 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.8 // indirect
 	github.com/gin-contrib/sse v1.0.0 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
