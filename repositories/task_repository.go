@@ -121,6 +121,7 @@ func (r *TaskRepository) Create(ctx context.Context, task *models.TaskEntity) (*
 	return task, nil
 }
 
+// AddTimeEntry adds a time entry to a task
 func (r *TaskRepository) AddTimeEntry(ctx context.Context, taskID string, timeEntry *models.TimeEntry) (*models.TaskEntity, error) {
 	objID, err := primitive.ObjectIDFromHex(taskID)
 	if err != nil {
