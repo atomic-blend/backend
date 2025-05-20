@@ -36,7 +36,7 @@ func (c *TaskController) RemoveTimeEntry(ctx *gin.Context) {
 		return
 	}
 
-	timeEntryID := ctx.Param("entryID")
+	timeEntryID := ctx.Param("entryId")
 	if timeEntryID == "" {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Time Entry ID is required"})
 		return
