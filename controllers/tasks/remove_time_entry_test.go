@@ -59,7 +59,7 @@ func TestRemoveTimeEntry(t *testing.T) {
 		// Create a router with the route registered
 		router := gin.New()
 		controller := NewTaskController(mockTaskRepo, nil)
-		router.DELETE("/tasks/:id/time-entries/:entryId", func(c *gin.Context) {
+		router.DELETE("/tasks/:id/time-entries/:entryID", func(c *gin.Context) {
 			// Manually set the auth user on each request
 			c.Set("authUser", &auth.UserAuthInfo{UserID: userID})
 			controller.RemoveTimeEntry(c)
@@ -96,7 +96,7 @@ func TestRemoveTimeEntry(t *testing.T) {
 		// Create a router with the route registered
 		router := gin.New()
 		controller := NewTaskController(mockTaskRepo, nil)
-		router.DELETE("/tasks/:id/time-entries/:entryId", func(c *gin.Context) {
+		router.DELETE("/tasks/:id/time-entries/:entryID", func(c *gin.Context) {
 			// Manually set the auth user on each request
 			c.Set("authUser", &auth.UserAuthInfo{UserID: userID})
 			controller.RemoveTimeEntry(c)
@@ -136,7 +136,7 @@ func TestRemoveTimeEntry(t *testing.T) {
 		// Create a router with the route registered
 		router := gin.New()
 		controller := NewTaskController(mockTaskRepo, nil)
-		router.DELETE("/tasks/:id/time-entries/:entryId", func(c *gin.Context) {
+		router.DELETE("/tasks/:id/time-entries/:entryID", func(c *gin.Context) {
 			// Manually set the auth user on each request
 			c.Set("authUser", &auth.UserAuthInfo{UserID: userID})
 			controller.RemoveTimeEntry(c)
@@ -177,7 +177,7 @@ func TestRemoveTimeEntry(t *testing.T) {
 		// Create a router with the route registered
 		router := gin.New()
 		controller := NewTaskController(mockTaskRepo, nil)
-		router.DELETE("/tasks/:id/time-entries/:entryId", func(c *gin.Context) {
+		router.DELETE("/tasks/:id/time-entries/:entryID", func(c *gin.Context) {
 			// Manually set the auth user on each request
 			c.Set("authUser", &auth.UserAuthInfo{UserID: userID})
 			controller.RemoveTimeEntry(c)
@@ -218,7 +218,7 @@ func TestRemoveTimeEntry(t *testing.T) {
 		// Create a router with the route registered
 		router := gin.New()
 		controller := NewTaskController(mockTaskRepo, nil)
-		router.DELETE("/tasks/:id/time-entries/:entryId", func(c *gin.Context) {
+		router.DELETE("/tasks/:id/time-entries/:entryID", func(c *gin.Context) {
 			// Manually set the auth user on each request
 			c.Set("authUser", &auth.UserAuthInfo{UserID: userID})
 			controller.RemoveTimeEntry(c)
