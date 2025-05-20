@@ -4,9 +4,10 @@ import (
 	"atomic_blend_api/models"
 	"context"
 	"errors"
+	"go.mongodb.org/mongo-driver/mongo/options"
 	"time"
 
-	"go.mongodb.org/mongo-driver/bson"
+	bson "go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
@@ -20,6 +21,9 @@ type TaskRepositoryInterface interface {
 	Create(ctx context.Context, task *models.TaskEntity) (*models.TaskEntity, error)
 	Update(ctx context.Context, id string, task *models.TaskEntity) (*models.TaskEntity, error)
 	Delete(ctx context.Context, id string) error
+	AddTimeEntry(ctx context.Context, taskID string, timeEntry *models.TimeEntry) (*models.TaskEntity, error)
+	RemoveTimeEntry(ctx context.Context, taskID string, timeEntryID string) (*models.TaskEntity, error)
+	UpdateTimeEntry(ctx context.Context, taskID string, timeEntryID string, timeEntry *models.TimeEntry) (*models.TaskEntity, error)
 }
 
 // TaskRepository handles database operations related to tasks
@@ -114,6 +118,120 @@ func (r *TaskRepository) Create(ctx context.Context, task *models.TaskEntity) (*
 	}
 
 	return task, nil
+}
+
+func (r *TaskRepository) AddTimeEntry(ctx context.Context, taskID string, timeEntry *models.TimeEntry) (*models.TaskEntity, error) {
+	objID, err := primitive.ObjectIDFromHex(taskID)
+	if err != nil {
+		return nil, err
+	}
+
+	// set the array for time entries if not defined
+	task := &models.TaskEntity{}
+	err = r.collection.FindOne(ctx, bson.M{"_id": objID}).Decode(task)
+	if err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	if task.TimeEntries == nil {
+		task.TimeEntries = []*models.TimeEntry{}
+	}
+
+	// Add the new time entry to the task
+	task.TimeEntries = append(task.TimeEntries, timeEntry)
+	update := bson.M{
+		"$set": bson.M{
+			"time_entries": task.TimeEntries,
+		},
+	}
+
+	filter := bson.M{"_id": objID}
+	_, err = r.collection.UpdateOne(ctx, filter, update)
+	if err != nil {
+		return nil, err
+	}
+
+	return r.GetByID(ctx, taskID)
+}
+
+// RemoveTimeEntry removes a time entry from a task
+func (r *TaskRepository) RemoveTimeEntry(ctx context.Context, taskID string, timeEntryID string) (*models.TaskEntity, error) {
+	objID, err := primitive.ObjectIDFromHex(taskID)
+	if err != nil {
+		return nil, err
+	}
+
+	task := &models.TaskEntity{}
+	err = r.collection.FindOne(ctx, bson.M{"_id": objID}).Decode(task)
+	if err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	if task.TimeEntries == nil {
+		return nil, errors.New("no time entries found")
+	}
+
+	update := bson.M{
+		"$pull": bson.M{
+			"time_entries": bson.M{"_id": timeEntryID},
+		},
+	}
+
+	filter := bson.M{"_id": objID}
+	_, err = r.collection.UpdateOne(ctx, filter, update)
+	if err != nil {
+		return nil, err
+	}
+
+	return r.GetByID(ctx, taskID)
+}
+
+// UpdateTimeEntry updates a time entry in a task
+func (r *TaskRepository) UpdateTimeEntry(ctx context.Context, taskID string, timeEntryID string, timeEntry *models.TimeEntry) (*models.TaskEntity, error) {
+	objID, err := primitive.ObjectIDFromHex(taskID)
+	if err != nil {
+		return nil, err
+	}
+
+	task := &models.TaskEntity{}
+	err = r.collection.FindOne(ctx, bson.M{"_id": objID}).Decode(task)
+	if err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	if task.TimeEntries == nil {
+		return nil, errors.New("no time entries found")
+	}
+
+	update := bson.M{
+		"$set": bson.M{
+			"time_entries.$[entry].start_date": timeEntry.StartDate,
+			"time_entries.$[entry].end_date":   timeEntry.EndDate,
+		},
+	}
+
+	filter := bson.M{"_id": objID}
+	arrayFilters := options.ArrayFilters{
+		Filters: []interface{}{
+			bson.M{"entry._id": timeEntryID},
+		},
+	}
+
+	opts := options.Update().SetArrayFilters(arrayFilters)
+	_, err = r.collection.UpdateOne(ctx, filter, update, opts)
+	if err != nil {
+		return nil, err
+	}
+
+	return r.GetByID(ctx, taskID)
 }
 
 // Update updates an existing task

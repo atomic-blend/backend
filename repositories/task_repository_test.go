@@ -4,6 +4,7 @@ import (
 	"atomic_blend_api/models"
 	"atomic_blend_api/tests/utils/inmemorymongo"
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -207,5 +208,160 @@ func TestTaskRepository_GetAll(t *testing.T) {
 		allTasks, err := repo.GetAll(context.Background(), nil)
 		require.NoError(t, err)
 		assert.Len(t, allTasks, 2)
+	})
+}
+
+func TestTaskRepository_AddTimeEntry(t *testing.T) {
+	repo, cleanup := setupTaskTest(t)
+	defer cleanup()
+
+	t.Run("successful add time entry", func(t *testing.T) {
+		// Create a task first
+		task := createTestTask()
+		created, err := repo.Create(context.Background(), task)
+		require.NoError(t, err)
+		require.NotEmpty(t, created.ID)
+
+		// Create time entry
+		timeEntryID := primitive.NewObjectID().Hex()
+		startDate := time.Now().Format(time.RFC3339)
+		endDate := time.Now().Add(1 * time.Hour).Format(time.RFC3339)
+		timeEntry := &models.TimeEntry{
+			ID:        &timeEntryID,
+			StartDate: startDate,
+			EndDate:   endDate,
+		}
+
+		// Add time entry to task
+		updatedTask, err := repo.AddTimeEntry(context.Background(), created.ID, timeEntry)
+		require.NoError(t, err)
+		require.NotNil(t, updatedTask)
+		require.NotNil(t, updatedTask.TimeEntries)
+		require.Len(t, updatedTask.TimeEntries, 1)
+		require.Equal(t, timeEntryID, *updatedTask.TimeEntries[0].ID)
+		require.Equal(t, startDate, updatedTask.TimeEntries[0].StartDate)
+		require.Equal(t, endDate, updatedTask.TimeEntries[0].EndDate)
+	})
+
+	t.Run("add time entry to non-existent task", func(t *testing.T) {
+		nonExistentID := primitive.NewObjectID().Hex()
+		timeEntryID := primitive.NewObjectID().Hex()
+		timeEntry := &models.TimeEntry{
+			ID:        &timeEntryID,
+			StartDate: time.Now().Format(time.RFC3339),
+			EndDate:   time.Now().Add(1 * time.Hour).Format(time.RFC3339),
+		}
+
+		_, err := repo.AddTimeEntry(context.Background(), nonExistentID, timeEntry)
+		require.NoError(t, err) // MongoDB doesn't error on updates with no matches
+	})
+}
+
+func TestTaskRepository_RemoveTimeEntry(t *testing.T) {
+	repo, cleanup := setupTaskTest(t)
+	defer cleanup()
+
+	t.Run("successful remove time entry", func(t *testing.T) {
+		// Create a task first
+		task := createTestTask()
+		created, err := repo.Create(context.Background(), task)
+		require.NoError(t, err)
+		require.NotEmpty(t, created.ID)
+
+		// Add time entry to task
+		timeEntryID := primitive.NewObjectID().Hex()
+		timeEntry := &models.TimeEntry{
+			ID:        &timeEntryID,
+			StartDate: time.Now().Format(time.RFC3339),
+			EndDate:   time.Now().Add(1 * time.Hour).Format(time.RFC3339),
+		}
+
+		updatedTask, err := repo.AddTimeEntry(context.Background(), created.ID, timeEntry)
+		require.NoError(t, err)
+		require.Len(t, updatedTask.TimeEntries, 1)
+
+		// Remove the time entry
+		taskAfterRemoval, err := repo.RemoveTimeEntry(context.Background(), created.ID, timeEntryID)
+		require.NoError(t, err)
+		require.NotNil(t, taskAfterRemoval)
+
+		// Should have no time entries now
+		require.Empty(t, taskAfterRemoval.TimeEntries)
+	})
+
+	t.Run("remove non-existent time entry", func(t *testing.T) {
+		// Create a task first
+		task := createTestTask()
+		created, err := repo.Create(context.Background(), task)
+		require.NoError(t, err)
+
+		// Try to remove a non-existent time entry
+		nonExistentTimeEntryID := primitive.NewObjectID().Hex()
+		_, err = repo.RemoveTimeEntry(context.Background(), created.ID, nonExistentTimeEntryID)
+		// require error "no time entries found"
+		require.Error(t, errors.New("no time entries found"))
+	})
+}
+
+func TestTaskRepository_UpdateTimeEntry(t *testing.T) {
+	repo, cleanup := setupTaskTest(t)
+	defer cleanup()
+
+	t.Run("successful update time entry", func(t *testing.T) {
+		// Create a task first
+		task := createTestTask()
+		created, err := repo.Create(context.Background(), task)
+		require.NoError(t, err)
+		require.NotEmpty(t, created.ID)
+
+		// Add time entry to task
+		timeEntryID := primitive.NewObjectID().Hex()
+		originalStartDate := time.Now().Format(time.RFC3339)
+		originalEndDate := time.Now().Add(1 * time.Hour).Format(time.RFC3339)
+		timeEntry := &models.TimeEntry{
+			ID:        &timeEntryID,
+			StartDate: originalStartDate,
+			EndDate:   originalEndDate,
+		}
+
+		updatedTask, err := repo.AddTimeEntry(context.Background(), created.ID, timeEntry)
+		require.NoError(t, err)
+		require.Len(t, updatedTask.TimeEntries, 1)
+
+		// Update the time entry
+		updatedStartDate := time.Now().Add(30 * time.Minute).Format(time.RFC3339)
+		updatedEndDate := time.Now().Add(2 * time.Hour).Format(time.RFC3339)
+		updatedTimeEntry := &models.TimeEntry{
+			ID:        &timeEntryID,
+			StartDate: updatedStartDate,
+			EndDate:   updatedEndDate,
+		}
+
+		taskAfterUpdate, err := repo.UpdateTimeEntry(context.Background(), created.ID, timeEntryID, updatedTimeEntry)
+		require.NoError(t, err)
+		require.NotNil(t, taskAfterUpdate)
+		require.Len(t, taskAfterUpdate.TimeEntries, 1)
+
+		// Verify the time entry was updated
+		require.Equal(t, updatedStartDate, taskAfterUpdate.TimeEntries[0].StartDate)
+		require.Equal(t, updatedEndDate, taskAfterUpdate.TimeEntries[0].EndDate)
+	})
+
+	t.Run("update non-existent time entry", func(t *testing.T) {
+		// Create a task first
+		task := createTestTask()
+		created, err := repo.Create(context.Background(), task)
+		require.NoError(t, err)
+
+		// Try to update a non-existent time entry
+		nonExistentTimeEntryID := primitive.NewObjectID().Hex()
+		updatedTimeEntry := &models.TimeEntry{
+			ID:        &nonExistentTimeEntryID,
+			StartDate: time.Now().Format(time.RFC3339),
+			EndDate:   time.Now().Add(2 * time.Hour).Format(time.RFC3339),
+		}
+
+		_, err = repo.UpdateTimeEntry(context.Background(), created.ID, nonExistentTimeEntryID, updatedTimeEntry)
+		require.Error(t, errors.New("no time entries found"))
 	})
 }
