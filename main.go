@@ -3,6 +3,7 @@ package main
 import (
 	"atomic_blend_api/auth"
 	"atomic_blend_api/controllers/admin"
+	"atomic_blend_api/controllers/folder"
 	"atomic_blend_api/controllers/habits"
 	"atomic_blend_api/controllers/health"
 	"atomic_blend_api/controllers/tags"
@@ -12,9 +13,10 @@ import (
 	"atomic_blend_api/models"
 	"atomic_blend_api/utils/db"
 	"context"
-	"github.com/gin-contrib/cors"
 	"os"
 	"time"
+
+	"github.com/gin-contrib/cors"
 
 	"github.com/jasonlvhit/gocron"
 
@@ -104,6 +106,7 @@ func main() {
 	health.SetupRoutes(router, db.Database)
 	habits.SetupRoutes(router, db.Database)
 	tags.SetupRoutes(router, db.Database)
+	folder.SetupRoutes(router, db.Database)
 
 	// Define port
 	port := os.Getenv("PORT")
