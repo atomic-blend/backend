@@ -268,6 +268,7 @@ func (r *TaskRepository) Update(ctx context.Context, id string, task *models.Tas
 			"reminders":   task.Reminders,
 			"priority":    task.Priority,
 			"tags":        task.Tags,
+			"folder_id":   task.FolderID,
 			"updated_at":  task.UpdatedAt,
 		},
 	}
