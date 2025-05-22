@@ -36,6 +36,8 @@ func (c *FolderController) UpdateFolder(ctx *gin.Context) {
 		return
 	}
 
+	folder.UserID = authUser.UserID
+
 	// Update folder in database
 	updatedFolder, err := c.folderRepo.Update(ctx, folderObjectID, &folder)
 	if err != nil {
