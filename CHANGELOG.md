@@ -2,6 +2,30 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## 0.5.0 - 2025-05-23
+#### Bug Fixes
+- linter - (0801a26) - Brandon Guigo
+- add missing folder_id in update - (bafff02) - Brandon Guigo
+- update of the folder data + naming for json - (6a7fa9f) - Brandon Guigo
+- add the tests for the folder controller - (5e10283) - Brandon Guigo
+- linter - (008c95c) - Brandon Guigo
+- delete didn't work - (ad5b601) - Brandon Guigo
+- UT and add timer and pomo boolean for future usage - (e5dd181) - Brandon Guigo
+- update test - (3f240cd) - Brandon Guigo
+- upate priority in the repo - (3e967ed) - Brandon Guigo
+- add priority field to task entity - (c1e8529) - Brandon Guigo
+#### Features
+- add folder controller - (e55f806) - Brandon Guigo
+- add folders to task entity - (88d21d1) - Brandon Guigo
+- add and delete of time entry works - (01da644) - Brandon Guigo
+- add the controller endpoints to manage time entries - (4879e27) - Brandon Guigo
+- add endpoints to manage time entries on a task - (c678f04) - Brandon Guigo
+- add time entries field to task - (209119e) - Brandon Guigo
+#### Miscellaneous Chores
+- **(release)** 0.4.9 [skip ci] - (5f26e10) - GitHub Actions
+
+- - -
+
 ## 0.4.9 - 2025-05-14
 #### Bug Fixes
 - add missing headers to cors - (7f2b7b7) - Brandon Guigo
