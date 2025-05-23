@@ -20,7 +20,7 @@ import (
 // @Failure 401 {object} map[string]interface{}
 // @Failure 500 {object} map[string]interface{}
 // @Router /folders [post]
-func (c *FolderController) CreateFolder(ctx *gin.Context) {
+func (c *Controller) CreateFolder(ctx *gin.Context) {
 	// Get authenticated user from context
 	authUser := auth.GetAuthUser(ctx)
 	if authUser == nil {

@@ -2,6 +2,7 @@ package models
 
 import "go.mongodb.org/mongo-driver/bson/primitive"
 
+// Folder represents a folder in the application
 type Folder struct {
 	ID        *primitive.ObjectID `bson:"_id" json:"id"`
 	Name      string              `bson:"name" json:"name" binding:"required"`

@@ -9,7 +9,8 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-func (c *FolderController) UpdateFolder(ctx *gin.Context) {
+// UpdateFolder handles the update of a folder
+func (c *Controller) UpdateFolder(ctx *gin.Context) {
 	// Get authenticated user from context
 	authUser := auth.GetAuthUser(ctx)
 	if authUser == nil {

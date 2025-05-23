@@ -8,14 +8,14 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-// FolderController handles folder related operations
-type FolderController struct {
+// Controller handles folder related operations
+type Controller struct {
 	folderRepo repositories.FolderRepositoryInterface
 }
 
 // NewFolderController creates a new folder controller instance
-func NewFolderController(folderRepo repositories.FolderRepositoryInterface) *FolderController {
-	return &FolderController{
+func NewFolderController(folderRepo repositories.FolderRepositoryInterface) *Controller {
+	return &Controller{
 		folderRepo: folderRepo,
 	}
 }
@@ -34,7 +34,7 @@ func SetupRoutesWithMock(router *gin.Engine, folderRepo repositories.FolderRepos
 }
 
 // setupFolderRoutes sets up the routes for folder controller
-func setupFolderRoutes(router *gin.Engine, folderController *FolderController) {
+func setupFolderRoutes(router *gin.Engine, folderController *Controller) {
 	folderRoutes := router.Group("/folders")
 	auth.RequireAuth(folderRoutes)
 	{

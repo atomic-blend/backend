@@ -7,7 +7,8 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func (c *FolderController) GetAllFolders(ctx *gin.Context) {
+// GetAllFolders handles the retrieval of all folders for the authenticated user
+func (c *Controller) GetAllFolders(ctx *gin.Context) {
 	// Get authenticated user from context
 	authUser := auth.GetAuthUser(ctx)
 	if authUser == nil {

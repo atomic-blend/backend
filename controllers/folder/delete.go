@@ -8,7 +8,8 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-func (c *FolderController) DeleteFolder(ctx *gin.Context) {
+// DeleteFolder handles the deletion of a folder
+func (c *Controller) DeleteFolder(ctx *gin.Context) {
 	// Get authenticated user from context
 	authUser := auth.GetAuthUser(ctx)
 	if authUser == nil {
