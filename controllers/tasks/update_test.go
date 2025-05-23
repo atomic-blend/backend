@@ -65,6 +65,9 @@ func TestUpdateTask(t *testing.T) {
 		}
 		updatedTask.Tags = &tags
 
+		prio := 1
+		updatedTask.Priority = &prio
+
 		// Mock tag validation - for each tag, return a valid tag owned by the user
 		mockTagRepo.On("GetByID", mock.Anything, tagID1).Return(tags[0], nil).Once()
 		mockTagRepo.On("GetByID", mock.Anything, tagID2).Return(tags[1], nil).Once()
@@ -98,6 +101,7 @@ func TestUpdateTask(t *testing.T) {
 		assert.NotNil(t, response.Reminders)
 		assert.Len(t, response.Reminders, 3) // Verify updated reminders are included
 		assert.NotNil(t, response.Tags)
+		assert.NotNil(t, response.Priority)
 		assert.Len(t, *response.Tags, 2) // Verify tags are included
 	})
 
