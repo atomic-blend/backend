@@ -8,6 +8,7 @@ import (
 type TimeEntry struct {
 	ID        *primitive.ObjectID `json:"id" bson:"_id"`
 	User      *primitive.ObjectID `json:"user" bson:"user"`
+	TaskID    *primitive.ObjectID `json:"taskId" bson:"task_id"`
 	StartDate string              `json:"startDate" bson:"start_date" binding:"required"`
 	EndDate   string              `json:"endDate" bson:"end_date" binding:"required"`
 	Duration  *string             `json:"duration" bson:"duration"`
