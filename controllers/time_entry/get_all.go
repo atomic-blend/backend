@@ -2,6 +2,7 @@ package time_entry
 
 import (
 	"atomic_blend_api/auth"
+	"atomic_blend_api/models"
 	"context"
 	"net/http"
 
@@ -21,6 +22,10 @@ func (tc *TimeEntryController) GetAll(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve time entries"})
 		return
+	}
+
+	if timeEntries == nil {
+		timeEntries = []*models.TimeEntry{} // Ensure we return an empty array instead of null
 	}
 
 	c.JSON(http.StatusOK, timeEntries)
