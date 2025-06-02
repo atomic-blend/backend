@@ -1,4 +1,4 @@
-package time_entry
+package timeentrycontroller
 
 import (
 	"atomic_blend_api/auth"
@@ -11,7 +11,7 @@ import (
 )
 
 // Create creates a new time entry
-func (tc *TimeEntryController) Create(c *gin.Context) {
+func (tc *Controller) Create(c *gin.Context) {
 	authUser := auth.GetAuthUser(c)
 	if authUser == nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})

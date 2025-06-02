@@ -1,4 +1,4 @@
-package time_entry
+package timeentrycontroller
 
 import (
 	"atomic_blend_api/auth"
@@ -8,12 +8,14 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-type TimeEntryController struct {
+// Controller handles time entry related operations
+type Controller struct {
 	timeEntryRepository repositories.TimeEntryRepositoryInterface
 }
 
-func NewTimeEntryController(timeEntryRepository repositories.TimeEntryRepositoryInterface) *TimeEntryController {
-	return &TimeEntryController{
+// NewTimeEntryController creates a new instance of TimeEntryController
+func NewTimeEntryController(timeEntryRepository repositories.TimeEntryRepositoryInterface) *Controller {
+	return &Controller{
 		timeEntryRepository: timeEntryRepository,
 	}
 }

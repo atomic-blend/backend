@@ -1,4 +1,4 @@
-package time_entry
+package timeentrycontroller
 
 import (
 	"atomic_blend_api/auth"

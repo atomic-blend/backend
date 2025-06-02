@@ -1,4 +1,4 @@
-package time_entry
+package timeentrycontroller
 
 import (
 	"atomic_blend_api/auth"
@@ -10,7 +10,7 @@ import (
 )
 
 // GetAll retrieves all time entries for the authenticated user
-func (tc *TimeEntryController) GetAll(c *gin.Context) {
+func (tc *Controller) GetAll(c *gin.Context) {
 	authUser := auth.GetAuthUser(c)
 	if authUser == nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})

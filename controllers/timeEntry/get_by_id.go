@@ -1,4 +1,4 @@
-package time_entry
+package timeentrycontroller
 
 import (
 	"atomic_blend_api/auth"
@@ -9,7 +9,7 @@ import (
 )
 
 // GetByID retrieves a specific time entry by ID
-func (tc *TimeEntryController) GetByID(c *gin.Context) {
+func (tc *Controller) GetByID(c *gin.Context) {
 	authUser := auth.GetAuthUser(c)
 	if authUser == nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})

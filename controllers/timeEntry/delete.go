@@ -1,4 +1,4 @@
-package time_entry
+package timeentrycontroller
 
 import (
 	"atomic_blend_api/auth"
@@ -9,7 +9,7 @@ import (
 )
 
 // Delete deletes a time entry
-func (tc *TimeEntryController) Delete(c *gin.Context) {
+func (tc *Controller) Delete(c *gin.Context) {
 	authUser := auth.GetAuthUser(c)
 	if authUser == nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})

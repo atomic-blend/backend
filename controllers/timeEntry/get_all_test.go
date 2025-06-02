@@ -1,4 +1,4 @@
-package time_entry
+package timeentrycontroller
 
 import (
 	"atomic_blend_api/auth"
@@ -13,8 +13,6 @@ import (
 	"github.com/stretchr/testify/mock"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
-
-
 
 func TestTimeEntryController_GetAll(t *testing.T) {
 	mockRepo := new(mocks.MockTimeEntryRepository)

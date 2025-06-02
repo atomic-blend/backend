@@ -1,4 +1,4 @@
-package time_entry
+package timeentrycontroller
 
 import (
 	"atomic_blend_api/auth"
@@ -62,7 +62,6 @@ func TestTimeEntryController_Create(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, resp.Code)
 	mockRepo.AssertExpectations(t)
 }
-
 
 func TestTimeEntryController_Create_RepositoryError(t *testing.T) {
 	mockRepo := new(mocks.MockTimeEntryRepository)
