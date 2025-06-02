@@ -46,9 +46,5 @@ func setupTaskRoutes(router *gin.Engine, taskController *TaskController) {
 		taskRoutes.POST("", taskController.CreateTask)
 		taskRoutes.PUT("/:id", taskController.UpdateTask)
 		taskRoutes.DELETE("/:id", taskController.DeleteTask)
-
-		taskRoutes.POST("/:id/time-entries", taskController.AddTimeEntry)
-		taskRoutes.PUT("/:id/time-entries/:entryID", taskController.UpdateTimeEntry)
-		taskRoutes.DELETE("/:id/time-entries/:entryID", taskController.RemoveTimeEntry)
 	}
 }
