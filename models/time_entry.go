@@ -12,8 +12,10 @@ type TimeEntry struct {
 	StartDate string              `json:"startDate" bson:"start_date" binding:"required"`
 	EndDate   string              `json:"endDate" bson:"end_date" binding:"required"`
 	Duration  *string             `json:"duration" bson:"duration"`
-	CreatedAt string              `json:"createdAt" bson:"created_at"`
 	Timer     *bool               `json:"timer" bson:"timer"`
 	Pomodoro  *bool               `json:"pomodoro" bson:"pomodoro"`
+	PomoBreak *bool               `json:"pomoBreak" bson:"pomo_break"`
+	Note      *string             `json:"note" bson:"note"`
+	CreatedAt string              `json:"createdAt" bson:"created_at"`
 	UpdatedAt string              `json:"updatedAt" bson:"updated_at"`
 }
