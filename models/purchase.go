@@ -11,16 +11,13 @@ var ValidPurchaseTypes = []string{
 	"REVENUE_CAT",
 }
 
-// PurchaseData is a generic interface for purchase-specific data
-type PurchaseData interface{}
-
 // PurchaseEntity represents a generic purchase record
 type PurchaseEntity struct {
-	ID           primitive.ObjectID `json:"id" bson:"_id,omitempty"`
-	Type         *string            `json:"type" bson:"type" binding:"required,validPurchaseType"`
-	PurchaseData PurchaseData       `json:"purchaseData" bson:"purchase_data"`
-	CreatedAt    primitive.DateTime `json:"createdAt" bson:"created_at"`
-	UpdatedAt    primitive.DateTime `json:"updatedAt" bson:"updated_at"`
+	ID           primitive.ObjectID     `json:"id" bson:"_id,omitempty"`
+	Type         *string                `json:"type" bson:"type" binding:"required,validPurchaseType"`
+	PurchaseData RevenueCatPurchaseData `json:"purchaseData" bson:"purchase_data"`
+	CreatedAt    primitive.DateTime     `json:"createdAt" bson:"created_at"`
+	UpdatedAt    primitive.DateTime     `json:"updatedAt" bson:"updated_at"`
 }
 
 // RevenueCatPurchaseData represents RevenueCat specific purchase data
