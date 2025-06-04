@@ -70,3 +70,9 @@ func (m *MockUserRepository) ResetAllUserData(ctx *gin.Context, userID primitive
 	args := m.Called(ctx, userID)
 	return args.Error(0)
 }
+
+// AddPurchase adds a purchase to a user
+func (m *MockUserRepository) AddPurchase(ctx *gin.Context, userID primitive.ObjectID, purchase *models.PurchaseEntity) error {
+	args := m.Called(ctx, purchase)
+	return args.Error(0)
+}

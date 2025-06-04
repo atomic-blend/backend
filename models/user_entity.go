@@ -14,6 +14,7 @@ type UserEntity struct {
 	Roles             []*UserRoleEntity     `json:"roles" bson:"roles,omitempty"`
 	ResetPasswordCode *string               `json:"resetPasswordCode,omitempty" bson:"reset_password_code"`
 	Devices           []*UserDevice         `json:"devices" bson:"devices,omitempty"`
+	Purchases         []*PurchaseEntity     `json:"purchases" bson:"purchases,omitempty"`
 	CreatedAt         *primitive.DateTime   `json:"createdAt" bson:"created_at"`
 	UpdatedAt         *primitive.DateTime   `json:"updatedAt" bson:"updated_at"`
 }
