@@ -3,7 +3,10 @@ package habits
 import (
 	"atomic_blend_api/auth"
 	"atomic_blend_api/models"
+	"atomic_blend_api/tests/utils/inmemorymongo"
+	"atomic_blend_api/utils/db"
 	"bytes"
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -12,6 +15,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -24,7 +28,9 @@ func TestCreateHabit(t *testing.T) {
 		habit := createTestHabit()
 		habit.UserID = userID // Should be overwritten by handler
 
-		mockRepo.On("Create", mock.Anything, mock.AnythingOfType("*models.Habit")).Return(habit, nil)
+		// Mock GetAll to return fewer than 3 habits (no subscription needed)
+		mockRepo.On("GetAll", mock.Anything, &userID).Return([]*models.Habit{}, nil).Once()
+		mockRepo.On("Create", mock.Anything, mock.AnythingOfType("*models.Habit")).Return(habit, nil).Once()
 
 		habitJSON, _ := json.Marshal(habit)
 		w := httptest.NewRecorder()
@@ -49,6 +55,79 @@ func TestCreateHabit(t *testing.T) {
 		assert.Equal(t, *habit.Frequency, *response.Frequency)
 	})
 
+	t.Run("forbidden - user has 3 habits and is not subscribed", func(t *testing.T) {
+		// Setup in-memory MongoDB for subscription check
+		mongoServer, err := inmemorymongo.CreateInMemoryMongoDB()
+		require.NoError(t, err)
+		defer mongoServer.Stop()
+
+		client, err := inmemorymongo.ConnectToInMemoryDB(mongoServer.URI())
+		require.NoError(t, err)
+		defer client.Disconnect(context.Background())
+
+		// Set global database for subscription function
+		originalDB := db.Database
+		db.Database = client.Database("test_db")
+		defer func() { db.Database = originalDB }()
+
+		userID := primitive.NewObjectID()
+		habit := createTestHabit()
+
+		// Create 3 existing habits to simulate user at limit
+		existingHabits := make([]*models.Habit, 3)
+		for i := 0; i < 3; i++ {
+			existingHabits[i] = createTestHabit()
+			existingHabits[i].UserID = userID
+		}
+
+		// Mock GetAll to return 3 habits
+		mockRepo.On("GetAll", mock.Anything, &userID).Return(existingHabits, nil).Once()
+
+		habitJSON, _ := json.Marshal(habit)
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("POST", "/habits", bytes.NewBuffer(habitJSON))
+		req.Header.Set("Content-Type", "application/json")
+
+		ctx, _ := gin.CreateTestContext(w)
+		ctx.Request = req
+		ctx.Set("authUser", &auth.UserAuthInfo{UserID: userID})
+
+		controller := NewHabitController(mockRepo)
+		controller.CreateHabit(ctx)
+
+		assert.Equal(t, http.StatusForbidden, w.Code)
+		var response map[string]interface{}
+		err = json.Unmarshal(w.Body.Bytes(), &response)
+		assert.NoError(t, err)
+		assert.Equal(t, "You must be subscribed to create more than 3 habits", response["error"])
+	})
+
+	t.Run("error when GetAll fails", func(t *testing.T) {
+		userID := primitive.NewObjectID()
+		habit := createTestHabit()
+
+		// Mock GetAll to return an error
+		mockRepo.On("GetAll", mock.Anything, &userID).Return(nil, assert.AnError).Once()
+
+		habitJSON, _ := json.Marshal(habit)
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("POST", "/habits", bytes.NewBuffer(habitJSON))
+		req.Header.Set("Content-Type", "application/json")
+
+		ctx, _ := gin.CreateTestContext(w)
+		ctx.Request = req
+		ctx.Set("authUser", &auth.UserAuthInfo{UserID: userID})
+
+		controller := NewHabitController(mockRepo)
+		controller.CreateHabit(ctx)
+
+		assert.Equal(t, http.StatusInternalServerError, w.Code)
+		var response map[string]interface{}
+		err := json.Unmarshal(w.Body.Bytes(), &response)
+		assert.NoError(t, err)
+		assert.Contains(t, response["error"], "assert.AnError")
+	})
+
 	t.Run("unauthorized - no auth user", func(t *testing.T) {
 		habit := createTestHabit()
 		habitJSON, _ := json.Marshal(habit)
@@ -71,6 +150,9 @@ func TestCreateHabit(t *testing.T) {
 		// Create authenticated user
 		userID := primitive.NewObjectID()
 
+		// Mock GetAll to return fewer than 3 habits (no subscription needed)
+		mockRepo.On("GetAll", mock.Anything, &userID).Return([]*models.Habit{}, nil).Once()
+
 		// Invalid JSON
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("POST", "/habits", bytes.NewBuffer([]byte("invalid json")))
@@ -91,6 +173,10 @@ func TestCreateHabit(t *testing.T) {
 	// Validation test cases
 	t.Run("validation - missing required name", func(t *testing.T) {
 		userID := primitive.NewObjectID()
+
+		// Mock GetAll to return fewer than 3 habits (no subscription needed)
+		mockRepo.On("GetAll", mock.Anything, &userID).Return([]*models.Habit{}, nil).Once()
+
 		habit := createTestHabit()
 		habit.Name = nil // Make name nil to trigger validation error
 
@@ -115,6 +201,10 @@ func TestCreateHabit(t *testing.T) {
 
 	t.Run("validation - missing required frequency", func(t *testing.T) {
 		userID := primitive.NewObjectID()
+
+		// Mock GetAll to return fewer than 3 habits (no subscription needed)
+		mockRepo.On("GetAll", mock.Anything, &userID).Return([]*models.Habit{}, nil).Once()
+
 		habit := createTestHabit()
 		habit.Frequency = nil // Make frequency nil to trigger validation error
 
@@ -139,6 +229,10 @@ func TestCreateHabit(t *testing.T) {
 
 	t.Run("validation - invalid frequency value", func(t *testing.T) {
 		userID := primitive.NewObjectID()
+
+		// Mock GetAll to return fewer than 3 habits (no subscription needed)
+		mockRepo.On("GetAll", mock.Anything, &userID).Return([]*models.Habit{}, nil).Once()
+
 		habit := createTestHabit()
 		invalidFreq := "yearly" // Not in ValidFrequencies list
 		habit.Frequency = &invalidFreq
@@ -165,6 +259,10 @@ func TestCreateHabit(t *testing.T) {
 
 	t.Run("validation - missing start date", func(t *testing.T) {
 		userID := primitive.NewObjectID()
+
+		// Mock GetAll to return fewer than 3 habits (no subscription needed)
+		mockRepo.On("GetAll", mock.Anything, &userID).Return([]*models.Habit{}, nil).Once()
+
 		habit := createTestHabit()
 		habit.StartDate = nil // Make start date nil to trigger validation error
 
