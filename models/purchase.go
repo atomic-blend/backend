@@ -60,7 +60,7 @@ type Attribute struct {
 
 // RevenueCatPayload represents the structure of a RevenueCat webhook payload
 type RevenueCatPayload struct {
-	ApiVersion string                 `json:"api_version"`
+	APIVersion string                 `json:"api_version"`
 	Event      RevenueCatPurchaseData `json:"event"`
 }
 

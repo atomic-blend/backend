@@ -9,12 +9,14 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-type WebhooksController struct {
+// Controller handles webhooks from external services like RevenueCat
+type Controller struct {
 	userRepo repositories.UserRepositoryInterface
 }
 
-func NewWebhooksController(userRepo repositories.UserRepositoryInterface) *WebhooksController {
-	return &WebhooksController{
+// NewWebhooksController creates a new instance of WebhooksController
+func NewWebhooksController(userRepo repositories.UserRepositoryInterface) *Controller {
+	return &Controller{
 		userRepo: userRepo,
 	}
 }

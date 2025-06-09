@@ -9,6 +9,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
+// IsUserSubscribed checks if a user has an active subscription
 func IsUserSubscribed(ctx *gin.Context, userID primitive.ObjectID) bool {
 	userRepo := repositories.NewUserRepository(db.Database)
 
@@ -16,7 +17,7 @@ func IsUserSubscribed(ctx *gin.Context, userID primitive.ObjectID) bool {
 	if err != nil {
 		return false
 	}
-	
+
 	if user == nil {
 		return false
 	}

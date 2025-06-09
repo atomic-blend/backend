@@ -44,6 +44,7 @@ func RequireAuth(group *gin.RouterGroup) *gin.RouterGroup {
 	return group
 }
 
+// RequireStaticStringMiddleware is a middleware that checks if a static string is present in the request
 func RequireStaticStringMiddleware(group *gin.RouterGroup, staticString string) *gin.RouterGroup {
 	group.Use(StaticStringMiddleware(staticString))
 	return group
