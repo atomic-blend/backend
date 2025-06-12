@@ -6,6 +6,7 @@ import (
 	"atomic_blend_api/controllers/folder"
 	"atomic_blend_api/controllers/habits"
 	"atomic_blend_api/controllers/health"
+	"atomic_blend_api/controllers/notes"
 	"atomic_blend_api/controllers/tags"
 	"atomic_blend_api/controllers/tasks"
 	timeentrycontroller "atomic_blend_api/controllers/timeEntry"
@@ -160,6 +161,7 @@ func main() {
 	folder.SetupRoutes(router, db.Database)
 	timeentrycontroller.SetupRoutes(router, db.Database)
 	webhooks.SetupRoutes(router, db.Database)
+	notes.SetupRoutes(router, db.Database)
 
 	// Define port
 	port := os.Getenv("PORT")
