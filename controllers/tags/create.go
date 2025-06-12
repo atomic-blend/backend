@@ -3,6 +3,7 @@ package tags
 import (
 	"atomic_blend_api/auth"
 	"atomic_blend_api/models"
+	"atomic_blend_api/utils/subscription"
 	"net/http"
 	"time"
 
@@ -28,6 +29,20 @@ func (c *TagController) CreateTag(ctx *gin.Context) {
 	if authUser == nil {
 		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
 		return
+	}
+
+	// check if the user is subscribed if he have more than 5 tags
+	userTags, err := c.tagRepo.GetAll(ctx, &authUser.UserID)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	if len(userTags) >= 5 {
+		if !subscription.IsUserSubscribed(ctx, authUser.UserID) {
+			ctx.JSON(http.StatusForbidden, gin.H{"error": "You must be subscribed to create more than 5 tags"})
+			return
+		}
 	}
 
 	var tag models.Tag

@@ -3,7 +3,10 @@ package tags
 import (
 	"atomic_blend_api/auth"
 	"atomic_blend_api/models"
+	"atomic_blend_api/tests/utils/inmemorymongo"
+	"atomic_blend_api/utils/db"
 	"bytes"
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -12,6 +15,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -24,6 +28,8 @@ func TestCreateTag(t *testing.T) {
 		tag := createTestTag()
 		tag.UserID = &userID // This should be overwritten by the handler
 
+		// Mock GetAll to return fewer than 5 tags (no subscription needed)
+		mockTagRepo.On("GetAll", mock.Anything, &userID).Return([]*models.Tag{}, nil).Once()
 		mockTagRepo.On("Create", mock.Anything, mock.AnythingOfType("*models.Tag")).Return(tag, nil).Once()
 
 		tagJSON, _ := json.Marshal(tag)
@@ -49,6 +55,79 @@ func TestCreateTag(t *testing.T) {
 		assert.Equal(t, userID, *response.UserID) // Verify the tag is owned by the authenticated user
 	})
 
+	t.Run("forbidden - user has 5 tags and is not subscribed", func(t *testing.T) {
+		// Setup in-memory MongoDB for subscription check
+		mongoServer, err := inmemorymongo.CreateInMemoryMongoDB()
+		require.NoError(t, err)
+		defer mongoServer.Stop()
+
+		client, err := inmemorymongo.ConnectToInMemoryDB(mongoServer.URI())
+		require.NoError(t, err)
+		defer client.Disconnect(context.Background())
+
+		// Set global database for subscription function
+		originalDB := db.Database
+		db.Database = client.Database("test_db")
+		defer func() { db.Database = originalDB }()
+
+		userID := primitive.NewObjectID()
+		tag := createTestTag()
+
+		// Create 5 existing tags to simulate user at limit
+		existingTags := make([]*models.Tag, 5)
+		for i := 0; i < 5; i++ {
+			existingTags[i] = createTestTag()
+			existingTags[i].UserID = &userID
+		}
+
+		// Mock GetAll to return 5 tags
+		mockTagRepo.On("GetAll", mock.Anything, &userID).Return(existingTags, nil).Once()
+
+		tagJSON, _ := json.Marshal(tag)
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("POST", "/tags", bytes.NewBuffer(tagJSON))
+		req.Header.Set("Content-Type", "application/json")
+
+		ctx, _ := gin.CreateTestContext(w)
+		ctx.Request = req
+		ctx.Set("authUser", &auth.UserAuthInfo{UserID: userID})
+
+		controller := NewTagController(mockTagRepo, mockTaskRepo)
+		controller.CreateTag(ctx)
+
+		assert.Equal(t, http.StatusForbidden, w.Code)
+		var response map[string]interface{}
+		err = json.Unmarshal(w.Body.Bytes(), &response)
+		assert.NoError(t, err)
+		assert.Equal(t, "You must be subscribed to create more than 5 tags", response["error"])
+	})
+
+	t.Run("error when GetAll fails", func(t *testing.T) {
+		userID := primitive.NewObjectID()
+		tag := createTestTag()
+
+		// Mock GetAll to return an error (this happens before subscription check)
+		mockTagRepo.On("GetAll", mock.Anything, &userID).Return(nil, assert.AnError).Once()
+
+		tagJSON, _ := json.Marshal(tag)
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("POST", "/tags", bytes.NewBuffer(tagJSON))
+		req.Header.Set("Content-Type", "application/json")
+
+		ctx, _ := gin.CreateTestContext(w)
+		ctx.Request = req
+		ctx.Set("authUser", &auth.UserAuthInfo{UserID: userID})
+
+		controller := NewTagController(mockTagRepo, mockTaskRepo)
+		controller.CreateTag(ctx)
+
+		assert.Equal(t, http.StatusInternalServerError, w.Code)
+		var response map[string]interface{}
+		err := json.Unmarshal(w.Body.Bytes(), &response)
+		assert.NoError(t, err)
+		assert.Contains(t, response["error"], "assert.AnError")
+	})
+
 	t.Run("unauthorized - no auth user", func(t *testing.T) {
 		tag := createTestTag()
 		tagJSON, _ := json.Marshal(tag)
@@ -71,6 +150,9 @@ func TestCreateTag(t *testing.T) {
 		// Create authenticated user
 		userID := primitive.NewObjectID()
 
+		// Mock GetAll to return fewer than 5 tags (no subscription needed)
+		mockTagRepo.On("GetAll", mock.Anything, &userID).Return([]*models.Tag{}, nil).Once()
+
 		// Invalid JSON
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("POST", "/tags", bytes.NewBuffer([]byte("invalid json")))
@@ -91,6 +173,9 @@ func TestCreateTag(t *testing.T) {
 	t.Run("missing required name field", func(t *testing.T) {
 		// Create authenticated user
 		userID := primitive.NewObjectID()
+
+		// Mock GetAll to return fewer than 5 tags (no subscription needed)
+		mockTagRepo.On("GetAll", mock.Anything, &userID).Return([]*models.Tag{}, nil).Once()
 
 		// Create a tag without a name
 		tag := createTestTag()

@@ -3,6 +3,7 @@ package habits
 import (
 	"atomic_blend_api/auth"
 	"atomic_blend_api/models"
+	"atomic_blend_api/utils/subscription"
 	"net/http"
 	"time"
 
@@ -28,6 +29,20 @@ func (c *HabitController) CreateHabit(ctx *gin.Context) {
 	if authUser == nil {
 		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
 		return
+	}
+
+	userHabits, err := c.habitRepo.GetAll(ctx, &authUser.UserID)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Check if user has reached habit limit
+	if len(userHabits) >= 3 {
+		if !subscription.IsUserSubscribed(ctx, authUser.UserID) {
+			ctx.JSON(http.StatusForbidden, gin.H{"error": "You must be subscribed to create more than 3 habits"})
+			return
+		}
 	}
 
 	var habit models.Habit

@@ -8,7 +8,9 @@ import (
 	"atomic_blend_api/controllers/health"
 	"atomic_blend_api/controllers/tags"
 	"atomic_blend_api/controllers/tasks"
+	timeentrycontroller "atomic_blend_api/controllers/timeEntry"
 	"atomic_blend_api/controllers/users"
+	"atomic_blend_api/controllers/webhooks"
 	"atomic_blend_api/cron"
 	"atomic_blend_api/models"
 	"atomic_blend_api/utils/db"
@@ -107,6 +109,8 @@ func main() {
 	habits.SetupRoutes(router, db.Database)
 	tags.SetupRoutes(router, db.Database)
 	folder.SetupRoutes(router, db.Database)
+	timeentrycontroller.SetupRoutes(router, db.Database)
+	webhooks.SetupRoutes(router, db.Database)
 
 	// Define port
 	port := os.Getenv("PORT")
