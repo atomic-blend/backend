@@ -134,6 +134,7 @@ func (r *NoteRepository) Update(ctx context.Context, id string, note *models.Not
 		"title":      note.Title,
 		"content":    note.Content,
 		"user":       note.User,
+		"deleted":    note.Deleted,
 		"updated_at": updatedAt,
 	}}
 

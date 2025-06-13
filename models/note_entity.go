@@ -10,6 +10,7 @@ type NoteEntity struct {
 	Title     *string             `json:"title" bson:"title"`
 	Content   *string             `json:"content" bson:"content"`
 	User      primitive.ObjectID  `json:"user" bson:"user"`
+	Deleted   *bool               `json:"deleted,omitempty" bson:"deleted,omitempty"`
 	CreatedAt primitive.DateTime  `json:"createdAt" bson:"created_at"`
 	UpdatedAt primitive.DateTime  `json:"updatedAt" bson:"updated_at"`
 }
