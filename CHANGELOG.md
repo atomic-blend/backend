@@ -2,6 +2,14 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## 0.6.3 - 2025-06-19
+#### Bug Fixes
+- make CORS configurable by env var - (d678f72) - Brandon Guigo
+#### Miscellaneous Chores
+- **(release)** 0.6.2 [skip ci] - (8ef7b36) - GitHub Actions
+
+- - -
+
 ## 0.6.2 - 2025-06-19
 #### Bug Fixes
 - be able to use a env provided full connection string as db creds - (16f01cb) - Brandon Guigo
