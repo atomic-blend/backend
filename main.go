@@ -16,6 +16,7 @@ import (
 	"atomic_blend_api/utils/db"
 	"context"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/gin-contrib/cors"
@@ -64,17 +65,89 @@ func main() {
 
 	// Setup router with middleware
 	router := gin.Default()
-	appUrls := []string{
-		os.Getenv("TASK_APP_URL"),
+
+	// Configure CORS if environment variables are provided
+	corsOrigins := os.Getenv("CORS_ALLOWED_ORIGINS")
+	corsMethods := os.Getenv("CORS_ALLOWED_METHODS")
+	corsHeaders := os.Getenv("CORS_ALLOWED_HEADERS")
+	corsExposeHeaders := os.Getenv("CORS_EXPOSE_HEADERS")
+	corsCredentials := os.Getenv("CORS_ALLOW_CREDENTIALS")
+	corsMaxAge := os.Getenv("CORS_MAX_AGE")
+
+	// Apply CORS only if we have sufficient configuration
+	if corsOrigins != "" {
+		var allowedOrigins []string
+
+		// Build origins list
+		if corsOrigins != "" {
+			// Split by comma and trim spaces
+			for _, origin := range strings.Split(corsOrigins, ",") {
+				if trimmed := strings.TrimSpace(origin); trimmed != "" {
+					allowedOrigins = append(allowedOrigins, trimmed)
+				}
+			}
+		}
+
+		// Default methods if not specified
+		allowedMethods := []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"}
+		if corsMethods != "" {
+			allowedMethods = []string{}
+			for _, method := range strings.Split(corsMethods, ",") {
+				if trimmed := strings.TrimSpace(method); trimmed != "" {
+					allowedMethods = append(allowedMethods, trimmed)
+				}
+			}
+		}
+
+		// Default headers if not specified
+		allowedHeaders := []string{"Origin", "Content-Type", "Authorization"}
+		if corsHeaders != "" {
+			allowedHeaders = []string{}
+			for _, header := range strings.Split(corsHeaders, ",") {
+				if trimmed := strings.TrimSpace(header); trimmed != "" {
+					allowedHeaders = append(allowedHeaders, trimmed)
+				}
+			}
+		}
+
+		// Default expose headers if not specified
+		exposeHeaders := []string{"Content-Length"}
+		if corsExposeHeaders != "" {
+			exposeHeaders = []string{}
+			for _, header := range strings.Split(corsExposeHeaders, ",") {
+				if trimmed := strings.TrimSpace(header); trimmed != "" {
+					exposeHeaders = append(exposeHeaders, trimmed)
+				}
+			}
+		}
+
+		// Default credentials to true if not specified
+		allowCredentials := true
+		if corsCredentials != "" {
+			allowCredentials = strings.ToLower(corsCredentials) == "true"
+		}
+
+		// Default max age to 12 hours if not specified
+		maxAge := 12 * time.Hour
+		if corsMaxAge != "" {
+			if duration, err := time.ParseDuration(corsMaxAge); err == nil {
+				maxAge = duration
+			}
+		}
+
+		router.Use(cors.New(cors.Config{
+			AllowOrigins:     allowedOrigins,
+			AllowMethods:     allowedMethods,
+			AllowHeaders:     allowedHeaders,
+			ExposeHeaders:    exposeHeaders,
+			AllowCredentials: allowCredentials,
+			MaxAge:           maxAge,
+		}))
+
+		log.Info().Strs("origins", allowedOrigins).Msg("CORS configured")
+	} else {
+		log.Info().Msg("No CORS configuration found, skipping CORS setup")
 	}
-	router.Use(cors.New(cors.Config{
-		AllowOrigins:     appUrls,
-		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
-		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
-		ExposeHeaders:    []string{"Content-Length"},
-		AllowCredentials: true,
-		MaxAge:           12 * time.Hour,
-	}))
 
 	// Register all routes
 	auth.SetupRoutes(router, db.Database)
