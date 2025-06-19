@@ -2,6 +2,30 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## 0.6.0 - 2025-06-19
+#### Bug Fixes
+- refactor mongodb service - (9bbb20b) - Brandon Guigo
+- linter issues - (30ac4ec) - Brandon Guigo
+- add the tests for subscription secure endpoint - (6e52448) - Brandon Guigo
+- revenue cat model in user - (9aeca97) - Brandon Guigo
+- add revenue cat payload model to parse content from revenuecat - (7305fde) - Brandon Guigo
+- linter and naming - (9f79bae) - Brandon Guigo
+- change type of duration to String since it's encrypted - (421d7bd) - Brandon Guigo
+#### Features
+- check subscription when the user add a tag or a habit - (81024f7) - Brandon Guigo
+- add subscription utils to check if a user request is needing subscription or not - (d077214) - Brandon Guigo
+- store the purchase inside the user object to be ready to dispatch to app at next getUser - (c16c30f) - Brandon Guigo
+- setup webhooks controller with static token security - (a8d110d) - Brandon Guigo
+- add fields to time_entry - (310ff31) - Brandon Guigo
+- move time entries to the dedicated collection - (11f0906) - Brandon Guigo
+- add task id to time entry model - (5fa9c5a) - Brandon Guigo
+- add controller for time entries without any objects associated - (414e66c) - Brandon Guigo
+#### Miscellaneous Chores
+- **(release)** 0.5.0 [skip ci] - (642739d) - GitHub Actions
+- fix example .env - (7fd5de0) - Brandon Guigo
+
+- - -
+
 ## 0.5.0 - 2025-05-23
 #### Bug Fixes
 - linter - (0801a26) - Brandon Guigo
