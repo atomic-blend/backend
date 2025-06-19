@@ -2,6 +2,14 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## 0.6.2 - 2025-06-19
+#### Bug Fixes
+- be able to use a env provided full connection string as db creds - (16f01cb) - Brandon Guigo
+#### Miscellaneous Chores
+- **(release)** 0.6.1 [skip ci] - (5e2cd7a) - GitHub Actions
+
+- - -
+
 ## 0.6.1 - 2025-06-19
 #### Bug Fixes
 - add authMechanism option to mongo - (f6f5e5d) - Brandon Guigo
