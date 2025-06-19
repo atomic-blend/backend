@@ -2,6 +2,14 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## 0.6.1 - 2025-06-19
+#### Bug Fixes
+- add authMechanism option to mongo - (f6f5e5d) - Brandon Guigo
+#### Miscellaneous Chores
+- **(release)** 0.6.0 [skip ci] - (4f58c03) - GitHub Actions
+
+- - -
+
 ## 0.6.0 - 2025-06-19
 #### Bug Fixes
 - refactor mongodb service - (9bbb20b) - Brandon Guigo
