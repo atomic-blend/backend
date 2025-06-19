@@ -228,7 +228,7 @@ func TestConnectMongo(t *testing.T) {
 		}()
 
 		client, err := ConnectMongo()
-		
+
 		// If we reach here, it means there was an error instead of panic
 		assert.Error(t, err)
 		assert.Nil(t, client)
@@ -273,7 +273,7 @@ func TestConnectMongo(t *testing.T) {
 		}()
 
 		client, err := ConnectMongo()
-		
+
 		// If we reach here, it means there was an error instead of panic
 		assert.Error(t, err)
 		assert.Nil(t, client)
