@@ -445,3 +445,243 @@ T7qLYtMnQJ9hMr0rI+T8W3RP8BXzl3Pi+w==
 		assert.Nil(t, client)
 	})
 }
+
+func TestBuildMongoURI(t *testing.T) {
+	t.Run("should use MONGO_URI when provided", func(t *testing.T) {
+		expectedURI := "mongodb://user:pass@host:27017/mydb?retryWrites=false&authSource=admin"
+		os.Setenv("MONGO_URI", expectedURI)
+		defer os.Unsetenv("MONGO_URI")
+
+		uri := buildMongoURI()
+
+		assert.Equal(t, expectedURI, uri)
+	})
+
+	t.Run("should build URI from individual env vars when MONGO_URI is not set", func(t *testing.T) {
+		os.Setenv("MONGO_USERNAME", "testuser")
+		os.Setenv("MONGO_PASSWORD", "testpass")
+		os.Setenv("MONGO_HOST", "localhost")
+		os.Setenv("MONGO_PORT", "27017")
+		os.Setenv("DATABASE_NAME", "testdb")
+		defer func() {
+			os.Unsetenv("MONGO_USERNAME")
+			os.Unsetenv("MONGO_PASSWORD")
+			os.Unsetenv("MONGO_HOST")
+			os.Unsetenv("MONGO_PORT")
+			os.Unsetenv("DATABASE_NAME")
+		}()
+
+		uri := buildMongoURI()
+
+		expectedURI := "mongodb://testuser:testpass@localhost:27017/testdb"
+		assert.Equal(t, expectedURI, uri)
+	})
+
+	t.Run("should build URI with SSL parameters when individual env vars are used", func(t *testing.T) {
+		os.Setenv("MONGO_USERNAME", "testuser")
+		os.Setenv("MONGO_PASSWORD", "testpass")
+		os.Setenv("MONGO_HOST", "localhost")
+		os.Setenv("MONGO_PORT", "27017")
+		os.Setenv("DATABASE_NAME", "testdb")
+		os.Setenv("MONGO_SSL", "true")
+		os.Setenv("MONGO_TLS", "true")
+		defer func() {
+			os.Unsetenv("MONGO_USERNAME")
+			os.Unsetenv("MONGO_PASSWORD")
+			os.Unsetenv("MONGO_HOST")
+			os.Unsetenv("MONGO_PORT")
+			os.Unsetenv("DATABASE_NAME")
+			os.Unsetenv("MONGO_SSL")
+			os.Unsetenv("MONGO_TLS")
+		}()
+
+		uri := buildMongoURI()
+
+		assert.Contains(t, uri, "mongodb://testuser:testpass@localhost:27017/testdb")
+		assert.Contains(t, uri, "ssl=true")
+		assert.Contains(t, uri, "tls=true")
+	})
+
+	t.Run("should build URI with auth parameters when individual env vars are used", func(t *testing.T) {
+		os.Setenv("MONGO_USERNAME", "testuser")
+		os.Setenv("MONGO_PASSWORD", "testpass")
+		os.Setenv("MONGO_HOST", "localhost")
+		os.Setenv("MONGO_PORT", "27017")
+		os.Setenv("DATABASE_NAME", "testdb")
+		os.Setenv("MONGO_AUTH_SOURCE", "admin")
+		os.Setenv("MONGO_AUTH_MECHANISM", "SCRAM-SHA-256")
+		defer func() {
+			os.Unsetenv("MONGO_USERNAME")
+			os.Unsetenv("MONGO_PASSWORD")
+			os.Unsetenv("MONGO_HOST")
+			os.Unsetenv("MONGO_PORT")
+			os.Unsetenv("DATABASE_NAME")
+			os.Unsetenv("MONGO_AUTH_SOURCE")
+			os.Unsetenv("MONGO_AUTH_MECHANISM")
+		}()
+
+		uri := buildMongoURI()
+
+		assert.Contains(t, uri, "mongodb://testuser:testpass@localhost:27017/testdb")
+		assert.Contains(t, uri, "authSource=admin")
+		assert.Contains(t, uri, "authMechanism=SCRAM-SHA-256")
+	})
+
+	t.Run("should build URI with timeout parameters when individual env vars are used", func(t *testing.T) {
+		os.Setenv("MONGO_USERNAME", "testuser")
+		os.Setenv("MONGO_PASSWORD", "testpass")
+		os.Setenv("MONGO_HOST", "localhost")
+		os.Setenv("MONGO_PORT", "27017")
+		os.Setenv("DATABASE_NAME", "testdb")
+		os.Setenv("MONGO_CONNECT_TIMEOUT_MS", "5000")
+		os.Setenv("MONGO_SERVER_SELECTION_TIMEOUT_MS", "3000")
+		defer func() {
+			os.Unsetenv("MONGO_USERNAME")
+			os.Unsetenv("MONGO_PASSWORD")
+			os.Unsetenv("MONGO_HOST")
+			os.Unsetenv("MONGO_PORT")
+			os.Unsetenv("DATABASE_NAME")
+			os.Unsetenv("MONGO_CONNECT_TIMEOUT_MS")
+			os.Unsetenv("MONGO_SERVER_SELECTION_TIMEOUT_MS")
+		}()
+
+		uri := buildMongoURI()
+
+		assert.Contains(t, uri, "mongodb://testuser:testpass@localhost:27017/testdb")
+		assert.Contains(t, uri, "connectTimeoutMS=5000")
+		assert.Contains(t, uri, "serverSelectionTimeoutMS=3000")
+	})
+
+	t.Run("should build URI with directConnection parameter when individual env vars are used", func(t *testing.T) {
+		os.Setenv("MONGO_USERNAME", "testuser")
+		os.Setenv("MONGO_PASSWORD", "testpass")
+		os.Setenv("MONGO_HOST", "localhost")
+		os.Setenv("MONGO_PORT", "27017")
+		os.Setenv("DATABASE_NAME", "testdb")
+		os.Setenv("MONGO_DIRECT_CONNECTION", "true")
+		defer func() {
+			os.Unsetenv("MONGO_USERNAME")
+			os.Unsetenv("MONGO_PASSWORD")
+			os.Unsetenv("MONGO_HOST")
+			os.Unsetenv("MONGO_PORT")
+			os.Unsetenv("DATABASE_NAME")
+			os.Unsetenv("MONGO_DIRECT_CONNECTION")
+		}()
+
+		uri := buildMongoURI()
+
+		assert.Contains(t, uri, "mongodb://testuser:testpass@localhost:27017/testdb")
+		assert.Contains(t, uri, "directConnection=true")
+	})
+
+	t.Run("should build URI with retryWrites=false when MONGO_RETRY_WRITES is false or not set", func(t *testing.T) {
+		os.Setenv("MONGO_USERNAME", "testuser")
+		os.Setenv("MONGO_PASSWORD", "testpass")
+		os.Setenv("MONGO_HOST", "localhost")
+		os.Setenv("MONGO_PORT", "27017")
+		os.Setenv("DATABASE_NAME", "testdb")
+		os.Setenv("MONGO_RETRY_WRITES", "false")
+		defer func() {
+			os.Unsetenv("MONGO_USERNAME")
+			os.Unsetenv("MONGO_PASSWORD")
+			os.Unsetenv("MONGO_HOST")
+			os.Unsetenv("MONGO_PORT")
+			os.Unsetenv("DATABASE_NAME")
+			os.Unsetenv("MONGO_RETRY_WRITES")
+		}()
+
+		uri := buildMongoURI()
+
+		assert.Contains(t, uri, "mongodb://testuser:testpass@localhost:27017/testdb")
+		assert.Contains(t, uri, "retryWrites=false")
+	})
+
+	t.Run("should include retryWrites when MONGO_RETRY_WRITES is true", func(t *testing.T) {
+		os.Setenv("MONGO_USERNAME", "testuser")
+		os.Setenv("MONGO_PASSWORD", "testpass")
+		os.Setenv("MONGO_HOST", "localhost")
+		os.Setenv("MONGO_PORT", "27017")
+		os.Setenv("DATABASE_NAME", "testdb")
+		os.Setenv("MONGO_RETRY_WRITES", "true")
+		defer func() {
+			os.Unsetenv("MONGO_USERNAME")
+			os.Unsetenv("MONGO_PASSWORD")
+			os.Unsetenv("MONGO_HOST")
+			os.Unsetenv("MONGO_PORT")
+			os.Unsetenv("DATABASE_NAME")
+			os.Unsetenv("MONGO_RETRY_WRITES")
+		}()
+
+		uri := buildMongoURI()
+
+		assert.Contains(t, uri, "mongodb://testuser:testpass@localhost:27017/testdb")
+		assert.Contains(t, uri, "retryWrites=true")
+	})
+
+	t.Run("should handle empty MONGO_URI and fallback to individual env vars", func(t *testing.T) {
+		os.Setenv("MONGO_URI", "")
+		os.Setenv("MONGO_USERNAME", "testuser")
+		os.Setenv("MONGO_PASSWORD", "testpass")
+		os.Setenv("MONGO_HOST", "localhost")
+		os.Setenv("MONGO_PORT", "27017")
+		os.Setenv("DATABASE_NAME", "testdb")
+		defer func() {
+			os.Unsetenv("MONGO_URI")
+			os.Unsetenv("MONGO_USERNAME")
+			os.Unsetenv("MONGO_PASSWORD")
+			os.Unsetenv("MONGO_HOST")
+			os.Unsetenv("MONGO_PORT")
+			os.Unsetenv("DATABASE_NAME")
+		}()
+
+		uri := buildMongoURI()
+
+		expectedURI := "mongodb://testuser:testpass@localhost:27017/testdb"
+		assert.Equal(t, expectedURI, uri)
+	})
+
+	t.Run("should use MONGO_URI when connecting to MongoDB", func(t *testing.T) {
+		// Set test environment to avoid actual connection
+		os.Setenv("ENV", "test")
+		os.Setenv("DATABASE_NAME", "test_db")
+		os.Setenv("MONGO_URI", "mongodb://testuser:testpass@localhost:27017/testdb?retryWrites=false&authSource=admin")
+		defer func() {
+			os.Unsetenv("ENV")
+			os.Unsetenv("DATABASE_NAME")
+			os.Unsetenv("MONGO_URI")
+		}()
+
+		client, err := ConnectMongo()
+
+		// In test mode, client should be nil but no error
+		assert.Nil(t, err)
+		assert.Nil(t, client)
+	})
+
+	t.Run("should prioritize MONGO_URI over individual env vars in connection", func(t *testing.T) {
+		// Set test environment to avoid actual connection
+		os.Setenv("ENV", "test")
+		os.Setenv("DATABASE_NAME", "test_db")
+		os.Setenv("MONGO_URI", "mongodb://direct:uri@example.com:27017/directdb?ssl=true")
+		// Set individual vars that should be ignored
+		os.Setenv("MONGO_USERNAME", "should_not_use")
+		os.Setenv("MONGO_PASSWORD", "should_not_use")
+		os.Setenv("MONGO_HOST", "should_not_use")
+		os.Setenv("MONGO_PORT", "should_not_use")
+		defer func() {
+			os.Unsetenv("ENV")
+			os.Unsetenv("DATABASE_NAME")
+			os.Unsetenv("MONGO_URI")
+			os.Unsetenv("MONGO_USERNAME")
+			os.Unsetenv("MONGO_PASSWORD")
+			os.Unsetenv("MONGO_HOST")
+			os.Unsetenv("MONGO_PORT")
+		}()
+
+		client, err := ConnectMongo()
+
+		// In test mode, client should be nil but no error
+		assert.Nil(t, err)
+		assert.Nil(t, client)
+	})
+}
