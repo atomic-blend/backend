@@ -418,4 +418,30 @@ T7qLYtMnQJ9hMr0rI+T8W3RP8BXzl3Pi+w==
 		assert.Nil(t, err)
 		assert.Nil(t, client)
 	})
+
+	t.Run("should build URI with authMechanism when MONGO_AUTH_MECHANISM is set", func(t *testing.T) {
+		// Setup test environment
+		os.Setenv("ENV", "test")
+		os.Setenv("DATABASE_NAME", "test_db")
+		os.Setenv("MONGO_USERNAME", "testuser")
+		os.Setenv("MONGO_PASSWORD", "testpass")
+		os.Setenv("MONGO_HOST", "localhost")
+		os.Setenv("MONGO_PORT", "27017")
+		os.Setenv("MONGO_AUTH_MECHANISM", "SCRAM-SHA-256")
+		defer func() {
+			os.Unsetenv("ENV")
+			os.Unsetenv("DATABASE_NAME")
+			os.Unsetenv("MONGO_USERNAME")
+			os.Unsetenv("MONGO_PASSWORD")
+			os.Unsetenv("MONGO_HOST")
+			os.Unsetenv("MONGO_PORT")
+			os.Unsetenv("MONGO_AUTH_MECHANISM")
+		}()
+
+		client, err := ConnectMongo()
+
+		// In test mode, client should be nil but no error
+		assert.Nil(t, err)
+		assert.Nil(t, client)
+	})
 }

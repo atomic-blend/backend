@@ -36,6 +36,7 @@ func buildMongoURI() string {
 	directConnection := os.Getenv("MONGO_DIRECT_CONNECTION") == "true"
 
 	authSource := os.Getenv("MONGO_AUTH_SOURCE")
+	authMechanism := os.Getenv("MONGO_AUTH_MECHANISM")
 	
 	// Construction de l'URI avec les paramètres
 	uri := fmt.Sprintf("mongodb://%s:%s@%s:%s/%s",
@@ -50,6 +51,10 @@ func buildMongoURI() string {
 
 	if authSource != "" {
 		params = append(params, fmt.Sprintf("authSource=%s", authSource))
+	}
+
+	if authMechanism != "" {
+		params = append(params, fmt.Sprintf("authMechanism=%s", authMechanism))
 	}
 
 	if directConnection {
