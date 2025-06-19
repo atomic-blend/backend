@@ -8,7 +8,9 @@ import (
 	"atomic_blend_api/controllers/health"
 	"atomic_blend_api/controllers/tags"
 	"atomic_blend_api/controllers/tasks"
+	timeentrycontroller "atomic_blend_api/controllers/timeEntry"
 	"atomic_blend_api/controllers/users"
+	"atomic_blend_api/controllers/webhooks"
 	"atomic_blend_api/cron"
 	"atomic_blend_api/models"
 	"atomic_blend_api/utils/db"
@@ -36,32 +38,8 @@ func main() {
 
 	_ = godotenv.Load()
 
-	mongoURI := os.Getenv("MONGO_URI")
-
-	mongoUsername := os.Getenv("MONGO_USERNAME")
-	mongoPassword := os.Getenv("MONGO_PASSWORD")
-	mongoHost := os.Getenv("MONGO_HOST")
-	mongoPort := os.Getenv("MONGO_PORT")
-	databaseName := os.Getenv("DATABASE_NAME")
-	log.Info().Msgf("MONGO_USERNAME: %s", mongoUsername)
-	log.Info().Msgf("MONGO_HOST: %s", mongoHost)
-	log.Info().Msgf("MONGO_PORT: %s", mongoPort)
-	if mongoUsername != "" && mongoPassword != "" && mongoHost != "" {
-		mongoURI = "mongodb://" + mongoUsername + ":" + mongoPassword + "@" + mongoHost
-		if mongoPort != "" {
-			mongoURI = mongoURI + ":" + mongoPort
-		}
-		if databaseName != "" {
-			mongoURI = mongoURI + "/" + databaseName
-		}
-	} else if mongoURI == "" {
-		mongoURI = "mongodb://mongo_user:password@mongodb:27017"
-	}
-
-	log.Info().Msgf("Connecting to MongoDB at %s", mongoURI)
-
 	// Initialize MongoDB connection
-	client, err := db.ConnectMongo(&mongoURI)
+	client, err := db.ConnectMongo()
 	if err != nil {
 		log.Fatal().Err(err).Msg("❌ Error connecting to MongoDB")
 	}
@@ -107,6 +85,8 @@ func main() {
 	habits.SetupRoutes(router, db.Database)
 	tags.SetupRoutes(router, db.Database)
 	folder.SetupRoutes(router, db.Database)
+	timeentrycontroller.SetupRoutes(router, db.Database)
+	webhooks.SetupRoutes(router, db.Database)
 
 	// Define port
 	port := os.Getenv("PORT")

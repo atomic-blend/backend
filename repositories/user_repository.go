@@ -27,15 +27,16 @@ type UserRepositoryInterface interface {
 	FindByEmail(ctx context.Context, email string) (*models.UserEntity, error)
 	FindByID(ctx *gin.Context, id primitive.ObjectID) (*models.UserEntity, error)
 	ResetAllUserData(ctx *gin.Context, userID primitive.ObjectID) error
+	AddPurchase(ctx *gin.Context, userID primitive.ObjectID, purchaseEntry *models.PurchaseEntity) error
 }
 
 // UserRepository provides methods to interact with user data in the database
 type UserRepository struct {
-	collection *mongo.Collection
-	taskCollection *mongo.Collection
-	habitCollection *mongo.Collection
+	collection           *mongo.Collection
+	taskCollection       *mongo.Collection
+	habitCollection      *mongo.Collection
 	habitEntryCollection *mongo.Collection
-	tagCollection *mongo.Collection
+	tagCollection        *mongo.Collection
 }
 
 // Ensure UserRepository implements UserRepositoryInterface
@@ -47,11 +48,11 @@ func NewUserRepository(database *mongo.Database) *UserRepository {
 		database = db.Database
 	}
 	return &UserRepository{
-		collection: database.Collection(userCollection),
-		taskCollection: database.Collection(taskCollection),
-		habitCollection: database.Collection(habitCollection),
+		collection:           database.Collection(userCollection),
+		taskCollection:       database.Collection(taskCollection),
+		habitCollection:      database.Collection(habitCollection),
 		habitEntryCollection: database.Collection(habitEntryCollection),
-		tagCollection: database.Collection(tagCollection),
+		tagCollection:        database.Collection(tagCollection),
 	}
 }
 
@@ -189,7 +190,7 @@ func (r *UserRepository) FindByID(ctx *gin.Context, d primitive.ObjectID) (*mode
 func (r *UserRepository) ResetAllUserData(ctx *gin.Context, userID primitive.ObjectID) error {
 	// Delete all tasks for the user
 	_, err := r.taskCollection.DeleteMany(ctx, bson.M{"user": userID})
-	if err != nil {	
+	if err != nil {
 		log.Error().Err(err).Msg("Failed to delete user tasks")
 		return err
 	}
@@ -212,6 +213,32 @@ func (r *UserRepository) ResetAllUserData(ctx *gin.Context, userID primitive.Obj
 	_, err = r.tagCollection.DeleteMany(ctx, bson.M{"user_id": userID})
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to delete user tags")
+		return err
+	}
+
+	return nil
+}
+
+// AddPurchase adds a purchase entry to the user
+func (r *UserRepository) AddPurchase(ctx *gin.Context, userID primitive.ObjectID, purchaseEntry *models.PurchaseEntity) error {
+	user, error := r.FindByID(ctx, userID)
+	if error != nil {
+		log.Error().Err(error).Msg("Failed to find user")
+		return error
+	}
+	if user == nil {
+		log.Error().Msg("User not found")
+		return errors.New("user not found")
+	}
+	purchaseEntry.ID = primitive.NewObjectID()
+	purchaseEntry.CreatedAt = primitive.NewDateTimeFromTime(time.Now())
+	purchaseEntry.UpdatedAt = primitive.NewDateTimeFromTime(time.Now())
+
+	// Add the purchase entry to the user's purchases
+	user.Purchases = append(user.Purchases, purchaseEntry)
+	_, err := r.collection.UpdateOne(ctx, bson.M{"_id": user.ID}, bson.M{"$set": bson.M{"purchases": user.Purchases}})
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to update user with purchase entry")
 		return err
 	}
 

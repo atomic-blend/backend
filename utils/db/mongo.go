@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	tls "crypto/tls"
@@ -21,65 +22,97 @@ var MongoClient *mongo.Client
 // Database is the MongoDB database instance
 var Database *mongo.Database
 
-// ConnectMongo initializes and returns a MongoDB client
-func ConnectMongo(uri *string) (*mongo.Client, error) {
-	env := os.Getenv("ENV")
-	databaseName := os.Getenv("DATABASE_NAME")
-	ssl := os.Getenv("MONGO_SSL")
-	tlsConfig := os.Getenv("MONGO_TLS")
-	sslCaCert := os.Getenv("MONGO_SSL_CA_CERT_PATH")
-	retryWrites := os.Getenv("MONGO_RETRY_WRITES")
+func buildMongoURI() string {
+	username := os.Getenv("MONGO_USERNAME")
+	password := os.Getenv("MONGO_PASSWORD")
+	host := os.Getenv("MONGO_HOST")
+	port := os.Getenv("MONGO_PORT")
+	database := os.Getenv("DATABASE_NAME")
 
-	// optionally set ssl and tls and retryWrites if they are set to true
-	if ssl == "true" {
-		log.Debug().Msg("Setting SSL to true")
-		*uri += "?ssl=true"
-	}
-	if tlsConfig == "true" {
-		if ssl != "true" {
-			log.Debug().Msg("Setting TLS to true")
-			*uri += "?tls=true"
-		} else {
-			log.Debug().Msg("Setting TLS to true with SSL")
-			*uri += "&tls=true"
-		}
-	}
-	if retryWrites != "" {
-		if ssl != "true" && tlsConfig != "true" {
-			log.Debug().Msg("Setting retryWrites to true")
-			*uri += "?retryWrites="+retryWrites
-		} else {
-			log.Debug().Msg("Setting retryWrites to true with SSL/TLS")
-			*uri += "&retryWrites="+retryWrites
-		}
-	}
+	// Récupération des paramètres booléens
+	ssl := os.Getenv("MONGO_SSL") == "true"
+	tls := os.Getenv("MONGO_TLS") == "true"
+	retryWrites := os.Getenv("MONGO_RETRY_WRITES") == "true"
+	directConnection := os.Getenv("MONGO_DIRECT_CONNECTION") == "true"
+
+	authSource := os.Getenv("MONGO_AUTH_SOURCE")
 	
+	// Construction de l'URI avec les paramètres
+	uri := fmt.Sprintf("mongodb://%s:%s@%s:%s/%s",
+		username, password, host, port, database)
+
+	// Ajout des paramètres de requête
+	params := []string{}
+
+	if !retryWrites {
+		params = append(params, "retryWrites=false")
+	}
+
+	if authSource != "" {
+		params = append(params, fmt.Sprintf("authSource=%s", authSource))
+	}
+
+	if directConnection {
+		params = append(params, "directConnection=true")
+	} else {
+		params = append(params, "directConnection=false")
+	}
+
+	if ssl {
+		params = append(params, "ssl=true")
+	}
+
+	if tls {
+		params = append(params, "tls=true")
+	}
+
+	// Ajout des timeouts si définis
+	if connectTimeout := os.Getenv("MONGO_CONNECT_TIMEOUT_MS"); connectTimeout != "" {
+		params = append(params, fmt.Sprintf("connectTimeoutMS=%s", connectTimeout))
+	}
+
+	if serverSelectionTimeout := os.Getenv("MONGO_SERVER_SELECTION_TIMEOUT_MS"); serverSelectionTimeout != "" {
+		params = append(params, fmt.Sprintf("serverSelectionTimeoutMS=%s", serverSelectionTimeout))
+	}
+
+	if len(params) > 0 {
+		uri += "?" + strings.Join(params, "&")
+	}
+
+	print(uri)
+
+	return uri
+}
+
+// ConnectMongo initializes and returns a MongoDB client
+func ConnectMongo() (*mongo.Client, error) {
+	env := os.Getenv("ENV")
+	sslCaCert := os.Getenv("MONGO_SSL_CA_CERT_PATH")
+
+	databaseName := os.Getenv("DATABASE_NAME")
+	shortcuts.CheckRequiredEnvVar("DATABASE_NAME", databaseName, "")
+
+	uri := buildMongoURI()
 
 	if env == "test" {
 		// setup in memory mongo for testing
 		log.Debug().Msg("Setting up in memory mongo for testing")
 		return nil, nil
 	}
-	if uri == nil {
-		err := fmt.Errorf("MONGO_URI is not set")
-		return nil, err
-	}
 
-	shortcuts.CheckRequiredEnvVar("DATABASE_NAME", databaseName, "")
-
-	clientOptions := options.Client().ApplyURI(*uri)
+	clientOptions := options.Client().ApplyURI(uri)
 	if sslCaCert != "" {
 		// Load CA cert if provided
 		caCert, err := os.ReadFile(sslCaCert)
 		if err != nil {
 			return nil, fmt.Errorf("failed to read CA certificate: %w", err)
 		}
-		
+
 		certPool := x509.NewCertPool()
 		if !certPool.AppendCertsFromPEM(caCert) {
 			return nil, fmt.Errorf("failed to append CA certificate")
 		}
-		
+
 		tlsConfig := &tls.Config{
 			MinVersion: tls.VersionTLS12,
 			RootCAs:    certPool,
