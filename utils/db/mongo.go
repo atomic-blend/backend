@@ -23,6 +23,13 @@ var MongoClient *mongo.Client
 var Database *mongo.Database
 
 func buildMongoURI() string {
+	// Check if MONGO_URI is provided as a complete URI
+	if mongoURI := os.Getenv("MONGO_URI"); mongoURI != "" {
+		log.Debug().Msg("Using provided MONGO_URI")
+		return mongoURI
+	}
+
+	// Fallback to building URI from individual environment variables
 	username := os.Getenv("MONGO_USERNAME")
 	password := os.Getenv("MONGO_PASSWORD")
 	host := os.Getenv("MONGO_HOST")
@@ -32,12 +39,11 @@ func buildMongoURI() string {
 	// Récupération des paramètres booléens
 	ssl := os.Getenv("MONGO_SSL") == "true"
 	tls := os.Getenv("MONGO_TLS") == "true"
-	retryWrites := os.Getenv("MONGO_RETRY_WRITES") == "true"
 	directConnection := os.Getenv("MONGO_DIRECT_CONNECTION") == "true"
 
 	authSource := os.Getenv("MONGO_AUTH_SOURCE")
 	authMechanism := os.Getenv("MONGO_AUTH_MECHANISM")
-	
+
 	// Construction de l'URI avec les paramètres
 	uri := fmt.Sprintf("mongodb://%s:%s@%s:%s/%s",
 		username, password, host, port, database)
@@ -45,8 +51,14 @@ func buildMongoURI() string {
 	// Ajout des paramètres de requête
 	params := []string{}
 
-	if !retryWrites {
-		params = append(params, "retryWrites=false")
+	// Add retryWrites if explicitly set to true or false
+	if retryWritesEnv := os.Getenv("MONGO_RETRY_WRITES"); retryWritesEnv != "" {
+		switch retryWritesEnv {
+		case "true":
+			params = append(params, "retryWrites=true")
+		case "false":
+			params = append(params, "retryWrites=false")
+		}
 	}
 
 	if authSource != "" {
@@ -57,10 +69,13 @@ func buildMongoURI() string {
 		params = append(params, fmt.Sprintf("authMechanism=%s", authMechanism))
 	}
 
-	if directConnection {
-		params = append(params, "directConnection=true")
-	} else {
-		params = append(params, "directConnection=false")
+	// Only add directConnection if explicitly set
+	if os.Getenv("MONGO_DIRECT_CONNECTION") != "" {
+		if directConnection {
+			params = append(params, "directConnection=true")
+		} else {
+			params = append(params, "directConnection=false")
+		}
 	}
 
 	if ssl {
