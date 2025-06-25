@@ -2,6 +2,15 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## 0.7.0 - 2025-06-25
+#### Features
+- add deleted note boolean - (3c6419f) - Brandon Guigo
+- add notes controller - (ae298b9) - Brandon Guigo
+#### Miscellaneous Chores
+- **(release)** 0.6.3 [skip ci] - (49d1f62) - GitHub Actions
+
+- - -
+
 ## 0.6.3 - 2025-06-19
 #### Bug Fixes
 - make CORS configurable by env var - (d678f72) - Brandon Guigo
