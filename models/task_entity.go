@@ -2,6 +2,24 @@ package models
 
 import "go.mongodb.org/mongo-driver/bson/primitive"
 
+// ConflictedItem represents a conflicted item during bulk operations
+type ConflictedItem struct {
+	Type string      `json:"type"`
+	Old  interface{} `json:"old"`
+	New  interface{} `json:"new"`
+}
+
+// BulkTaskRequest represents the request payload for bulk task operations
+type BulkTaskRequest struct {
+	Tasks []*TaskEntity `json:"tasks" binding:"required"`
+}
+
+// BulkTaskResponse represents the response for bulk task operations
+type BulkTaskResponse struct {
+	Updated   []*TaskEntity     `json:"updated"`
+	Conflicts []*ConflictedItem `json:"conflicts"`
+}
+
 // TaskEntity represents a task
 type TaskEntity struct {
 	ID          string                `json:"id" bson:"_id"`

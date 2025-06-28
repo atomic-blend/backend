@@ -45,6 +45,7 @@ func setupTaskRoutes(router *gin.Engine, taskController *TaskController) {
 		taskRoutes.GET("/:id", taskController.GetTaskByID)
 		taskRoutes.POST("", taskController.CreateTask)
 		taskRoutes.PUT("/:id", taskController.UpdateTask)
+		taskRoutes.PUT("/bulk", taskController.BulkUpdateTasks)
 		taskRoutes.DELETE("/:id", taskController.DeleteTask)
 	}
 }
