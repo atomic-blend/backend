@@ -294,8 +294,8 @@ func TestTaskRepository_BulkUpdate(t *testing.T) {
 		assert.Len(t, updated, 0)
 		assert.Len(t, conflicts, 1)
 		assert.Equal(t, "task", conflicts[0].Type)
-		assert.Equal(t, "Recently Updated Task", conflicts[0].Old.(*models.TaskEntity).Title)
-		assert.Equal(t, "Conflicting Update", conflicts[0].New.(*models.TaskEntity).Title)
+		assert.Equal(t, "Recently Updated Task", conflicts[0].OldItem.(*models.TaskEntity).Title)
+		assert.Equal(t, "Conflicting Update", conflicts[0].NewItem.(*models.TaskEntity).Title)
 	})
 
 	t.Run("bulk update with new task creation", func(t *testing.T) {
@@ -386,8 +386,8 @@ func TestTaskRepository_BulkUpdate(t *testing.T) {
 
 		// Check conflict
 		assert.Equal(t, "task", conflicts[0].Type)
-		assert.Equal(t, "Database Updated Task", conflicts[0].Old.(*models.TaskEntity).Title)
-		assert.Equal(t, "Conflicting Update", conflicts[0].New.(*models.TaskEntity).Title)
+		assert.Equal(t, "Database Updated Task", conflicts[0].OldItem.(*models.TaskEntity).Title)
+		assert.Equal(t, "Conflicting Update", conflicts[0].NewItem.(*models.TaskEntity).Title)
 
 		// Check updates
 		updatedTitles := []string{updated[0].Title, updated[1].Title}

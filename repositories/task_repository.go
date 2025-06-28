@@ -187,9 +187,9 @@ func (r *TaskRepository) BulkUpdate(ctx context.Context, tasks []*models.TaskEnt
 		if existingTask.UpdatedAt.Time().After(task.UpdatedAt.Time()) {
 			// Database version is more recent, add to conflicts
 			conflict := &models.ConflictedItem{
-				Type: "task",
-				Old:  existingTask,
-				New:  task,
+				Type:    "task",
+				OldItem: existingTask,
+				NewItem: task,
 			}
 			conflicts = append(conflicts, conflict)
 		} else {

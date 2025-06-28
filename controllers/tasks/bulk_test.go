@@ -119,8 +119,8 @@ func TestBulkUpdateTasks(t *testing.T) {
 		conflicts := []*models.ConflictedItem{
 			{
 				Type: "task",
-				Old:  existingTask1,
-				New:  task1,
+				OldItem:  existingTask1,
+				NewItem:  task1,
 			},
 		}
 
