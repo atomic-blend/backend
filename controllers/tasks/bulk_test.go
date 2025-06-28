@@ -28,17 +28,17 @@ func TestBulkUpdateTasks(t *testing.T) {
 	t.Run("successful bulk update with no conflicts", func(t *testing.T) {
 		// Create new mocks for this test
 		_, mockTaskRepo, mockTagRepo := setupTest()
-		
+
 		// Create authenticated user
 		userID := primitive.NewObjectID()
-		
+
 		// Create test tasks without tags to avoid validation calls
 		task1 := createTestTask()
 		task1.ID = primitive.NewObjectID().Hex()
 		task1.User = userID
 		task1.Title = "Updated Task 1"
 		task1.Tags = nil // Remove tags to avoid validation calls
-		
+
 		task2 := createTestTask()
 		task2.ID = primitive.NewObjectID().Hex()
 		task2.User = userID
@@ -46,14 +46,14 @@ func TestBulkUpdateTasks(t *testing.T) {
 		task2.Tags = nil // Remove tags to avoid validation calls
 
 		// Create request
-		request := models.BulkTaskRequest{
+		request := BulkTaskRequest{
 			Tasks: []*models.TaskEntity{task1, task2},
 		}
 
 		// Mock repository response - no conflicts, all updated
 		updatedTasks := []*models.TaskEntity{task1, task2}
 		var conflicts []*models.ConflictedItem
-		
+
 		mockTaskRepo.On("BulkUpdate", mock.Anything, mock.AnythingOfType("[]*models.TaskEntity")).Return(updatedTasks, conflicts, nil)
 
 		requestJSON, _ := json.Marshal(request)
@@ -71,7 +71,7 @@ func TestBulkUpdateTasks(t *testing.T) {
 		controller.BulkUpdateTasks(ctx)
 
 		assert.Equal(t, http.StatusOK, w.Code)
-		var response models.BulkTaskResponse
+		var response BulkTaskResponse
 		err := json.Unmarshal(w.Body.Bytes(), &response)
 		assert.NoError(t, err)
 		assert.Len(t, response.Updated, 2)
@@ -83,16 +83,16 @@ func TestBulkUpdateTasks(t *testing.T) {
 	t.Run("bulk update with conflicts", func(t *testing.T) {
 		// Create new mocks for this test
 		_, mockTaskRepo, mockTagRepo := setupTest()
-		
+
 		// Create authenticated user
 		userID := primitive.NewObjectID()
-		
+
 		// Create test tasks
 		task1 := createTestTask()
 		task1.ID = primitive.NewObjectID().Hex()
 		task1.User = userID
 		task1.Title = "Updated Task 1"
-		task1.Tags = nil // Remove tags to avoid validation calls
+		task1.Tags = nil                                                                // Remove tags to avoid validation calls
 		task1.UpdatedAt = primitive.NewDateTimeFromTime(time.Now().Add(-1 * time.Hour)) // Older timestamp
 
 		task2 := createTestTask()
@@ -106,11 +106,11 @@ func TestBulkUpdateTasks(t *testing.T) {
 		existingTask1.ID = task1.ID
 		existingTask1.User = userID
 		existingTask1.Title = "Existing Task 1 (More Recent)"
-		existingTask1.Tags = nil // Remove tags to avoid validation calls
+		existingTask1.Tags = nil                                            // Remove tags to avoid validation calls
 		existingTask1.UpdatedAt = primitive.NewDateTimeFromTime(time.Now()) // More recent timestamp
 
 		// Create request
-		request := models.BulkTaskRequest{
+		request := BulkTaskRequest{
 			Tasks: []*models.TaskEntity{task1, task2},
 		}
 
@@ -123,7 +123,7 @@ func TestBulkUpdateTasks(t *testing.T) {
 				New:  task1,
 			},
 		}
-		
+
 		mockTaskRepo.On("BulkUpdate", mock.Anything, mock.AnythingOfType("[]*models.TaskEntity")).Return(updatedTasks, conflicts, nil)
 
 		requestJSON, _ := json.Marshal(request)
@@ -141,7 +141,7 @@ func TestBulkUpdateTasks(t *testing.T) {
 		controller.BulkUpdateTasks(ctx)
 
 		assert.Equal(t, http.StatusOK, w.Code)
-		var response models.BulkTaskResponse
+		var response BulkTaskResponse
 		err := json.Unmarshal(w.Body.Bytes(), &response)
 		assert.NoError(t, err)
 		assert.Len(t, response.Updated, 1)
@@ -153,10 +153,10 @@ func TestBulkUpdateTasks(t *testing.T) {
 	t.Run("bulk update with tags validation", func(t *testing.T) {
 		// Create new mocks for this test
 		_, mockTaskRepo, mockTagRepo := setupTest()
-		
+
 		// Create authenticated user
 		userID := primitive.NewObjectID()
-		
+
 		// Create test task with tags
 		task1 := createTestTask()
 		task1.ID = primitive.NewObjectID().Hex()
@@ -181,7 +181,7 @@ func TestBulkUpdateTasks(t *testing.T) {
 		task1.Tags = &tags
 
 		// Create request
-		request := models.BulkTaskRequest{
+		request := BulkTaskRequest{
 			Tasks: []*models.TaskEntity{task1},
 		}
 
@@ -192,7 +192,7 @@ func TestBulkUpdateTasks(t *testing.T) {
 		// Mock repository response
 		updatedTasks := []*models.TaskEntity{task1}
 		var conflicts []*models.ConflictedItem
-		
+
 		mockTaskRepo.On("BulkUpdate", mock.Anything, mock.AnythingOfType("[]*models.TaskEntity")).Return(updatedTasks, conflicts, nil)
 
 		requestJSON, _ := json.Marshal(request)
@@ -210,7 +210,7 @@ func TestBulkUpdateTasks(t *testing.T) {
 		controller.BulkUpdateTasks(ctx)
 
 		assert.Equal(t, http.StatusOK, w.Code)
-		var response models.BulkTaskResponse
+		var response BulkTaskResponse
 		err := json.Unmarshal(w.Body.Bytes(), &response)
 		assert.NoError(t, err)
 		assert.Len(t, response.Updated, 1)
@@ -222,8 +222,8 @@ func TestBulkUpdateTasks(t *testing.T) {
 	t.Run("unauthorized access - no auth user", func(t *testing.T) {
 		task1 := createTestTask()
 		task1.ID = primitive.NewObjectID().Hex()
-		
-		request := models.BulkTaskRequest{
+
+		request := BulkTaskRequest{
 			Tasks: []*models.TaskEntity{task1},
 		}
 
@@ -248,12 +248,12 @@ func TestBulkUpdateTasks(t *testing.T) {
 	t.Run("empty tasks array", func(t *testing.T) {
 		// Create new mocks for this test
 		_, mockTaskRepo, mockTagRepo := setupTest()
-		
+
 		// Create authenticated user
 		userID := primitive.NewObjectID()
-		
+
 		// Create request with empty tasks array
-		request := models.BulkTaskRequest{
+		request := BulkTaskRequest{
 			Tasks: []*models.TaskEntity{},
 		}
 
@@ -281,10 +281,10 @@ func TestBulkUpdateTasks(t *testing.T) {
 	t.Run("task without ID", func(t *testing.T) {
 		// Create new mocks for this test
 		_, mockTaskRepo, mockTagRepo := setupTest()
-		
+
 		// Create authenticated user
 		userID := primitive.NewObjectID()
-		
+
 		// Create test task without ID
 		task1 := createTestTask()
 		task1.ID = "" // No ID provided
@@ -292,7 +292,7 @@ func TestBulkUpdateTasks(t *testing.T) {
 		task1.Tags = nil // Remove tags to avoid validation calls
 
 		// Create request
-		request := models.BulkTaskRequest{
+		request := BulkTaskRequest{
 			Tasks: []*models.TaskEntity{task1},
 		}
 
@@ -321,7 +321,7 @@ func TestBulkUpdateTasks(t *testing.T) {
 	t.Run("tag validation - invalid tag ID", func(t *testing.T) {
 		// Create new mocks for this test
 		_, mockTaskRepo, mockTagRepo := setupTest()
-		
+
 		// Create authenticated user
 		userID := primitive.NewObjectID()
 		invalidTagID := primitive.NewObjectID()
@@ -343,7 +343,7 @@ func TestBulkUpdateTasks(t *testing.T) {
 		task1.Tags = &tags
 
 		// Create request
-		request := models.BulkTaskRequest{
+		request := BulkTaskRequest{
 			Tasks: []*models.TaskEntity{task1},
 		}
 
@@ -375,7 +375,7 @@ func TestBulkUpdateTasks(t *testing.T) {
 	t.Run("tag validation - tag belongs to another user", func(t *testing.T) {
 		// Create new mocks for this test
 		_, mockTaskRepo, mockTagRepo := setupTest()
-		
+
 		// Create authenticated user
 		userID := primitive.NewObjectID()
 		anotherUserID := primitive.NewObjectID() // Different user ID
@@ -398,7 +398,7 @@ func TestBulkUpdateTasks(t *testing.T) {
 		task1.Tags = &tags
 
 		// Create request
-		request := models.BulkTaskRequest{
+		request := BulkTaskRequest{
 			Tasks: []*models.TaskEntity{task1},
 		}
 
