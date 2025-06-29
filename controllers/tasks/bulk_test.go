@@ -46,9 +46,7 @@ func TestBulkUpdateTasks(t *testing.T) {
 		task2.Tags = nil // Remove tags to avoid validation calls
 
 		// Create request
-		request := BulkTaskRequest{
-			Tasks: []*models.TaskEntity{task1, task2},
-		}
+		tasks := []*models.TaskEntity{task1, task2}
 
 		// Mock repository response - no conflicts, all updated
 		updatedTasks := []*models.TaskEntity{task1, task2}
@@ -56,7 +54,7 @@ func TestBulkUpdateTasks(t *testing.T) {
 
 		mockTaskRepo.On("BulkUpdate", mock.Anything, mock.AnythingOfType("[]*models.TaskEntity")).Return(updatedTasks, conflicts, nil)
 
-		requestJSON, _ := json.Marshal(request)
+		requestJSON, _ := json.Marshal(tasks)
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("PUT", "/tasks/bulk", bytes.NewBuffer(requestJSON))
 		req.Header.Set("Content-Type", "application/json")
@@ -110,23 +108,21 @@ func TestBulkUpdateTasks(t *testing.T) {
 		existingTask1.UpdatedAt = primitive.NewDateTimeFromTime(time.Now()) // More recent timestamp
 
 		// Create request
-		request := BulkTaskRequest{
-			Tasks: []*models.TaskEntity{task1, task2},
-		}
+		tasks := []*models.TaskEntity{task1, task2}
 
 		// Mock repository response - one conflict, one update
 		updatedTasks := []*models.TaskEntity{task2} // Only task2 gets updated
 		conflicts := []*models.ConflictedItem{
 			{
-				Type: "task",
-				OldItem:  existingTask1,
-				NewItem:  task1,
+				Type:    "task",
+				OldItem: existingTask1,
+				NewItem: task1,
 			},
 		}
 
 		mockTaskRepo.On("BulkUpdate", mock.Anything, mock.AnythingOfType("[]*models.TaskEntity")).Return(updatedTasks, conflicts, nil)
 
-		requestJSON, _ := json.Marshal(request)
+		requestJSON, _ := json.Marshal(tasks)
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("PUT", "/tasks/bulk", bytes.NewBuffer(requestJSON))
 		req.Header.Set("Content-Type", "application/json")
@@ -181,9 +177,7 @@ func TestBulkUpdateTasks(t *testing.T) {
 		task1.Tags = &tags
 
 		// Create request
-		request := BulkTaskRequest{
-			Tasks: []*models.TaskEntity{task1},
-		}
+		tasks := []*models.TaskEntity{task1}
 
 		// Mock tag validation - for each tag, return a valid tag owned by the user
 		mockTagRepo.On("GetByID", mock.Anything, tagID1).Return(tags[0], nil).Once()
@@ -195,7 +189,7 @@ func TestBulkUpdateTasks(t *testing.T) {
 
 		mockTaskRepo.On("BulkUpdate", mock.Anything, mock.AnythingOfType("[]*models.TaskEntity")).Return(updatedTasks, conflicts, nil)
 
-		requestJSON, _ := json.Marshal(request)
+		requestJSON, _ := json.Marshal(tasks)
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("PUT", "/tasks/bulk", bytes.NewBuffer(requestJSON))
 		req.Header.Set("Content-Type", "application/json")
@@ -223,11 +217,9 @@ func TestBulkUpdateTasks(t *testing.T) {
 		task1 := createTestTask()
 		task1.ID = primitive.NewObjectID().Hex()
 
-		request := BulkTaskRequest{
-			Tasks: []*models.TaskEntity{task1},
-		}
+		tasks := []*models.TaskEntity{task1}
 
-		requestJSON, _ := json.Marshal(request)
+		requestJSON, _ := json.Marshal(tasks)
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("PUT", "/tasks/bulk", bytes.NewBuffer(requestJSON))
 		req.Header.Set("Content-Type", "application/json")
@@ -253,11 +245,9 @@ func TestBulkUpdateTasks(t *testing.T) {
 		userID := primitive.NewObjectID()
 
 		// Create request with empty tasks array
-		request := BulkTaskRequest{
-			Tasks: []*models.TaskEntity{},
-		}
+		tasks := []*models.TaskEntity{}
 
-		requestJSON, _ := json.Marshal(request)
+		requestJSON, _ := json.Marshal(tasks)
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("PUT", "/tasks/bulk", bytes.NewBuffer(requestJSON))
 		req.Header.Set("Content-Type", "application/json")
@@ -292,11 +282,9 @@ func TestBulkUpdateTasks(t *testing.T) {
 		task1.Tags = nil // Remove tags to avoid validation calls
 
 		// Create request
-		request := BulkTaskRequest{
-			Tasks: []*models.TaskEntity{task1},
-		}
+		tasks := []*models.TaskEntity{task1}
 
-		requestJSON, _ := json.Marshal(request)
+		requestJSON, _ := json.Marshal(tasks)
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("PUT", "/tasks/bulk", bytes.NewBuffer(requestJSON))
 		req.Header.Set("Content-Type", "application/json")
@@ -343,14 +331,12 @@ func TestBulkUpdateTasks(t *testing.T) {
 		task1.Tags = &tags
 
 		// Create request
-		request := BulkTaskRequest{
-			Tasks: []*models.TaskEntity{task1},
-		}
+		tasks := []*models.TaskEntity{task1}
 
 		// Mock tag validation to return nil for the invalid tag ID
 		mockTagRepo.On("GetByID", mock.Anything, invalidTagID).Return(nil, nil).Once()
 
-		requestJSON, _ := json.Marshal(request)
+		requestJSON, _ := json.Marshal(tasks)
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("PUT", "/tasks/bulk", bytes.NewBuffer(requestJSON))
 		req.Header.Set("Content-Type", "application/json")
@@ -398,9 +384,7 @@ func TestBulkUpdateTasks(t *testing.T) {
 		task1.Tags = &tags
 
 		// Create request
-		request := BulkTaskRequest{
-			Tasks: []*models.TaskEntity{task1},
-		}
+		tasks := []*models.TaskEntity{task1}
 
 		// Mock tag validation to return a tag owned by another user
 		dbTag := &models.Tag{
@@ -410,7 +394,7 @@ func TestBulkUpdateTasks(t *testing.T) {
 		}
 		mockTagRepo.On("GetByID", mock.Anything, tagID).Return(dbTag, nil).Once()
 
-		requestJSON, _ := json.Marshal(request)
+		requestJSON, _ := json.Marshal(tasks)
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("PUT", "/tasks/bulk", bytes.NewBuffer(requestJSON))
 		req.Header.Set("Content-Type", "application/json")

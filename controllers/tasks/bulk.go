@@ -14,7 +14,7 @@ import (
 // @Tags Tasks
 // @Accept json
 // @Produce json
-// @Param tasks body BulkTaskRequest true "Tasks to update"
+// @Param tasks body []models.TaskEntity true "Tasks to update"
 // @Success 200 {object} BulkTaskResponse
 // @Failure 400 {object} map[string]interface{}
 // @Failure 401 {object} map[string]interface{}
@@ -30,20 +30,20 @@ func (c *TaskController) BulkUpdateTasks(ctx *gin.Context) {
 	}
 
 	// Bind the request payload
-	var request BulkTaskRequest
-	if err := ctx.ShouldBindJSON(&request); err != nil {
+	var tasks []*models.TaskEntity
+	if err := ctx.ShouldBindJSON(&tasks); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	// Validate that tasks are provided
-	if len(request.Tasks) == 0 {
+	if len(tasks) == 0 {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "At least one task is required"})
 		return
 	}
 
 	// Validate ownership and tags for all tasks
-	for i, task := range request.Tasks {
+	for i, task := range tasks {
 		// Validate task ID is provided
 		if task.ID == "" {
 			ctx.JSON(http.StatusBadRequest, gin.H{
@@ -104,7 +104,7 @@ func (c *TaskController) BulkUpdateTasks(ctx *gin.Context) {
 	}
 
 	// Perform bulk update
-	updated, conflicts, err := c.taskRepo.BulkUpdate(ctx, request.Tasks)
+	updated, conflicts, err := c.taskRepo.BulkUpdate(ctx, tasks)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
