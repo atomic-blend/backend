@@ -61,10 +61,7 @@ func TaskDueNotificationCron() {
 			continue
 		}
 
-		log.Debug().Msgf("Processing user: %s", user.ID)
 		// get the tasks for the user
-		//TODO: replace with a cursor here
-
 		tasks, err := taskRepo.GetAll(ctx, user.ID)
 		if err != nil {
 			log.Error().Err(err).Msg("Failed to get tasks for user")
