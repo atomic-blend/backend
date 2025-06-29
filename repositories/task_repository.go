@@ -193,12 +193,18 @@ func (r *TaskRepository) BulkUpdate(ctx context.Context, tasks []*models.TaskEnt
 			}
 			conflicts = append(conflicts, conflict)
 		} else {
-			// Update the task
-			updatedTask, err := r.Update(ctx, task.ID, task)
-			if err != nil {
-				return nil, nil, err
+			// Check if task has actually changed before updating
+			if !existingTask.Equals(task) {
+				// Update the task only if there are changes
+				updatedTask, err := r.Update(ctx, task.ID, task)
+				if err != nil {
+					return nil, nil, err
+				}
+				updated = append(updated, updatedTask)
+			} else {
+				// No changes, add existing task to updated list
+				updated = append(updated, existingTask)
 			}
-			updated = append(updated, updatedTask)
 		}
 	}
 
