@@ -83,17 +83,21 @@ func (m *MockTaskRepository) UpdateTimeEntry(ctx context.Context, taskID string,
 }
 
 // BulkUpdate updates multiple tasks, handling conflicts when existing tasks are more recent
-func (m *MockTaskRepository) BulkUpdate(ctx context.Context, tasks []*models.TaskEntity) ([]*models.TaskEntity, []*models.ConflictedItem, error) {
+func (m *MockTaskRepository) BulkUpdate(ctx context.Context, tasks []*models.TaskEntity) ([]*models.TaskEntity, []*models.TaskEntity, []*models.ConflictedItem, error) {
 	args := m.Called(ctx, tasks)
 	var updated []*models.TaskEntity
+	var skipped []*models.TaskEntity
 	var conflicts []*models.ConflictedItem
-	
+
 	if args.Get(0) != nil {
 		updated = args.Get(0).([]*models.TaskEntity)
 	}
 	if args.Get(1) != nil {
-		conflicts = args.Get(1).([]*models.ConflictedItem)
+		skipped = args.Get(1).([]*models.TaskEntity)
 	}
-	
-	return updated, conflicts, args.Error(2)
+	if args.Get(2) != nil {
+		conflicts = args.Get(2).([]*models.ConflictedItem)
+	}
+
+	return updated, skipped, conflicts, args.Error(3)
 }

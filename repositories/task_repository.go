@@ -20,7 +20,7 @@ type TaskRepositoryInterface interface {
 	Create(ctx context.Context, task *models.TaskEntity) (*models.TaskEntity, error)
 	Update(ctx context.Context, id string, task *models.TaskEntity) (*models.TaskEntity, error)
 	Delete(ctx context.Context, id string) error
-	BulkUpdate(ctx context.Context, tasks []*models.TaskEntity) ([]*models.TaskEntity, []*models.ConflictedItem, error)
+	BulkUpdate(ctx context.Context, tasks []*models.TaskEntity) ([]*models.TaskEntity, []*models.TaskEntity, []*models.ConflictedItem, error)
 }
 
 // TaskRepository handles database operations related to tasks
@@ -96,17 +96,17 @@ func (r *TaskRepository) Create(ctx context.Context, task *models.TaskEntity) (*
 	}
 
 	_, err = r.collection.InsertOne(ctx, bson.M{
-		"_id":          objID,
-		"title":        task.Title,
-		"user":         task.User,
-		"description":  task.Description,
-		"start_date":   task.StartDate,
-		"end_date":     task.EndDate,
-		"completed":    task.Completed,
-		"reminders":    task.Reminders,
-		"priority":     task.Priority,
-		"created_at":   task.CreatedAt,
-		"updated_at":   task.UpdatedAt,
+		"_id":         objID,
+		"title":       task.Title,
+		"user":        task.User,
+		"description": task.Description,
+		"start_date":  task.StartDate,
+		"end_date":    task.EndDate,
+		"completed":   task.Completed,
+		"reminders":   task.Reminders,
+		"priority":    task.Priority,
+		"created_at":  task.CreatedAt,
+		"updated_at":  task.UpdatedAt,
 	})
 
 	if err != nil {
@@ -162,22 +162,23 @@ func (r *TaskRepository) Delete(ctx context.Context, id string) error {
 }
 
 // BulkUpdate updates multiple tasks, handling conflicts when existing tasks are more recent
-func (r *TaskRepository) BulkUpdate(ctx context.Context, tasks []*models.TaskEntity) ([]*models.TaskEntity, []*models.ConflictedItem, error) {
+func (r *TaskRepository) BulkUpdate(ctx context.Context, tasks []*models.TaskEntity) ([]*models.TaskEntity, []*models.TaskEntity, []*models.ConflictedItem, error) {
 	var updated []*models.TaskEntity
+	var skipped []*models.TaskEntity
 	var conflicts []*models.ConflictedItem
 
 	for _, task := range tasks {
 		// Get existing task from database
 		existingTask, err := r.GetByID(ctx, task.ID)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 
 		// If task doesn't exist, create it
 		if existingTask == nil {
 			createdTask, err := r.Create(ctx, task)
 			if err != nil {
-				return nil, nil, err
+				return nil, nil, nil, err
 			}
 			updated = append(updated, createdTask)
 			continue
@@ -186,6 +187,7 @@ func (r *TaskRepository) BulkUpdate(ctx context.Context, tasks []*models.TaskEnt
 		// Compare UpdatedAt timestamps to detect conflicts
 		if existingTask.UpdatedAt.Time().After(task.UpdatedAt.Time()) {
 			// Database version is more recent, add to conflicts
+			println("Conflict detected for task ID:", task.ID)
 			conflict := &models.ConflictedItem{
 				Type:    "task",
 				OldItem: existingTask,
@@ -194,19 +196,19 @@ func (r *TaskRepository) BulkUpdate(ctx context.Context, tasks []*models.TaskEnt
 			conflicts = append(conflicts, conflict)
 		} else {
 			// Check if task has actually changed before updating
-			if !existingTask.Equals(task) {
+			if !existingTask.UpdatedAt.Time().Equal(task.UpdatedAt.Time()) {
 				// Update the task only if there are changes
 				updatedTask, err := r.Update(ctx, task.ID, task)
 				if err != nil {
-					return nil, nil, err
+					return nil, nil, nil, err
 				}
 				updated = append(updated, updatedTask)
 			} else {
-				// No changes, add existing task to updated list
-				updated = append(updated, existingTask)
+				// No changes, add task to skipped list
+				skipped = append(skipped, existingTask)
 			}
 		}
 	}
 
-	return updated, conflicts, nil
+	return updated, skipped, conflicts, nil
 }

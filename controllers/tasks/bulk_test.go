@@ -50,9 +50,10 @@ func TestBulkUpdateTasks(t *testing.T) {
 
 		// Mock repository response - no conflicts, all updated
 		updatedTasks := []*models.TaskEntity{task1, task2}
+		var skipped []*models.TaskEntity
 		var conflicts []*models.ConflictedItem
 
-		mockTaskRepo.On("BulkUpdate", mock.Anything, mock.AnythingOfType("[]*models.TaskEntity")).Return(updatedTasks, conflicts, nil)
+		mockTaskRepo.On("BulkUpdate", mock.Anything, mock.AnythingOfType("[]*models.TaskEntity")).Return(updatedTasks, skipped, conflicts, nil)
 
 		requestJSON, _ := json.Marshal(tasks)
 		w := httptest.NewRecorder()
@@ -73,6 +74,7 @@ func TestBulkUpdateTasks(t *testing.T) {
 		err := json.Unmarshal(w.Body.Bytes(), &response)
 		assert.NoError(t, err)
 		assert.Len(t, response.Updated, 2)
+		assert.Len(t, response.Skipped, 0)
 		assert.Len(t, response.Conflicts, 0)
 		assert.Equal(t, task1.Title, response.Updated[0].Title)
 		assert.Equal(t, task2.Title, response.Updated[1].Title)
@@ -112,6 +114,7 @@ func TestBulkUpdateTasks(t *testing.T) {
 
 		// Mock repository response - one conflict, one update
 		updatedTasks := []*models.TaskEntity{task2} // Only task2 gets updated
+		var skipped []*models.TaskEntity
 		conflicts := []*models.ConflictedItem{
 			{
 				Type:    "task",
@@ -120,7 +123,7 @@ func TestBulkUpdateTasks(t *testing.T) {
 			},
 		}
 
-		mockTaskRepo.On("BulkUpdate", mock.Anything, mock.AnythingOfType("[]*models.TaskEntity")).Return(updatedTasks, conflicts, nil)
+		mockTaskRepo.On("BulkUpdate", mock.Anything, mock.AnythingOfType("[]*models.TaskEntity")).Return(updatedTasks, skipped, conflicts, nil)
 
 		requestJSON, _ := json.Marshal(tasks)
 		w := httptest.NewRecorder()
@@ -141,6 +144,7 @@ func TestBulkUpdateTasks(t *testing.T) {
 		err := json.Unmarshal(w.Body.Bytes(), &response)
 		assert.NoError(t, err)
 		assert.Len(t, response.Updated, 1)
+		assert.Len(t, response.Skipped, 0)
 		assert.Len(t, response.Conflicts, 1)
 		assert.Equal(t, task2.Title, response.Updated[0].Title)
 		assert.Equal(t, "task", response.Conflicts[0].Type)
@@ -185,9 +189,10 @@ func TestBulkUpdateTasks(t *testing.T) {
 
 		// Mock repository response
 		updatedTasks := []*models.TaskEntity{task1}
+		var skipped []*models.TaskEntity
 		var conflicts []*models.ConflictedItem
 
-		mockTaskRepo.On("BulkUpdate", mock.Anything, mock.AnythingOfType("[]*models.TaskEntity")).Return(updatedTasks, conflicts, nil)
+		mockTaskRepo.On("BulkUpdate", mock.Anything, mock.AnythingOfType("[]*models.TaskEntity")).Return(updatedTasks, skipped, conflicts, nil)
 
 		requestJSON, _ := json.Marshal(tasks)
 		w := httptest.NewRecorder()
@@ -208,9 +213,58 @@ func TestBulkUpdateTasks(t *testing.T) {
 		err := json.Unmarshal(w.Body.Bytes(), &response)
 		assert.NoError(t, err)
 		assert.Len(t, response.Updated, 1)
+		assert.Len(t, response.Skipped, 0)
 		assert.Len(t, response.Conflicts, 0)
 		assert.NotNil(t, response.Updated[0].Tags)
 		assert.Len(t, *response.Updated[0].Tags, 2)
+	})
+
+	t.Run("bulk update with no changes - tasks should be skipped", func(t *testing.T) {
+		// Create new mocks for this test
+		_, mockTaskRepo, mockTagRepo := setupTest()
+
+		// Create authenticated user
+		userID := primitive.NewObjectID()
+
+		// Create test task - exactly the same as existing task
+		task1 := createTestTask()
+		task1.ID = primitive.NewObjectID().Hex()
+		task1.User = userID
+		task1.Title = "Unchanged Task"
+		task1.Tags = nil
+
+		// Create request
+		tasks := []*models.TaskEntity{task1}
+
+		// Mock repository response - no updates, one skipped
+		var updatedTasks []*models.TaskEntity
+		skippedTasks := []*models.TaskEntity{task1}
+		var conflicts []*models.ConflictedItem
+
+		mockTaskRepo.On("BulkUpdate", mock.Anything, mock.AnythingOfType("[]*models.TaskEntity")).Return(updatedTasks, skippedTasks, conflicts, nil)
+
+		requestJSON, _ := json.Marshal(tasks)
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("PUT", "/tasks/bulk", bytes.NewBuffer(requestJSON))
+		req.Header.Set("Content-Type", "application/json")
+
+		// Create a context and set auth user
+		ctx, _ := gin.CreateTestContext(w)
+		ctx.Request = req
+		ctx.Set("authUser", &auth.UserAuthInfo{UserID: userID})
+
+		// Call the handler directly
+		controller := NewTaskController(mockTaskRepo, mockTagRepo)
+		controller.BulkUpdateTasks(ctx)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+		var response BulkTaskResponse
+		err := json.Unmarshal(w.Body.Bytes(), &response)
+		assert.NoError(t, err)
+		assert.Len(t, response.Updated, 0)
+		assert.Len(t, response.Skipped, 1)
+		assert.Len(t, response.Conflicts, 0)
+		assert.Equal(t, task1.Title, response.Skipped[0].Title)
 	})
 
 	t.Run("unauthorized access - no auth user", func(t *testing.T) {

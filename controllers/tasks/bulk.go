@@ -104,7 +104,7 @@ func (c *TaskController) BulkUpdateTasks(ctx *gin.Context) {
 	}
 
 	// Perform bulk update
-	updated, conflicts, err := c.taskRepo.BulkUpdate(ctx, tasks)
+	updated, skipped, conflicts, err := c.taskRepo.BulkUpdate(ctx, tasks)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -113,6 +113,7 @@ func (c *TaskController) BulkUpdateTasks(ctx *gin.Context) {
 	// Return the response
 	response := BulkTaskResponse{
 		Updated:   updated,
+		Skipped:   skipped,
 		Conflicts: conflicts,
 	}
 

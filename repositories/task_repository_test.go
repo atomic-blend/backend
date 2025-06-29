@@ -248,11 +248,12 @@ func TestTaskRepository_BulkUpdate(t *testing.T) {
 		}
 
 		// Perform bulk update
-		updated, conflicts, err := repo.BulkUpdate(context.Background(), []*models.TaskEntity{updatedTask1, updatedTask2})
+		updated, skipped, conflicts, err := repo.BulkUpdate(context.Background(), []*models.TaskEntity{updatedTask1, updatedTask2})
 		require.NoError(t, err)
 
 		// Should update both tasks with no conflicts
 		assert.Len(t, updated, 2)
+		assert.Len(t, skipped, 0)
 		assert.Len(t, conflicts, 0)
 		assert.Equal(t, "Updated Task 1", updated[0].Title)
 		assert.Equal(t, "Updated Task 2", updated[1].Title)
@@ -287,11 +288,12 @@ func TestTaskRepository_BulkUpdate(t *testing.T) {
 		}
 
 		// Perform bulk update
-		updated, conflicts, err := repo.BulkUpdate(context.Background(), []*models.TaskEntity{conflictingTask})
+		updated, skipped, conflicts, err := repo.BulkUpdate(context.Background(), []*models.TaskEntity{conflictingTask})
 		require.NoError(t, err)
 
 		// Should have no updates and one conflict
 		assert.Len(t, updated, 0)
+		assert.Len(t, skipped, 0)
 		assert.Len(t, conflicts, 1)
 		assert.Equal(t, "task", conflicts[0].Type)
 		assert.Equal(t, "Recently Updated Task", conflicts[0].OldItem.(*models.TaskEntity).Title)
@@ -308,11 +310,12 @@ func TestTaskRepository_BulkUpdate(t *testing.T) {
 		}
 
 		// Perform bulk update
-		updated, conflicts, err := repo.BulkUpdate(context.Background(), []*models.TaskEntity{newTask})
+		updated, skipped, conflicts, err := repo.BulkUpdate(context.Background(), []*models.TaskEntity{newTask})
 		require.NoError(t, err)
 
 		// Should create the new task
 		assert.Len(t, updated, 1)
+		assert.Len(t, skipped, 0)
 		assert.Len(t, conflicts, 0)
 		assert.Equal(t, "New Task", updated[0].Title)
 		assert.Equal(t, newTaskID, updated[0].ID)
@@ -373,7 +376,7 @@ func TestTaskRepository_BulkUpdate(t *testing.T) {
 		}
 
 		// Perform bulk update
-		updated, conflicts, err := repo.BulkUpdate(context.Background(), []*models.TaskEntity{
+		updated, skipped, conflicts, err := repo.BulkUpdate(context.Background(), []*models.TaskEntity{
 			conflictingTask,
 			newTask,
 			successfulUpdate,
@@ -382,6 +385,7 @@ func TestTaskRepository_BulkUpdate(t *testing.T) {
 
 		// Should have 2 updates (new task + successful update) and 1 conflict
 		assert.Len(t, updated, 2)
+		assert.Len(t, skipped, 0)
 		assert.Len(t, conflicts, 1)
 
 		// Check conflict
