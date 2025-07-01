@@ -175,10 +175,22 @@ func (r *TaskRepository) UpdatePatch(ctx context.Context, patch *patchmodels.Pat
 	updatePayload := bson.M{}
 	for _, change := range patch.Changes {
 		//convert Key from camelCase to snake_case
+		key := keyconverter.ToSnakeCase(change.Key)
 		print("Key: ", change.Key, "\n")
 		print("converted: ", keyconverter.ToSnakeCase(change.Key), "\n")
-		updatePayload[keyconverter.ToSnakeCase(change.Key)] = change.Value
+		value := change.Value
+		if isDateTimeField(key) {
+			if dateValue, err := convertToDateTime(change.Value, isDateTimePointerField(key)); err == nil {
+				value = dateValue
+			} else {
+				return nil, errors.New("invalid date format for field: " + key)
+			}
+		}
+
+		updatePayload[key] = value
 	}
+
+	updatePayload["updated_at"] = primitive.NewDateTimeFromTime(time.Now())
 
 	// Perform the update operation
 	_, err := r.collection.UpdateOne(ctx, bson.M{"_id": patch.ItemID}, bson.M{"$set": updatePayload})
@@ -187,4 +199,72 @@ func (r *TaskRepository) UpdatePatch(ctx context.Context, patch *patchmodels.Pat
 	}
 
 	return r.GetByID(ctx, patch.ItemID.Hex())
+}
+
+// Helper function to check if a field is a date/time field
+func isDateTimeField(fieldName string) bool {
+	dateTimeFields := []string{"start_date", "end_date", "created_at", "updated_at"}
+	for _, field := range dateTimeFields {
+		if fieldName == field {
+			return true
+		}
+	}
+	return false
+}
+
+// Helper function to check if a field should be a pointer to DateTime
+func isDateTimePointerField(fieldName string) bool {
+	pointerFields := []string{"start_date", "end_date"}
+	for _, field := range pointerFields {
+		if fieldName == field {
+			return true
+		}
+	}
+	return false
+}
+
+// Helper function to convert various date formats to primitive.DateTime
+func convertToDateTime(value interface{}, isPointer bool) (interface{}, error) {
+	if value == nil {
+		return nil, nil
+	}
+
+	var parsedTime time.Time
+	var err error
+
+	switch v := value.(type) {
+	case string:
+		// Try parsing different date formats
+		formats := []string{
+			time.RFC3339,
+			time.RFC3339Nano,
+			"2006-01-02T15:04:05Z",
+			"2006-01-02T15:04:05.000Z",
+			"2006-01-02 15:04:05",
+		}
+
+		for _, format := range formats {
+			if parsedTime, err = time.Parse(format, v); err == nil {
+				break
+			}
+		}
+		if err != nil {
+			return nil, errors.New("unable to parse date string")
+		}
+	case int64:
+		// Unix timestamp in milliseconds
+		parsedTime = time.Unix(0, v*int64(time.Millisecond))
+	case float64:
+		// Unix timestamp in seconds (JavaScript timestamps are often float64)
+		parsedTime = time.Unix(int64(v), 0)
+	default:
+		return nil, errors.New("unsupported date format")
+	}
+
+	dt := primitive.NewDateTimeFromTime(parsedTime)
+
+	if isPointer {
+		return &dt, nil
+	}
+	return dt, nil
 }
