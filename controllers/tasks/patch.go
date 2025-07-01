@@ -3,6 +3,7 @@ package tasks
 import (
 	patchmodels "atomic_blend_api/models/patch_models"
 	"context"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -11,6 +12,7 @@ type PatchResponse struct {
 	Success   []string                     `json:"success"`
 	Errors    []patchmodels.PatchError     `json:"errors"`
 	Conflicts []patchmodels.ConflictedItem `json:"conflicts"`
+	Date      time.Time                    `json:"date"`
 }
 
 func (c *TaskController) Patch(ctx *gin.Context) {
@@ -47,7 +49,7 @@ func (c *TaskController) Patch(ctx *gin.Context) {
 		}
 
 		// check that the patch is dated after the last update of the task
-		if patch.UpdatedAt.Time().Before(task.UpdatedAt.Time()) {
+		if patch.PatchDate.Time().Before(task.UpdatedAt.Time()) {
 			conflicts = append(conflicts, patchmodels.ConflictedItem{PatchID: patch.ID.Hex(), RemoteObject: task})
 			continue
 		}
@@ -76,6 +78,7 @@ func (c *TaskController) Patch(ctx *gin.Context) {
 		Success:   success,
 		Errors:    errors,
 		Conflicts: conflicts,
+		Date:      time.Now(),
 	})
 }
 
