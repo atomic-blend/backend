@@ -1,8 +1,10 @@
 package tasks
 
 import (
+	"atomic_blend_api/models"
 	patchmodels "atomic_blend_api/models/patch_models"
 	"context"
+	"encoding/json"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -65,11 +67,29 @@ func (c *TaskController) Patch(ctx *gin.Context) {
 			continue
 		case patchmodels.PatchActionDelete:
 			//TODO:
-			errors = append(errors, patchmodels.PatchError{PatchID: patch.ID.Hex(), ErrorCode: "delete_not_supported"})
+			err := c.taskRepo.Delete(ct, patch.ItemID.Hex())
+			if err != nil {
+				errors = append(errors, patchmodels.PatchError{PatchID: patch.ID.Hex(),
+					ErrorCode: "delete_failed"})
+			} else {
+				success = append(success, patch.ID.Hex())
+			}
 			continue
 		case patchmodels.PatchActionCreate:
-			//TODO:
-			errors = append(errors, patchmodels.PatchError{PatchID: patch.ID.Hex(), ErrorCode: "create_not_supported"})
+			// the content of the task is under the data key of the first change
+			newTask := &models.TaskEntity{}
+			if err := json.Unmarshal([]byte(patch.Changes[0].Value.(string)), newTask); err != nil {
+				errors = append(errors, patchmodels.PatchError{PatchID: patch.ID.Hex(),
+					ErrorCode: "invalid_task_data"})
+				continue
+			}
+			_, err := c.taskRepo.Create(ct, newTask)
+			if err != nil {
+				errors = append(errors, patchmodels.PatchError{PatchID: patch.ID.Hex(),
+					ErrorCode: "create_failed"})
+			} else {
+				success = append(success, patch.ID.Hex())
+			}
 			continue
 		}
 	}
