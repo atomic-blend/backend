@@ -185,6 +185,12 @@ func (r *TaskRepository) UpdatePatch(ctx context.Context, patch *patchmodels.Pat
 			} else {
 				return nil, errors.New("invalid date format for field: " + key)
 			}
+		} else if isBooleanField(key) {
+			if boolValue, err := convertToBoolean(change.Value, isBooleanPointerField(key)); err == nil {
+				value = boolValue
+			} else {
+				return nil, errors.New("invalid boolean format for field: " + key)
+			}
 		}
 
 		updatePayload[key] = value
@@ -215,6 +221,28 @@ func isDateTimeField(fieldName string) bool {
 // Helper function to check if a field should be a pointer to DateTime
 func isDateTimePointerField(fieldName string) bool {
 	pointerFields := []string{"start_date", "end_date"}
+	for _, field := range pointerFields {
+		if fieldName == field {
+			return true
+		}
+	}
+	return false
+}
+
+// Helper function to check if a field is a boolean field
+func isBooleanField(fieldName string) bool {
+	booleanFields := []string{"completed"}
+	for _, field := range booleanFields {
+		if fieldName == field {
+			return true
+		}
+	}
+	return false
+}
+
+// Helper function to check if a field should be a pointer to bool
+func isBooleanPointerField(fieldName string) bool {
+	pointerFields := []string{"completed"}
 	for _, field := range pointerFields {
 		if fieldName == field {
 			return true
@@ -267,4 +295,40 @@ func convertToDateTime(value interface{}, isPointer bool) (interface{}, error) {
 		return &dt, nil
 	}
 	return dt, nil
+}
+
+// Helper function to convert various boolean formats to bool
+func convertToBoolean(value interface{}, isPointer bool) (interface{}, error) {
+	if value == nil {
+		return nil, nil
+	}
+
+	var boolValue bool
+
+	switch v := value.(type) {
+	case bool:
+		boolValue = v
+	case string:
+		switch v {
+		case "true", "True", "TRUE", "1":
+			boolValue = true
+		case "false", "False", "FALSE", "0":
+			boolValue = false
+		default:
+			return nil, errors.New("unable to parse boolean string")
+		}
+	case int:
+		boolValue = v != 0
+	case int64:
+		boolValue = v != 0
+	case float64:
+		boolValue = v != 0
+	default:
+		return nil, errors.New("unsupported boolean format")
+	}
+
+	if isPointer {
+		return &boolValue, nil
+	}
+	return boolValue, nil
 }
