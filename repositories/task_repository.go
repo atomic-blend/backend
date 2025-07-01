@@ -20,7 +20,6 @@ type TaskRepositoryInterface interface {
 	Create(ctx context.Context, task *models.TaskEntity) (*models.TaskEntity, error)
 	Update(ctx context.Context, id string, task *models.TaskEntity) (*models.TaskEntity, error)
 	Delete(ctx context.Context, id string) error
-	BulkUpdate(ctx context.Context, tasks []*models.TaskEntity) ([]*models.TaskEntity, []*models.TaskEntity, []*models.ConflictedItem, error)
 }
 
 // TaskRepository handles database operations related to tasks
@@ -159,56 +158,4 @@ func (r *TaskRepository) Delete(ctx context.Context, id string) error {
 	filter := bson.M{"_id": objID}
 	_, err = r.collection.DeleteOne(ctx, filter)
 	return err
-}
-
-// BulkUpdate updates multiple tasks, handling conflicts when existing tasks are more recent
-func (r *TaskRepository) BulkUpdate(ctx context.Context, tasks []*models.TaskEntity) ([]*models.TaskEntity, []*models.TaskEntity, []*models.ConflictedItem, error) {
-	var updated []*models.TaskEntity
-	var skipped []*models.TaskEntity
-	var conflicts []*models.ConflictedItem
-
-	for _, task := range tasks {
-		// Get existing task from database
-		existingTask, err := r.GetByID(ctx, task.ID)
-		if err != nil {
-			return nil, nil, nil, err
-		}
-
-		// If task doesn't exist, create it
-		if existingTask == nil {
-			createdTask, err := r.Create(ctx, task)
-			if err != nil {
-				return nil, nil, nil, err
-			}
-			updated = append(updated, createdTask)
-			continue
-		}
-
-		// Compare UpdatedAt timestamps to detect conflicts
-		if existingTask.UpdatedAt.Time().After(task.UpdatedAt.Time()) {
-			// Database version is more recent, add to conflicts
-			println("Conflict detected for task ID:", task.ID)
-			conflict := &models.ConflictedItem{
-				Type:    "task",
-				OldItem: existingTask,
-				NewItem: task,
-			}
-			conflicts = append(conflicts, conflict)
-		} else {
-			// Check if task has actually changed before updating
-			if !existingTask.UpdatedAt.Time().Equal(task.UpdatedAt.Time()) {
-				// Update the task only if there are changes
-				updatedTask, err := r.Update(ctx, task.ID, task)
-				if err != nil {
-					return nil, nil, nil, err
-				}
-				updated = append(updated, updatedTask)
-			} else {
-				// No changes, add task to skipped list
-				skipped = append(skipped, existingTask)
-			}
-		}
-	}
-
-	return updated, skipped, conflicts, nil
 }
