@@ -2,6 +2,7 @@ package mocks
 
 import (
 	"atomic_blend_api/models"
+	patchmodels "atomic_blend_api/models/patch_models"
 	"context"
 
 	"github.com/stretchr/testify/mock"
@@ -76,6 +77,14 @@ func (m *MockTaskRepository) RemoveTimeEntry(ctx context.Context, taskID string,
 // UpdateTimeEntry updates a time entry in a task
 func (m *MockTaskRepository) UpdateTimeEntry(ctx context.Context, taskID string, timeEntryID string, timeEntry *models.TimeEntry) (*models.TaskEntity, error) {
 	args := m.Called(ctx, taskID, timeEntryID, timeEntry)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*models.TaskEntity), args.Error(1)
+}
+
+func (m *MockTaskRepository) UpdatePatch(ctx context.Context, patch *patchmodels.Patch) (*models.TaskEntity, error) {
+	args := m.Called(ctx, patch)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}

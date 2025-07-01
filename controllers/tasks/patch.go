@@ -52,7 +52,24 @@ func (c *TaskController) Patch(ctx *gin.Context) {
 			continue
 		}
 
-		//TODO: handle each patch case
+		switch patch.Action {
+		case patchmodels.PatchActionUpdate:
+			_, err := c.taskRepo.UpdatePatch(ct, &patch)
+			if err != nil {
+				errors = append(errors, patchmodels.PatchError{PatchID: patch.ID.Hex(), ErrorCode: "update_failed"})
+			} else {
+				success = append(success, patch.ID.Hex())
+			}
+			continue
+		case patchmodels.PatchActionDelete:
+			//TODO:
+			errors = append(errors, patchmodels.PatchError{PatchID: patch.ID.Hex(), ErrorCode: "delete_not_supported"})
+			continue
+		case patchmodels.PatchActionCreate:
+			//TODO:
+			errors = append(errors, patchmodels.PatchError{PatchID: patch.ID.Hex(), ErrorCode: "create_not_supported"})
+			continue
+		}
 	}
 
 	ctx.JSON(200, PatchResponse{

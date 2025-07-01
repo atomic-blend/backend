@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"atomic_blend_api/models"
+	patchmodels "atomic_blend_api/models/patch_models"
 	"context"
 	"errors"
 	"time"
@@ -20,6 +21,7 @@ type TaskRepositoryInterface interface {
 	Create(ctx context.Context, task *models.TaskEntity) (*models.TaskEntity, error)
 	Update(ctx context.Context, id string, task *models.TaskEntity) (*models.TaskEntity, error)
 	Delete(ctx context.Context, id string) error
+	UpdatePatch(ctx context.Context, patch *patchmodels.Patch) (*models.TaskEntity, error)
 }
 
 // TaskRepository handles database operations related to tasks
@@ -158,4 +160,27 @@ func (r *TaskRepository) Delete(ctx context.Context, id string) error {
 	filter := bson.M{"_id": objID}
 	_, err = r.collection.DeleteOne(ctx, filter)
 	return err
+}
+
+func (r *TaskRepository) UpdatePatch(ctx context.Context, patch *patchmodels.Patch) (*models.TaskEntity, error) {
+	if patch.Action != "update" {
+		return nil, errors.New("only update action is supported")
+	}
+
+	if patch.ItemType != patchmodels.ItemTypeTask {
+		return nil, errors.New("item type not supported")
+	}
+
+	updatePayload := bson.M{}
+	for _, change := range patch.Changes {
+		updatePayload[change.Key] = change.Value
+	}
+
+	// Perform the update operation
+	_, err := r.collection.UpdateOne(ctx, bson.M{"_id": patch.ItemID}, bson.M{"$set": updatePayload})
+	if err != nil {
+		return nil, err
+	}
+
+	return r.GetByID(ctx, patch.ItemID.Hex())
 }
