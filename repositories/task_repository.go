@@ -3,6 +3,7 @@ package repositories
 import (
 	"atomic_blend_api/models"
 	patchmodels "atomic_blend_api/models/patch_models"
+	keyconverter "atomic_blend_api/utils/key_converter"
 	"context"
 	"errors"
 	"time"
@@ -173,7 +174,10 @@ func (r *TaskRepository) UpdatePatch(ctx context.Context, patch *patchmodels.Pat
 
 	updatePayload := bson.M{}
 	for _, change := range patch.Changes {
-		updatePayload[change.Key] = change.Value
+		//convert Key from camelCase to snake_case
+		print("Key: ", change.Key, "\n")
+		print("converted: ", keyconverter.ToSnakeCase(change.Key), "\n")
+		updatePayload[keyconverter.ToSnakeCase(change.Key)] = change.Value
 	}
 
 	// Perform the update operation
