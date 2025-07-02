@@ -595,7 +595,7 @@ func TestPatch(t *testing.T) {
 		patchDate := primitive.NewDateTimeFromTime(time.Now())
 
 		// Create patch with invalid data that can't be unmarshaled into TaskEntity
-		invalidData := make(chan int) // channels can't be marshaled/unmarshaled
+		invalidData := make(map[string]interface{}) // channels can't be marshaled/unmarshaled
 
 		patch := patchmodels.Patch{
 			ID:       patchID,

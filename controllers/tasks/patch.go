@@ -6,7 +6,6 @@ import (
 	patchmodels "atomic_blend_api/models/patch_models"
 	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"time"
 
@@ -52,25 +51,27 @@ func (c *TaskController) Patch(ctx *gin.Context) {
 			continue
 		}
 
-		// get the task by ID
-		task, err := c.taskRepo.GetByID(ct, patch.ItemID.Hex())
-		if err != nil {
-			errors = append(errors, patchmodels.PatchError{PatchID: patch.ID.Hex(), ErrorCode: "task_not_found"})
-			continue
-		}
-
-		// check that the patch is dated after the last update of the task
-		if patch.Action != patchmodels.PatchActionCreate && patch.PatchDate.Time().Before(task.UpdatedAt.Time()) {
-			conflicts = append(conflicts, patchmodels.ConflictedItem{PatchID: patch.ID.Hex(), RemoteObject: task})
-			continue
-		}
-
-		switch patch.Action {
-		case patchmodels.PatchActionUpdate:
+		if patch.Action != patchmodels.PatchActionCreate {
 			if patch.ItemID == nil {
 				errors = append(errors, patchmodels.PatchError{PatchID: patch.ID.Hex(), ErrorCode: "item_id_required"})
 				continue
 			}
+			// get the task by ID
+			task, err := c.taskRepo.GetByID(ct, patch.ItemID.Hex())
+			if err != nil {
+				errors = append(errors, patchmodels.PatchError{PatchID: patch.ID.Hex(), ErrorCode: "task_not_found"})
+				continue
+			}
+
+			// check that the patch is dated after the last update of the task
+			if patch.Action != patchmodels.PatchActionCreate && patch.PatchDate.Time().Before(task.UpdatedAt.Time()) {
+				conflicts = append(conflicts, patchmodels.ConflictedItem{PatchID: patch.ID.Hex(), RemoteObject: task})
+				continue
+			}
+		}
+
+		switch patch.Action {
+		case patchmodels.PatchActionUpdate:
 			_, err := c.taskRepo.UpdatePatch(ct, &patch)
 			if err != nil {
 				errors = append(errors, patchmodels.PatchError{PatchID: patch.ID.Hex(), ErrorCode: "update_failed"})
@@ -80,10 +81,6 @@ func (c *TaskController) Patch(ctx *gin.Context) {
 			continue
 		case patchmodels.PatchActionDelete:
 			//TODO:
-			if patch.ItemID == nil {
-				errors = append(errors, patchmodels.PatchError{PatchID: patch.ID.Hex(), ErrorCode: "item_id_required"})
-				continue
-			}
 			err := c.taskRepo.Delete(ct, patch.ItemID.Hex())
 			if err != nil {
 				errors = append(errors, patchmodels.PatchError{PatchID: patch.ID.Hex(),
@@ -99,7 +96,9 @@ func (c *TaskController) Patch(ctx *gin.Context) {
 			// Convert map to json string
 			jsonStr, err := json.Marshal(patch.Changes[0].Value)
 			if err != nil {
-				fmt.Println(err)
+				errors = append(errors, patchmodels.PatchError{PatchID: patch.ID.Hex(),
+					ErrorCode: "invalid_task_data"})
+				continue
 			}
 			if err := json.Unmarshal(jsonStr, newTask); err != nil {
 				errors = append(errors, patchmodels.PatchError{PatchID: patch.ID.Hex(),
