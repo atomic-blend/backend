@@ -5,7 +5,7 @@ import "go.mongodb.org/mongo-driver/bson/primitive"
 // TaskEntity represents a task
 type TaskEntity struct {
 	ID          string                `json:"id" bson:"_id"`
-	Title       string                `json:"title" bson:"title" binding:"required"`
+	Title       string                `json:"title" bson:"title" binding:"required" validate:"required"`
 	User        primitive.ObjectID    `json:"user" bson:"user"`
 	Description *string               `json:"description" bson:"description"`
 	StartDate   *primitive.DateTime   `json:"startDate" bson:"start_date"`

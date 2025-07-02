@@ -3,6 +3,7 @@ package tasks
 import (
 	"atomic_blend_api/auth"
 	patchmodels "atomic_blend_api/models/patch_models"
+	"atomic_blend_api/tests/mocks"
 	"bytes"
 	"encoding/json"
 	"net/http"
@@ -595,7 +596,8 @@ func TestPatch(t *testing.T) {
 		patchDate := primitive.NewDateTimeFromTime(time.Now())
 
 		// Create patch with invalid data that can't be unmarshaled into TaskEntity
-		invalidData := make(map[string]interface{}) // channels can't be marshaled/unmarshaled
+		invalidData := make(map[string]interface {
+		})
 
 		patch := patchmodels.Patch{
 			ID:       patchID,
@@ -638,6 +640,8 @@ func TestPatch(t *testing.T) {
 	})
 
 	t.Run("create failed", func(t *testing.T) {
+		mockTaskRepo := new(mocks.MockTaskRepository)
+		mockTagRepo := new(mocks.MockTagRepository)
 		userID := primitive.NewObjectID()
 		patchID := primitive.NewObjectID()
 		patchDate := primitive.NewDateTimeFromTime(time.Now())

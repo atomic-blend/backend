@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/go-playground/validator/v10"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type PatchResponse struct {
@@ -106,7 +108,16 @@ func (c *TaskController) Patch(ctx *gin.Context) {
 				continue
 			}
 
+			validate := validator.New()
+			if err := validate.Struct(newTask); err != nil {
+				errors = append(errors, patchmodels.PatchError{PatchID: patch.ID.Hex(),
+					ErrorCode: "invalid_task_data"})
+				continue
+			}
+
 			newTask.User = authUser.UserID
+			newTask.CreatedAt = primitive.NewDateTimeFromTime(time.Now())
+			newTask.UpdatedAt = primitive.NewDateTimeFromTime(time.Now())
 
 			_, err = c.taskRepo.Create(ct, newTask)
 			if err != nil {
