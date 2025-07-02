@@ -1,10 +1,13 @@
 package tasks
 
 import (
+	"atomic_blend_api/auth"
 	"atomic_blend_api/models"
 	patchmodels "atomic_blend_api/models/patch_models"
 	"context"
 	"encoding/json"
+	"fmt"
+	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -18,6 +21,12 @@ type PatchResponse struct {
 }
 
 func (c *TaskController) Patch(ctx *gin.Context) {
+	authUser := auth.GetAuthUser(ctx)
+	if authUser == nil {
+		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
+		return
+	}
+
 	var ct = context.TODO()
 	// parse the request body into a Patch struct
 	var patchs []patchmodels.Patch
@@ -51,13 +60,17 @@ func (c *TaskController) Patch(ctx *gin.Context) {
 		}
 
 		// check that the patch is dated after the last update of the task
-		if patch.PatchDate.Time().Before(task.UpdatedAt.Time()) {
+		if patch.Action != patchmodels.PatchActionCreate && patch.PatchDate.Time().Before(task.UpdatedAt.Time()) {
 			conflicts = append(conflicts, patchmodels.ConflictedItem{PatchID: patch.ID.Hex(), RemoteObject: task})
 			continue
 		}
 
 		switch patch.Action {
 		case patchmodels.PatchActionUpdate:
+			if patch.ItemID == nil {
+				errors = append(errors, patchmodels.PatchError{PatchID: patch.ID.Hex(), ErrorCode: "item_id_required"})
+				continue
+			}
 			_, err := c.taskRepo.UpdatePatch(ct, &patch)
 			if err != nil {
 				errors = append(errors, patchmodels.PatchError{PatchID: patch.ID.Hex(), ErrorCode: "update_failed"})
@@ -67,6 +80,10 @@ func (c *TaskController) Patch(ctx *gin.Context) {
 			continue
 		case patchmodels.PatchActionDelete:
 			//TODO:
+			if patch.ItemID == nil {
+				errors = append(errors, patchmodels.PatchError{PatchID: patch.ID.Hex(), ErrorCode: "item_id_required"})
+				continue
+			}
 			err := c.taskRepo.Delete(ct, patch.ItemID.Hex())
 			if err != nil {
 				errors = append(errors, patchmodels.PatchError{PatchID: patch.ID.Hex(),
@@ -78,12 +95,21 @@ func (c *TaskController) Patch(ctx *gin.Context) {
 		case patchmodels.PatchActionCreate:
 			// the content of the task is under the data key of the first change
 			newTask := &models.TaskEntity{}
-			if err := json.Unmarshal([]byte(patch.Changes[0].Value.(string)), newTask); err != nil {
+
+			// Convert map to json string
+			jsonStr, err := json.Marshal(patch.Changes[0].Value)
+			if err != nil {
+				fmt.Println(err)
+			}
+			if err := json.Unmarshal(jsonStr, newTask); err != nil {
 				errors = append(errors, patchmodels.PatchError{PatchID: patch.ID.Hex(),
 					ErrorCode: "invalid_task_data"})
 				continue
 			}
-			_, err := c.taskRepo.Create(ct, newTask)
+
+			newTask.User = authUser.UserID
+
+			_, err = c.taskRepo.Create(ct, newTask)
 			if err != nil {
 				errors = append(errors, patchmodels.PatchError{PatchID: patch.ID.Hex(),
 					ErrorCode: "create_failed"})

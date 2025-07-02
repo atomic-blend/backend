@@ -8,7 +8,7 @@ type Patch struct {
 	ID        primitive.ObjectID  `json:"id" bson:"_id" binding:"required"`
 	Action    string              `json:"action" bson:"action" binding:"required"`
 	ItemType  string              `json:"itemType" bson:"item_type" binding:"required"`
-	ItemID    primitive.ObjectID  `json:"itemId" bson:"item_id" binding:"required"`
+	ItemID    *primitive.ObjectID `json:"itemId" bson:"item_id"`
 	Changes   []PatchChange       `json:"changes" bson:"changes" binding:"required"`
 	PatchDate *primitive.DateTime `json:"patchDate" bson:"patch_date" binding:"required"`
 	Force     *bool               `json:"force,omitempty" bson:"force,omitempty"`
