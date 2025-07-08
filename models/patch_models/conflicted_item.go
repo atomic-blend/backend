@@ -5,5 +5,4 @@ type ConflictedItem struct {
 	Type         string      `json:"type"`
 	PatchID      string      `json:"patchId"`
 	RemoteObject interface{} `json:"remoteObject"`
-	LocalObject  interface{} `json:"localObject"`
 }

@@ -66,8 +66,8 @@ func (c *TaskController) Patch(ctx *gin.Context) {
 			}
 
 			// check that the patch is dated after the last update of the task
-			if patch.Action != patchmodels.PatchActionCreate && patch.PatchDate.Time().Before(task.UpdatedAt.Time()) {
-				conflicts = append(conflicts, patchmodels.ConflictedItem{Type: "task", PatchID: patch.ID.Hex(), RemoteObject: task, LocalObject: patch.Changes[0].Value})
+			if patch.Action != patchmodels.PatchActionCreate && patch.PatchDate.Time().Before(task.UpdatedAt.Time()) && patch.Force != nil && *patch.Force != true {
+				conflicts = append(conflicts, patchmodels.ConflictedItem{Type: "task", PatchID: patch.ID.Hex(), RemoteObject: task})
 				continue
 			}
 		}
