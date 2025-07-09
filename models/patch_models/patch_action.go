@@ -9,4 +9,5 @@ const (
 	PatchActionDelete = "delete"
 )
 
+// ValidPatchActions contains the valid actions for patch operations
 var ValidPatchActions = []string{PatchActionCreate, PatchActionUpdate, PatchActionDelete}

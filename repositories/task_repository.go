@@ -163,6 +163,7 @@ func (r *TaskRepository) Delete(ctx context.Context, id string) error {
 	return err
 }
 
+// UpdatePatch applies a patch to a task based on the provided patch model
 func (r *TaskRepository) UpdatePatch(ctx context.Context, patch *patchmodels.Patch) (*models.TaskEntity, error) {
 	if patch.Action != "update" {
 		return nil, errors.New("only update action is supported")

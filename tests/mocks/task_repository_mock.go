@@ -83,6 +83,7 @@ func (m *MockTaskRepository) UpdateTimeEntry(ctx context.Context, taskID string,
 	return args.Get(0).(*models.TaskEntity), args.Error(1)
 }
 
+// UpdatePatch applies a patch to a task based on the provided patch model
 func (m *MockTaskRepository) UpdatePatch(ctx context.Context, patch *patchmodels.Patch) (*models.TaskEntity, error) {
 	args := m.Called(ctx, patch)
 	if args.Get(0) == nil {

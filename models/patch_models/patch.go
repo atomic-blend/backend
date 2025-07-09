@@ -4,6 +4,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
+// Patch represents a patch operation on an item in the system.
 type Patch struct {
 	ID        primitive.ObjectID  `json:"id" bson:"_id" binding:"required"`
 	Action    string              `json:"action" bson:"action" binding:"required"`

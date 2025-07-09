@@ -14,6 +14,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
+// PatchResponse represents the response structure for the patch operation
 type PatchResponse struct {
 	Success   []string                     `json:"success"`
 	Errors    []patchmodels.PatchError     `json:"errors"`
@@ -21,6 +22,7 @@ type PatchResponse struct {
 	Date      time.Time                    `json:"date"`
 }
 
+// Patch handles the patching of tasks
 func (c *TaskController) Patch(ctx *gin.Context) {
 	authUser := auth.GetAuthUser(ctx)
 	if authUser == nil {
