@@ -2,6 +2,7 @@ package mocks
 
 import (
 	"atomic_blend_api/models"
+	patchmodels "atomic_blend_api/models/patch_models"
 	"context"
 
 	"github.com/stretchr/testify/mock"
@@ -53,4 +54,13 @@ func (m *MockNoteRepository) Update(ctx context.Context, id string, note *models
 func (m *MockNoteRepository) Delete(ctx context.Context, id string) error {
 	args := m.Called(ctx, id)
 	return args.Error(0)
+}
+
+// UpdatePatch updates a note based on a patch
+func (m *MockNoteRepository) UpdatePatch(ctx context.Context, patch *patchmodels.Patch) (*models.NoteEntity, error) {
+	args := m.Called(ctx, patch)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*models.NoteEntity), args.Error(1)
 }

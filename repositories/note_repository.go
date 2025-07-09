@@ -2,6 +2,8 @@ package repositories
 
 import (
 	"atomic_blend_api/models"
+	patchmodels "atomic_blend_api/models/patch_models"
+	keyconverter "atomic_blend_api/utils/key_converter"
 	"context"
 	"errors"
 	"time"
@@ -20,6 +22,7 @@ type NoteRepositoryInterface interface {
 	Create(ctx context.Context, note *models.NoteEntity) (*models.NoteEntity, error)
 	Update(ctx context.Context, id string, note *models.NoteEntity) (*models.NoteEntity, error)
 	Delete(ctx context.Context, id string) error
+	UpdatePatch(ctx context.Context, patch *patchmodels.Patch) (*models.NoteEntity, error)
 }
 
 // NoteRepository handles database operations related to notes
@@ -171,4 +174,167 @@ func (r *NoteRepository) Delete(ctx context.Context, id string) error {
 	}
 
 	return nil
+}
+
+// UpdatePatch updates a note based on a patch
+func (r *NoteRepository) UpdatePatch(ctx context.Context, patch *patchmodels.Patch) (*models.NoteEntity, error) {
+	if patch.Action != "update" {
+		return nil, errors.New("only update action is supported")
+	}
+
+	if patch.ItemType != patchmodels.ItemTypeNote {
+		return nil, errors.New("item type not supported")
+	}
+
+	updatePayload := bson.M{}
+	for _, change := range patch.Changes {
+		//convert Key from camelCase to snake_case
+		key := keyconverter.ToSnakeCase(change.Key)
+		value := change.Value
+		if isNoteDateTime(key) {
+			if dateValue, err := convertToNoteDateTime(change.Value, isNoteDateTimePointer(key)); err == nil {
+				value = dateValue
+			} else {
+				return nil, errors.New("invalid date format for field: " + key)
+			}
+		} else if isNoteBooleanField(key) {
+			if boolValue, err := convertToNoteBoolean(change.Value, isNoteBooleanPointer(key)); err == nil {
+				value = boolValue
+			} else {
+				return nil, errors.New("invalid boolean format for field: " + key)
+			}
+		}
+
+		updatePayload[key] = value
+	}
+
+	updatePayload["updated_at"] = primitive.NewDateTimeFromTime(time.Now())
+
+	// Perform the update operation
+	_, err := r.collection.UpdateOne(ctx, bson.M{"_id": patch.ItemID}, bson.M{"$set": updatePayload})
+	if err != nil {
+		return nil, err
+	}
+
+	return r.GetByID(ctx, patch.ItemID.Hex())
+}
+
+// Helper function to check if a note field is a date/time field
+func isNoteDateTime(fieldName string) bool {
+	dateTimeFields := []string{"created_at", "updated_at"}
+	for _, field := range dateTimeFields {
+		if fieldName == field {
+			return true
+		}
+	}
+	return false
+}
+
+// Helper function to check if a field should be a pointer to DateTime
+func isNoteDateTimePointer(fieldName string) bool {
+	return false // Note entity doesn't have any dateTime pointer fields
+}
+
+// Helper function to check if a field is a boolean field
+func isNoteBooleanField(fieldName string) bool {
+	booleanFields := []string{"deleted"}
+	for _, field := range booleanFields {
+		if fieldName == field {
+			return true
+		}
+	}
+	return false
+}
+
+// Helper function to check if a field should be a pointer to bool
+func isNoteBooleanPointer(fieldName string) bool {
+	pointerFields := []string{"deleted"}
+	for _, field := range pointerFields {
+		if fieldName == field {
+			return true
+		}
+	}
+	return false
+}
+
+// Helper function to convert various date formats to primitive.DateTime
+func convertToNoteDateTime(value interface{}, isPointer bool) (interface{}, error) {
+	if value == nil {
+		return nil, nil
+	}
+
+	var parsedTime time.Time
+	var err error
+
+	switch v := value.(type) {
+	case string:
+		// Try parsing different date formats
+		formats := []string{
+			time.RFC3339,
+			time.RFC3339Nano,
+			"2006-01-02T15:04:05Z",
+			"2006-01-02T15:04:05.000Z",
+			"2006-01-02 15:04:05",
+		}
+
+		for _, format := range formats {
+			if parsedTime, err = time.Parse(format, v); err == nil {
+				break
+			}
+		}
+		if err != nil {
+			return nil, errors.New("unable to parse date string")
+		}
+	case int64:
+		// Unix timestamp in milliseconds
+		parsedTime = time.Unix(0, v*int64(time.Millisecond))
+	case float64:
+		// Unix timestamp in seconds (JavaScript timestamps are often float64)
+		parsedTime = time.Unix(int64(v), 0)
+	default:
+		return nil, errors.New("unsupported date format")
+	}
+
+	dt := primitive.NewDateTimeFromTime(parsedTime)
+
+	if isPointer {
+		return &dt, nil
+	}
+	return dt, nil
+}
+
+// Helper function to convert various boolean formats to bool
+func convertToNoteBoolean(value interface{}, isPointer bool) (interface{}, error) {
+	if value == nil {
+		return nil, nil
+	}
+
+	var boolValue bool
+
+	switch v := value.(type) {
+	case bool:
+		boolValue = v
+	case string:
+		switch v {
+		case "true", "True", "TRUE", "1":
+			boolValue = true
+		case "false", "False", "FALSE", "0":
+			boolValue = false
+		default:
+			return nil, errors.New("unable to parse boolean string")
+		}
+	case int:
+		boolValue = v != 0
+	case int64:
+		boolValue = v != 0
+	case float64:
+		boolValue = v != 0
+	default:
+		return nil, errors.New("unsupported boolean format")
+	}
+
+	if isPointer {
+		return &boolValue, nil
+	}
+	return boolValue, nil
 }
