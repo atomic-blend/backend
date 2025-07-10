@@ -78,7 +78,24 @@ func (c *NoteController) Patch(ctx *gin.Context) {
 
 		switch patch.Action {
 		case patchmodels.PatchActionUpdate:
-			_, err := c.noteRepo.UpdatePatch(ct, &patch)
+			// get the original note and check ownership
+			if patch.ItemID == nil {
+				errors = append(errors, patchmodels.PatchError{PatchID: patch.ID.Hex(), ErrorCode: "item_id_required"})
+				continue
+			}
+			note, err := c.noteRepo.GetByID(ct, patch.ItemID.Hex())
+			if err != nil {
+				errors = append(errors, patchmodels.PatchError{PatchID: patch.ID.Hex(), ErrorCode: "note_not_found"})
+				continue
+			}
+
+			if note.User != authUser.UserID {
+				errors = append(errors, patchmodels.PatchError{PatchID: patch.ID.Hex(), ErrorCode: "not_authorized"})
+				continue
+			}
+
+			// apply the changes to the note
+			_, err = c.noteRepo.UpdatePatch(ct, &patch)
 			if err != nil {
 				errors = append(errors, patchmodels.PatchError{PatchID: patch.ID.Hex(), ErrorCode: "update_failed"})
 			} else {
@@ -86,7 +103,24 @@ func (c *NoteController) Patch(ctx *gin.Context) {
 			}
 			continue
 		case patchmodels.PatchActionDelete:
-			err := c.noteRepo.Delete(ct, patch.ItemID.Hex())
+			// get the original note and check ownership
+			if patch.ItemID == nil {
+				errors = append(errors, patchmodels.PatchError{PatchID: patch.ID.Hex(), ErrorCode: "item_id_required"})
+				continue
+			}
+			note, err := c.noteRepo.GetByID(ct, patch.ItemID.Hex())
+			if err != nil {
+				errors = append(errors, patchmodels.PatchError{PatchID: patch.ID.Hex(), ErrorCode: "note_not_found"})
+				continue
+			}
+
+			if note.User != authUser.UserID {
+				errors = append(errors, patchmodels.PatchError{PatchID: patch.ID.Hex(), ErrorCode: "not_authorized"})
+				continue
+			}
+
+			// delete the note
+			err = c.noteRepo.Delete(ct, patch.ItemID.Hex())
 			if err != nil {
 				errors = append(errors, patchmodels.PatchError{PatchID: patch.ID.Hex(),
 					ErrorCode: "delete_failed"})

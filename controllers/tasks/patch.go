@@ -78,7 +78,26 @@ func (c *TaskController) Patch(ctx *gin.Context) {
 
 		switch patch.Action {
 		case patchmodels.PatchActionUpdate:
-			_, err := c.taskRepo.UpdatePatch(ct, &patch)
+			// get the task by ID and check ownership
+			if patch.ItemID == nil {
+				errors = append(errors, patchmodels.PatchError{PatchID: patch.ID.Hex(), ErrorCode: "item_id_required"})
+				continue
+			}
+
+			task, err := c.taskRepo.GetByID(ct, patch.ItemID.Hex())
+			if err != nil {
+				errors = append(errors, patchmodels.PatchError{PatchID: patch.ID.Hex(), ErrorCode: "task_not_found"})
+				continue
+			}
+
+			// check ownership
+			if task.User != authUser.UserID {
+				errors = append(errors, patchmodels.PatchError{PatchID: patch.ID.Hex(), ErrorCode: "not_authorized"})
+				continue
+			}
+
+			// apply changes to the task
+			_, err = c.taskRepo.UpdatePatch(ct, &patch)
 			if err != nil {
 				errors = append(errors, patchmodels.PatchError{PatchID: patch.ID.Hex(), ErrorCode: "update_failed"})
 			} else {
@@ -86,8 +105,26 @@ func (c *TaskController) Patch(ctx *gin.Context) {
 			}
 			continue
 		case patchmodels.PatchActionDelete:
-			//TODO:
-			err := c.taskRepo.Delete(ct, patch.ItemID.Hex())
+			// get the task by ID and check ownership
+			if patch.ItemID == nil {
+				errors = append(errors, patchmodels.PatchError{PatchID: patch.ID.Hex(), ErrorCode: "item_id_required"})
+				continue
+			}
+
+			task, err := c.taskRepo.GetByID(ct, patch.ItemID.Hex())
+			if err != nil {
+				errors = append(errors, patchmodels.PatchError{PatchID: patch.ID.Hex(), ErrorCode: "task_not_found"})
+				continue
+			}
+
+			// check ownership
+			if task.User != authUser.UserID {
+				errors = append(errors, patchmodels.PatchError{PatchID: patch.ID.Hex(), ErrorCode: "not_authorized"})
+				continue
+			}
+
+			// delete the task
+			err = c.taskRepo.Delete(ct, patch.ItemID.Hex())
 			if err != nil {
 				errors = append(errors, patchmodels.PatchError{PatchID: patch.ID.Hex(),
 					ErrorCode: "delete_failed"})

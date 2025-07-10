@@ -22,7 +22,6 @@ func TestPatch(t *testing.T) {
 
 	t.Run("successful patch update", func(t *testing.T) {
 		// Create authenticated user
-		userID := primitive.NewObjectID()
 		noteID := primitive.NewObjectID()
 		patchID := primitive.NewObjectID()
 
@@ -63,7 +62,7 @@ func TestPatch(t *testing.T) {
 		// Create a context and set auth user
 		ctx, _ := gin.CreateTestContext(w)
 		ctx.Request = req
-		ctx.Set("authUser", &auth.UserAuthInfo{UserID: userID})
+		ctx.Set("authUser", &auth.UserAuthInfo{UserID: existingNote.User})
 
 		// Call the handler directly
 		controller := NewNoteController(mockNoteRepo)
@@ -81,7 +80,6 @@ func TestPatch(t *testing.T) {
 
 	t.Run("successful patch delete", func(t *testing.T) {
 		// Create authenticated user
-		userID := primitive.NewObjectID()
 		noteID := primitive.NewObjectID()
 		patchID := primitive.NewObjectID()
 
@@ -113,7 +111,7 @@ func TestPatch(t *testing.T) {
 		// Create a context and set auth user
 		ctx, _ := gin.CreateTestContext(w)
 		ctx.Request = req
-		ctx.Set("authUser", &auth.UserAuthInfo{UserID: userID})
+		ctx.Set("authUser", &auth.UserAuthInfo{UserID: existingNote.User})
 
 		// Call the handler directly
 		controller := NewNoteController(mockNoteRepo)
@@ -489,6 +487,52 @@ func TestPatch(t *testing.T) {
 	})
 
 	t.Run("update failed", func(t *testing.T) {
+		noteID := primitive.NewObjectID()
+		patchID := primitive.NewObjectID()
+
+		existingNote := createTestNote()
+		existingNote.UpdatedAt = primitive.NewDateTimeFromTime(time.Now().Add(-1 * time.Hour))
+
+		patchDate := primitive.NewDateTimeFromTime(time.Now())
+		patch := patchmodels.Patch{
+			ID:        patchID,
+			Action:    patchmodels.PatchActionUpdate,
+			ItemType:  patchmodels.ItemTypeNote,
+			ItemID:    &noteID,
+			Changes:   []patchmodels.PatchChange{},
+			PatchDate: &patchDate,
+		}
+
+		patches := []patchmodels.Patch{patch}
+
+		mockNoteRepo.On("GetByID", mock.Anything, noteID.Hex()).Return(existingNote, nil)
+		mockNoteRepo.On("UpdatePatch", mock.Anything, &patch).Return(nil, assert.AnError)
+
+		patchJSON, _ := json.Marshal(patches)
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("POST", "/notes/patch", bytes.NewBuffer(patchJSON))
+		req.Header.Set("Content-Type", "application/json")
+
+		// Create a context and set auth user
+		ctx, _ := gin.CreateTestContext(w)
+		ctx.Request = req
+		ctx.Set("authUser", &auth.UserAuthInfo{UserID: existingNote.User})
+
+		// Call the handler directly
+		controller := NewNoteController(mockNoteRepo)
+		controller.Patch(ctx)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+		var response PatchResponse
+		err := json.Unmarshal(w.Body.Bytes(), &response)
+		assert.NoError(t, err)
+		assert.Len(t, response.Success, 0)
+		assert.Len(t, response.Errors, 1)
+		assert.Equal(t, "update_failed", response.Errors[0].ErrorCode)
+		assert.Equal(t, patchID.Hex(), response.Errors[0].PatchID)
+	})
+
+	t.Run("update unauthorized", func(t *testing.T) {
 		userID := primitive.NewObjectID()
 		noteID := primitive.NewObjectID()
 		patchID := primitive.NewObjectID()
@@ -531,11 +575,57 @@ func TestPatch(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Len(t, response.Success, 0)
 		assert.Len(t, response.Errors, 1)
-		assert.Equal(t, "update_failed", response.Errors[0].ErrorCode)
+		assert.Equal(t, "not_authorized", response.Errors[0].ErrorCode)
 		assert.Equal(t, patchID.Hex(), response.Errors[0].PatchID)
 	})
 
 	t.Run("delete failed", func(t *testing.T) {
+		noteID := primitive.NewObjectID()
+		patchID := primitive.NewObjectID()
+
+		existingNote := createTestNote()
+		existingNote.UpdatedAt = primitive.NewDateTimeFromTime(time.Now().Add(-1 * time.Hour))
+
+		patchDate := primitive.NewDateTimeFromTime(time.Now())
+		patch := patchmodels.Patch{
+			ID:        patchID,
+			Action:    patchmodels.PatchActionDelete,
+			ItemType:  patchmodels.ItemTypeNote,
+			ItemID:    &noteID,
+			Changes:   []patchmodels.PatchChange{},
+			PatchDate: &patchDate,
+		}
+
+		patches := []patchmodels.Patch{patch}
+
+		mockNoteRepo.On("GetByID", mock.Anything, noteID.Hex()).Return(existingNote, nil)
+		mockNoteRepo.On("Delete", mock.Anything, noteID.Hex()).Return(assert.AnError)
+
+		patchJSON, _ := json.Marshal(patches)
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("POST", "/notes/patch", bytes.NewBuffer(patchJSON))
+		req.Header.Set("Content-Type", "application/json")
+
+		// Create a context and set auth user
+		ctx, _ := gin.CreateTestContext(w)
+		ctx.Request = req
+		ctx.Set("authUser", &auth.UserAuthInfo{UserID: existingNote.User})
+
+		// Call the handler directly
+		controller := NewNoteController(mockNoteRepo)
+		controller.Patch(ctx)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+		var response PatchResponse
+		err := json.Unmarshal(w.Body.Bytes(), &response)
+		assert.NoError(t, err)
+		assert.Len(t, response.Success, 0)
+		assert.Len(t, response.Errors, 1)
+		assert.Equal(t, "delete_failed", response.Errors[0].ErrorCode)
+		assert.Equal(t, patchID.Hex(), response.Errors[0].PatchID)
+	})
+
+	t.Run("delete unauthorized", func(t *testing.T) {
 		userID := primitive.NewObjectID()
 		noteID := primitive.NewObjectID()
 		patchID := primitive.NewObjectID()
@@ -578,7 +668,7 @@ func TestPatch(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Len(t, response.Success, 0)
 		assert.Len(t, response.Errors, 1)
-		assert.Equal(t, "delete_failed", response.Errors[0].ErrorCode)
+		assert.Equal(t, "not_authorized", response.Errors[0].ErrorCode)
 		assert.Equal(t, patchID.Hex(), response.Errors[0].PatchID)
 	})
 
@@ -686,8 +776,6 @@ func TestPatch(t *testing.T) {
 	})
 
 	t.Run("mixed operations with successes, errors, and conflicts", func(t *testing.T) {
-		userID := primitive.NewObjectID()
-
 		// Patch 1: Successful update
 		noteID1 := primitive.NewObjectID()
 		patchID1 := primitive.NewObjectID()
@@ -747,7 +835,7 @@ func TestPatch(t *testing.T) {
 		// Create a context and set auth user
 		ctx, _ := gin.CreateTestContext(w)
 		ctx.Request = req
-		ctx.Set("authUser", &auth.UserAuthInfo{UserID: userID})
+		ctx.Set("authUser", &auth.UserAuthInfo{UserID: existingNote1.User})
 
 		// Call the handler directly
 		controller := NewNoteController(mockNoteRepo)
