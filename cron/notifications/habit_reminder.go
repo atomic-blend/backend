@@ -54,8 +54,6 @@ func HabitReminderNotificationCron() {
 			continue
 		}
 
-		log.Debug().Msgf("Processing user: %s", user.ID)
-
 		habits, err := habitRepo.GetAll(ctx, user.ID)
 		if err != nil {
 			log.Error().Err(err).Msg("Failed to get habits")
