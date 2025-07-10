@@ -2,6 +2,39 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## 0.8.0 - 2025-07-10
+#### Bug Fixes
+- check that user have the right to patch note / task - (749af27) - Brandon Guigo
+- linter issues - (a9386ae) - Brandon Guigo
+- check for force patch - (ddfeb50) - Brandon Guigo
+- skip conflict check if patch have the force boolean - (82a3da5) - Brandon Guigo
+- return a valid conflicted item entity - (a6cca10) - Brandon Guigo
+- make the patch task test working - (4d29e11) - Brandon Guigo
+- most of the tests - (cb5eaf8) - Brandon Guigo
+- add tests except create - (b2911fa) - Brandon Guigo
+- task creation bug - (3a21bdb) - Brandon Guigo
+- support for booleans - (6125f6f) - Brandon Guigo
+- make the update date work - (64b9a2b) - Brandon Guigo
+- camelCase error - (6167bbd) - Brandon Guigo
+- wrong date in backend for patch conflict check - (b921b38) - Brandon Guigo
+- remove broken updateBulk to setup patch - (3526c90) - Brandon Guigo
+- remove unnecessary logs in cron - (bb9ea1a) - Brandon Guigo
+- only update when the task have some changes - (06c2478) - Brandon Guigo
+- bulk update request type - (1c4f663) - Brandon Guigo
+- rename conflicted item fields - (450ec7b) - Brandon Guigo
+- tests and linter - (62f8b25) - Brandon Guigo
+#### Features
+- add notes patch endpoint - (dd1655d) - Brandon Guigo
+- add methods for create / delete - (cb5d922) - Brandon Guigo
+- update patch for task - (0378c9d) - Brandon Guigo
+- start of the patch method for task - (b7014db) - Brandon Guigo
+- add skipped list in bulk update - (fc604eb) - Brandon Guigo
+- add bulk update method to task - (c386a82) - Brandon Guigo
+#### Miscellaneous Chores
+- **(release)** 0.7.0 [skip ci] - (66bae0c) - GitHub Actions
+
+- - -
+
 ## 0.7.0 - 2025-06-25
 #### Features
 - add deleted note boolean - (3c6419f) - Brandon Guigo
