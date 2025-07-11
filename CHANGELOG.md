@@ -2,6 +2,14 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## 0.8.1 - 2025-07-11
+#### Bug Fixes
+- use buildx to build amd and arm images - (24ff873) - Brandon Guigo
+#### Miscellaneous Chores
+- **(release)** 0.8.0 [skip ci] - (a3bce9f) - GitHub Actions
+
+- - -
+
 ## 0.8.0 - 2025-07-10
 #### Bug Fixes
 - check that user have the right to patch note / task - (749af27) - Brandon Guigo
