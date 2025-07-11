@@ -135,51 +135,6 @@ jobs:
           tags: |
             ghcr.io/${{ github.repository }}:${{ steps.get-tag.outputs.tag }}
 
-  deploy-to-ecs:
-    needs: build-docker-images
-    runs-on: ubuntu-22.04
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-
-      - name: Get tag
-        id: get-tag
-        run: |
-          TAG=$(git describe --abbrev=0 --tags)
-          echo "tag=$TAG" >> $GITHUB_OUTPUT
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
-
-      - name: Download task definition
-        run: |
-          aws ecs describe-task-definition \
-          --task-definition prod \
-          --query "taskDefinition" \
-          --output json > task-definition.json
-
-      - name: Replace image in task definition
-        uses: aws-actions/amazon-ecs-render-task-definition@v1
-        id: render
-        with:
-          task-definition: task-definition.json
-          container-name: backend
-          image: ghcr.io/atomic-blend/backend:${{ steps.get-tag.outputs.tag }}
-
-      - name: Deploy to ECS service
-        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
-        with:
-          task-definition: ${{ steps.render.outputs.task-definition }}
-          service: prod
-          cluster: prod
-          wait-for-service-stability: true
-
   create-github-release:
     needs: deploy-to-ecs
     runs-on: ubuntu-22.04
