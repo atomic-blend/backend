@@ -1,17 +1,62 @@
-// filepath: /Users/brandonguigo/workspace/atomic-blend/backend/api/auth/root_test.go
 package auth
 
 import (
+	"auth/tests/utils/inmemorymongo"
+	"auth/utils/db"
 	"auth/utils/jwt"
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"testing"
 
+	"github.com/atomic-blend/memongo"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
+
+var rootTestMongoServer *memongo.Server
+
+// setupRootTestDB initializes an in-memory MongoDB for testing
+func setupRootTestDB() error {
+	if rootTestMongoServer != nil {
+		return nil // Already set up
+	}
+
+	server, err := inmemorymongo.CreateInMemoryMongoDB()
+	if err != nil {
+		return err
+	}
+
+	rootTestMongoServer = server
+
+	// Connect to the in-memory database
+	client, err := inmemorymongo.ConnectToInMemoryDB(server.URI())
+	if err != nil {
+		server.Stop()
+		return err
+	}
+
+	// Set the global database variables
+	db.MongoClient = client
+	db.Database = client.Database("test_database")
+
+	return nil
+}
+
+// teardownRootTestDB cleans up the test database
+func teardownRootTestDB() {
+	if rootTestMongoServer != nil {
+		if db.MongoClient != nil {
+			db.MongoClient.Disconnect(context.Background())
+		}
+		rootTestMongoServer.Stop()
+		rootTestMongoServer = nil
+		db.MongoClient = nil
+		db.Database = nil
+	}
+}
 
 // TestSetupRoutes verifies that the auth routes are set up correctly
 // We'll use a simpler approach by directly adding routes to the router for testing
@@ -57,6 +102,11 @@ func TestRequireAuth(t *testing.T) {
 	// Set Gin to test mode
 	gin.SetMode(gin.TestMode)
 
+	// Set up in-memory database for tests
+	err := setupRootTestDB()
+	assert.NoError(t, err, "Failed to set up test database")
+	defer teardownRootTestDB()
+
 	// Set a mock secret for testing
 	originalSecret := os.Getenv("SSO_SECRET")
 	os.Setenv("SSO_SECRET", "test_secret_for_require_auth")
@@ -85,7 +135,11 @@ func TestRequireAuth(t *testing.T) {
 
 	// Test with valid auth header
 	userID := primitive.NewObjectID()
-	tokenDetails, _ := jwt.GenerateToken(userID, jwt.AccessToken)
+
+	// Create a test context for token generation
+	tempW := httptest.NewRecorder()
+	tempC, _ := gin.CreateTestContext(tempW)
+	tokenDetails, _ := jwt.GenerateToken(tempC, userID, jwt.AccessToken)
 
 	w = httptest.NewRecorder()
 	req, _ = http.NewRequest("GET", "/test/protected", nil)
@@ -95,59 +149,158 @@ func TestRequireAuth(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 }
 
-// Test for RequireRole - simpler approach to avoid DB dependencies
-func TestRequireRole(t *testing.T) {
+// Test for RequireRoleMiddleware - simpler approach to avoid DB dependencies
+func TestRequireRoleMiddleware(t *testing.T) {
 	// Set Gin to test mode
 	gin.SetMode(gin.TestMode)
 
+	// Set up in-memory database for tests
+	err := setupRootTestDB()
+	assert.NoError(t, err, "Failed to set up test database")
+	defer teardownRootTestDB()
+
 	// Set a mock secret for testing
 	originalSecret := os.Getenv("SSO_SECRET")
-	os.Setenv("SSO_SECRET", "test_secret_for_require_role")
+	os.Setenv("SSO_SECRET", "test_secret_for_require_role_middleware")
 	defer func() {
 		os.Setenv("SSO_SECRET", originalSecret)
 	}()
 
-	// Create a router
-	router := gin.New()
+	t.Run("No Authorization Header", func(t *testing.T) {
+		// Create a router
+		router := gin.New()
 
-	// We'll test the auth part directly with a simple mock of the role middleware
-	// Rather than calling the actual RequireRole function which requires DB access
+		// Note: We cannot easily test RequireRoleMiddleware without a real database connection
+		// because it creates repositories internally using db.Database
+		// This test demonstrates the expected behavior at the auth middleware level
 
-	// Create a route group
-	group := router.Group("/admin")
+		// Create a route group with auth middleware (part of RequireRoleMiddleware)
+		group := router.Group("/admin")
+		RequireAuth(group) // This is what RequireRoleMiddleware does first
 
-	// Apply auth middleware first (same as RequireRole would do)
-	RequireAuth(group)
+		// Add a test handler
+		group.GET("/test", func(c *gin.Context) {
+			c.String(http.StatusOK, "admin only")
+		})
 
-	// Then add a simple mock role middleware that always denies access if not authenticated
-	group.Use(func(c *gin.Context) {
-		// If we got past the auth middleware, pretend this is a role check
-		// In a real application this would check the user's role
-		c.Next()
+		// Test with no auth header (should fail at the auth middleware)
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/admin/test", nil)
+		router.ServeHTTP(w, req)
+
+		// Should fail at the auth middleware with 401
+		assert.Equal(t, http.StatusUnauthorized, w.Code)
+		assert.Contains(t, w.Body.String(), "Authorization header is required")
 	})
 
-	// Add a test handler
-	group.GET("/test", func(c *gin.Context) {
-		c.String(http.StatusOK, "admin only")
+	t.Run("Valid Auth Token", func(t *testing.T) {
+		// Create a router
+		router := gin.New()
+
+		// Apply only the auth part (since we can't test the role part without DB)
+		group := router.Group("/admin")
+		RequireAuth(group)
+
+		// Add a test handler
+		group.GET("/test", func(c *gin.Context) {
+			// If we reach here, auth middleware passed
+			authUser := GetAuthUser(c)
+			assert.NotNil(t, authUser, "Auth user should be set")
+			c.String(http.StatusOK, "auth passed")
+		})
+
+		// Test with valid auth header
+		userID := primitive.NewObjectID()
+
+		// Create a test context for token generation
+		tempW := httptest.NewRecorder()
+		tempC, _ := gin.CreateTestContext(tempW)
+		tokenDetails, _ := jwt.GenerateToken(tempC, userID, jwt.AccessToken)
+
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/admin/test", nil)
+		req.Header.Set("Authorization", "Bearer "+tokenDetails.Token)
+		router.ServeHTTP(w, req)
+
+		// Should pass the auth middleware
+		assert.Equal(t, http.StatusOK, w.Code)
+		assert.Equal(t, "auth passed", w.Body.String())
+	})
+}
+
+// Test for RequireStaticStringMiddleware
+func TestRequireStaticStringMiddleware(t *testing.T) {
+	// Set Gin to test mode
+	gin.SetMode(gin.TestMode)
+
+	t.Run("Missing Authorization Header", func(t *testing.T) {
+		// Create a router
+		router := gin.New()
+
+		// Create a route group with static string middleware
+		group := router.Group("/api")
+		RequireStaticStringMiddleware(group, "Bearer test_token")
+
+		// Add a test handler
+		group.GET("/test", func(c *gin.Context) {
+			c.String(http.StatusOK, "success")
+		})
+
+		// Test with no auth header
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/api/test", nil)
+		router.ServeHTTP(w, req)
+
+		// Should fail with 401
+		assert.Equal(t, http.StatusUnauthorized, w.Code)
+		assert.Contains(t, w.Body.String(), "Authorization header is required")
 	})
 
-	// Test with no auth header (should fail at the auth middleware)
-	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("GET", "/admin/test", nil)
-	router.ServeHTTP(w, req)
+	t.Run("Invalid Static Token", func(t *testing.T) {
+		// Create a router
+		router := gin.New()
 
-	// Should fail at the auth middleware with 401
-	assert.Equal(t, http.StatusUnauthorized, w.Code)
+		// Create a route group with static string middleware
+		group := router.Group("/api")
+		RequireStaticStringMiddleware(group, "Bearer test_token")
 
-	// Test with valid auth header (should pass both middlewares)
-	userID := primitive.NewObjectID()
-	tokenDetails, _ := jwt.GenerateToken(userID, jwt.AccessToken)
+		// Add a test handler
+		group.GET("/test", func(c *gin.Context) {
+			c.String(http.StatusOK, "success")
+		})
 
-	w = httptest.NewRecorder()
-	req, _ = http.NewRequest("GET", "/admin/test", nil)
-	req.Header.Set("Authorization", "Bearer "+tokenDetails.Token)
-	router.ServeHTTP(w, req)
+		// Test with wrong token
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/api/test", nil)
+		req.Header.Set("Authorization", "Bearer wrong_token")
+		router.ServeHTTP(w, req)
 
-	// Should pass both middlewares and return 200
-	assert.Equal(t, http.StatusOK, w.Code)
+		// Should fail with 401
+		assert.Equal(t, http.StatusUnauthorized, w.Code)
+		assert.Contains(t, w.Body.String(), "Invalid token")
+	})
+
+	t.Run("Valid Static Token", func(t *testing.T) {
+		// Create a router
+		router := gin.New()
+
+		// Create a route group with static string middleware
+		group := router.Group("/api")
+		RequireStaticStringMiddleware(group, "Bearer test_token")
+
+		// Add a test handler
+		group.GET("/test", func(c *gin.Context) {
+			c.String(http.StatusOK, "success")
+		})
+
+		// Test with correct token
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/api/test", nil)
+		req.Header.Set("Authorization", "Bearer test_token")
+		router.ServeHTTP(w, req)
+
+		// Should succeed
+		assert.Equal(t, http.StatusOK, w.Code)
+		assert.Equal(t, "success", w.Body.String())
+	})
 }
