@@ -1,9 +1,9 @@
 package auth
 
 import (
+	"net/http"
 	"productivity/repositories"
 	"productivity/utils/jwt"
-	"net/http"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -14,6 +14,7 @@ import (
 // UserAuthInfo contains the authenticated user information
 type UserAuthInfo struct {
 	UserID primitive.ObjectID
+	Claims *jwt.CustomClaims
 }
 
 // Middleware verifies JWT tokens and adds user info to the context
@@ -46,15 +47,14 @@ func Middleware() gin.HandlerFunc {
 		}
 
 		// Extract user ID from token claims
-		userIDStr, ok := (*claims)["user_id"].(string)
-		if !ok {
+		if claims.UserID == nil {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token: missing user_id claim"})
 			c.Abort()
 			return
 		}
 
 		// Convert string user ID to ObjectID
-		userID, err := primitive.ObjectIDFromHex(userIDStr)
+		userID, err := primitive.ObjectIDFromHex(*claims.UserID)
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid user ID in token"})
 			c.Abort()
@@ -64,6 +64,7 @@ func Middleware() gin.HandlerFunc {
 		// Set user info in context for use in subsequent handlers
 		c.Set("authUser", &UserAuthInfo{
 			UserID: userID,
+			Claims: claims,
 		})
 
 		c.Next()
@@ -169,17 +170,16 @@ func OptionalAuth() gin.HandlerFunc {
 		}
 
 		// Extract user ID from token claims
-		userIDStr, ok := (*claims)["user_id"].(string)
-		if !ok {
+
+		if claims.UserID == nil {
 			// Just continue without auth
 			c.Next()
 			return
 		}
 
 		// Convert string user ID to ObjectID
-		userID, err := primitive.ObjectIDFromHex(userIDStr)
+		userID, err := primitive.ObjectIDFromHex(*claims.UserID)
 		if err != nil {
-			// Just continue without auth
 			c.Next()
 			return
 		}

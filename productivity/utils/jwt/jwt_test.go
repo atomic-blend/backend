@@ -43,8 +43,8 @@ func TestValidateToken(t *testing.T) {
 		claims, err := ValidateToken(td.Token, AccessToken)
 		assert.NoError(t, err)
 		assert.NotNil(t, claims)
-		assert.Equal(t, userID.Hex(), (*claims)["user_id"])
-		assert.Equal(t, string(AccessToken), (*claims)["type"])
+		assert.Equal(t, userID.Hex(), claims.UserID)
+		assert.Equal(t, string(AccessToken), claims.Type)
 	})
 
 	t.Run("should fail with invalid token", func(t *testing.T) {

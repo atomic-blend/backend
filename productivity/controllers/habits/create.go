@@ -38,8 +38,7 @@ func (c *HabitController) CreateHabit(ctx *gin.Context) {
 
 	// Check if user has reached habit limit
 	if len(userHabits) >= 3 {
-		//TODO: replace that with grpc call
-		if !subscription.IsUserSubscribed(ctx, authUser.UserID) {
+		if authUser.Claims.UserID != nil && !*authUser.Claims.IsSubscribed {
 			ctx.JSON(http.StatusForbidden, gin.H{"error": "You must be subscribed to create more than 3 habits"})
 			return
 		}

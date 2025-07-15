@@ -17,7 +17,7 @@ type TokenType string
 
 const (
 	// AccessToken is used for authenticating requests
-	AccessToken  TokenType = "access"
+	AccessToken TokenType = "access"
 
 	// RefreshToken is used to get a new access token
 	RefreshToken TokenType = "refresh"
@@ -29,6 +29,13 @@ type TokenDetails struct {
 	TokenType TokenType
 	ExpiresAt time.Time
 	UserID    string
+}
+
+type CustomClaims struct {
+	UserID *string `json:"user_id"`
+	IsSubscribed *bool `json:"is_subscribed"`
+	Type *string `json:"type"`
+	jwt.RegisteredClaims
 }
 
 // GenerateToken creates a new JWT token
@@ -49,12 +56,12 @@ func GenerateToken(userID primitive.ObjectID, tokenType TokenType) (*TokenDetail
 	td.ExpiresAt = time.Now().Add(expTime)
 
 	claims := jwt.MapClaims{
-		"sub":  td.UserID,
+		"sub":     td.UserID,
 		"user_id": td.UserID,
-		"aud":  "atomic-blend",
-		"iss":  "atomic-blend",
-		"type": string(tokenType),
-		"iat":  time.Now().Unix(),
+		"aud":     "atomic-blend",
+		"iss":     "atomic-blend",
+		"type":    string(tokenType),
+		"iat":     time.Now().Unix(),
 	}
 
 	if tokenType == AccessToken {
@@ -73,15 +80,15 @@ func GenerateToken(userID primitive.ObjectID, tokenType TokenType) (*TokenDetail
 }
 
 // ValidateToken verifies if a token is valid
-func ValidateToken(tokenString string, tokenType TokenType) (*jwt.MapClaims, error) {
-
+func ValidateToken(tokenString string, tokenType TokenType) (*CustomClaims, error) {
 	secretKey := os.Getenv("SSO_SECRET")
 	if secretKey == "" {
 		log.Error().Msg("SSO_SECRET not set")
 		return nil, errors.New("SSO_SECRET not set")
 	}
 
-	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+	claims := &CustomClaims{}
+	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, errors.New("unexpected signing method")
 		}
@@ -92,17 +99,20 @@ func ValidateToken(tokenString string, tokenType TokenType) (*jwt.MapClaims, err
 		return nil, err
 	}
 
-	claims, ok := token.Claims.(jwt.MapClaims)
-	if !ok || !token.Valid {
+	if !token.Valid {
 		return nil, errors.New("invalid token")
 	}
 
 	// Verify token type
-	if claims["type"] != string(tokenType) {
+	if *claims.Type != string(tokenType) {
 		return nil, errors.New("invalid token type")
 	}
 
-	return &claims, nil
+	return claims, nil
+}
+
+func GetIsSubscribed(claims *CustomClaims) {
+
 }
 
 // GenerateJWKS creates a new JSON Web Key Set

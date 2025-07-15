@@ -38,7 +38,7 @@ func (c *TagController) CreateTag(ctx *gin.Context) {
 	}
 
 	if len(userTags) >= 5 {
-		if !subscription.IsUserSubscribed(ctx, authUser.UserID) {
+		if authUser.Claims.UserID != nil && !*authUser.Claims.IsSubscribed {
 			ctx.JSON(http.StatusForbidden, gin.H{"error": "You must be subscribed to create more than 5 tags"})
 			return
 		}
