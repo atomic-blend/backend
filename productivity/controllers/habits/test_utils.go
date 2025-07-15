@@ -53,10 +53,10 @@ func createTestHabit() *models.Habit {
 // setupTest creates a test router and mock repository for testing
 func setupTest() (*gin.Engine, *mocks.MockHabitRepository) {
 	gin.SetMode(gin.TestMode)
-	
+
 	// Register custom validators for tests
 	models.RegisterValidators()
-	
+
 	router := gin.New()
 	mockRepo := new(mocks.MockHabitRepository)
 	habitController := NewHabitController(mockRepo)

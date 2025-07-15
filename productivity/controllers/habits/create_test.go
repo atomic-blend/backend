@@ -10,6 +10,7 @@ import (
 	"productivity/models"
 	"productivity/tests/utils/inmemorymongo"
 	"productivity/utils/db"
+	"productivity/utils/jwt"
 	"testing"
 
 	"github.com/gin-gonic/gin"
@@ -90,7 +91,12 @@ func TestCreateHabit(t *testing.T) {
 
 		ctx, _ := gin.CreateTestContext(w)
 		ctx.Request = req
-		ctx.Set("authUser", &auth.UserAuthInfo{UserID: userID})
+		userIDString := userID.Hex()
+		isSubscribed := false // Simulate user not subscribed
+		ctx.Set("authUser", &auth.UserAuthInfo{UserID: userID, Claims: &jwt.CustomClaims{
+			UserID:       &userIDString,
+			IsSubscribed: &isSubscribed,
+		}})
 
 		controller := NewHabitController(mockRepo)
 		controller.CreateHabit(ctx)
