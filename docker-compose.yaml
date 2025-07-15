@@ -1,14 +1,26 @@
 version: "3.8"
 services:
-  api-ab:
-    build:
-      dockerfile: auth-service/Dockerfile.dev  # Use a dev-specific Dockerfile
-    container_name: api-atomic-blend
+  reverse-proxy:
+    image: nginx:alpine
+    container_name: reverse-proxy
     ports:
-      - "8080:8080"
+      - "8080:80"
     volumes:
-      - ./auth-service:/app
-      # - /etc/localtime:/etc/localtime:ro
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - auth
+      - productivity
+    restart: unless-stopped
+
+  auth:
+    build:
+      context: ./auth
+      dockerfile: Dockerfile.dev  # Use a dev-specific Dockerfile
+    container_name: auth
+    expose:
+      - "8080"
+    volumes:
+      - ./auth:/app
       - type: bind
         source: ${HOME}${USERPROFILE}/.netrc
         target: /root/.netrc
@@ -18,23 +30,25 @@ services:
     env_file:
       - .env
     command: air  # Hot-reloading for development
-
-  # rabbitmq:
-  #   image: rabbitmq:4.0.5-management
-  #   container_name: rabbitmq_server
-  #   restart: always
-  #   ports:
-  #     - "5672:5672"   # AMQP protocol
-  #     - "15672:15672" # Management UI
-  #   environment:
-  #     RABBITMQ_DEFAULT_USER: user
-  #     RABBITMQ_DEFAULT_PASS: password
-  #   volumes:
-  #     - rabbitmq_data:/var/lib/rabbitmq
-  #   healthcheck:
-  #     test: ["CMD", "rabbitmq-diagnostics", "check_running"]
-  #     interval: 10s
-  #     retries: 5
+  
+  productivity:
+    build:
+      context: ./productivity
+      dockerfile: Dockerfile.dev  # Use a dev-specific Dockerfile
+    container_name: productivity
+    expose:
+      - "8080"
+    volumes:
+      - ./productivity:/app
+      - type: bind
+        source: ${HOME}${USERPROFILE}/.netrc
+        target: /root/.netrc
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    env_file:
+      - .env
+    command: air  # Hot-reloading for development
 
   mongodb:
     image: mongo:8.0.4

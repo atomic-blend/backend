@@ -16,7 +16,7 @@ func SetupRoutes(router *gin.Engine, database *mongo.Database) {
 	resetPasswordRepo := repositories.NewUserResetPasswordRequestRepository(database)
 	authController := auth.NewController(userRepo, userRoleRepo, resetPasswordRepo)
 
-	authGroup := router.Group("/auth")
+	authGroup := router.Group("")
 	{
 		authGroup.POST("/register", authController.Register)
 		authGroup.POST("/login", authController.Login)
