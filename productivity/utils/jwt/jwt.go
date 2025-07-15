@@ -31,10 +31,11 @@ type TokenDetails struct {
 	UserID    string
 }
 
+// CustomClaims represents the custom claims in the JWT
 type CustomClaims struct {
-	UserID *string `json:"user_id"`
-	IsSubscribed *bool `json:"is_subscribed"`
-	Type *string `json:"type"`
+	UserID       *string `json:"user_id"`
+	IsSubscribed *bool   `json:"is_subscribed"`
+	Type         *string `json:"type"`
 	jwt.RegisteredClaims
 }
 
@@ -109,10 +110,6 @@ func ValidateToken(tokenString string, tokenType TokenType) (*CustomClaims, erro
 	}
 
 	return claims, nil
-}
-
-func GetIsSubscribed(claims *CustomClaims) {
-
 }
 
 // GenerateJWKS creates a new JSON Web Key Set
