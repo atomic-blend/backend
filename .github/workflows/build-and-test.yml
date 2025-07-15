@@ -19,8 +19,11 @@ jobs:
         uses: tj-actions/changed-files@v35
         with:
           dir_names: true
-          dir_names_max_depth: 2 # This is optional. If not provided, full subdirectories' paths will be provided. Use it if you need to trim the output. See docs for details: https://github.com/tj-actions/changed-files/tree/main#inputs.
+          dir_names_max_depth: 1 # This is optional. If not provided, full subdirectories' paths will be provided. Use it if you need to trim the output. See docs for details: https://github.com/tj-actions/changed-files/tree/main#inputs.
           json: true
+          files: |
+            auth/**
+            productivity/**
           quotepath: false
 
       - name: "Set output in the matrix format"
