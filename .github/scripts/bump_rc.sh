@@ -40,4 +40,4 @@ else
 fi
 
 echo "Running: cog bump --pre $next_rc"
-cog bump --pre "$next_rc"
+~/.cargo/bin/cog bump --pre "$next_rc"

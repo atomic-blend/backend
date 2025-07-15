@@ -1,4 +1,5 @@
 from_latest_tag = true
+tag_prefix = "productivity-v"
 ignore_merge_commits = true
 disable_changelog = false
 disable_bump_commit = true
