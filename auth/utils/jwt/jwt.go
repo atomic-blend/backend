@@ -1,11 +1,13 @@
 package jwt
 
 import (
+	"auth/utils/subscription"
 	"errors"
 	"fmt"
 	"os"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/lestrrat-go/jwx/jwk"
 	"github.com/rs/zerolog/log"
@@ -17,7 +19,7 @@ type TokenType string
 
 const (
 	// AccessToken is used for authenticating requests
-	AccessToken  TokenType = "access"
+	AccessToken TokenType = "access"
 
 	// RefreshToken is used to get a new access token
 	RefreshToken TokenType = "refresh"
@@ -32,7 +34,7 @@ type TokenDetails struct {
 }
 
 // GenerateToken creates a new JWT token
-func GenerateToken(userID primitive.ObjectID, tokenType TokenType) (*TokenDetails, error) {
+func GenerateToken(ctx *gin.Context, userID primitive.ObjectID, tokenType TokenType) (*TokenDetails, error) {
 	var td TokenDetails
 	td.UserID = userID.Hex()
 	td.TokenType = tokenType
@@ -48,13 +50,16 @@ func GenerateToken(userID primitive.ObjectID, tokenType TokenType) (*TokenDetail
 	expTime = 15 * time.Minute // 15 minutes for access token
 	td.ExpiresAt = time.Now().Add(expTime)
 
+	isSubscribed := subscription.IsUserSubscribed(ctx, userID)
+
 	claims := jwt.MapClaims{
-		"sub":  td.UserID,
-		"user_id": td.UserID,
-		"aud":  "atomic-blend",
-		"iss":  "atomic-blend",
-		"type": string(tokenType),
-		"iat":  time.Now().Unix(),
+		"sub":           td.UserID,
+		"user_id":       td.UserID,
+		"aud":           "atomic-blend",
+		"iss":           "atomic-blend",
+		"type":          string(tokenType),
+		"iat":           time.Now().Unix(),
+		"is_subscribed": isSubscribed,
 	}
 
 	if tokenType == AccessToken {

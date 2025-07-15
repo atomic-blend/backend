@@ -79,13 +79,13 @@ func (c *Controller) Register(ctx *gin.Context) {
 	}
 
 	// Generate tokens
-	accessToken, err := jwt.GenerateToken(*newUser.ID, jwt.AccessToken)
+	accessToken, err := jwt.GenerateToken(ctx, *newUser.ID, jwt.AccessToken)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate access token"})
 		return
 	}
 
-	refreshToken, err := jwt.GenerateToken(*newUser.ID, jwt.RefreshToken)
+	refreshToken, err := jwt.GenerateToken(ctx, *newUser.ID, jwt.RefreshToken)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate refresh token"})
 		return

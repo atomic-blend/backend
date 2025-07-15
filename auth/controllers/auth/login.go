@@ -54,13 +54,13 @@ func (c *Controller) Login(ctx *gin.Context) {
 	}
 
 	// Generate tokens
-	accessToken, err := jwt.GenerateToken(*user.ID, jwt.AccessToken)
+	accessToken, err := jwt.GenerateToken(ctx, *user.ID, jwt.AccessToken)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate access token"})
 		return
 	}
 
-	refreshToken, err := jwt.GenerateToken(*user.ID, jwt.RefreshToken)
+	refreshToken, err := jwt.GenerateToken(ctx, *user.ID, jwt.RefreshToken)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate refresh token"})
 		return
