@@ -4,11 +4,13 @@ import (
 	"auth/models"
 	"auth/repositories"
 	"auth/tests/utils/inmemorymongo"
+	"auth/utils/db"
 	"bytes"
 	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 
 	"github.com/gin-gonic/gin"
@@ -19,6 +21,10 @@ import (
 )
 
 func TestRegister(t *testing.T) {
+	// Set environment variable needed for JWT
+	os.Setenv("SSO_SECRET", "test-secret-key")
+	defer os.Unsetenv("SSO_SECRET")
+
 	// Set Gin to test mode
 	gin.SetMode(gin.TestMode)
 
@@ -40,12 +46,19 @@ func TestRegister(t *testing.T) {
 	defer client.Disconnect(context.TODO())
 
 	// Get database reference
-	db := client.Database("test_db")
+	database := client.Database("test_db")
+
+	// Set the global database for the subscription function to use
+	db.Database = database
+	defer func() {
+		// Reset global database after test
+		db.Database = nil
+	}()
 
 	// Create user repository
-	userRepo := repositories.NewUserRepository(db)
-	userRoleRepo := repositories.NewUserRoleRepository(db)
-	resetPasswordRepo := repositories.NewUserResetPasswordRequestRepository(db)
+	userRepo := repositories.NewUserRepository(database)
+	userRoleRepo := repositories.NewUserRoleRepository(database)
+	resetPasswordRepo := repositories.NewUserResetPasswordRequestRepository(database)
 
 	// Create controller
 	authController := NewController(userRepo, userRoleRepo, resetPasswordRepo)
@@ -60,7 +73,7 @@ func TestRegister(t *testing.T) {
 		ID:   &roleID,
 		Name: "user",
 	}
-	_, err = db.Collection("user_roles").InsertOne(context.TODO(), defaultRole)
+	_, err = database.Collection("user_roles").InsertOne(context.TODO(), defaultRole)
 	if err != nil {
 		t.Fatalf("Failed to insert default user role: %v", err)
 	}
@@ -86,7 +99,7 @@ func TestRegister(t *testing.T) {
 				},
 			},
 			expectedStatus: http.StatusCreated,
-			checkResponse: func(t *testing.T, w *httptest.ResponseRecorder, db *mongo.Database) {
+			checkResponse: func(t *testing.T, w *httptest.ResponseRecorder, database *mongo.Database) {
 				var response Response
 				err := json.Unmarshal(w.Body.Bytes(), &response)
 				assert.NoError(t, err)
@@ -106,7 +119,7 @@ func TestRegister(t *testing.T) {
 
 				// Verify user in database
 				var savedUser models.UserEntity
-				err = db.Collection("users").FindOne(context.TODO(), bson.M{"email": "newuser@example.com"}).Decode(&savedUser)
+				err = database.Collection("users").FindOne(context.TODO(), bson.M{"email": "newuser@example.com"}).Decode(&savedUser)
 				assert.NoError(t, err)
 
 				// Verify password is hashed
@@ -125,7 +138,7 @@ func TestRegister(t *testing.T) {
 				assert.Equal(t, 1, len(savedUser.RoleIds))
 				assert.Equal(t, roleID, *savedUser.RoleIds[0])
 			},
-			setupTest: func(t *testing.T, db *mongo.Database) {
+			setupTest: func(t *testing.T, database *mongo.Database) {
 				// No setup needed
 			},
 		},
@@ -142,18 +155,18 @@ func TestRegister(t *testing.T) {
 				},
 			},
 			expectedStatus: http.StatusConflict,
-			checkResponse: func(t *testing.T, w *httptest.ResponseRecorder, db *mongo.Database) {
+			checkResponse: func(t *testing.T, w *httptest.ResponseRecorder, database *mongo.Database) {
 				var response map[string]string
 				err := json.Unmarshal(w.Body.Bytes(), &response)
 				assert.NoError(t, err)
 				assert.Contains(t, response, "error")
 				assert.Equal(t, "Email is already registered", response["error"])
 			},
-			setupTest: func(t *testing.T, db *mongo.Database) {
+			setupTest: func(t *testing.T, database *mongo.Database) {
 				// Create an existing user
 				email := "existing@example.com"
 				password := "hashedPassword" // In a real scenario this would be hashed
-				_, err := db.Collection("users").InsertOne(context.TODO(), models.UserEntity{
+				_, err := database.Collection("users").InsertOne(context.TODO(), models.UserEntity{
 					Email:    &email,
 					Password: &password,
 				})
@@ -173,13 +186,13 @@ func TestRegister(t *testing.T) {
 				},
 			},
 			expectedStatus: http.StatusBadRequest,
-			checkResponse: func(t *testing.T, w *httptest.ResponseRecorder, db *mongo.Database) {
+			checkResponse: func(t *testing.T, w *httptest.ResponseRecorder, database *mongo.Database) {
 				var response map[string]string
 				err := json.Unmarshal(w.Body.Bytes(), &response)
 				assert.NoError(t, err)
 				assert.Contains(t, response, "error")
 			},
-			setupTest: func(t *testing.T, db *mongo.Database) {
+			setupTest: func(t *testing.T, database *mongo.Database) {
 				// No setup needed for this test case
 			},
 		},
@@ -196,13 +209,13 @@ func TestRegister(t *testing.T) {
 				},
 			},
 			expectedStatus: http.StatusBadRequest,
-			checkResponse: func(t *testing.T, w *httptest.ResponseRecorder, db *mongo.Database) {
+			checkResponse: func(t *testing.T, w *httptest.ResponseRecorder, database *mongo.Database) {
 				var response map[string]string
 				err := json.Unmarshal(w.Body.Bytes(), &response)
 				assert.NoError(t, err)
 				assert.Contains(t, response, "error")
 			},
-			setupTest: func(t *testing.T, db *mongo.Database) {
+			setupTest: func(t *testing.T, database *mongo.Database) {
 				// No setup needed for this test case
 			},
 		},
@@ -218,13 +231,13 @@ func TestRegister(t *testing.T) {
 				},
 			},
 			expectedStatus: http.StatusBadRequest,
-			checkResponse: func(t *testing.T, w *httptest.ResponseRecorder, db *mongo.Database) {
+			checkResponse: func(t *testing.T, w *httptest.ResponseRecorder, database *mongo.Database) {
 				var response map[string]string
 				err := json.Unmarshal(w.Body.Bytes(), &response)
 				assert.NoError(t, err)
 				assert.Contains(t, response, "error")
 			},
-			setupTest: func(t *testing.T, db *mongo.Database) {
+			setupTest: func(t *testing.T, database *mongo.Database) {
 				// No setup needed for this test case
 			},
 		},
@@ -240,13 +253,13 @@ func TestRegister(t *testing.T) {
 				},
 			},
 			expectedStatus: http.StatusBadRequest,
-			checkResponse: func(t *testing.T, w *httptest.ResponseRecorder, db *mongo.Database) {
+			checkResponse: func(t *testing.T, w *httptest.ResponseRecorder, database *mongo.Database) {
 				var response map[string]string
 				err := json.Unmarshal(w.Body.Bytes(), &response)
 				assert.NoError(t, err)
 				assert.Contains(t, response, "error")
 			},
-			setupTest: func(t *testing.T, db *mongo.Database) {
+			setupTest: func(t *testing.T, database *mongo.Database) {
 				// No setup needed for this test case
 			},
 		},
@@ -257,13 +270,13 @@ func TestRegister(t *testing.T) {
 				"password": "securePassword123",
 			},
 			expectedStatus: http.StatusBadRequest,
-			checkResponse: func(t *testing.T, w *httptest.ResponseRecorder, db *mongo.Database) {
+			checkResponse: func(t *testing.T, w *httptest.ResponseRecorder, database *mongo.Database) {
 				var response map[string]string
 				err := json.Unmarshal(w.Body.Bytes(), &response)
 				assert.NoError(t, err)
 				assert.Contains(t, response, "error")
 			},
-			setupTest: func(t *testing.T, db *mongo.Database) {
+			setupTest: func(t *testing.T, database *mongo.Database) {
 				// No setup needed for this test case
 			},
 		},
@@ -273,7 +286,7 @@ func TestRegister(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			// Setup test case
-			tc.setupTest(t, db)
+			tc.setupTest(t, database)
 
 			// Create request body
 			jsonBody, _ := json.Marshal(tc.requestBody)
@@ -290,7 +303,7 @@ func TestRegister(t *testing.T) {
 			assert.Equal(t, tc.expectedStatus, w.Code)
 
 			// Check response
-			tc.checkResponse(t, w, db)
+			tc.checkResponse(t, w, database)
 		})
 	}
 }

@@ -181,7 +181,7 @@ func createTestUser(t *testing.T, repo repositories.UserRepositoryInterface, pur
 		Salt:         "testSalt123",
 		MnemonicSalt: "testMnemonicSalt123",
 	}
-	
+
 	user := &models.UserEntity{
 		Email:     &email,
 		Password:  &password,
@@ -212,7 +212,7 @@ func createTestRole(t *testing.T, repo repositories.UserRoleRepositoryInterface)
 func (suite *RefreshTokenTestSuite) SetupTest() {
 	os.Setenv("SSO_SECRET", "test-secret-key")
 	gin.SetMode(gin.TestMode)
-	
+
 	// Setup real database for testing
 	var cleanup func()
 	suite.userRepo, suite.userRoleRepo, cleanup = setupTestDB(suite.T())
@@ -258,13 +258,13 @@ func (suite *RefreshTokenTestSuite) TestRefreshToken() {
 						UpdatedAt: primitive.NewDateTimeFromTime(time.Now()),
 					},
 				}
-				
+
 				user := createTestUser(suite.T(), suite.userRepo, purchases)
 				role := createTestRole(suite.T(), suite.userRoleRepo)
-				
+
 				// Assign role to user
 				user.Roles = []*models.UserRoleEntity{role}
-				
+
 				return *user.ID, user
 			},
 			authHeader:         "Bearer valid_refresh_token",
@@ -301,10 +301,10 @@ func (suite *RefreshTokenTestSuite) TestRefreshToken() {
 				// Create user without purchases
 				user := createTestUser(suite.T(), suite.userRepo, nil)
 				role := createTestRole(suite.T(), suite.userRoleRepo)
-				
+
 				// Assign role to user
 				user.Roles = []*models.UserRoleEntity{role}
-				
+
 				return *user.ID, user
 			},
 			authHeader:         "Bearer valid_refresh_token",
@@ -372,7 +372,7 @@ func (suite *RefreshTokenTestSuite) TestRefreshToken() {
 		suite.T().Run(tc.name, func(t *testing.T) {
 			// Setup test data
 			userID, user := tc.setupTestData()
-			
+
 			// Update the JWT validator to use the actual userID if needed
 			if tc.mockJWTValidator != nil && !userID.IsZero() {
 				tc.mockJWTValidator = func(tokenString string, tokenType jwt.TokenType) (*jwtlib.MapClaims, error) {

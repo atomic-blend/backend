@@ -4,12 +4,14 @@ import (
 	"auth/models"
 	"auth/repositories"
 	"auth/tests/utils/inmemorymongo"
+	"auth/utils/db"
 	"auth/utils/password"
 	"bytes"
 	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 
 	"github.com/gin-gonic/gin"
@@ -18,6 +20,10 @@ import (
 )
 
 func TestLogin(t *testing.T) {
+	// Set environment variable needed for JWT
+	os.Setenv("SSO_SECRET", "test-secret-key")
+	defer os.Unsetenv("SSO_SECRET")
+
 	// Set Gin to test mode
 	gin.SetMode(gin.TestMode)
 
@@ -39,12 +45,19 @@ func TestLogin(t *testing.T) {
 	defer client.Disconnect(context.TODO())
 
 	// Get database reference
-	db := client.Database("test_db")
+	database := client.Database("test_db")
+
+	// Set the global database for the subscription function to use
+	db.Database = database
+	defer func() {
+		// Reset global database after test
+		db.Database = nil
+	}()
 
 	// Create user repository
-	userRepo := repositories.NewUserRepository(db)
-	userRoleRepo := repositories.NewUserRoleRepository(db)
-	resetPasswordRepo := repositories.NewUserResetPasswordRequestRepository(db)
+	userRepo := repositories.NewUserRepository(database)
+	userRoleRepo := repositories.NewUserRoleRepository(database)
+	resetPasswordRepo := repositories.NewUserResetPasswordRequestRepository(database)
 
 	// Create controller
 	authController := NewController(userRepo, userRoleRepo, resetPasswordRepo)
@@ -59,7 +72,7 @@ func TestLogin(t *testing.T) {
 		ID:   &roleID,
 		Name: "user",
 	}
-	_, err = db.Collection("user_roles").InsertOne(context.TODO(), userRole)
+	_, err = database.Collection("user_roles").InsertOne(context.TODO(), userRole)
 	if err != nil {
 		t.Fatalf("Failed to insert test user role: %v", err)
 	}
@@ -82,7 +95,7 @@ func TestLogin(t *testing.T) {
 	}
 
 	// Insert test user into database
-	_, err = db.Collection("users").InsertOne(context.TODO(), testUser)
+	_, err = database.Collection("users").InsertOne(context.TODO(), testUser)
 	if err != nil {
 		t.Fatalf("Failed to insert test user: %v", err)
 	}
