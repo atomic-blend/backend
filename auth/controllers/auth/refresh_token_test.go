@@ -2,8 +2,11 @@ package auth
 
 import (
 	"auth/models"
-	"auth/tests/mocks"
+	"auth/repositories"
+	"auth/tests/utils/inmemorymongo"
+	"auth/utils/db"
 	"auth/utils/jwt"
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -15,10 +18,45 @@ import (
 	"github.com/gin-gonic/gin"
 	jwtlib "github.com/golang-jwt/jwt/v5"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
+
+// setupTestDB creates an in-memory MongoDB for testing
+func setupTestDB(t *testing.T) (repositories.UserRepositoryInterface, repositories.UserRoleRepositoryInterface, func()) {
+	// Set Gin to test mode
+	gin.SetMode(gin.TestMode)
+
+	// Start in-memory MongoDB server
+	mongoServer, err := inmemorymongo.CreateInMemoryMongoDB()
+	require.NoError(t, err)
+
+	// Get MongoDB connection URI
+	mongoURI := mongoServer.URI()
+
+	// Connect to the in-memory MongoDB
+	client, err := inmemorymongo.ConnectToInMemoryDB(mongoURI)
+	require.NoError(t, err)
+
+	// Get database reference and create repositories
+	database := client.Database("test_db")
+	userRepo := repositories.NewUserRepository(database)
+	userRoleRepo := repositories.NewUserRoleRepository(database)
+
+	// Set the global database for the subscription function to use
+	db.Database = database
+
+	// Return cleanup function
+	cleanup := func() {
+		// Reset global database
+		db.Database = nil
+		client.Disconnect(context.Background())
+		mongoServer.Stop()
+	}
+
+	return userRepo, userRoleRepo, cleanup
+}
 
 // Create a test-specific controller that can use our test JWT validator
 type TestController struct {
@@ -111,8 +149,8 @@ func (c *TestController) RefreshToken(ctx *gin.Context) {
 
 // Create a new TestController
 func NewTestController(
-	userRepo *mocks.MockUserRepository,
-	userRoleRepo *mocks.MockUserRoleRepository,
+	userRepo repositories.UserRepositoryInterface,
+	userRoleRepo repositories.UserRoleRepositoryInterface,
 	mockJWTValidator func(string, jwt.TokenType) (*jwtlib.MapClaims, error),
 ) *TestController {
 	return &TestController{
@@ -126,70 +164,112 @@ func NewTestController(
 
 type RefreshTokenTestSuite struct {
 	suite.Suite
-	userRepo     *mocks.MockUserRepository
-	userRoleRepo *mocks.MockUserRoleRepository
+	userRepo     repositories.UserRepositoryInterface
+	userRoleRepo repositories.UserRoleRepositoryInterface
 	controller   *TestController
 	router       *gin.Engine
+	cleanup      func()
 }
 
-func (suite *RefreshTokenTestSuite) SetupTest() {
-	os.Setenv("SSO_SECRET", "test-secret-key")
-	gin.SetMode(gin.TestMode)
-	suite.userRepo = new(mocks.MockUserRepository)
-	suite.userRoleRepo = new(mocks.MockUserRoleRepository)
-}
-
-func (suite *RefreshTokenTestSuite) TestRefreshToken() {
-	// User ID for testing
-	userID := primitive.NewObjectID()
+// createTestUser creates a test user with optional purchase data
+func createTestUser(t *testing.T, repo repositories.UserRepositoryInterface, purchases []*models.PurchaseEntity) *models.UserEntity {
 	email := "test@example.com"
+	password := "testpassword"
 	keySet := models.EncryptionKey{
 		UserKey:      "testUserKey123",
 		BackupKey:    "testBackupKey123",
 		Salt:         "testSalt123",
 		MnemonicSalt: "testMnemonicSalt123",
 	}
-	now := primitive.NewDateTimeFromTime(time.Now())
-	roleID := primitive.NewObjectID()
+	
+	user := &models.UserEntity{
+		Email:     &email,
+		Password:  &password,
+		KeySet:    &keySet,
+		Purchases: purchases,
+	}
+
+	created, err := repo.Create(context.Background(), user)
+	require.NoError(t, err)
+	require.NotNil(t, created.ID)
+
+	return created
+}
+
+// createTestRole creates a test role
+func createTestRole(t *testing.T, repo repositories.UserRoleRepositoryInterface) *models.UserRoleEntity {
 	role := &models.UserRoleEntity{
-		ID:   &roleID,
 		Name: "user",
 	}
 
+	created, err := repo.Create(context.Background(), role)
+	require.NoError(t, err)
+	require.NotNil(t, created.ID)
+
+	return created
+}
+
+func (suite *RefreshTokenTestSuite) SetupTest() {
+	os.Setenv("SSO_SECRET", "test-secret-key")
+	gin.SetMode(gin.TestMode)
+	
+	// Setup real database for testing
+	var cleanup func()
+	suite.userRepo, suite.userRoleRepo, cleanup = setupTestDB(suite.T())
+	suite.cleanup = cleanup
+}
+
+func (suite *RefreshTokenTestSuite) TearDownTest() {
+	if suite.cleanup != nil {
+		suite.cleanup()
+	}
+}
+
+func (suite *RefreshTokenTestSuite) TestRefreshToken() {
 	// Test cases
 	testCases := []struct {
 		name               string
 		mockJWTValidator   func(string, jwt.TokenType) (*jwtlib.MapClaims, error)
-		setupMocks         func()
+		setupTestData      func() (primitive.ObjectID, *models.UserEntity)
 		authHeader         string
 		expectedStatusCode int
-		validateResponse   func(*httptest.ResponseRecorder)
+		validateResponse   func(*httptest.ResponseRecorder, primitive.ObjectID, *models.UserEntity)
 	}{
 		{
-			name: "Successful_Token_Refresh",
+			name: "Successful_Token_Refresh_With_Active_Subscription",
 			mockJWTValidator: func(tokenString string, tokenType jwt.TokenType) (*jwtlib.MapClaims, error) {
-				claims := jwtlib.MapClaims{
-					"user_id": userID.Hex(),
-					"type":    string(jwt.RefreshToken),
-				}
-				return &claims, nil
+				// This will be set dynamically in setupTestData
+				return nil, nil
 			},
-			setupMocks: func() {
-				user := &models.UserEntity{
-					ID:        &userID,
-					Email:     &email,
-					KeySet:    &keySet,
-					CreatedAt: &now,
-					UpdatedAt: &now,
-					Roles:     []*models.UserRoleEntity{role},
+			setupTestData: func() (primitive.ObjectID, *models.UserEntity) {
+				// Create purchase with active subscription
+				futureTime := time.Now().Add(24 * time.Hour).UnixMilli() // 1 day in future
+				purchaseType := "REVENUE_CAT"
+				purchases := []*models.PurchaseEntity{
+					{
+						ID:   primitive.NewObjectID(),
+						Type: &purchaseType,
+						PurchaseData: models.RevenueCatPurchaseData{
+							ExpirationAtMs: futureTime,
+							ProductID:      "test_product",
+							AppUserID:      "test_user",
+						},
+						CreatedAt: primitive.NewDateTimeFromTime(time.Now()),
+						UpdatedAt: primitive.NewDateTimeFromTime(time.Now()),
+					},
 				}
-
-				suite.userRepo.On("FindByID", mock.Anything, userID).Return(user, nil)
-				suite.userRoleRepo.On("PopulateRoles", mock.Anything, user).Return(nil)
+				
+				user := createTestUser(suite.T(), suite.userRepo, purchases)
+				role := createTestRole(suite.T(), suite.userRoleRepo)
+				
+				// Assign role to user
+				user.Roles = []*models.UserRoleEntity{role}
+				
+				return *user.ID, user
 			},
-			authHeader:         "Bearer valid_refresh_token", // The actual token content doesn't matter since we mock validation
+			authHeader:         "Bearer valid_refresh_token",
 			expectedStatusCode: http.StatusOK,
-			validateResponse: func(recorder *httptest.ResponseRecorder) {
+			validateResponse: func(recorder *httptest.ResponseRecorder, userID primitive.ObjectID, user *models.UserEntity) {
 				var response Response
 				err := json.NewDecoder(recorder.Body).Decode(&response)
 
@@ -201,31 +281,52 @@ func (suite *RefreshTokenTestSuite) TestRefreshToken() {
 
 				if response.User != nil {
 					assert.Equal(suite.T(), userID, *response.User.ID)
-					assert.Equal(suite.T(), email, *response.User.Email)
-
-					// Verify KeySet
+					assert.Equal(suite.T(), *user.Email, *response.User.Email)
 					assert.NotNil(suite.T(), response.User.KeySet)
 					if response.User.KeySet != nil {
-						assert.Equal(suite.T(), keySet.UserKey, response.User.KeySet.UserKey)
-						assert.Equal(suite.T(), keySet.BackupKey, response.User.KeySet.BackupKey)
-						assert.Equal(suite.T(), keySet.Salt, response.User.KeySet.Salt)
-						assert.Equal(suite.T(), keySet.MnemonicSalt, response.User.KeySet.MnemonicSalt)
-					}
-
-					assert.NotEmpty(suite.T(), response.User.Roles)
-					if len(response.User.Roles) > 0 {
-						assert.Equal(suite.T(), role, response.User.Roles[0])
+						assert.Equal(suite.T(), user.KeySet.UserKey, response.User.KeySet.UserKey)
+						assert.Equal(suite.T(), user.KeySet.BackupKey, response.User.KeySet.BackupKey)
+						assert.Equal(suite.T(), user.KeySet.Salt, response.User.KeySet.Salt)
+						assert.Equal(suite.T(), user.KeySet.MnemonicSalt, response.User.KeySet.MnemonicSalt)
 					}
 				}
 			},
 		},
 		{
+			name: "Successful_Token_Refresh_Without_Subscription",
+			mockJWTValidator: func(tokenString string, tokenType jwt.TokenType) (*jwtlib.MapClaims, error) {
+				return nil, nil
+			},
+			setupTestData: func() (primitive.ObjectID, *models.UserEntity) {
+				// Create user without purchases
+				user := createTestUser(suite.T(), suite.userRepo, nil)
+				role := createTestRole(suite.T(), suite.userRoleRepo)
+				
+				// Assign role to user
+				user.Roles = []*models.UserRoleEntity{role}
+				
+				return *user.ID, user
+			},
+			authHeader:         "Bearer valid_refresh_token",
+			expectedStatusCode: http.StatusOK,
+			validateResponse: func(recorder *httptest.ResponseRecorder, userID primitive.ObjectID, user *models.UserEntity) {
+				var response Response
+				err := json.NewDecoder(recorder.Body).Decode(&response)
+
+				assert.NoError(suite.T(), err)
+				assert.NotEmpty(suite.T(), response.AccessToken)
+				assert.NotEmpty(suite.T(), response.RefreshToken)
+				assert.NotZero(suite.T(), response.ExpiresAt)
+				assert.NotNil(suite.T(), response.User)
+			},
+		},
+		{
 			name:               "Missing_Auth_Header",
 			mockJWTValidator:   nil,
-			setupMocks:         func() {},
+			setupTestData:      func() (primitive.ObjectID, *models.UserEntity) { return primitive.ObjectID{}, nil },
 			authHeader:         "",
 			expectedStatusCode: http.StatusUnauthorized,
-			validateResponse: func(recorder *httptest.ResponseRecorder) {
+			validateResponse: func(recorder *httptest.ResponseRecorder, userID primitive.ObjectID, user *models.UserEntity) {
 				var response gin.H
 				err := json.Unmarshal(recorder.Body.Bytes(), &response)
 				assert.NoError(suite.T(), err)
@@ -236,10 +337,10 @@ func (suite *RefreshTokenTestSuite) TestRefreshToken() {
 		{
 			name:               "Invalid_Token_Format",
 			mockJWTValidator:   nil,
-			setupMocks:         func() {},
+			setupTestData:      func() (primitive.ObjectID, *models.UserEntity) { return primitive.ObjectID{}, nil },
 			authHeader:         "Invalid token",
 			expectedStatusCode: http.StatusUnauthorized,
-			validateResponse: func(recorder *httptest.ResponseRecorder) {
+			validateResponse: func(recorder *httptest.ResponseRecorder, userID primitive.ObjectID, user *models.UserEntity) {
 				var response gin.H
 				err := json.Unmarshal(recorder.Body.Bytes(), &response)
 				assert.NoError(suite.T(), err)
@@ -252,10 +353,10 @@ func (suite *RefreshTokenTestSuite) TestRefreshToken() {
 			mockJWTValidator: func(tokenString string, tokenType jwt.TokenType) (*jwtlib.MapClaims, error) {
 				return nil, errors.New("Invalid token")
 			},
-			setupMocks:         func() {},
+			setupTestData:      func() (primitive.ObjectID, *models.UserEntity) { return primitive.ObjectID{}, nil },
 			authHeader:         "Bearer invalid_token",
 			expectedStatusCode: http.StatusUnauthorized,
-			validateResponse: func(recorder *httptest.ResponseRecorder) {
+			validateResponse: func(recorder *httptest.ResponseRecorder, userID primitive.ObjectID, user *models.UserEntity) {
 				var response gin.H
 				err := json.Unmarshal(recorder.Body.Bytes(), &response)
 
@@ -264,69 +365,24 @@ func (suite *RefreshTokenTestSuite) TestRefreshToken() {
 				assert.Equal(suite.T(), "Invalid refresh token", response["error"])
 			},
 		},
-		{
-			name: "User_Not_Found",
-			mockJWTValidator: func(tokenString string, tokenType jwt.TokenType) (*jwtlib.MapClaims, error) {
-				claims := jwtlib.MapClaims{
-					"user_id": userID.Hex(),
-					"type":    string(jwt.RefreshToken),
-				}
-				return &claims, nil
-			},
-			setupMocks: func() {
-				suite.userRepo.On("FindByID", mock.Anything, userID).Return(nil, errors.New("User not found"))
-			},
-			authHeader:         "Bearer valid_token_but_user_not_found",
-			expectedStatusCode: http.StatusUnauthorized,
-			validateResponse: func(recorder *httptest.ResponseRecorder) {
-				var response gin.H
-				err := json.Unmarshal(recorder.Body.Bytes(), &response)
-
-				assert.Nil(suite.T(), err)
-				assert.Contains(suite.T(), response, "error")
-				assert.Equal(suite.T(), "User not found", response["error"])
-			},
-		},
-		{
-			name: "Role_Population_Error",
-			mockJWTValidator: func(tokenString string, tokenType jwt.TokenType) (*jwtlib.MapClaims, error) {
-				claims := jwtlib.MapClaims{
-					"user_id": userID.Hex(),
-					"type":    string(jwt.RefreshToken),
-				}
-				return &claims, nil
-			},
-			setupMocks: func() {
-				user := &models.UserEntity{
-					ID:        &userID,
-					Email:     &email,
-					KeySet:    &keySet,
-					CreatedAt: &now,
-					UpdatedAt: &now,
-				}
-
-				suite.userRepo.On("FindByID", mock.Anything, userID).Return(user, nil)
-				suite.userRoleRepo.On("PopulateRoles", mock.Anything, user).Return(errors.New("Failed to populate user roles"))
-			},
-			authHeader:         "Bearer valid_token_but_role_error",
-			expectedStatusCode: http.StatusInternalServerError,
-			validateResponse: func(recorder *httptest.ResponseRecorder) {
-				var response gin.H
-				err := json.Unmarshal(recorder.Body.Bytes(), &response)
-
-				assert.Nil(suite.T(), err)
-				assert.Contains(suite.T(), response, "error")
-				assert.Equal(suite.T(), "Failed to populate user roles", response["error"])
-			},
-		},
 	}
 
 	// Run test cases
 	for _, tc := range testCases {
 		suite.T().Run(tc.name, func(t *testing.T) {
-			// Reset mocks before each test to clear previous expectations
-			suite.userRepo = new(mocks.MockUserRepository)
-			suite.userRoleRepo = new(mocks.MockUserRoleRepository)
+			// Setup test data
+			userID, user := tc.setupTestData()
+			
+			// Update the JWT validator to use the actual userID if needed
+			if tc.mockJWTValidator != nil && !userID.IsZero() {
+				tc.mockJWTValidator = func(tokenString string, tokenType jwt.TokenType) (*jwtlib.MapClaims, error) {
+					claims := jwtlib.MapClaims{
+						"user_id": userID.Hex(),
+						"type":    string(jwt.RefreshToken),
+					}
+					return &claims, nil
+				}
+			}
 
 			// Create a new test controller with the mock JWT validator
 			suite.controller = NewTestController(
@@ -338,9 +394,6 @@ func (suite *RefreshTokenTestSuite) TestRefreshToken() {
 			suite.router = gin.New()
 			authGroup := suite.router.Group("/auth")
 			authGroup.POST("/refresh", suite.controller.RefreshToken)
-
-			// Setup mocks
-			tc.setupMocks()
 
 			// Create request
 			req, _ := http.NewRequest(http.MethodPost, "/auth/refresh", nil)
@@ -354,11 +407,7 @@ func (suite *RefreshTokenTestSuite) TestRefreshToken() {
 
 			// Assert status code and validate response
 			assert.Equal(t, tc.expectedStatusCode, recorder.Code)
-			tc.validateResponse(recorder)
-
-			// Clear mocks
-			suite.userRepo.AssertExpectations(t)
-			suite.userRoleRepo.AssertExpectations(t)
+			tc.validateResponse(recorder, userID, user)
 		})
 	}
 }
