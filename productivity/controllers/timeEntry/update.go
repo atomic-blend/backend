@@ -3,6 +3,7 @@ package timeentrycontroller
 import (
 	"context"
 	"net/http"
+	"productivity/auth"
 	"productivity/models"
 	"time"
 

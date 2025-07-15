@@ -1,12 +1,13 @@
 package notes
 
 import (
-	patchmodels "productivity/models/patch_models"
-	"productivity/tests/mocks"
 	"bytes"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"productivity/auth"
+	patchmodels "productivity/models/patch_models"
+	"productivity/tests/mocks"
 	"testing"
 	"time"
 

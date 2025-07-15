@@ -1,8 +1,9 @@
 package notes
 
 import (
-	"productivity/models"
 	"net/http"
+	"productivity/auth"
+	"productivity/models"
 	"strings"
 
 	"github.com/gin-gonic/gin"

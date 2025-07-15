@@ -1,14 +1,15 @@
 package habits
 
 import (
-	"productivity/models"
-	"productivity/tests/utils/inmemorymongo"
-	"productivity/utils/db"
 	"bytes"
 	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"productivity/auth"
+	"productivity/models"
+	"productivity/tests/utils/inmemorymongo"
+	"productivity/utils/db"
 	"testing"
 
 	"github.com/gin-gonic/gin"

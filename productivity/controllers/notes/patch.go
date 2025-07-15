@@ -1,11 +1,12 @@
 package notes
 
 import (
-	"productivity/models"
-	patchmodels "productivity/models/patch_models"
 	"context"
 	"encoding/json"
 	"net/http"
+	"productivity/auth"
+	"productivity/models"
+	patchmodels "productivity/models/patch_models"
 	"time"
 
 	"github.com/gin-gonic/gin"

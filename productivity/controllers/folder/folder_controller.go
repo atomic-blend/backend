@@ -2,6 +2,7 @@ package folder
 
 import (
 	"productivity/repositories"
+	"productivity/auth"
 
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/mongo"

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"productivity/auth"
 	"testing"
 
 	"github.com/gin-gonic/gin"

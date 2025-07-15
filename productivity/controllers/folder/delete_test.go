@@ -1,10 +1,11 @@
 package folder
 
 import (
-	"productivity/tests/mocks"
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"productivity/auth"
+	"productivity/tests/mocks"
 	"testing"
 
 	"github.com/gin-gonic/gin"

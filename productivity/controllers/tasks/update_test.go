@@ -2,12 +2,13 @@
 package tasks
 
 import (
-	"productivity/models"
 	"bytes"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"productivity/auth"
+	"productivity/models"
 	"testing"
 	"time"
 

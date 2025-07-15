@@ -3,6 +3,7 @@ package timeentrycontroller
 import (
 	"context"
 	"net/http"
+	"productivity/auth"
 
 	"github.com/gin-gonic/gin"
 )

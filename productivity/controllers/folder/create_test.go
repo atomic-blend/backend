@@ -1,12 +1,14 @@
 package folder
 
 import (
-	"productivity/tests/mocks"
 	"bytes"
 	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"productivity/auth"
+	"productivity/models"
+	"productivity/tests/mocks"
 	"testing"
 	"time"
 

@@ -2,6 +2,7 @@ package notes
 
 import (
 	"net/http"
+	"productivity/auth"
 
 	"github.com/gin-gonic/gin"
 )

@@ -1,12 +1,12 @@
 package habits
 
 import (
-	"atomic_blend_api/auth"
-	"atomic_blend_api/models"
 	"bytes"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"productivity/auth"
+	"productivity/models"
 	"testing"
 
 	"github.com/gin-gonic/gin"

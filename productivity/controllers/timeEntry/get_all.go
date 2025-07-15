@@ -1,9 +1,10 @@
 package timeentrycontroller
 
 import (
-	"productivity/models"
 	"context"
 	"net/http"
+	"productivity/auth"
+	"productivity/models"
 
 	"github.com/gin-gonic/gin"
 )

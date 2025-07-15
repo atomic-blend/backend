@@ -1,8 +1,9 @@
 package folder
 
 import (
-	"productivity/models"
 	"net/http"
+	"productivity/auth"
+	"productivity/models"
 
 	"github.com/gin-gonic/gin"
 )

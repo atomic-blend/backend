@@ -1,10 +1,11 @@
 package notes
 
 import (
-	"productivity/models"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"productivity/auth"
+	"productivity/models"
 	"testing"
 
 	"github.com/gin-gonic/gin"

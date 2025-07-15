@@ -1,10 +1,11 @@
 package folder
 
 import (
-	"productivity/models"
-	"productivity/tests/mocks"
 	"net/http"
 	"net/http/httptest"
+	"productivity/auth"
+	"productivity/models"
+	"productivity/tests/mocks"
 	"testing"
 	"time"
 

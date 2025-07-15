@@ -1,11 +1,12 @@
 package tags
 
 import (
-	"productivity/models"
 	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"productivity/auth"
+	"productivity/models"
 	"testing"
 
 	"github.com/gin-gonic/gin"

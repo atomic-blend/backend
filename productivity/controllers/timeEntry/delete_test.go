@@ -1,11 +1,11 @@
 package timeentrycontroller
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"productivity/auth"
 	"productivity/models"
 	"productivity/tests/mocks"
-	"net/http"
-	"net/http/httptest"
 	"testing"
 
 	"github.com/gin-gonic/gin"

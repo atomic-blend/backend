@@ -1,12 +1,13 @@
 package folder
 
 import (
-	"productivity/models"
-	"productivity/tests/mocks"
 	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"productivity/auth"
+	"productivity/models"
+	"productivity/tests/mocks"
 	"testing"
 
 	"github.com/gin-gonic/gin"

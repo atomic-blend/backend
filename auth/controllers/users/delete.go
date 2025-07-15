@@ -2,20 +2,10 @@ package users
 
 import (
 	"auth/auth"
-	"auth/repositories"
-	"auth/utils/db"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 )
-
-// TaskRepositoryFactory is a function type to create task repositories
-type TaskRepositoryFactory func() repositories.TaskRepositoryInterface
-
-// Default implementation of TaskRepositoryFactory that will be used in production
-var defaultTaskRepositoryFactory TaskRepositoryFactory = func() repositories.TaskRepositoryInterface {
-	return repositories.NewTaskRepository(db.Database)
-}
 
 // DeleteAccount handles user account deletion
 // @Summary Delete user account
@@ -66,11 +56,4 @@ func (c *UserController) DeleteAccount(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{
 		"message": "Account successfully deleted",
 	})
-}
-
-
-
-// getTaskRepository returns a task repository instance using the factory
-func (c *UserController) getTaskRepository() repositories.TaskRepositoryInterface {
-	return defaultTaskRepositoryFactory()
 }

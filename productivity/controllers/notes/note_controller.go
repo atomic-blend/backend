@@ -1,6 +1,7 @@
 package notes
 
 import (
+	"productivity/auth"
 	"productivity/repositories"
 
 	"github.com/gin-gonic/gin"

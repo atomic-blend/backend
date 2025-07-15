@@ -1,12 +1,13 @@
 package timeentrycontroller
 
 import (
-	"productivity/models"
-	"productivity/tests/mocks"
 	"bytes"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"productivity/auth"
+	"productivity/models"
+	"productivity/tests/mocks"
 	"testing"
 	"time"
 

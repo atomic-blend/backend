@@ -1,9 +1,9 @@
 package habits
 
 import (
-	"productivity/models"
-	"productivity/utils/subscription"
 	"net/http"
+	"productivity/auth"
+	"productivity/models"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -38,6 +38,7 @@ func (c *HabitController) CreateHabit(ctx *gin.Context) {
 
 	// Check if user has reached habit limit
 	if len(userHabits) >= 3 {
+		//TODO: replace that with grpc call
 		if !subscription.IsUserSubscribed(ctx, authUser.UserID) {
 			ctx.JSON(http.StatusForbidden, gin.H{"error": "You must be subscribed to create more than 3 habits"})
 			return

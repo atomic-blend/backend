@@ -1,10 +1,11 @@
 package habits
 
 import (
-	"productivity/models"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"productivity/auth"
+	"productivity/models"
 	"testing"
 	"time"
 

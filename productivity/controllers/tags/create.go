@@ -1,9 +1,9 @@
 package tags
 
 import (
-	"productivity/models"
-	"productivity/utils/subscription"
 	"net/http"
+	"productivity/auth"
+	"productivity/models"
 	"time"
 
 	"github.com/gin-gonic/gin"

@@ -1,8 +1,8 @@
 package tasks
 
 import (
-	"productivity/auth"
 	"net/http"
+	"productivity/auth"
 
 	"github.com/gin-gonic/gin"
 )
