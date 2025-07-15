@@ -2,12 +2,12 @@ version: "3.8"
 services:
   api-ab:
     build:
-      dockerfile: Dockerfile.dev  # Use a dev-specific Dockerfile
+      dockerfile: auth-service/Dockerfile.dev  # Use a dev-specific Dockerfile
     container_name: api-atomic-blend
     ports:
       - "8080:8080"
     volumes:
-      - ./:/app
+      - ./auth-service:/app
       # - /etc/localtime:/etc/localtime:ro
       - type: bind
         source: ${HOME}${USERPROFILE}/.netrc
