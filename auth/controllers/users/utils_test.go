@@ -5,9 +5,9 @@ import (
 	"errors"
 	"testing"
 
-	"atomic_blend_api/models"
-	"atomic_blend_api/repositories"
-	"atomic_blend_api/tests/mocks"
+	"auth/models"
+	"auth/repositories"
+	"auth/tests/mocks"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"

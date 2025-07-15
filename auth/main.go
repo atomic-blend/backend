@@ -1,28 +1,19 @@
 package main
 
 import (
-	"atomic_blend_api/auth"
-	"atomic_blend_api/controllers/admin"
-	"atomic_blend_api/controllers/folder"
-	"atomic_blend_api/controllers/habits"
-	"atomic_blend_api/controllers/health"
-	"atomic_blend_api/controllers/notes"
-	"atomic_blend_api/controllers/tags"
-	"atomic_blend_api/controllers/tasks"
-	timeentrycontroller "atomic_blend_api/controllers/timeEntry"
-	"atomic_blend_api/controllers/users"
-	"atomic_blend_api/controllers/webhooks"
-	"atomic_blend_api/cron"
-	"atomic_blend_api/models"
-	"atomic_blend_api/utils/db"
+	"auth/auth"
+	"auth/controllers/admin"
+	"auth/controllers/health"
+	"auth/controllers/users"
+	"auth/controllers/webhooks"
+	"auth/models"
+	"auth/utils/db"
 	"context"
 	"os"
 	"strings"
 	"time"
 
 	"github.com/gin-contrib/cors"
-
-	"github.com/jasonlvhit/gocron"
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
@@ -54,15 +45,6 @@ func main() {
 	}()
 
 	models.RegisterValidators()
-
-	// start cron
-	go func() {
-		err := gocron.Every(60).Seconds().Do(cron.MainCron)
-		if err != nil {
-			log.Error().Err(err).Msg("Error defining cron job")
-		}
-		<-gocron.Start()
-	}()
 
 	// Setup router with middleware
 	router := gin.Default()
@@ -154,14 +136,8 @@ func main() {
 	auth.SetupRoutes(router, db.Database)
 	users.SetupRoutes(router, db.Database)
 	admin.SetupRoutes(router, db.Database)
-	tasks.SetupRoutes(router, db.Database)
 	health.SetupRoutes(router, db.Database)
-	habits.SetupRoutes(router, db.Database)
-	tags.SetupRoutes(router, db.Database)
-	folder.SetupRoutes(router, db.Database)
-	timeentrycontroller.SetupRoutes(router, db.Database)
 	webhooks.SetupRoutes(router, db.Database)
-	notes.SetupRoutes(router, db.Database)
 
 	// Define port
 	port := os.Getenv("PORT")

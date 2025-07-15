@@ -1,7 +1,7 @@
 package db
 
 import (
-	"atomic_blend_api/tests/utils/inmemorymongo"
+	"auth/tests/utils/inmemorymongo"
 	"fmt"
 	"os"
 	"testing"

@@ -1,8 +1,8 @@
 package subscription
 
 import (
-	"atomic_blend_api/repositories"
-	"atomic_blend_api/utils/db"
+	"auth/repositories"
+	"auth/utils/db"
 	"time"
 
 	"github.com/gin-gonic/gin"

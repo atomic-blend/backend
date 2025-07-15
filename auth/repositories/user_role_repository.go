@@ -5,8 +5,8 @@ import (
 	"errors"
 	"time"
 
-	"atomic_blend_api/models"
-	"atomic_blend_api/utils/db"
+	"auth/models"
+	"auth/utils/db"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"

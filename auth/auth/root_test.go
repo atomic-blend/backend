@@ -2,7 +2,7 @@
 package auth
 
 import (
-	"atomic_blend_api/utils/jwt"
+	"auth/utils/jwt"
 	"net/http"
 	"net/http/httptest"
 	"os"

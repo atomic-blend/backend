@@ -1,7 +1,7 @@
 package users
 
 import (
-	"atomic_blend_api/auth"
+	"auth/auth"
 	"net/http"
 
 	"github.com/gin-gonic/gin"

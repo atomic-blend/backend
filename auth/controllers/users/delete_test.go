@@ -1,10 +1,10 @@
 package users
 
 import (
-	"atomic_blend_api/auth"
-	"atomic_blend_api/models"
-	"atomic_blend_api/repositories"
-	"atomic_blend_api/tests/mocks"
+	"auth/auth"
+	"auth/models"
+	"auth/repositories"
+	"auth/tests/mocks"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"

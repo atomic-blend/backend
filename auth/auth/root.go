@@ -1,9 +1,9 @@
 package auth
 
 import (
-	"atomic_blend_api/controllers/auth"
-	"atomic_blend_api/repositories"
-	"atomic_blend_api/utils/db"
+	"auth/controllers/auth"
+	"auth/repositories"
+	"auth/utils/db"
 
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/mongo"

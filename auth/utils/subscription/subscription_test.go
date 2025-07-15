@@ -1,10 +1,10 @@
 package subscription
 
 import (
-	"atomic_blend_api/models"
-	"atomic_blend_api/repositories"
-	"atomic_blend_api/tests/utils/inmemorymongo"
-	"atomic_blend_api/utils/db"
+	"auth/models"
+	"auth/repositories"
+	"auth/tests/utils/inmemorymongo"
+	"auth/utils/db"
 	"context"
 	"testing"
 	"time"

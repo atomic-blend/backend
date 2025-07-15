@@ -1,8 +1,8 @@
 package auth
 
 import (
-	"atomic_blend_api/repositories"
-	"atomic_blend_api/utils/jwt"
+	"auth/repositories"
+	"auth/utils/jwt"
 	"net/http"
 	"strings"
 

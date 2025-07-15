@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"atomic_blend_api/tests/utils/inmemorymongo"
-	"atomic_blend_api/utils/db"
+	"auth/tests/utils/inmemorymongo"
+	"auth/utils/db"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"

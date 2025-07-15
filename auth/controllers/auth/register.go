@@ -1,9 +1,9 @@
 package auth
 
 import (
-	"atomic_blend_api/models"
-	"atomic_blend_api/utils/jwt"
-	"atomic_blend_api/utils/password"
+	"auth/models"
+	"auth/utils/jwt"
+	"auth/utils/password"
 	"net/http"
 
 	"github.com/gin-gonic/gin"

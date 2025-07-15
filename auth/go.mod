@@ -1,4 +1,4 @@
-module atomic_blend_api
+module auth
 
 go 1.23.5
 

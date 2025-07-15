@@ -1,10 +1,10 @@
 package auth
 
 import (
-	"atomic_blend_api/models"
-	"atomic_blend_api/repositories"
-	"atomic_blend_api/tests/utils/inmemorymongo"
-	"atomic_blend_api/utils/password"
+	"auth/models"
+	"auth/repositories"
+	"auth/tests/utils/inmemorymongo"
+	"auth/utils/password"
 	"bytes"
 	"context"
 	"encoding/json"

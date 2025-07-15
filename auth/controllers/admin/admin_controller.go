@@ -1,9 +1,9 @@
 package admin
 
 import (
-	"atomic_blend_api/auth"
-	"atomic_blend_api/controllers/admin/userrole"
-	"atomic_blend_api/repositories"
+	"auth/auth"
+	"auth/controllers/admin/userrole"
+	"auth/repositories"
 
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/mongo"

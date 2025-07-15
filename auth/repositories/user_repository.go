@@ -11,9 +11,9 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 
-	"atomic_blend_api/models"
-	"atomic_blend_api/utils/db"
-	regexutils "atomic_blend_api/utils/regex"
+	"auth/models"
+	"auth/utils/db"
+	regexutils "auth/utils/regex"
 )
 
 const userCollection = "users"
@@ -49,10 +49,11 @@ func NewUserRepository(database *mongo.Database) *UserRepository {
 	}
 	return &UserRepository{
 		collection:           database.Collection(userCollection),
-		taskCollection:       database.Collection(taskCollection),
-		habitCollection:      database.Collection(habitCollection),
-		habitEntryCollection: database.Collection(habitEntryCollection),
-		tagCollection:        database.Collection(tagCollection),
+		//TODO: replace with grpc calls
+		// taskCollection:       database.Collection(taskCollection),
+		// habitCollection:      database.Collection(habitCollection),
+		// habitEntryCollection: database.Collection(habitEntryCollection),
+		// tagCollection:        database.Collection(tagCollection),
 	}
 }
 

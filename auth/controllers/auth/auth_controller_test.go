@@ -1,8 +1,8 @@
 package auth
 
 import (
-	"atomic_blend_api/models"
-	"atomic_blend_api/repositories"
+	"auth/models"
+	"auth/repositories"
 	"reflect"
 	"testing"
 

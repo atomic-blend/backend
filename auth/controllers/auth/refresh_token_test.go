@@ -1,9 +1,9 @@
 package auth
 
 import (
-	"atomic_blend_api/models"
-	"atomic_blend_api/tests/mocks"
-	"atomic_blend_api/utils/jwt"
+	"auth/models"
+	"auth/tests/mocks"
+	"auth/utils/jwt"
 	"encoding/json"
 	"errors"
 	"net/http"

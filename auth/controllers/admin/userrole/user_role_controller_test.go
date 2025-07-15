@@ -1,7 +1,7 @@
 package userrole
 
 import (
-	"atomic_blend_api/tests/mocks"
+	"auth/tests/mocks"
 	"testing"
 
 	"github.com/gin-gonic/gin"

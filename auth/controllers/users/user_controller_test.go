@@ -1,8 +1,8 @@
 package users
 
 import (
-	"atomic_blend_api/repositories"
-	"atomic_blend_api/tests/mocks"
+	"auth/repositories"
+	"auth/tests/mocks"
 	"testing"
 
 	"github.com/stretchr/testify/assert"

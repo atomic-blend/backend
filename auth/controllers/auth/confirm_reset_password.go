@@ -1,7 +1,7 @@
 package auth
 
 import (
-	"atomic_blend_api/utils/password"
+	"auth/utils/password"
 	"net/http"
 	"time"
 

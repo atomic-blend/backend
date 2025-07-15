@@ -2,8 +2,8 @@
 package auth
 
 import (
-	"atomic_blend_api/models"
-	"atomic_blend_api/utils/jwt"
+	"auth/models"
+	"auth/utils/jwt"
 	"context"
 	"errors"
 	"net/http"

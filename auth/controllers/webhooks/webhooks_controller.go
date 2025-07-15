@@ -1,8 +1,8 @@
 package webhooks
 
 import (
-	"atomic_blend_api/auth"
-	"atomic_blend_api/repositories"
+	"auth/auth"
+	"auth/repositories"
 	"os"
 
 	"github.com/gin-gonic/gin"
