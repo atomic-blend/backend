@@ -24,11 +24,10 @@ func ValidateFrequency(fl validator.FieldLevel) bool {
     return false
 }
 
-// ValidatePurchaseType is a list of valid frequency values for subscriptions
+// ValidatePurchaseType checks if the purchase type is in the allowed list
 func ValidatePurchaseType(fl validator.FieldLevel) bool {
     purchaseType := fl.Field().String()
-    validPurchaseTypes := []string{}
-    for _, validType := range validPurchaseTypes {
+    for _, validType := range ValidPurchaseTypes {
         if purchaseType == validType {
             return true
         }
