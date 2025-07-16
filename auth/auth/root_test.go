@@ -1,9 +1,9 @@
 package auth
 
 import (
-	"auth/tests/utils/inmemorymongo"
-	"auth/utils/db"
-	"auth/utils/jwt"
+	"atomic-blend/backend/auth/tests/utils/inmemorymongo"
+	"atomic-blend/backend/auth/utils/db"
+	"atomic-blend/backend/auth/utils/jwt"
 	"context"
 	"net/http"
 	"net/http/httptest"

@@ -1,8 +1,8 @@
 package auth
 
 import (
-	"auth/models"
-	"auth/repositories"
+	"atomic-blend/backend/auth/models"
+	"atomic-blend/backend/auth/repositories"
 )
 
 // RegisterRequest represents the structure for registration request data

@@ -1,8 +1,8 @@
 package repositories
 
 import (
-	"auth/models"
-	"auth/tests/utils/inmemorymongo"
+	"atomic-blend/backend/auth/models"
+	"atomic-blend/backend/auth/tests/utils/inmemorymongo"
 	"context"
 	"testing"
 

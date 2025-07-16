@@ -1,7 +1,7 @@
 package auth
 
 import (
-	"auth/utils/password"
+	"atomic-blend/backend/auth/utils/password"
 	"net/http"
 	"time"
 

@@ -1,8 +1,8 @@
 package userrole
 
 import (
-	"auth/models"
-	"auth/tests/mocks"
+	"atomic-blend/backend/auth/models"
+	"atomic-blend/backend/auth/tests/mocks"
 	"encoding/json"
 	"errors"
 	"net/http"

@@ -1,7 +1,7 @@
 package userrole
 
 import (
-	"auth/models"
+	"atomic-blend/backend/auth/models"
 	"net/http"
 
 	"github.com/gin-gonic/gin"

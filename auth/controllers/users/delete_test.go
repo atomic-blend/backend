@@ -1,9 +1,9 @@
 package users
 
 import (
-	"auth/auth"
-	"auth/models"
-	"auth/tests/mocks"
+	"atomic-blend/backend/auth/auth"
+	"atomic-blend/backend/auth/models"
+	"atomic-blend/backend/auth/tests/mocks"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"

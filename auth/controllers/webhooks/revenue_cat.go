@@ -1,7 +1,7 @@
 package webhooks
 
 import (
-	"auth/models"
+	"atomic-blend/backend/auth/models"
 	"slices"
 
 	"github.com/gin-gonic/gin"

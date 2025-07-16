@@ -1,7 +1,7 @@
 package mocks
 
 import (
-	"auth/models"
+	"atomic-blend/backend/auth/models"
 	"context"
 
 	"github.com/gin-gonic/gin"

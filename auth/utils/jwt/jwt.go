@@ -1,7 +1,7 @@
 package jwt
 
 import (
-	"auth/utils/subscription"
+	"atomic-blend/backend/auth/utils/subscription"
 	"errors"
 	"fmt"
 	"os"

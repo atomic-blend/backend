@@ -1,4 +1,4 @@
-module auth
+module atomic-blend/backend/auth
 
 go 1.23.5
 
@@ -7,7 +7,6 @@ require (
 	github.com/atomic-blend/memongo v0.0.0-20250305155718-adada7465e0f
 	github.com/gin-contrib/cors v1.7.5
 	github.com/gin-gonic/gin v1.10.0
-	github.com/jasonlvhit/gocron v0.0.1
 	github.com/resend/resend-go/v2 v2.17.0
 	github.com/stretchr/testify v1.10.0
 )

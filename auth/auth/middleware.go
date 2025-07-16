@@ -1,8 +1,8 @@
 package auth
 
 import (
-	"auth/repositories"
-	"auth/utils/jwt"
+	"atomic-blend/backend/auth/repositories"
+	"atomic-blend/backend/auth/utils/jwt"
 	"net/http"
 	"strings"
 

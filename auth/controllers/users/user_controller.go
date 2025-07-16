@@ -1,8 +1,8 @@
 package users
 
 import (
-	"auth/auth"
-	"auth/repositories"
+	"atomic-blend/backend/auth/auth"
+	"atomic-blend/backend/auth/repositories"
 
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/mongo"
