@@ -11,6 +11,8 @@ require (
 	github.com/stretchr/testify v1.10.0
 )
 
+require github.com/atomic-blend/backend/grpc v0.0.0-20250716142858-002d68472673 // indirect
+
 require (
 	cel.dev/expr v0.19.1 // indirect
 	cloud.google.com/go v0.117.0 // indirect
@@ -82,6 +84,7 @@ require (
 )
 
 require (
+	connectrpc.com/connect v1.18.1
 	github.com/bytedance/sonic v1.13.2 // indirect
 	github.com/bytedance/sonic/loader v0.2.4 // indirect
 	github.com/cloudwego/base64x v0.1.5 // indirect

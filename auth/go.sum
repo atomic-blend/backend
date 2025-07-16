@@ -59,6 +59,8 @@ cloud.google.com/go/storage v1.49.0 h1:zenOPBOWHCnojRd9aJZAyQXBYqkJkdQS42dxL55CI
 cloud.google.com/go/storage v1.49.0/go.mod h1:k1eHhhpLvrPjVGfo0mOUPEJ4Y2+a/Hv5PiwehZI9qGU=
 cloud.google.com/go/trace v1.11.2 h1:4ZmaBdL8Ng/ajrgKqY5jfvzqMXbrDcBsUGXOT9aqTtI=
 cloud.google.com/go/trace v1.11.2/go.mod h1:bn7OwXd4pd5rFuAnTrzBuoZ4ax2XQeG3qNgYmfCy0Io=
+connectrpc.com/connect v1.18.1 h1:PAg7CjSAGvscaf6YZKUefjoih5Z/qYkyaTrBW8xvYPw=
+connectrpc.com/connect v1.18.1/go.mod h1:0292hj1rnx8oFrStN7cB4jjVBeqs+Yx5yDIC2prWDO8=
 dmitri.shuralyov.com/gpu/mtl v0.0.0-20190408044501-666a987793e9/go.mod h1:H6x//7gZCb22OMCxBHrMx7a5I7Hp++hsVxbQ4BYO7hU=
 firebase.google.com/go/v4 v4.15.2 h1:KJtV4rAfO2CVCp40hBfVk+mqUqg7+jQKx7yOgFDnXBg=
 firebase.google.com/go/v4 v4.15.2/go.mod h1:qkD/HtSumrPMTLs0ahQrje5gTw2WKFKrzVFoqy4SbKA=
@@ -78,6 +80,8 @@ github.com/acobaugh/osrelease v0.0.0-20181218015638-a93a0a55a249 h1:fMi9ZZ/it4or
 github.com/acobaugh/osrelease v0.0.0-20181218015638-a93a0a55a249/go.mod h1:iU1PxQMQwoHZZWmMKrMkrNlY+3+p9vxIjpZOVyxWa0g=
 github.com/appleboy/go-fcm v1.2.3 h1:8AgRNl5z1RVg7HH+8kblolf+5LA9xxRBKo8MsVbOxak=
 github.com/appleboy/go-fcm v1.2.3/go.mod h1:BtQ+uqFC3wtAOPOeN+g+MKy9DBEe/rSyywRCH/r62bg=
+github.com/atomic-blend/backend/grpc v0.0.0-20250716142858-002d68472673 h1:r07OFyP1aIM3fwtclUJIY0LTnoHhtxlD9LqtRCMm6IY=
+github.com/atomic-blend/backend/grpc v0.0.0-20250716142858-002d68472673/go.mod h1:myCzKWUYinI2ZDpxHJ+3NmUvzSTJ8e1vgp8zpGATaTY=
 github.com/atomic-blend/memongo v0.0.0-20250305155718-adada7465e0f h1:USVU2p7/RTSOY1DV1aKhtTGvPEoHgHlqy9ZT2txoXlw=
 github.com/atomic-blend/memongo v0.0.0-20250305155718-adada7465e0f/go.mod h1:GlVBodZbIfTJdagvuzGxDFLpF8IbuxMaTXlP3agpt8w=
 github.com/bytedance/sonic v1.13.2 h1:8/H1FempDZqC4VqjptGo14QQlJx8VdZJegxs6wwfqpQ=
