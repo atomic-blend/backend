@@ -2,7 +2,7 @@ package habits
 
 import (
 	"net/http"
-	"productivity/auth"
+	"atomic-blend/backend/productivity/auth"
 
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson/primitive"

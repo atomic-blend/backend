@@ -2,7 +2,7 @@ package notes
 
 import (
 	"net/http"
-	"productivity/auth"
+	"atomic-blend/backend/productivity/auth"
 
 	"github.com/gin-gonic/gin"
 )

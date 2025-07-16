@@ -4,9 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
-	"productivity/auth"
-	"productivity/models"
-	patchmodels "productivity/models/patch_models"
+	"atomic-blend/backend/productivity/auth"
+	"atomic-blend/backend/productivity/models"
+	patchmodels "atomic-blend/backend/productivity/models/patch_models"
 	"time"
 
 	"github.com/gin-gonic/gin"

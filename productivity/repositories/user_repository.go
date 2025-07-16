@@ -11,9 +11,9 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 
-	"productivity/models"
-	"productivity/utils/db"
-	regexutils "productivity/utils/regex"
+	"atomic-blend/backend/productivity/models"
+	"atomic-blend/backend/productivity/utils/db"
+	regexutils "atomic-blend/backend/productivity/utils/regex"
 )
 
 const userCollection = "users"

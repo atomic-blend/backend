@@ -5,8 +5,8 @@ import (
 	"errors"
 	"time"
 
-	"productivity/models"
-	"productivity/utils/db"
+	"atomic-blend/backend/productivity/models"
+	"atomic-blend/backend/productivity/utils/db"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"

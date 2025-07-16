@@ -48,7 +48,7 @@ func NewUserRepository(database *mongo.Database) *UserRepository {
 		database = db.Database
 	}
 	return &UserRepository{
-		collection:           database.Collection(userCollection),
+		collection: database.Collection(userCollection),
 		//TODO: replace with grpc calls
 		// taskCollection:       database.Collection(taskCollection),
 		// habitCollection:      database.Collection(habitCollection),

@@ -1,7 +1,7 @@
 package cron
 
 import (
-	"productivity/cron/notifications"
+	"atomic-blend/backend/productivity/cron/notifications"
 	"github.com/rs/zerolog/log"
 )
 

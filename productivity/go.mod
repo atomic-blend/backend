@@ -1,4 +1,4 @@
-module productivity
+module atomic-blend/backend/productivity
 
 go 1.23.5
 

@@ -4,8 +4,8 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
-	"productivity/auth"
-	"productivity/models"
+	"atomic-blend/backend/productivity/auth"
+	"atomic-blend/backend/productivity/models"
 	"testing"
 
 	"github.com/gin-gonic/gin"

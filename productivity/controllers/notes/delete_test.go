@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"productivity/auth"
+	"atomic-blend/backend/productivity/auth"
 	"testing"
 
 	"github.com/gin-gonic/gin"

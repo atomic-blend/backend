@@ -1,7 +1,7 @@
 package health
 
 import (
-	"productivity/tests/utils/inmemorymongo"
+	"atomic-blend/backend/productivity/tests/utils/inmemorymongo"
 	"context"
 	"encoding/json"
 	"net/http"

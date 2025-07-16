@@ -1,8 +1,8 @@
 package tags
 
 import (
-	"productivity/auth"
-	"productivity/repositories"
+	"atomic-blend/backend/productivity/auth"
+	"atomic-blend/backend/productivity/repositories"
 
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/mongo"

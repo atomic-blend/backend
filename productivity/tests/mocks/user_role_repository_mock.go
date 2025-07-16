@@ -1,7 +1,7 @@
 package mocks
 
 import (
-	"productivity/models"
+	"atomic-blend/backend/productivity/models"
 	"context"
 
 	"github.com/stretchr/testify/mock"

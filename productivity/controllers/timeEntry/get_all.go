@@ -3,8 +3,8 @@ package timeentrycontroller
 import (
 	"context"
 	"net/http"
-	"productivity/auth"
-	"productivity/models"
+	"atomic-blend/backend/productivity/auth"
+	"atomic-blend/backend/productivity/models"
 
 	"github.com/gin-gonic/gin"
 )

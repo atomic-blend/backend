@@ -1,8 +1,8 @@
 package repositories
 
 import (
-	"productivity/models"
-	"productivity/tests/utils/inmemorymongo"
+	"atomic-blend/backend/productivity/models"
+	"atomic-blend/backend/productivity/tests/utils/inmemorymongo"
 	"context"
 	"testing"
 	"time"
