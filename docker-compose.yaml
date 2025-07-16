@@ -38,6 +38,7 @@ services:
     container_name: productivity
     expose:
       - "8080"
+      - "50051"  # gRPC port
     volumes:
       - ./productivity:/app
       - type: bind

@@ -26,10 +26,6 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// Router is exported for use in other packages
-// nolint
-var Router *gin.Engine
-
 func main() {
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
@@ -50,6 +46,9 @@ func main() {
 	}()
 
 	models.RegisterValidators()
+
+	// start grpc server
+	go startGRPCServer()
 
 	// start cron
 	go func() {
