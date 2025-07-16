@@ -1,8 +1,8 @@
 package userrole
 
 import (
-	"atomic-blend/backend/auth/models"
-	"atomic-blend/backend/auth/tests/mocks"
+	"github.com/atomic-blend/backend/auth/models"
+	"github.com/atomic-blend/backend/auth/tests/mocks"
 	"bytes"
 	"encoding/json"
 	"errors"

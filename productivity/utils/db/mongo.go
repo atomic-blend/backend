@@ -1,7 +1,7 @@
 package db
 
 import (
-	"atomic-blend/backend/productivity/utils/shortcuts"
+	"github.com/atomic-blend/backend/productivity/utils/shortcuts"
 	"context"
 	"fmt"
 	"os"

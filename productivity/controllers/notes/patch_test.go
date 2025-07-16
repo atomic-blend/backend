@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"atomic-blend/backend/productivity/auth"
-	patchmodels "atomic-blend/backend/productivity/models/patch_models"
-	"atomic-blend/backend/productivity/tests/mocks"
+	"github.com/atomic-blend/backend/productivity/auth"
+	patchmodels "github.com/atomic-blend/backend/productivity/models/patch_models"
+	"github.com/atomic-blend/backend/productivity/tests/mocks"
 	"testing"
 	"time"
 

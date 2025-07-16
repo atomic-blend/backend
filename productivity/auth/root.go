@@ -1,8 +1,8 @@
 package auth
 
 import (
-	"atomic-blend/backend/productivity/repositories"
-	"atomic-blend/backend/productivity/utils/db"
+	"github.com/atomic-blend/backend/productivity/repositories"
+	"github.com/atomic-blend/backend/productivity/utils/db"
 
 	"github.com/gin-gonic/gin"
 )

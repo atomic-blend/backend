@@ -2,8 +2,8 @@ package notes
 
 import (
 	"net/http"
-	"atomic-blend/backend/productivity/auth"
-	"atomic-blend/backend/productivity/models"
+	"github.com/atomic-blend/backend/productivity/auth"
+	"github.com/atomic-blend/backend/productivity/models"
 	"strings"
 
 	"github.com/gin-gonic/gin"

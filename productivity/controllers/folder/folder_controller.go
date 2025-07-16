@@ -1,8 +1,8 @@
 package folder
 
 import (
-	"atomic-blend/backend/productivity/repositories"
-	"atomic-blend/backend/productivity/auth"
+	"github.com/atomic-blend/backend/productivity/repositories"
+	"github.com/atomic-blend/backend/productivity/auth"
 
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/mongo"

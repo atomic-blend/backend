@@ -2,8 +2,8 @@
 package auth
 
 import (
-	"atomic-blend/backend/productivity/models"
-	"atomic-blend/backend/productivity/utils/jwt"
+	"github.com/atomic-blend/backend/productivity/models"
+	"github.com/atomic-blend/backend/productivity/utils/jwt"
 	"context"
 	"errors"
 	"net/http"

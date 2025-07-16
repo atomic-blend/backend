@@ -1,9 +1,9 @@
 package repositories
 
 import (
-	"atomic-blend/backend/productivity/models"
-	patchmodels "atomic-blend/backend/productivity/models/patch_models"
-	keyconverter "atomic-blend/backend/productivity/utils/key_converter"
+	"github.com/atomic-blend/backend/productivity/models"
+	patchmodels "github.com/atomic-blend/backend/productivity/models/patch_models"
+	keyconverter "github.com/atomic-blend/backend/productivity/utils/key_converter"
 	"context"
 	"errors"
 	"time"

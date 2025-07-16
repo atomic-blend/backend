@@ -1,9 +1,9 @@
 package auth
 
 import (
-	"atomic-blend/backend/auth/models"
-	"atomic-blend/backend/auth/utils/password"
-	"atomic-blend/backend/auth/utils/resend"
+	"github.com/atomic-blend/backend/auth/models"
+	"github.com/atomic-blend/backend/auth/utils/password"
+	"github.com/atomic-blend/backend/auth/utils/resend"
 	"bytes"
 	"html/template"
 	"net/http"

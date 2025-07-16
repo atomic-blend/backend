@@ -1,7 +1,7 @@
 package repositories
 
 import (
-	"atomic-blend/backend/productivity/models"
+	"github.com/atomic-blend/backend/productivity/models"
 	"context"
 	"time"
 

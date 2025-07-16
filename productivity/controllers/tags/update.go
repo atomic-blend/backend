@@ -2,8 +2,8 @@ package tags
 
 import (
 	"net/http"
-	"atomic-blend/backend/productivity/auth"
-	"atomic-blend/backend/productivity/models"
+	"github.com/atomic-blend/backend/productivity/auth"
+	"github.com/atomic-blend/backend/productivity/models"
 	"time"
 
 	"github.com/gin-gonic/gin"

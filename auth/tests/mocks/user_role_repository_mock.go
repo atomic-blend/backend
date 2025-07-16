@@ -1,7 +1,7 @@
 package mocks
 
 import (
-	"atomic-blend/backend/auth/models"
+	"github.com/atomic-blend/backend/auth/models"
 	"context"
 
 	"github.com/stretchr/testify/mock"

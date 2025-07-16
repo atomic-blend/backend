@@ -1,8 +1,8 @@
 package tags
 
 import (
-	"atomic-blend/backend/productivity/models"
-	"atomic-blend/backend/productivity/tests/mocks"
+	"github.com/atomic-blend/backend/productivity/models"
+	"github.com/atomic-blend/backend/productivity/tests/mocks"
 	"time"
 
 	"github.com/gin-gonic/gin"

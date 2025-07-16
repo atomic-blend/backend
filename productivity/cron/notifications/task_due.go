@@ -1,12 +1,12 @@
 package notifications
 
 import (
-	"atomic-blend/backend/productivity/cron/notifications/payloads"
-	"atomic-blend/backend/productivity/models"
-	"atomic-blend/backend/productivity/repositories"
-	"atomic-blend/backend/productivity/utils/db"
-	fcmutils "atomic-blend/backend/productivity/utils/fcm_utils"
-	"atomic-blend/backend/productivity/utils/shortcuts"
+	"github.com/atomic-blend/backend/productivity/cron/notifications/payloads"
+	"github.com/atomic-blend/backend/productivity/models"
+	"github.com/atomic-blend/backend/productivity/repositories"
+	"github.com/atomic-blend/backend/productivity/utils/db"
+	fcmutils "github.com/atomic-blend/backend/productivity/utils/fcm_utils"
+	"github.com/atomic-blend/backend/productivity/utils/shortcuts"
 	"context"
 	"os"
 	"time"

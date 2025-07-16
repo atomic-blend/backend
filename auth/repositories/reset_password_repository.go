@@ -1,7 +1,7 @@
 package repositories
 
 import (
-	"atomic-blend/backend/auth/models"
+	"github.com/atomic-blend/backend/auth/models"
 	"context"
 	"time"
 

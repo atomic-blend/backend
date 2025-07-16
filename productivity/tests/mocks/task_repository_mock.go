@@ -1,8 +1,8 @@
 package mocks
 
 import (
-	"atomic-blend/backend/productivity/models"
-	patchmodels "atomic-blend/backend/productivity/models/patch_models"
+	"github.com/atomic-blend/backend/productivity/models"
+	patchmodels "github.com/atomic-blend/backend/productivity/models/patch_models"
 	"context"
 
 	"github.com/stretchr/testify/mock"

@@ -1,10 +1,10 @@
 package auth
 
 import (
-	"atomic-blend/backend/auth/models"
-	"atomic-blend/backend/auth/repositories"
-	"atomic-blend/backend/auth/tests/utils/inmemorymongo"
-	"atomic-blend/backend/auth/utils/password"
+	"github.com/atomic-blend/backend/auth/models"
+	"github.com/atomic-blend/backend/auth/repositories"
+	"github.com/atomic-blend/backend/auth/tests/utils/inmemorymongo"
+	"github.com/atomic-blend/backend/auth/utils/password"
 	"bytes"
 	"context"
 	"encoding/json"

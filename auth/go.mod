@@ -1,4 +1,4 @@
-module atomic-blend/backend/auth
+module github.com/atomic-blend/backend/auth
 
 go 1.23.5
 

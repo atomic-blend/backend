@@ -1,8 +1,8 @@
 package auth
 
 import (
-	"atomic-blend/backend/auth/models"
-	"atomic-blend/backend/auth/repositories"
+	"github.com/atomic-blend/backend/auth/models"
+	"github.com/atomic-blend/backend/auth/repositories"
 	"reflect"
 	"testing"
 

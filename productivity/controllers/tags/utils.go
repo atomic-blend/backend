@@ -1,7 +1,7 @@
 package tags
 
 import (
-	"atomic-blend/backend/productivity/models"
+	"github.com/atomic-blend/backend/productivity/models"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )

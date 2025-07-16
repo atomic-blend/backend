@@ -3,7 +3,7 @@ package habits
 import (
 	"net/http"
 	"net/http/httptest"
-	"atomic-blend/backend/productivity/auth"
+	"github.com/atomic-blend/backend/productivity/auth"
 	"testing"
 
 	"github.com/gin-gonic/gin"

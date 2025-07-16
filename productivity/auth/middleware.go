@@ -2,8 +2,8 @@ package auth
 
 import (
 	"net/http"
-	"atomic-blend/backend/productivity/repositories"
-	"atomic-blend/backend/productivity/utils/jwt"
+	"github.com/atomic-blend/backend/productivity/repositories"
+	"github.com/atomic-blend/backend/productivity/utils/jwt"
 	"strings"
 
 	"github.com/gin-gonic/gin"

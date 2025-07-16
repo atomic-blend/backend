@@ -6,9 +6,9 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
-	"atomic-blend/backend/productivity/auth"
-	"atomic-blend/backend/productivity/models"
-	"atomic-blend/backend/productivity/tests/mocks"
+	"github.com/atomic-blend/backend/productivity/auth"
+	"github.com/atomic-blend/backend/productivity/models"
+	"github.com/atomic-blend/backend/productivity/tests/mocks"
 	"testing"
 	"time"
 

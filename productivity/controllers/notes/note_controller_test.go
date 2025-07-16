@@ -1,8 +1,8 @@
 package notes
 
 import (
-	"atomic-blend/backend/productivity/models"
-	"atomic-blend/backend/productivity/tests/mocks"
+	"github.com/atomic-blend/backend/productivity/models"
+	"github.com/atomic-blend/backend/productivity/tests/mocks"
 	"net/http"
 	"net/http/httptest"
 	"testing"

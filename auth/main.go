@@ -1,13 +1,13 @@
 package main
 
 import (
-	"atomic-blend/backend/auth/auth"
-	"atomic-blend/backend/auth/controllers/admin"
-	"atomic-blend/backend/auth/controllers/health"
-	"atomic-blend/backend/auth/controllers/users"
-	"atomic-blend/backend/auth/controllers/webhooks"
-	"atomic-blend/backend/auth/models"
-	"atomic-blend/backend/auth/utils/db"
+	"github.com/atomic-blend/backend/auth/auth"
+	"github.com/atomic-blend/backend/auth/controllers/admin"
+	"github.com/atomic-blend/backend/auth/controllers/health"
+	"github.com/atomic-blend/backend/auth/controllers/users"
+	"github.com/atomic-blend/backend/auth/controllers/webhooks"
+	"github.com/atomic-blend/backend/auth/models"
+	"github.com/atomic-blend/backend/auth/utils/db"
 	"context"
 	"os"
 	"strings"

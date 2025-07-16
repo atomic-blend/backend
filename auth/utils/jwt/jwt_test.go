@@ -1,8 +1,8 @@
 package jwt
 
 import (
-	"atomic-blend/backend/auth/tests/utils/inmemorymongo"
-	"atomic-blend/backend/auth/utils/db"
+	"github.com/atomic-blend/backend/auth/tests/utils/inmemorymongo"
+	"github.com/atomic-blend/backend/auth/utils/db"
 	"context"
 	"net/http/httptest"
 	"os"

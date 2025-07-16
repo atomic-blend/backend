@@ -1,9 +1,9 @@
 package repositories
 
 import (
-	"atomic-blend/backend/productivity/utils/db"
+	"github.com/atomic-blend/backend/productivity/utils/db"
 	"context"
-	"atomic-blend/backend/productivity/models"
+	"github.com/atomic-blend/backend/productivity/models"
 	"time"
 
 	bson "go.mongodb.org/mongo-driver/bson"

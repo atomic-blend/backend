@@ -2,7 +2,7 @@
 package auth
 
 import (
-	"atomic-blend/backend/productivity/utils/jwt"
+	"github.com/atomic-blend/backend/productivity/utils/jwt"
 	"net/http"
 	"net/http/httptest"
 	"os"

@@ -1,7 +1,7 @@
 package mocks
 
 import (
-	"atomic-blend/backend/productivity/models"
+	"github.com/atomic-blend/backend/productivity/models"
 	"context"
 
 	"github.com/gin-gonic/gin"

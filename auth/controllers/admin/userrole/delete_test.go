@@ -1,7 +1,7 @@
 package userrole
 
 import (
-	"atomic-blend/backend/auth/tests/mocks"
+	"github.com/atomic-blend/backend/auth/tests/mocks"
 	"errors"
 	"net/http"
 	"net/http/httptest"

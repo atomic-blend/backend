@@ -1,7 +1,7 @@
 package db
 
 import (
-	"atomic-blend/backend/auth/utils/shortcuts"
+	"github.com/atomic-blend/backend/auth/utils/shortcuts"
 	"context"
 	"fmt"
 	"os"

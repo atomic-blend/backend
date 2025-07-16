@@ -6,8 +6,8 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"atomic-blend/backend/productivity/auth"
-	"atomic-blend/backend/productivity/models"
+	"github.com/atomic-blend/backend/productivity/auth"
+	"github.com/atomic-blend/backend/productivity/models"
 	"testing"
 
 	"github.com/gin-gonic/gin"
