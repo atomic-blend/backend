@@ -6,7 +6,8 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
-	"github.com/atomic-blend/backend/grpc/gen/auth"
+	authv1 "github.com/atomic-blend/backend/grpc/gen/auth/v1"
+	userv1 "github.com/atomic-blend/backend/grpc/gen/user/v1"
 	"github.com/atomic-blend/backend/productivity/cron/notifications/payloads"
 	"github.com/atomic-blend/backend/productivity/grpc/clients"
 	"github.com/atomic-blend/backend/productivity/models"
@@ -80,9 +81,9 @@ func TaskDueNotificationCron() {
 		userID := task.User.Hex()
 
 		// get user devices using gRPC client
-		req := &connect.Request[auth.GetUserDevicesRequest]{
-			Msg: &auth.GetUserDevicesRequest{
-				User: &auth.User{
+		req := &connect.Request[userv1.GetUserDevicesRequest]{
+			Msg: &userv1.GetUserDevicesRequest{
+				User: &authv1.User{
 					Id: userID,
 				},
 			},

@@ -6,7 +6,8 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
-	"github.com/atomic-blend/backend/grpc/gen/auth"
+	authv1 "github.com/atomic-blend/backend/grpc/gen/auth/v1"
+	userv1 "github.com/atomic-blend/backend/grpc/gen/user/v1"
 	"github.com/atomic-blend/backend/productivity/cron/notifications/payloads"
 	"github.com/atomic-blend/backend/productivity/grpc/clients"
 	"github.com/atomic-blend/backend/productivity/models"
@@ -65,7 +66,6 @@ func HabitReminderNotificationCron() {
 		// Get the user for this habit
 		userID := habit.UserID.Hex()
 
-
 		// Check if this habit should send a notification now
 		shouldSendNotification, reminderToSend := shouldSendHabitNotification(habit, now)
 		if !shouldSendNotification {
@@ -76,9 +76,9 @@ func HabitReminderNotificationCron() {
 		log.Debug().Msgf("Reminder time matched: %s", reminderToSend.Format(time.RFC3339))
 
 		// Get user devices using gRPC client
-		req := &connect.Request[auth.GetUserDevicesRequest]{
-			Msg: &auth.GetUserDevicesRequest{
-				User: &auth.User{
+		req := &connect.Request[userv1.GetUserDevicesRequest]{
+			Msg: &userv1.GetUserDevicesRequest{
+				User: &authv1.User{
 					Id: userID,
 				},
 			},
