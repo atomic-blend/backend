@@ -79,7 +79,7 @@ jobs:
         if: steps.build-test.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
-          name: success-markers
+          name: success-marker-${{ matrix.dir }}
           path: /tmp/success-markers/${{ matrix.dir }}.txt
 
   release-rc:
@@ -96,8 +96,9 @@ jobs:
       - name: Download success markers
         uses: actions/download-artifact@v3
         with:
-          name: success-markers
+          pattern: success-marker-*
           path: /tmp/success-markers
+          merge-multiple: true
 
       - name: Collect successful directories
         id: collect-dirs
