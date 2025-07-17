@@ -33,8 +33,10 @@ jobs:
         run: echo "changed_directories={\"dir\":${{ steps.changed-files.outputs.all_changed_files }}}" >> "$GITHUB_OUTPUT"
 
   test-grpc:
-    if: ${{ needs.check-grpc-changes.outputs.changed_directories != '' && contains(needs.check-grpc-changes.outputs.changed_directories, 'grpc') }}
+    if: ${{ needs.check-grpc-changes.outputs.changed_directories != '' }}
     runs-on: ubuntu-latest
+    strategy:
+      matrix: ${{fromJson(needs.check-grpc-changes.outputs.changed_directories)}}
     needs: check-grpc-changes
     steps:
       - name: Checkout code
@@ -43,7 +45,8 @@ jobs:
           fetch-depth: 0
 
       - name: Test gRPC files
+        if: ${{ matrix.dir == 'grpc' }}
         uses: ./.github/actions/test-grpc
         with:
           buf-version: '1.55.1'
-          working-directory: './grpc'
+          working-directory: './${{ matrix.dir }}'
