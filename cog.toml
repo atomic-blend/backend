@@ -25,4 +25,4 @@ authors = []
 
 [packages]
 auth = { path="auth" }
-productivity = { path = "productivity"}
+productivity = { path="productivity" }
