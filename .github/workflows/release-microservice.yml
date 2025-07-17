@@ -27,6 +27,7 @@ jobs:
           files: |
             auth/**
             productivity/**
+            grpc/**
           quotepath: false
 
       - name: "Set output in the matrix format"
@@ -48,6 +49,7 @@ jobs:
 
       - name: Build and test backend services
         id: build-test
+        if: ${{ matrix.dir != 'grpc' }}
         uses: ./.github/actions/build-and-test
         with:
           go-version: "1.21"
@@ -56,14 +58,22 @@ jobs:
           maizzle-directory: "./maizzle"
           upload-artifacts: "false"
 
+      - name: Test gRPC
+        id: test-grpc
+        if: ${{ matrix.dir == 'grpc' }}
+        uses: ./.github/actions/test-grpc
+        with:
+          buf-version: "1.55.1"
+          working-directory: "${{ matrix.dir }}"
+
       - name: Create success marker
-        if: steps.build-test.outcome == 'success'
+        if: ${{ (matrix.dir != 'grpc' && steps.build-test.outcome == 'success') || (matrix.dir == 'grpc' && steps.test-grpc.outcome == 'success') }}
         run: |
           mkdir -p /tmp/success-markers
           echo "${{ matrix.dir }}" > /tmp/success-markers/${{ matrix.dir }}.txt
 
       - name: Upload success markers
-        if: steps.build-test.outcome == 'success'
+        if: ${{ (matrix.dir != 'grpc' && steps.build-test.outcome == 'success') || (matrix.dir == 'grpc' && steps.test-grpc.outcome == 'success') }}
         uses: actions/upload-artifact@v4
         with:
           name: success-marker-${{ matrix.dir }}
@@ -213,7 +223,7 @@ jobs:
           FIRST=true
           
           for dir in $SUCCESSFUL_DIRS; do
-            if [ -d "$dir" ]; then
+            if [ -d "$dir" ] && [ "$dir" != "grpc" ]; then
               TAG_PREFIX="${dir}-v"
               TAG=$(git tag --list "${TAG_PREFIX}*" | grep -v -- '-rc' | sort -V | tail -n 1)
               VERSION=$(echo $TAG | sed 's/^[^-]*-v//')
@@ -234,6 +244,7 @@ jobs:
 
     outputs:
       docker_matrix: ${{ steps.prepare-matrix.outputs.matrix }}
+      all_successful_dirs: ${{ steps.bump-versions.outputs.successful_dirs }}
 
   build-docker-images:
     if: ${{ needs.release.outputs.docker_matrix != '' && fromJson(needs.release.outputs.docker_matrix).include[0] != null }}
@@ -269,14 +280,66 @@ jobs:
           tags: |
             ghcr.io/atomic-blend/${{ matrix.dir }}:${{ matrix.version }}
 
-  create-github-releases:
-    if: ${{ needs.release.outputs.docker_matrix != '' && fromJson(needs.release.outputs.docker_matrix).include[0] != null }}
+  prepare-github-releases:
     runs-on: ubuntu-22.04
     needs: 
       - build-docker-images
       - release
+    if: always() && (needs.build-docker-images.result == 'success' || needs.build-docker-images.result == 'skipped') && needs.release.result == 'success'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Prepare release matrix
+        id: prepare-release-matrix
+        run: |
+          ALL_SUCCESSFUL_DIRS="${{ needs.release.outputs.all_successful_dirs }}"
+          
+          if [ -z "$ALL_SUCCESSFUL_DIRS" ]; then
+            echo "No successful directories found"
+            echo "matrix={\"include\":[]}" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          MATRIX_JSON='{"include":['
+          FIRST=true
+          
+          for dir in $ALL_SUCCESSFUL_DIRS; do
+            if [ -d "$dir" ]; then
+              TAG_PREFIX="${dir}-v"
+              TAG=$(git tag --list "${TAG_PREFIX}*" | grep -v -- '-rc' | sort -V | tail -n 1)
+              VERSION=$(echo $TAG | sed 's/^[^-]*-v//')
+              
+              if [ "$FIRST" = "true" ]; then
+                FIRST=false
+              else
+                MATRIX_JSON="$MATRIX_JSON,"
+              fi
+              
+              # Add type field to distinguish between grpc and docker services
+              if [ "$dir" == "grpc" ]; then
+                MATRIX_JSON="$MATRIX_JSON{\"dir\":\"$dir\",\"version\":\"$VERSION\",\"tag\":\"$TAG\",\"type\":\"grpc\"}"
+              else
+                MATRIX_JSON="$MATRIX_JSON{\"dir\":\"$dir\",\"version\":\"$VERSION\",\"tag\":\"$TAG\",\"type\":\"docker\"}"
+              fi
+            fi
+          done
+          
+          MATRIX_JSON="$MATRIX_JSON]}"
+          echo "matrix=$MATRIX_JSON" >> $GITHUB_OUTPUT
+          echo "Release matrix: $MATRIX_JSON"
+
+    outputs:
+      release_matrix: ${{ steps.prepare-release-matrix.outputs.matrix }}
+
+  prepare-all-releases:
+    if: ${{ needs.prepare-github-releases.outputs.release_matrix != '' && fromJson(needs.prepare-github-releases.outputs.release_matrix).include[0] != null }}
+    runs-on: ubuntu-22.04
+    needs: prepare-github-releases
     strategy:
-      matrix: ${{ fromJson(needs.release.outputs.docker_matrix) }}
+      matrix: ${{ fromJson(needs.prepare-github-releases.outputs.release_matrix) }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -307,11 +370,19 @@ jobs:
             
             echo "$CHANGELOG" > release_notes_${{ matrix.dir }}.md
           else
-            echo "Release ${{ matrix.version }} for ${{ matrix.dir }} microservice" > release_notes_${{ matrix.dir }}.md
-            echo "" >> release_notes_${{ matrix.dir }}.md
-            echo "This is a stable release from the main branch." >> release_notes_${{ matrix.dir }}.md
-            echo "" >> release_notes_${{ matrix.dir }}.md
-            echo "🐳 **Docker Image**: \`ghcr.io/atomic-blend/${{ matrix.dir }}:${{ matrix.version }}\`" >> release_notes_${{ matrix.dir }}.md
+            if [ "${{ matrix.type }}" == "grpc" ]; then
+              echo "Release ${{ matrix.version }} for gRPC definitions" > release_notes_${{ matrix.dir }}.md
+              echo "" >> release_notes_${{ matrix.dir }}.md
+              echo "This is a stable release from the main branch." >> release_notes_${{ matrix.dir }}.md
+              echo "" >> release_notes_${{ matrix.dir }}.md
+              echo "📋 **gRPC Protocol Definitions**: Protocol Buffer definitions and generated code" >> release_notes_${{ matrix.dir }}.md
+            else
+              echo "Release ${{ matrix.version }} for ${{ matrix.dir }} microservice" > release_notes_${{ matrix.dir }}.md
+              echo "" >> release_notes_${{ matrix.dir }}.md
+              echo "This is a stable release from the main branch." >> release_notes_${{ matrix.dir }}.md
+              echo "" >> release_notes_${{ matrix.dir }}.md
+              echo "🐳 **Docker Image**: \`ghcr.io/atomic-blend/${{ matrix.dir }}:${{ matrix.version }}\`" >> release_notes_${{ matrix.dir }}.md
+            fi
           fi
 
       - name: Create GitHub Release for ${{ matrix.dir }}

@@ -1,7 +1,0 @@
-syntax = "proto3";
-package auth;
-
-message User {
-    string id = 1;
-    string email = 2;
-}
