@@ -1,4 +1,4 @@
-name: Build and Test
+name: Release RC for Microservices
 
 on:
   push:
@@ -98,8 +98,8 @@ jobs:
 
       - name: Check conventional commits validity
         id: check-commits
-        working-directory: "${{ matrix.dir }}"
         run: |
+          cd "${{ matrix.dir }}"
           ~/.cargo/bin/cog check
 
       - name: Create success marker
