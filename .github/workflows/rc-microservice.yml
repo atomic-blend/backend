@@ -80,11 +80,13 @@ jobs:
           RUSTFLAGS: --cfg procmacro2_semver_exempt
 
       - name: Check conventional commits validity
+        working-directory: "${{ matrix.dir }}"
         run: |
           ~/.cargo/bin/cog check
 
       # run the bump_rc.sh script to bump the release candidate version
       - name: Bump version
+        working-directory: "${{ matrix.dir }}"
         run: |
           ./.github/scripts/bump_rc.sh
       
