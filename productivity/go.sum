@@ -82,6 +82,8 @@ github.com/appleboy/go-fcm v1.2.3 h1:8AgRNl5z1RVg7HH+8kblolf+5LA9xxRBKo8MsVbOxak
 github.com/appleboy/go-fcm v1.2.3/go.mod h1:BtQ+uqFC3wtAOPOeN+g+MKy9DBEe/rSyywRCH/r62bg=
 github.com/atomic-blend/backend/grpc v0.0.0-20250716142858-002d68472673 h1:r07OFyP1aIM3fwtclUJIY0LTnoHhtxlD9LqtRCMm6IY=
 github.com/atomic-blend/backend/grpc v0.0.0-20250716142858-002d68472673/go.mod h1:myCzKWUYinI2ZDpxHJ+3NmUvzSTJ8e1vgp8zpGATaTY=
+github.com/atomic-blend/backend/grpc v0.0.0-20250717132125-45786f98de4e h1:zz8ax5IYWaN2AGojdHU0LAAZFXv2ErzFcyLiEvXZ7Qw=
+github.com/atomic-blend/backend/grpc v0.0.0-20250717132125-45786f98de4e/go.mod h1:myCzKWUYinI2ZDpxHJ+3NmUvzSTJ8e1vgp8zpGATaTY=
 github.com/atomic-blend/memongo v0.0.0-20250305155718-adada7465e0f h1:USVU2p7/RTSOY1DV1aKhtTGvPEoHgHlqy9ZT2txoXlw=
 github.com/atomic-blend/memongo v0.0.0-20250305155718-adada7465e0f/go.mod h1:GlVBodZbIfTJdagvuzGxDFLpF8IbuxMaTXlP3agpt8w=
 github.com/bytedance/sonic v1.13.2 h1:8/H1FempDZqC4VqjptGo14QQlJx8VdZJegxs6wwfqpQ=

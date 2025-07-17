@@ -2,7 +2,7 @@ package users
 
 import (
 	"github.com/atomic-blend/backend/auth/auth"
-	"github.com/atomic-blend/backend/auth/clients"
+	"github.com/atomic-blend/backend/auth/grpc/clients"
 	"github.com/atomic-blend/backend/auth/grpc/interfaces"
 	"github.com/atomic-blend/backend/auth/repositories"
 
