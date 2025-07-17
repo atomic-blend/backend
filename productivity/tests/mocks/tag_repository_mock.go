@@ -1,8 +1,9 @@
 package mocks
 
 import (
-	"github.com/atomic-blend/backend/productivity/models"
 	"context"
+
+	"github.com/atomic-blend/backend/productivity/models"
 
 	"github.com/stretchr/testify/mock"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -52,5 +53,11 @@ func (m *MockTagRepository) Update(ctx context.Context, tag *models.Tag) (*model
 // Delete deletes a tag by ID
 func (m *MockTagRepository) Delete(ctx context.Context, id primitive.ObjectID) error {
 	args := m.Called(ctx, id)
+	return args.Error(0)
+}
+
+// DeleteByUserID deletes all tags for a specific user
+func (m *MockTagRepository) DeleteByUserID(ctx context.Context, userID primitive.ObjectID) error {
+	args := m.Called(ctx, userID)
 	return args.Error(0)
 }

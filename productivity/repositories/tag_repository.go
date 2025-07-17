@@ -1,10 +1,11 @@
 package repositories
 
 import (
-	"github.com/atomic-blend/backend/productivity/models"
 	"context"
 	"errors"
 	"time"
+
+	"github.com/atomic-blend/backend/productivity/models"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -20,6 +21,7 @@ type TagRepositoryInterface interface {
 	Create(ctx context.Context, tag *models.Tag) (*models.Tag, error)
 	Update(ctx context.Context, tag *models.Tag) (*models.Tag, error)
 	Delete(ctx context.Context, id primitive.ObjectID) error
+	DeleteByUserID(ctx context.Context, userID primitive.ObjectID) error
 }
 
 // TagRepository handles database operations related to tags
@@ -127,5 +129,12 @@ func (r *TagRepository) Update(ctx context.Context, tag *models.Tag) (*models.Ta
 func (r *TagRepository) Delete(ctx context.Context, id primitive.ObjectID) error {
 	filter := bson.M{"_id": id}
 	_, err := r.collection.DeleteOne(ctx, filter)
+	return err
+}
+
+// DeleteByUserID deletes all tags for a specific user
+func (r *TagRepository) DeleteByUserID(ctx context.Context, userID primitive.ObjectID) error {
+	filter := bson.M{"user_id": userID}
+	_, err := r.collection.DeleteMany(ctx, filter)
 	return err
 }

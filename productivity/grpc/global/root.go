@@ -9,13 +9,15 @@ type grpcServer struct {
 	taskRepo  repositories.TaskRepositoryInterface
 	habitRepo repositories.HabitRepositoryInterface
 	noteRepo  repositories.NoteRepositoryInterface
+	tagRepo   repositories.TagRepositoryInterface
 }
 
 // NewGrpcServer create a new instance of GrpcServer
-func NewGrpcServer(taskRepo repositories.TaskRepositoryInterface, habitRepo repositories.HabitRepositoryInterface, noteRepo repositories.NoteRepositoryInterface) *grpcServer {
+func NewGrpcServer(taskRepo repositories.TaskRepositoryInterface, habitRepo repositories.HabitRepositoryInterface, noteRepo repositories.NoteRepositoryInterface, tagRepo repositories.TagRepositoryInterface) *grpcServer {
 	return &grpcServer{
 		taskRepo:  taskRepo,
 		habitRepo: habitRepo,
 		noteRepo:  noteRepo,
+		tagRepo:   tagRepo,
 	}
 }
