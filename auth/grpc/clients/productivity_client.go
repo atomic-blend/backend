@@ -6,13 +6,13 @@ import (
 
 	"connectrpc.com/connect"
 	grpcclientutils "github.com/atomic-blend/backend/auth/utils/grpc_client_utils"
-	"github.com/atomic-blend/backend/grpc/gen/productivity"
-	"github.com/atomic-blend/backend/grpc/gen/productivity/productivityconnect"
+	"github.com/atomic-blend/backend/grpc/gen/productivity/v1"
+	"github.com/atomic-blend/backend/grpc/gen/productivity/v1/productivityv1connect"
 )
 
 // ProductivityClient wraps the real gRPC productivity client
 type ProductivityClient struct {
-	client productivityconnect.ProductivityServiceClient
+	client productivityv1connect.ProductivityServiceClient
 }
 
 // NewProductivityClient creates a new productivity client
@@ -23,11 +23,11 @@ func NewProductivityClient() (*ProductivityClient, error) {
 		return nil, err
 	}
 	
-	client := productivityconnect.NewProductivityServiceClient(httpClient, baseURL)
+	client := productivityv1connect.NewProductivityServiceClient(httpClient, baseURL)
 	return &ProductivityClient{client: client}, nil
 }
 
 // DeleteUserData calls the DeleteUserData method on the productivity service
-func (p *ProductivityClient) DeleteUserData(ctx context.Context, req *connect.Request[productivity.DeleteUserDataRequest]) (*connect.Response[productivity.DeleteUserDataResponse], error) {
+func (p *ProductivityClient) DeleteUserData(ctx context.Context, req *connect.Request[productivityv1.DeleteUserDataRequest]) (*connect.Response[productivityv1.DeleteUserDataResponse], error) {
 	return p.client.DeleteUserData(ctx, req)
 }

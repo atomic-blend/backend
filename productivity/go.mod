@@ -11,7 +11,7 @@ require (
 	github.com/stretchr/testify v1.10.0
 )
 
-require github.com/atomic-blend/backend/grpc v0.0.0-20250717132125-45786f98de4e
+require github.com/atomic-blend/backend/grpc v0.0.0-20250717174558-94e1a82ce107
 
 require (
 	cel.dev/expr v0.19.1 // indirect

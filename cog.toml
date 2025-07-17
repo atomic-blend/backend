@@ -7,6 +7,7 @@ generate_mono_repository_global_tag = false
 generate_mono_repository_package_tags = true
 branch_whitelist = []
 skip_ci = "[skip ci]"
+monorepo_version_separator = "/"
 skip_untracked = false
 pre_bump_hooks = []
 post_bump_hooks = []

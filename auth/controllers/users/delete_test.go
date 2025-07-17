@@ -11,7 +11,7 @@ import (
 	"github.com/atomic-blend/backend/auth/tests/mocks"
 
 	"connectrpc.com/connect"
-	"github.com/atomic-blend/backend/grpc/gen/productivity"
+	"github.com/atomic-blend/backend/grpc/gen/productivity/v1"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -43,7 +43,7 @@ func TestDeleteAccount(t *testing.T) {
 
 				// Mock successful productivity client call
 				productivityClient.On("DeleteUserData", mock.Anything, mock.Anything).Return(
-					&connect.Response[productivity.DeleteUserDataResponse]{}, nil)
+					&connect.Response[productivityv1.DeleteUserDataResponse]{}, nil)
 			},
 			expectedStatus: http.StatusOK,
 			expectedBody:   map[string]string{"message": "Account successfully deleted"},
