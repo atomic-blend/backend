@@ -76,7 +76,7 @@ jobs:
         if: ${{ matrix.dir == 'grpc' }}
         uses: ./.github/actions/test-grpc
         with:
-          buf-version: "1.28.1"
+          buf-version: "1.55.1"
           working-directory: "${{ matrix.dir }}"
 
       - name: Create success marker
