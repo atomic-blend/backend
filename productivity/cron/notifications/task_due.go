@@ -1,15 +1,16 @@
 package notifications
 
 import (
+	"context"
+	"os"
+	"time"
+
 	"github.com/atomic-blend/backend/productivity/cron/notifications/payloads"
 	"github.com/atomic-blend/backend/productivity/models"
 	"github.com/atomic-blend/backend/productivity/repositories"
 	"github.com/atomic-blend/backend/productivity/utils/db"
 	fcmutils "github.com/atomic-blend/backend/productivity/utils/fcm_utils"
 	"github.com/atomic-blend/backend/productivity/utils/shortcuts"
-	"context"
-	"os"
-	"time"
 
 	fcm "github.com/appleboy/go-fcm"
 	"github.com/rs/zerolog/log"
@@ -25,6 +26,7 @@ var (
 func TaskDueNotificationCron() {
 	log.Debug().Msg("Starting task due notification cron job")
 	ctx := context.TODO()
+
 	taskRepo := repositories.NewTaskRepository(db.Database)
 	userRepo := repositories.NewUserRepository(db.Database)
 
@@ -37,88 +39,113 @@ func TaskDueNotificationCron() {
 		ctx,
 		fcm.WithProjectID(firebaseProjectID),
 		fcm.WithCredentialsFile(os.Getenv("GOOGLE_APPLICATION_CREDENTIALS")),
-		// initial with service account
-		// fcm.WithServiceAccount("my-client-id@my-project-id.iam.gserviceaccount.com"),
 	)
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed to create FCM client")
 		return
 	}
 
-	// get a cursor to all the users
-	userCursor, err := userRepo.GetAllIterable(ctx)
+	// Get all tasks from the database
+	tasks, err := taskRepo.GetAll(ctx, nil) // nil to get all tasks for all users
 	if err != nil {
-		log.Error().Err(err).Msg("Failed to get user cursor")
+		log.Error().Err(err).Msg("Failed to get tasks")
 		return
 	}
-	defer userCursor.Close(ctx)
 
-	// iterate through the cursor with user access
-	for userCursor.Next(ctx) {
-		var user models.UserEntity
-		if err := userCursor.Decode(&user); err != nil {
-			log.Error().Err(err).Msg("Failed to decode user")
+	now := time.Now()
+	log.Debug().Msgf("Current time: %s", now.Format(time.RFC3339))
+
+	// Process each task
+	for _, task := range tasks {
+		log.Debug().Msgf("Processing task: %s", task.ID)
+
+		// Check if this task should send a notification now
+		notificationType := shouldSendTaskNotification(task)
+		if notificationType == "" {
+			log.Debug().Msgf("No notification needed for task: %s", task.ID)
 			continue
 		}
 
-		// get the tasks for the user
-		tasks, err := taskRepo.GetAll(ctx, user.ID)
+		log.Debug().Msgf("Notification type: %s for task: %s", notificationType, task.ID)
+
+		// Get the user for this task
+		user, err := userRepo.GetByID(ctx, task.User.Hex())
 		if err != nil {
-			log.Error().Err(err).Msg("Failed to get tasks for user")
+			log.Error().Err(err).Msgf("Failed to get user for task: %s", task.ID)
+			continue
+		}
+		if user == nil {
+			log.Error().Msgf("User not found for task: %s", task.ID)
 			continue
 		}
 
+		// Extract device tokens
 		deviceTokens := []string{}
 		for _, device := range user.Devices {
 			deviceTokens = append(deviceTokens, device.FcmToken)
 		}
 
-		for _, task := range tasks {
-			//TODO: implement task due notification logic
-			log.Debug().Msgf("Processing task: %s", task.ID)
+		if len(deviceTokens) == 0 {
+			log.Debug().Msgf("No device tokens found for user: %s", user.ID.Hex())
+			continue
+		}
 
-			// send notification to the user when:
-			// - task is due and the due date is equal to the current date
-			// - task have a reminder set and the reminder is hour and minute equal to the current time
-			now := time.Now()
-			log.Debug().Msgf("Current time: %s", now.Format(time.RFC3339))
-			if isDateNow(task.EndDate, task.Completed) {
-				log.Debug().Msgf("Task is due: %s", task.EndDate.Time().Format(time.RFC3339))
-				payload := payloads.NewTaskDuePayload(
-					task.Title,
-				)
+		// Create and send appropriate notification based on type
+		var payload interface{ GetData() map[string]string }
 
-				data := payload.GetData()
-				fcmutils.SendMulticast(ctx, fcmClient, data, deviceTokens)
-				continue
-			}
-
-			if isDateNow(task.StartDate, task.Completed) {
-				log.Debug().Msgf("Task is starting: %s", task.StartDate.Time().Format(time.RFC3339))
-				payload := payloads.NewTaskStartingPayload(
-					task.Title,
-				)
-
-				data := payload.GetData()
-				fcmutils.SendMulticast(ctx, fcmClient, data, deviceTokens)
-				continue
-			}
-
+		switch notificationType {
+		case "due":
+			payload = payloads.NewTaskDuePayload(task.Title)
+		case "starting":
+			payload = payloads.NewTaskStartingPayload(task.Title)
+		case "reminder":
+			// Find the specific reminder that triggered
 			for _, reminder := range task.Reminders {
 				if isDateNow(reminder, task.Completed) {
-					log.Debug().Msgf("Task reminder: %s", reminder.Time().Format(time.RFC3339))
-					payload := payloads.NewTaskReminderPayload(
+					payload = payloads.NewTaskReminderPayload(
 						task.Title,
 						reminder.Time().UTC().Format(time.RFC3339),
 					)
-
-					data := payload.GetData()
-					fcmutils.SendMulticast(ctx, fcmClient, data, deviceTokens)
-					continue
+					break
 				}
 			}
 		}
+
+		if payload == nil {
+			log.Error().Msgf("Failed to create payload for task: %s", task.ID)
+			continue
+		}
+
+		data := payload.GetData()
+		fcmutils.SendMulticast(ctx, fcmClient, data, deviceTokens)
+		log.Debug().Msgf("Sent %s notification for task: %s", notificationType, task.ID)
 	}
+}
+
+// shouldSendTaskNotification determines if a task should send a notification at the current time
+// Returns notification type ("due", "starting", "reminder") or empty string if no notification
+func shouldSendTaskNotification(task *models.TaskEntity) string {
+	// Check if task is due
+	if isDateNow(task.EndDate, task.Completed) {
+		log.Debug().Msgf("Task is due: %s", task.EndDate.Time().Format(time.RFC3339))
+		return "due"
+	}
+
+	// Check if task is starting
+	if isDateNow(task.StartDate, task.Completed) {
+		log.Debug().Msgf("Task is starting: %s", task.StartDate.Time().Format(time.RFC3339))
+		return "starting"
+	}
+
+	// Check for reminders
+	for _, reminder := range task.Reminders {
+		if isDateNow(reminder, task.Completed) {
+			log.Debug().Msgf("Task reminder: %s", reminder.Time().Format(time.RFC3339))
+			return "reminder"
+		}
+	}
+
+	return ""
 }
 
 func isDateNow(date *primitive.DateTime, completed *bool) bool {
