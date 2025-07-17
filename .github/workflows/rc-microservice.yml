@@ -97,9 +97,9 @@ jobs:
           RUSTFLAGS: --cfg procmacro2_semver_exempt
 
       - name: Check conventional commits validity
+        working-directory: "${{ matrix.dir }}"
         id: check-commits
         run: |
-          cd "${{ matrix.dir }}"
           ~/.cargo/bin/cog check
 
       - name: Create success marker
