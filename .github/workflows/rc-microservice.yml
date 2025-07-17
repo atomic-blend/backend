@@ -110,7 +110,7 @@ jobs:
 
       - name: Upload success markers
         if: steps.build-test.outcome == 'success' && steps.check-commits.outcome == 'success'
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: success-markers
           path: /tmp/success-markers/${{ matrix.dir }}.txt
