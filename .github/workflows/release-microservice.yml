@@ -1,4 +1,4 @@
-name: Build and Test
+name: Release Microservices
 
 on:
   push:
@@ -47,6 +47,7 @@ jobs:
           fetch-depth: 0
 
       - name: Build and test backend services
+        id: build-test
         uses: ./.github/actions/build-and-test
         with:
           go-version: "1.21"
@@ -55,7 +56,54 @@ jobs:
           maizzle-directory: "./maizzle"
           upload-artifacts: "false"
 
-      # configure cocogitto and git
+      - name: Create success marker
+        if: steps.build-test.outcome == 'success'
+        run: |
+          mkdir -p /tmp/success-markers
+          echo "${{ matrix.dir }}" > /tmp/success-markers/${{ matrix.dir }}.txt
+
+      - name: Upload success markers
+        if: steps.build-test.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: success-marker-${{ matrix.dir }}
+          path: /tmp/success-markers/${{ matrix.dir }}.txt
+
+  release:
+    if: ${{ needs.build-and-test.result == 'success' }}
+    runs-on: ubuntu-22.04
+    needs:
+      - build-and-test
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Download success markers
+        uses: actions/download-artifact@v4
+        with:
+          pattern: success-marker-*
+          path: /tmp/success-markers
+          merge-multiple: true
+
+      - name: Collect successful directories
+        id: collect-dirs
+        run: |
+          SUCCESSFUL_DIRS=""
+          if [ -d "/tmp/success-markers" ]; then
+            for file in /tmp/success-markers/*.txt; do
+              if [ -f "$file" ]; then
+                dir=$(cat "$file")
+                SUCCESSFUL_DIRS="$SUCCESSFUL_DIRS $dir"
+              fi
+            done
+          fi
+          
+          SUCCESSFUL_DIRS=$(echo $SUCCESSFUL_DIRS | tr -s ' ' | sed 's/^ *//' | sed 's/ *$//')
+          echo "directories=$SUCCESSFUL_DIRS" >> $GITHUB_OUTPUT
+          echo "Found successful directories: $SUCCESSFUL_DIRS"
+
       - name: Configure git
         run: |
           git config user.email "pro@brandonguigo.com"
@@ -86,21 +134,118 @@ jobs:
         run: |
           ~/.cargo/bin/cog check
 
-      # run the bump.sh script to bump the version
-      - name: Bump version
+      - name: Bump versions for all successful microservices
+        id: bump-versions
         run: |
-          ./.github/scripts/bump.sh
+          SUCCESSFUL_DIRS="${{ steps.collect-dirs.outputs.directories }}"
+          
+          if [ -z "$SUCCESSFUL_DIRS" ]; then
+            echo "No successful directories found"
+            exit 0
+          fi
+          
+          echo "Bumping versions for: $SUCCESSFUL_DIRS"
+          
+          # Bump version for each successful microservice
+          for dir in $SUCCESSFUL_DIRS; do
+            if [ -d "$dir" ]; then
+              echo "Bumping version for $dir"
+              ./.github/scripts/bump.sh "$dir"
+            fi
+          done
+          
+          # Get the new tags for all microservices
+          TAGS_TO_PUSH=""
+          for dir in $SUCCESSFUL_DIRS; do
+            if [ -d "$dir" ]; then
+              TAG_PREFIX="${dir}-v"
+              NEW_TAG=$(git tag --list "${TAG_PREFIX}*" | grep -v -- '-rc' | sort -V | tail -n 1)
+              TAGS_TO_PUSH="$TAGS_TO_PUSH $NEW_TAG"
+              echo "New tag for $dir: $NEW_TAG"
+            fi
+          done
+          
+          echo "tags_to_push=$TAGS_TO_PUSH" >> $GITHUB_OUTPUT
+          echo "successful_dirs=$SUCCESSFUL_DIRS" >> $GITHUB_OUTPUT
 
       - name: Commit and push changes
         run: |
           if [ -n "$(git status --porcelain)" ]; then
-            git add CHANGELOG.md
-            git commit -m "chore(release): $(git describe --abbrev=0 --tags) [skip ci]"
+            # Add all CHANGELOG.md files
+            git add */CHANGELOG.md
+            
+            # Create commit message with all updated microservices
+            COMMIT_MSG="chore(release): bump versions for"
+            for dir in ${{ steps.bump-versions.outputs.successful_dirs }}; do
+              if [ -d "$dir" ]; then
+                TAG_PREFIX="${dir}-v"
+                NEW_TAG=$(git tag --list "${TAG_PREFIX}*" | grep -v -- '-rc' | sort -V | tail -n 1)
+                COMMIT_MSG="$COMMIT_MSG $dir@$NEW_TAG"
+              fi
+            done
+            COMMIT_MSG="$COMMIT_MSG [skip ci]"
+            
+            git commit -m "$COMMIT_MSG"
+            
+            # Push the commit
             git push https://${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git main
-            git push https://${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git tag $(git describe --abbrev=0 --tags)
+            
+            # Push all tags
+            for tag in ${{ steps.bump-versions.outputs.tags_to_push }}; do
+              git push https://${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git tag "$tag"
+            done
           else
             echo "No changes to commit"
           fi
+
+      - name: Prepare Docker build matrix
+        id: prepare-matrix
+        run: |
+          SUCCESSFUL_DIRS="${{ steps.bump-versions.outputs.successful_dirs }}"
+          
+          if [ -z "$SUCCESSFUL_DIRS" ]; then
+            echo "No successful directories found"
+            echo "matrix={\"include\":[]}" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          MATRIX_JSON='{"include":['
+          FIRST=true
+          
+          for dir in $SUCCESSFUL_DIRS; do
+            if [ -d "$dir" ]; then
+              TAG_PREFIX="${dir}-v"
+              TAG=$(git tag --list "${TAG_PREFIX}*" | grep -v -- '-rc' | sort -V | tail -n 1)
+              VERSION=$(echo $TAG | sed 's/^[^-]*-v//')
+              
+              if [ "$FIRST" = "true" ]; then
+                FIRST=false
+              else
+                MATRIX_JSON="$MATRIX_JSON,"
+              fi
+              
+              MATRIX_JSON="$MATRIX_JSON{\"dir\":\"$dir\",\"version\":\"$VERSION\",\"tag\":\"$TAG\"}"
+            fi
+          done
+          
+          MATRIX_JSON="$MATRIX_JSON]}"
+          echo "matrix=$MATRIX_JSON" >> $GITHUB_OUTPUT
+          echo "Docker build matrix: $MATRIX_JSON"
+
+    outputs:
+      docker_matrix: ${{ steps.prepare-matrix.outputs.matrix }}
+
+  build-docker-images:
+    if: ${{ needs.release.outputs.docker_matrix != '' && fromJson(needs.release.outputs.docker_matrix).include[0] != null }}
+    runs-on: ubuntu-22.04
+    needs: release
+    strategy:
+      matrix: ${{ fromJson(needs.release.outputs.docker_matrix) }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v2
@@ -111,54 +256,69 @@ jobs:
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
+        
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Get tag
-        id: get-tag
-        run: |
-          TAG=$(git describe --abbrev=0 --tags)
-          VERSION=$(echo $TAG | cut -d'-' -f2)
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-
-      - name: Build and push Docker image
+      - name: Build and push Docker image for ${{ matrix.dir }}
         uses: docker/build-push-action@v6
         with:
-          context: .
+          context: ${{ matrix.dir }}
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
-            ghcr.io/${{ matrix.dir }}:${{ steps.get-tag.outputs.version }}
+            ghcr.io/atomic-blend/${{ matrix.dir }}:${{ matrix.version }}
 
-      # GitHub Release creation steps
-      - name: Extract changelog
+  create-github-releases:
+    if: ${{ needs.release.outputs.docker_matrix != '' && fromJson(needs.release.outputs.docker_matrix).include[0] != null }}
+    runs-on: ubuntu-22.04
+    needs: 
+      - build-docker-images
+      - release
+    strategy:
+      matrix: ${{ fromJson(needs.release.outputs.docker_matrix) }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Extract changelog for ${{ matrix.dir }}
         id: extract-changelog
         run: |
-          TAG=${{ steps.get-tag.outputs.tag }}
-          CLEAN_TAG=$(echo "$TAG" | sed 's/^v//')
-
-          if [ -f "CHANGELOG.md" ]; then
+          TAG=${{ matrix.tag }}
+          CLEAN_TAG=$(echo "$TAG" | sed 's/^[^-]*-v//')
+          
+          if [ -f "${{ matrix.dir }}/CHANGELOG.md" ]; then
             # Try different changelog entry formats
-            CHANGELOG=$(sed -n "/^## $TAG - /,/^## /p" CHANGELOG.md | sed '1d;$d')
+            CHANGELOG=$(sed -n "/^## $TAG - /,/^## /p" ${{ matrix.dir }}/CHANGELOG.md | sed '1d;$d')
             
             if [ -z "$CHANGELOG" ]; then
-              CHANGELOG=$(sed -n "/^## $CLEAN_TAG - /,/^## /p" CHANGELOG.md | sed '1d;$d')
+              CHANGELOG=$(sed -n "/^## $CLEAN_TAG - /,/^## /p" ${{ matrix.dir }}/CHANGELOG.md | sed '1d;$d')
             fi
             
             if [ -z "$CHANGELOG" ]; then
-              CHANGELOG=$(sed -n "/^## \[$CLEAN_TAG\] - /,/^## /p" CHANGELOG.md | sed '1d;$d')
+              CHANGELOG=$(sed -n "/^## \[$CLEAN_TAG\] - /,/^## /p" ${{ matrix.dir }}/CHANGELOG.md | sed '1d;$d')
             fi
             
-            echo "$CHANGELOG" > release_notes.md
+            if [ -z "$CHANGELOG" ]; then
+              CHANGELOG=$(sed -n "/^## v$CLEAN_TAG - /,/^## /p" ${{ matrix.dir }}/CHANGELOG.md | sed '1d;$d')
+            fi
+            
+            echo "$CHANGELOG" > release_notes_${{ matrix.dir }}.md
           else
-            echo "No changelog found" > release_notes.md
+            echo "Release ${{ matrix.version }} for ${{ matrix.dir }} microservice" > release_notes_${{ matrix.dir }}.md
+            echo "" >> release_notes_${{ matrix.dir }}.md
+            echo "This is a stable release from the main branch." >> release_notes_${{ matrix.dir }}.md
+            echo "" >> release_notes_${{ matrix.dir }}.md
+            echo "🐳 **Docker Image**: \`ghcr.io/atomic-blend/${{ matrix.dir }}:${{ matrix.version }}\`" >> release_notes_${{ matrix.dir }}.md
           fi
 
-      - name: Create GitHub Release
+      - name: Create GitHub Release for ${{ matrix.dir }}
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: ${{ steps.get-tag.outputs.tag }}
-          name: v${{ steps.get-tag.outputs.tag }}
-          body_path: release_notes.md
+          tag_name: ${{ matrix.tag }}
+          name: "${{ matrix.dir }} v${{ matrix.version }}"
+          body_path: release_notes_${{ matrix.dir }}.md
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
