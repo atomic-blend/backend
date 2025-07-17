@@ -1,0 +1,51 @@
+name: Test gRPC
+
+on:
+  pull_request:
+    branches: [main, dev]
+    paths:
+      - 'grpc/**'
+
+jobs:
+  check-grpc-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      grpc_changed: ${{ steps.changes.outputs.grpc }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Check for gRPC changes
+        id: changes
+        uses: tj-actions/changed-files@v35
+        with:
+          files: |
+            grpc/**
+          json: false
+
+      - name: Set output
+        id: set-output
+        run: |
+          if [ "${{ steps.changes.outputs.any_changed }}" == "true" ]; then
+            echo "grpc=true" >> $GITHUB_OUTPUT
+          else
+            echo "grpc=false" >> $GITHUB_OUTPUT
+          fi
+
+  test-grpc:
+    if: ${{ needs.check-grpc-changes.outputs.grpc_changed == 'true' }}
+    runs-on: ubuntu-latest
+    needs: check-grpc-changes
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Test gRPC files
+        uses: ./.github/actions/test-grpc
+        with:
+          buf-version: '1.28.1'
+          working-directory: './grpc'

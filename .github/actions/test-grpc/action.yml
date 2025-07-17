@@ -1,0 +1,80 @@
+name: "Test gRPC with Buf"
+description: "Install Buf CLI and run buf build to validate protobuf files and lint"
+
+inputs:
+  buf-version:
+    description: "Version of Buf CLI to install"
+    required: false
+    default: "1.28.1"
+  working-directory:
+    description: "Working directory to run buf commands"
+    required: false
+    default: "./grpc"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Setup Buf CLI
+      shell: bash
+      run: |
+        echo "Installing Buf CLI version ${{ inputs.buf-version }}"
+
+        # Determine OS and architecture
+        OS=$(uname -s | tr '[:upper:]' '[:lower:]')
+        ARCH=$(uname -m)
+
+        # Map architecture names
+        case $ARCH in
+          x86_64) ARCH="x86_64" ;;
+          aarch64|arm64) ARCH="aarch_64" ;;
+          *) echo "Unsupported architecture: $ARCH"; exit 1 ;;
+        esac
+
+        # Download and install buf
+        BUF_VERSION="${{ inputs.buf-version }}"
+        BUF_URL="https://github.com/bufbuild/buf/releases/download/v${BUF_VERSION}/buf-${OS}-${ARCH}"
+
+        echo "Downloading buf from: $BUF_URL"
+        curl -sSL "$BUF_URL" -o buf
+        chmod +x buf
+        sudo mv buf /usr/local/bin/
+
+        # Verify installation
+        buf --version
+
+    - name: Run buf build and lint
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: |
+        echo "Running buf build in directory: ${{ inputs.working-directory }}"
+
+        # Check if buf.yaml exists
+        if [ ! -f "buf.yaml" ]; then
+          echo "Error: buf.yaml not found in ${{ inputs.working-directory }}"
+          echo "Available files:"
+          ls -la
+          exit 1
+        fi
+
+        echo "Found buf.yaml, running buf build..."
+
+        # Run buf build which includes linting
+        buf build
+
+        echo "buf build completed successfully!"
+
+    - name: Run buf lint (explicit)
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: |
+        echo "Running explicit buf lint..."
+        buf lint
+        echo "buf lint completed successfully!"
+
+    - name: Run buf format check
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: |
+        echo "Checking buf format..."
+        buf format --diff --exit-code
+        echo "buf format check completed successfully!"
