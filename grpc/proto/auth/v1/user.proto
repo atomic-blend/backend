@@ -1,5 +1,5 @@
 syntax = "proto3";
-package auth;
+package auth.v1;
 
 message User {
     string id = 1;

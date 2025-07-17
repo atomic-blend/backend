@@ -1,10 +1,10 @@
 syntax = "proto3";
-package productivity;
+package productivity.v1;
 
-import "auth/user.proto";
+import "auth/v1/user.proto";
 
 message DeleteUserDataRequest {
-    auth.User user = 1;
+    auth.v1.User user = 1;
 }
 
 message DeleteUserDataResponse {

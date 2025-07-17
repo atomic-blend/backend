@@ -1,17 +1,17 @@
 syntax = "proto3";
-package auth;
+package user.v1;
 
-import "auth/user.proto";
+import "auth/v1/user.proto";
 
 message UserDevice {
-    string deviceID = 1;
-    string deviceName = 2;
-    string fcmToken = 3;
-    optional string deviceTimezone = 4;
+    string device_id = 1;
+    string device_name = 2;
+    string fcm_token = 3;
+    optional string device_timezone = 4;
 }
 
 message GetUserDevicesRequest {
-    User user = 1;
+    auth.v1.User user = 1;
 }
 
 message GetUserDevicesResponse {
