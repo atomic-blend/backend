@@ -5,7 +5,7 @@ inputs:
   buf-version:
     description: "Version of Buf CLI to install"
     required: false
-    default: "1.28.1"
+    default: "1.55.1"
   working-directory:
     description: "Working directory to run buf commands"
     required: false
