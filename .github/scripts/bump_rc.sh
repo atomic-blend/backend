@@ -1,29 +1,8 @@
 #!/bin/bash
 set -euo pipefail
 
-# Check if microservice directory is provided
-if [ $# -eq 0 ]; then
-    echo "Usage: $0 <microservice-directory>"
-    echo "Example: $0 auth"
-    exit 1
-fi
-
-MICROSERVICE_DIR="$1"
-
-# Check if directory exists
-if [ ! -d "$MICROSERVICE_DIR" ]; then
-    echo "Error: Directory $MICROSERVICE_DIR does not exist"
-    exit 1
-fi
-
-# Check if cog.toml exists in the directory
-if [ ! -f "$MICROSERVICE_DIR/cog.toml" ]; then
-    echo "Error: cog.toml not found in $MICROSERVICE_DIR"
-    exit 1
-fi
-
-# Extract tag prefix from cog.toml
-TAG_PREFIX=$(grep "tag_prefix" "$MICROSERVICE_DIR/cog.toml" | cut -d'"' -f2)
+# Fixed tag prefix for auth microservice
+TAG_PREFIX="auth-v"
 
 # Patterns
 FINAL_TAG_PATTERN="${TAG_PREFIX}[0-9]*.[0-9]*.[0-9]*"
@@ -53,15 +32,14 @@ fi
 
 # Determine next RC
 if [[ -z "$latest_rc" ]] || [[ "$base_rc" != "$base_final" ]]; then
-  echo "Starting new RC cycle for $MICROSERVICE_DIR: rc.1"
+  echo "Starting new RC cycle: rc.1"
   next_rc="rc.1"
 else
   rc_number=$(echo "$latest_rc" | sed -nE 's/.*-rc\.([0-9]+)$/\1/p')
   next_rc="rc.$((rc_number + 1))"
-  echo "Incrementing RC for $MICROSERVICE_DIR: $latest_rc → $next_rc"
+  echo "Incrementing RC: $latest_rc → $next_rc"
 fi
 
-# Change to microservice directory and run cog bump
-echo "Running: cd $MICROSERVICE_DIR && cog bump --pre $next_rc"
-cd "$MICROSERVICE_DIR"
-~/.cargo/bin/cog bump --pre "$next_rc"
+# Run cog bump --auto from the root with the computed pre-release tag
+echo "Running: cog bump --auto --pre $next_rc"
+~/.cargo/bin/cog bump --auto --pre "$next_rc"

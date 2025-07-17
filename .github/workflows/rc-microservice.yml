@@ -97,7 +97,6 @@ jobs:
           RUSTFLAGS: --cfg procmacro2_semver_exempt
 
       - name: Check conventional commits validity
-        working-directory: "${{ matrix.dir }}"
         id: check-commits
         run: |
           ~/.cargo/bin/cog check -i -l
@@ -179,24 +178,22 @@ jobs:
         id: bump-versions
         run: |
           SUCCESSFUL_DIRS="${{ steps.collect-dirs.outputs.directories }}"
-          TAGS_TO_PUSH=""
           
           if [ -z "$SUCCESSFUL_DIRS" ]; then
             echo "No successful directories found"
             exit 0
           fi
           
+          echo "Bumping versions for: $SUCCESSFUL_DIRS"
+          ./.github/scripts/bump_rc.sh
+          
+          # Get the new tags for all microservices
+          TAGS_TO_PUSH=""
           for dir in $SUCCESSFUL_DIRS; do
             if [ -d "$dir" ]; then
-              echo "Bumping version for $dir"
-              ./.github/scripts/bump_rc.sh "$dir"
-              
-              # Get the new tag
-              cd "$dir"
-              NEW_TAG=$(git describe --abbrev=0 --tags)
+              TAG_PREFIX="${dir}-v"
+              NEW_TAG=$(git tag --list "${TAG_PREFIX}*" | sort -V | tail -n 1)
               TAGS_TO_PUSH="$TAGS_TO_PUSH $NEW_TAG"
-              cd ..
-              
               echo "New tag for $dir: $NEW_TAG"
             fi
           done
@@ -219,10 +216,9 @@ jobs:
             COMMIT_MSG="chore(release): bump RC versions for"
             for dir in ${{ steps.bump-versions.outputs.successful_dirs }}; do
               if [ -d "$dir" ]; then
-                cd "$dir"
-                NEW_TAG=$(git describe --abbrev=0 --tags)
+                TAG_PREFIX="${dir}-v"
+                NEW_TAG=$(git tag --list "${TAG_PREFIX}*" | sort -V | tail -n 1)
                 COMMIT_MSG="$COMMIT_MSG $dir@$NEW_TAG"
-                cd ..
               fi
             done
             COMMIT_MSG="$COMMIT_MSG [skip ci]"
@@ -256,13 +252,12 @@ jobs:
         run: |
           for dir in ${{ steps.bump-versions.outputs.successful_dirs }}; do
             if [ -d "$dir" ]; then
-              cd "$dir"
-              TAG=$(git describe --abbrev=0 --tags)
+              TAG_PREFIX="${dir}-v"
+              TAG=$(git tag --list "${TAG_PREFIX}*" | sort -V | tail -n 1)
               VERSION=$(echo $TAG | sed 's/^[^-]*-v//')
               
               echo "Building Docker image for $dir with tag $VERSION"
               
-              cd ..
               docker buildx build \
                 --context . \
                 --platform linux/amd64,linux/arm64 \
