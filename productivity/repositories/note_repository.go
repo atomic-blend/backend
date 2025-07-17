@@ -1,12 +1,13 @@
 package repositories
 
 import (
-	"github.com/atomic-blend/backend/productivity/models"
-	patchmodels "github.com/atomic-blend/backend/productivity/models/patch_models"
-	keyconverter "github.com/atomic-blend/backend/productivity/utils/key_converter"
 	"context"
 	"errors"
 	"time"
+
+	"github.com/atomic-blend/backend/productivity/models"
+	patchmodels "github.com/atomic-blend/backend/productivity/models/patch_models"
+	keyconverter "github.com/atomic-blend/backend/productivity/utils/key_converter"
 
 	bson "go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -22,6 +23,7 @@ type NoteRepositoryInterface interface {
 	Create(ctx context.Context, note *models.NoteEntity) (*models.NoteEntity, error)
 	Update(ctx context.Context, id string, note *models.NoteEntity) (*models.NoteEntity, error)
 	Delete(ctx context.Context, id string) error
+	DeleteByUserID(ctx context.Context, userID primitive.ObjectID) error
 	UpdatePatch(ctx context.Context, patch *patchmodels.Patch) (*models.NoteEntity, error)
 }
 
@@ -174,6 +176,13 @@ func (r *NoteRepository) Delete(ctx context.Context, id string) error {
 	}
 
 	return nil
+}
+
+// DeleteByUserID deletes all notes for a specific user
+func (r *NoteRepository) DeleteByUserID(ctx context.Context, userID primitive.ObjectID) error {
+	filter := bson.M{"user": userID}
+	_, err := r.collection.DeleteMany(ctx, filter)
+	return err
 }
 
 // UpdatePatch updates a note based on a patch

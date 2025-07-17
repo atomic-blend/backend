@@ -59,6 +59,14 @@ func (s *grpcServer) DeleteUserData(ctx context.Context, req *connect.Request[pr
 		}), nil
 	}
 
+	// Delete all notes for the user
+	if err := s.noteRepo.DeleteByUserID(ctx, userID); err != nil {
+		log.Error().Err(err).Msg("Failed to delete user notes")
+		return connect.NewResponse(&productivity.DeleteUserDataResponse{
+			Success: false,
+		}), nil
+	}
+
 	log.Info().Str("userID", userIDHex).Msg("Successfully deleted user data")
 
 	return connect.NewResponse(&productivity.DeleteUserDataResponse{

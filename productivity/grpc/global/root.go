@@ -8,12 +8,14 @@ import (
 type grpcServer struct {
 	taskRepo  repositories.TaskRepositoryInterface
 	habitRepo repositories.HabitRepositoryInterface
+	noteRepo  repositories.NoteRepositoryInterface
 }
 
 // NewGrpcServer create a new instance of GrpcServer
-func NewGrpcServer(taskRepo repositories.TaskRepositoryInterface, habitRepo repositories.HabitRepositoryInterface) *grpcServer {
+func NewGrpcServer(taskRepo repositories.TaskRepositoryInterface, habitRepo repositories.HabitRepositoryInterface, noteRepo repositories.NoteRepositoryInterface) *grpcServer {
 	return &grpcServer{
 		taskRepo:  taskRepo,
 		habitRepo: habitRepo,
+		noteRepo:  noteRepo,
 	}
 }
