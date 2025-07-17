@@ -66,4 +66,4 @@ fi
 
 # Run cog bump from the root directory
 echo "Running: cog bump --auto --pre $next_rc from root directory"
-~/.cargo/bin/cog bump --auto --pre "$next_rc" 
+~/.cargo/bin/cog bump --auto --pre "$next_rc" --skip-untracked --package "$MICROSERVICE_DIR"
