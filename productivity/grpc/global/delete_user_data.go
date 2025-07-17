@@ -75,6 +75,22 @@ func (s *grpcServer) DeleteUserData(ctx context.Context, req *connect.Request[pr
 		}), nil
 	}
 
+	// Delete all folders for the user (this also cleans folder references from tasks)
+	if err := s.folderRepo.DeleteByUserID(ctx, userID); err != nil {
+		log.Error().Err(err).Msg("Failed to delete user folders")
+		return connect.NewResponse(&productivity.DeleteUserDataResponse{
+			Success: false,
+		}), nil
+	}
+
+	// Delete all time entries for the user
+	if err := s.timeEntryRepo.DeleteByUserID(ctx, userID); err != nil {
+		log.Error().Err(err).Msg("Failed to delete user time entries")
+		return connect.NewResponse(&productivity.DeleteUserDataResponse{
+			Success: false,
+		}), nil
+	}
+
 	log.Info().Str("userID", userIDHex).Msg("Successfully deleted user data")
 
 	return connect.NewResponse(&productivity.DeleteUserDataResponse{

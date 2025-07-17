@@ -1,8 +1,9 @@
 package mocks
 
 import (
-	"github.com/atomic-blend/backend/productivity/models"
 	"context"
+
+	"github.com/atomic-blend/backend/productivity/models"
 
 	"github.com/stretchr/testify/mock"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -43,5 +44,11 @@ func (m *MockFolderRepository) Update(ctx context.Context, id primitive.ObjectID
 // Delete removes a folder
 func (m *MockFolderRepository) Delete(ctx context.Context, id primitive.ObjectID) error {
 	args := m.Called(ctx, id)
+	return args.Error(0)
+}
+
+// DeleteByUserID deletes all folders for a specific user
+func (m *MockFolderRepository) DeleteByUserID(ctx context.Context, userID primitive.ObjectID) error {
+	args := m.Called(ctx, userID)
 	return args.Error(0)
 }

@@ -1,10 +1,11 @@
 package repositories
 
 import (
-	"github.com/atomic-blend/backend/productivity/utils/db"
 	"context"
-	"github.com/atomic-blend/backend/productivity/models"
 	"time"
+
+	"github.com/atomic-blend/backend/productivity/models"
+	"github.com/atomic-blend/backend/productivity/utils/db"
 
 	bson "go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -19,6 +20,7 @@ type FolderRepositoryInterface interface {
 	Create(ctx context.Context, folder *models.Folder) (*models.Folder, error)
 	Update(ctx context.Context, id primitive.ObjectID, folder *models.Folder) (*models.Folder, error)
 	Delete(ctx context.Context, id primitive.ObjectID) error
+	DeleteByUserID(ctx context.Context, userID primitive.ObjectID) error
 }
 
 // FolderRepository handles database operations related to folders
@@ -119,4 +121,30 @@ func (r *FolderRepository) Update(ctx context.Context, id primitive.ObjectID, fo
 	}
 
 	return folder, nil
+}
+
+// DeleteByUserID deletes all folders for a specific user
+func (r *FolderRepository) DeleteByUserID(ctx context.Context, userID primitive.ObjectID) error {
+	// First, get all folders for this user
+	folders, err := r.GetAll(ctx, userID)
+	if err != nil {
+		return err
+	}
+
+	// For each folder, remove folder references from tasks
+	for _, folder := range folders {
+		if folder.ID != nil {
+			filter := bson.M{"folder_id": *folder.ID}
+			update := bson.M{"$set": bson.M{"folder_id": nil}}
+			_, err := r.collection.Database().Collection("tasks").UpdateMany(ctx, filter, update)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	// Then delete all folders for the user
+	filter := bson.M{"user_id": userID}
+	_, err = r.collection.DeleteMany(ctx, filter)
+	return err
 }

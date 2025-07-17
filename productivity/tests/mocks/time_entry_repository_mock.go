@@ -1,8 +1,9 @@
 package mocks
 
 import (
-	"github.com/atomic-blend/backend/productivity/models"
 	"context"
+
+	"github.com/atomic-blend/backend/productivity/models"
 
 	"github.com/stretchr/testify/mock"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -52,5 +53,11 @@ func (m *MockTimeEntryRepository) Update(ctx context.Context, id string, timeEnt
 // Delete mocks the Delete method
 func (m *MockTimeEntryRepository) Delete(ctx context.Context, id string) error {
 	args := m.Called(ctx, id)
+	return args.Error(0)
+}
+
+// DeleteByUserID deletes all time entries for a specific user
+func (m *MockTimeEntryRepository) DeleteByUserID(ctx context.Context, userID primitive.ObjectID) error {
+	args := m.Called(ctx, userID)
 	return args.Error(0)
 }

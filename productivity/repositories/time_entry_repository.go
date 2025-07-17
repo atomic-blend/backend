@@ -1,10 +1,11 @@
 package repositories
 
 import (
-	"github.com/atomic-blend/backend/productivity/models"
-	"github.com/atomic-blend/backend/productivity/utils/db"
 	"context"
 	"time"
+
+	"github.com/atomic-blend/backend/productivity/models"
+	"github.com/atomic-blend/backend/productivity/utils/db"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -20,6 +21,7 @@ type TimeEntryRepositoryInterface interface {
 	GetAll(ctx context.Context, userID *primitive.ObjectID) ([]*models.TimeEntry, error)
 	Update(ctx context.Context, id string, timeEntry *models.TimeEntry) (*models.TimeEntry, error)
 	Delete(ctx context.Context, id string) error
+	DeleteByUserID(ctx context.Context, userID primitive.ObjectID) error
 }
 
 // TimeEntryRepository provides methods to interact with time entry data in the database
@@ -137,5 +139,12 @@ func (r *TimeEntryRepository) Delete(ctx context.Context, id string) error {
 	}
 
 	_, err = r.collection.DeleteOne(ctx, bson.M{"_id": objectID})
+	return err
+}
+
+// DeleteByUserID deletes all time entries for a specific user
+func (r *TimeEntryRepository) DeleteByUserID(ctx context.Context, userID primitive.ObjectID) error {
+	filter := bson.M{"user": userID}
+	_, err := r.collection.DeleteMany(ctx, filter)
 	return err
 }
