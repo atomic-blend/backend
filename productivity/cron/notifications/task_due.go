@@ -5,7 +5,10 @@ import (
 	"os"
 	"time"
 
+	"connectrpc.com/connect"
+	"github.com/atomic-blend/backend/grpc/gen/auth"
 	"github.com/atomic-blend/backend/productivity/cron/notifications/payloads"
+	"github.com/atomic-blend/backend/productivity/grpc/clients"
 	"github.com/atomic-blend/backend/productivity/models"
 	"github.com/atomic-blend/backend/productivity/repositories"
 	"github.com/atomic-blend/backend/productivity/utils/db"
@@ -28,7 +31,12 @@ func TaskDueNotificationCron() {
 	ctx := context.TODO()
 
 	taskRepo := repositories.NewTaskRepository(db.Database)
-	userRepo := repositories.NewUserRepository(db.Database)
+
+	userService, err := clients.NewUserClient()
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to create user client")
+		return
+	}
 
 	log.Debug().Msg("Initializing the FCM client")
 	shortcuts.CheckRequiredEnvVar("FIREBASE_PROJECT_ID", firebaseProjectID, "FIREBASE_PROJECT_ID is required for FCM")
@@ -69,26 +77,35 @@ func TaskDueNotificationCron() {
 		log.Debug().Msgf("Notification type: %s for task: %s", notificationType, task.ID)
 
 		// Get the user for this task
-		user, err := userRepo.GetByID(ctx, task.User.Hex())
-		if err != nil {
-			log.Error().Err(err).Msgf("Failed to get user for task: %s", task.ID)
-			continue
+		userID := task.User.Hex()
+
+		// get user devices using gRPC client
+		req := &connect.Request[auth.GetUserDevicesRequest]{
+			Msg: &auth.GetUserDevicesRequest{
+				User: &auth.User{
+					Id: userID,
+				},
+			},
 		}
-		if user == nil {
-			log.Error().Msgf("User not found for task: %s", task.ID)
+		resp, err := userService.GetUserDevices(ctx, req)
+		if err != nil {
+			log.Error().Err(err).Msgf("Failed to get user devices for task: %s", task.ID)
 			continue
 		}
 
-		// Extract device tokens
 		deviceTokens := []string{}
-		for _, device := range user.Devices {
-			deviceTokens = append(deviceTokens, device.FcmToken)
+		for _, device := range resp.Msg.Devices {
+			if device.FcmToken != "" {
+				deviceTokens = append(deviceTokens, device.FcmToken)
+			}
 		}
 
 		if len(deviceTokens) == 0 {
-			log.Debug().Msgf("No device tokens found for user: %s", user.ID.Hex())
+			log.Debug().Msgf("No device tokens found for user: %s", userID)
 			continue
 		}
+
+		log.Debug().Msgf("Found %d device tokens for user: %s", len(deviceTokens), userID)
 
 		// Create and send appropriate notification based on type
 		var payload interface{ GetData() map[string]string }

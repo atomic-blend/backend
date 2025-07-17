@@ -5,7 +5,10 @@ import (
 	"os"
 	"time"
 
+	"connectrpc.com/connect"
+	"github.com/atomic-blend/backend/grpc/gen/auth"
 	"github.com/atomic-blend/backend/productivity/cron/notifications/payloads"
+	"github.com/atomic-blend/backend/productivity/grpc/clients"
 	"github.com/atomic-blend/backend/productivity/models"
 	"github.com/atomic-blend/backend/productivity/repositories"
 	"github.com/atomic-blend/backend/productivity/utils/db"
@@ -21,8 +24,13 @@ func HabitReminderNotificationCron() {
 	log.Debug().Msg("Starting habit due notification cron job")
 	ctx := context.TODO()
 
-	userRepo := repositories.NewUserRepository(db.Database)
 	habitRepo := repositories.NewHabitRepository(db.Database)
+
+	userService, err := clients.NewUserClient()
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to create user client")
+		return
+	}
 
 	log.Debug().Msg("Initializing the FCM client")
 	firebaseProjectID := os.Getenv("FIREBASE_PROJECT_ID")
@@ -54,6 +62,10 @@ func HabitReminderNotificationCron() {
 	for _, habit := range habits {
 		log.Debug().Msgf("Processing habit: %s", habit.ID)
 
+		// Get the user for this habit
+		userID := habit.UserID.Hex()
+
+
 		// Check if this habit should send a notification now
 		shouldSendNotification, reminderToSend := shouldSendHabitNotification(habit, now)
 		if !shouldSendNotification {
@@ -63,27 +75,33 @@ func HabitReminderNotificationCron() {
 
 		log.Debug().Msgf("Reminder time matched: %s", reminderToSend.Format(time.RFC3339))
 
-		// Get the user for this habit
-		user, err := userRepo.GetByID(ctx, habit.UserID.Hex())
-		if err != nil {
-			log.Error().Err(err).Msgf("Failed to get user for habit: %s", habit.ID)
-			continue
+		// Get user devices using gRPC client
+		req := &connect.Request[auth.GetUserDevicesRequest]{
+			Msg: &auth.GetUserDevicesRequest{
+				User: &auth.User{
+					Id: userID,
+				},
+			},
 		}
-		if user == nil {
-			log.Error().Msgf("User not found for habit: %s", habit.ID)
+		resp, err := userService.GetUserDevices(ctx, req)
+		if err != nil {
+			log.Error().Err(err).Msgf("Failed to get user devices for user: %s", userID)
 			continue
 		}
 
-		// Extract device tokens
 		deviceTokens := []string{}
-		for _, device := range user.Devices {
-			deviceTokens = append(deviceTokens, device.FcmToken)
+		for _, device := range resp.Msg.Devices {
+			if device.FcmToken != "" {
+				deviceTokens = append(deviceTokens, device.FcmToken)
+			}
 		}
 
 		if len(deviceTokens) == 0 {
-			log.Debug().Msgf("No device tokens found for user: %s", user.ID.Hex())
+			log.Debug().Msgf("No device tokens found for user: %s", userID)
 			continue
 		}
+
+		log.Debug().Msgf("Device tokens for user %s: %v", userID, deviceTokens)
 
 		// Create and send notification
 		payload := payloads.NewHabitReminderPayload(
