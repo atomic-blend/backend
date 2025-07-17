@@ -2,6 +2,41 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## productivity-v0.9.0-rc.2 - 2025-07-17
+#### Bug Fixes
+- remove --context in docker build - (4edfa51) - Brandon Guigo
+- remove old cog.toml - (cab208f) - Brandon Guigo
+- setup cocogitto to work in a monorepo setup - (9f5e362) - Brandon Guigo
+- linter - (6d2f946) - Brandon Guigo
+- refactor cron to be gRPC ready - (74ac6d2) - Brandon Guigo
+- linter - (4a451f2) - Brandon Guigo
+- add missing github.com to go modules - (4f38ac7) - Brandon Guigo
+- change module name of productivity go module - (798aaa1) - Brandon Guigo
+- tag create test - (dec70a9) - Brandon Guigo
+- create habit test - (d2d6413) - Brandon Guigo
+- validator test error - (755bba6) - Brandon Guigo
+- jwt + cicd - (08f7672) - Brandon Guigo
+- linter - (fef5452) - Brandon Guigo
+#### Features
+- convert cron to use gRPC call to get user device tokens - (ad76ffe) - Brandon Guigo
+- configure auth grpc client into productivity - (92a12df) - Brandon Guigo
+- add tests for new repo methods - (d4516db) - Brandon Guigo
+- delete folder and time entry too - (89d3492) - Brandon Guigo
+- delete tag too - (a139276) - Brandon Guigo
+- delete notes too - (6c55701) - Brandon Guigo
+- delete habits too - (8012678) - Brandon Guigo
+- delete tasks in productivity gRPCserver - (b5b0661) - Brandon Guigo
+- configure gRPC server in productivity api - (8aa9aab) - Brandon Guigo
+- add rc-microservice - (71aacb7) - Brandon Guigo
+- basic config of docker file - (350dc36) - Brandon Guigo
+- replace subscription with isSubcribed from token - (697b981) - Brandon Guigo
+- add auth to productivity - (d8265ed) - Brandon Guigo
+- rename imports and clean files - (a6f6851) - Brandon Guigo
+#### Miscellaneous Chores
+- **(release)** bump RC versions for auth@auth-v0.9.0-rc.1 productivity@productivity-v0.9.0-rc.1 [skip ci] - (695f8d3) - GitHub Actions
+
+- - -
+
 ## productivity-v0.9.0-rc.1 - 2025-07-17
 #### Bug Fixes
 - remove old cog.toml - (cab208f) - Brandon Guigo
