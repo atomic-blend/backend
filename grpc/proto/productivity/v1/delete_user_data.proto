@@ -4,13 +4,13 @@ package productivity.v1;
 import "auth/v1/user.proto";
 
 message DeleteUserDataRequest {
-    auth.v1.User user = 1;
+  auth.v1.User user = 1;
 }
 
 message DeleteUserDataResponse {
-    bool success = 1;
+  bool success = 1;
 }
 
 service ProductivityService {
-    rpc DeleteUserData(DeleteUserDataRequest) returns (DeleteUserDataResponse);
+  rpc DeleteUserData(DeleteUserDataRequest) returns (DeleteUserDataResponse);
 }

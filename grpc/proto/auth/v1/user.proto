@@ -2,6 +2,6 @@ syntax = "proto3";
 package auth.v1;
 
 message User {
-    string id = 1;
-    string email = 2;
+  string id = 1;
+  string email = 2;
 }
