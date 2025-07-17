@@ -64,7 +64,6 @@ else
   next_rc="rc.1"
 fi
 
-# Change to the microservice directory and run cog bump
-cd "$MICROSERVICE_DIR"
-echo "Running: cog bump --auto --pre $next_rc in directory $MICROSERVICE_DIR"
-~/.cargo/bin/cog bump --auto --pre "$next_rc"
+# Run cog bump from the root directory
+echo "Running: cog bump --auto --pre $next_rc from root directory"
+~/.cargo/bin/cog bump --auto --pre "$next_rc" 
