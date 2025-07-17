@@ -8,7 +8,7 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/atomic-blend/backend/auth/tests/mocks"
-	"github.com/atomic-blend/backend/grpc/gen/productivity"
+	"github.com/atomic-blend/backend/grpc/gen/productivity/v1"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -33,7 +33,7 @@ func TestDeletePersonalData_Success(t *testing.T) {
 	userID := primitive.NewObjectID()
 
 	// Mock successful gRPC call
-	mockResponse := &connect.Response[productivity.DeleteUserDataResponse]{}
+	mockResponse := &connect.Response[productivityv1.DeleteUserDataResponse]{}
 	mockProductivityClient.On("DeleteUserData", mock.Anything, mock.Anything).Return(mockResponse, nil)
 
 	// Call the function
@@ -92,10 +92,10 @@ func TestDeletePersonalData_CorrectRequestData(t *testing.T) {
 	userID := primitive.NewObjectID()
 
 	// Mock with basic validation that the request is properly formatted
-	mockResponse := &connect.Response[productivity.DeleteUserDataResponse]{}
+	mockResponse := &connect.Response[productivityv1.DeleteUserDataResponse]{}
 	mockProductivityClient.On("DeleteUserData",
 		mock.Anything,
-		mock.MatchedBy(func(req *connect.Request[productivity.DeleteUserDataRequest]) bool {
+		mock.MatchedBy(func(req *connect.Request[productivityv1.DeleteUserDataRequest]) bool {
 			// Validate that the request message is not nil
 			return req.Msg != nil
 		})).Return(mockResponse, nil)
