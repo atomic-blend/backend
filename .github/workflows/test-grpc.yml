@@ -10,15 +10,15 @@ jobs:
   check-grpc-changes:
     runs-on: ubuntu-latest
     outputs:
-      grpc_changed: ${{ steps.changes.outputs.grpc }}
+      changed_directories: ${{ steps.set-output.outputs.changed_directories }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
 
-      - name: Check for gRPC changes
-        id: changes
+      - name: Get changed files
+        id: changed-files
         uses: tj-actions/changed-files@v35
         with:
           dir_names: true
@@ -28,17 +28,12 @@ jobs:
             grpc/**
           quotepath: false
 
-      - name: Set output
+      - name: "Set output in the matrix format"
         id: set-output
-        run: |
-          if [ "${{ steps.changes.outputs.any_changed }}" == "true" ]; then
-            echo "grpc=true" >> $GITHUB_OUTPUT
-          else
-            echo "grpc=false" >> $GITHUB_OUTPUT
-          fi
+        run: echo "changed_directories={\"dir\":${{ steps.changed-files.outputs.all_changed_files }}}" >> "$GITHUB_OUTPUT"
 
   test-grpc:
-    if: ${{ needs.check-grpc-changes.outputs.grpc_changed == 'true' }}
+    if: ${{ needs.check-grpc-changes.outputs.changed_directories != '' && contains(needs.check-grpc-changes.outputs.changed_directories, 'grpc') }}
     runs-on: ubuntu-latest
     needs: check-grpc-changes
     steps:
