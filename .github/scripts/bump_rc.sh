@@ -1,8 +1,16 @@
 #!/bin/bash
 set -euo pipefail
 
-# Fixed tag prefix for auth microservice
-TAG_PREFIX="auth-v"
+# Get the microservice directory from the first argument
+MICROSERVICE_DIR="${1:-}"
+
+if [[ -z "$MICROSERVICE_DIR" ]]; then
+  echo "Usage: $0 <microservice_directory>"
+  exit 1
+fi
+
+# Dynamic tag prefix based on microservice
+TAG_PREFIX="${MICROSERVICE_DIR}-v"
 
 # Patterns
 FINAL_TAG_PATTERN="${TAG_PREFIX}[0-9]*.[0-9]*.[0-9]*"
@@ -14,9 +22,12 @@ latest_final=$(git tag --list "$FINAL_TAG_PATTERN" | grep -v -- '-rc' | sort -V 
 # Get latest pre-release (rc.*)
 latest_rc=$(git tag --list "$PRE_TAG_PATTERN" | sort -V | tail -n 1 || true)
 
+echo "Latest final tag: $latest_final"
+echo "Latest RC tag: $latest_rc"
+
 # Extract base version (remove prefix and pre-release suffix)
 extract_base_version() {
-  echo "$1" | sed -E "s/^$TAG_PREFIX//" | sed -E 's/-rc\.[0-9]+$//'
+  echo "$1" | sed -E "s/^${TAG_PREFIX//\//\\/}//" | sed -E 's/-rc\.[0-9]+$//'
 }
 
 base_final=""
@@ -30,16 +41,30 @@ if [[ -n "$latest_rc" ]]; then
   base_rc=$(extract_base_version "$latest_rc")
 fi
 
+echo "Base final version: $base_final"
+echo "Base RC version: $base_rc"
+
 # Determine next RC
-if [[ -z "$latest_rc" ]] || [[ "$base_rc" != "$base_final" ]]; then
-  echo "Starting new RC cycle: rc.1"
+if [[ -z "$latest_rc" ]]; then
+  echo "No RC found, starting new RC cycle: rc.1"
   next_rc="rc.1"
-else
+elif [[ -z "$latest_final" ]] || [[ "$base_rc" > "$base_final" ]]; then
+  # RC version is ahead of final version, increment RC
   rc_number=$(echo "$latest_rc" | sed -nE 's/.*-rc\.([0-9]+)$/\1/p')
   next_rc="rc.$((rc_number + 1))"
-  echo "Incrementing RC: $latest_rc → $next_rc"
+  echo "RC version ahead of final version, incrementing RC: $latest_rc → $next_rc"
+elif [[ "$base_rc" == "$base_final" ]]; then
+  # RC version matches final version, increment RC
+  rc_number=$(echo "$latest_rc" | sed -nE 's/.*-rc\.([0-9]+)$/\1/p')
+  next_rc="rc.$((rc_number + 1))"
+  echo "RC version matches final version, incrementing RC: $latest_rc → $next_rc"
+else
+  # RC version is behind final version, start new RC cycle
+  echo "RC version behind final version, starting new RC cycle: rc.1"
+  next_rc="rc.1"
 fi
 
-# Run cog bump --auto from the root with the computed pre-release tag
-echo "Running: cog bump --auto --pre $next_rc"
+# Change to the microservice directory and run cog bump
+cd "$MICROSERVICE_DIR"
+echo "Running: cog bump --auto --pre $next_rc in directory $MICROSERVICE_DIR"
 ~/.cargo/bin/cog bump --auto --pre "$next_rc"

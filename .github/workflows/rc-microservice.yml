@@ -154,7 +154,14 @@ jobs:
           fi
           
           echo "Bumping versions for: $SUCCESSFUL_DIRS"
-          ./.github/scripts/bump_rc.sh
+          
+          # Bump version for each successful microservice
+          for dir in $SUCCESSFUL_DIRS; do
+            if [ -d "$dir" ]; then
+              echo "Bumping version for $dir"
+              ./.github/scripts/bump_rc.sh "$dir"
+            fi
+          done
           
           # Get the new tags for all microservices
           TAGS_TO_PUSH=""
