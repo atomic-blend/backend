@@ -100,7 +100,7 @@ jobs:
         working-directory: "${{ matrix.dir }}"
         id: check-commits
         run: |
-          ~/.cargo/bin/cog check
+          ~/.cargo/bin/cog check -i -l
 
       - name: Create success marker
         if: steps.build-test.outcome == 'success' && steps.check-commits.outcome == 'success'
