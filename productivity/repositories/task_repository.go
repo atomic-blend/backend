@@ -1,12 +1,13 @@
 package repositories
 
 import (
-	"github.com/atomic-blend/backend/productivity/models"
-	patchmodels "github.com/atomic-blend/backend/productivity/models/patch_models"
-	keyconverter "github.com/atomic-blend/backend/productivity/utils/key_converter"
 	"context"
 	"errors"
 	"time"
+
+	"github.com/atomic-blend/backend/productivity/models"
+	patchmodels "github.com/atomic-blend/backend/productivity/models/patch_models"
+	keyconverter "github.com/atomic-blend/backend/productivity/utils/key_converter"
 
 	bson "go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -22,6 +23,7 @@ type TaskRepositoryInterface interface {
 	Create(ctx context.Context, task *models.TaskEntity) (*models.TaskEntity, error)
 	Update(ctx context.Context, id string, task *models.TaskEntity) (*models.TaskEntity, error)
 	Delete(ctx context.Context, id string) error
+	DeleteByUserID(ctx context.Context, userID primitive.ObjectID) error
 	UpdatePatch(ctx context.Context, patch *patchmodels.Patch) (*models.TaskEntity, error)
 }
 
@@ -160,6 +162,13 @@ func (r *TaskRepository) Delete(ctx context.Context, id string) error {
 
 	filter := bson.M{"_id": objID}
 	_, err = r.collection.DeleteOne(ctx, filter)
+	return err
+}
+
+// DeleteByUserID deletes all tasks for a specific user
+func (r *TaskRepository) DeleteByUserID(ctx context.Context, userID primitive.ObjectID) error {
+	filter := bson.M{"user": userID}
+	_, err := r.collection.DeleteMany(ctx, filter)
 	return err
 }
 

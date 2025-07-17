@@ -1,9 +1,10 @@
 package mocks
 
 import (
+	"context"
+
 	"github.com/atomic-blend/backend/productivity/models"
 	patchmodels "github.com/atomic-blend/backend/productivity/models/patch_models"
-	"context"
 
 	"github.com/stretchr/testify/mock"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -53,6 +54,12 @@ func (m *MockTaskRepository) Update(ctx context.Context, id string, task *models
 // Delete deletes a task by ID
 func (m *MockTaskRepository) Delete(ctx context.Context, id string) error {
 	args := m.Called(ctx, id)
+	return args.Error(0)
+}
+
+// DeleteByUserID deletes all tasks for a specific user
+func (m *MockTaskRepository) DeleteByUserID(ctx context.Context, userID primitive.ObjectID) error {
+	args := m.Called(ctx, userID)
 	return args.Error(0)
 }
 
