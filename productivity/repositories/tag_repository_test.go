@@ -1,11 +1,12 @@
 package repositories
 
 import (
-	"github.com/atomic-blend/backend/productivity/models"
-	"github.com/atomic-blend/backend/productivity/tests/utils/inmemorymongo"
 	"context"
 	"testing"
 	"time"
+
+	"github.com/atomic-blend/backend/productivity/models"
+	"github.com/atomic-blend/backend/productivity/tests/utils/inmemorymongo"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -194,4 +195,72 @@ func TestTagRepository_Delete(t *testing.T) {
 		require.NoError(t, err)
 		assert.Nil(t, found)
 	})
+}
+
+func TestTagRepository_DeleteByUserID(t *testing.T) {
+	repo, cleanup := setupTagTest(t)
+	defer cleanup()
+
+	// Create test users
+	userID1 := primitive.NewObjectID()
+	userID2 := primitive.NewObjectID()
+
+	// Create tags for user 1
+	tag1 := createTestTag()
+	tag1.UserID = &userID1
+	tag1.Name = "Tag 1 for User 1"
+	createdTag1, err := repo.Create(context.Background(), tag1)
+	require.NoError(t, err)
+	require.NotNil(t, createdTag1)
+
+	tag2 := createTestTag()
+	tag2.UserID = &userID1
+	tag2.Name = "Tag 2 for User 1"
+	createdTag2, err := repo.Create(context.Background(), tag2)
+	require.NoError(t, err)
+	require.NotNil(t, createdTag2)
+
+	// Create tags for user 2
+	tag3 := createTestTag()
+	tag3.UserID = &userID2
+	tag3.Name = "Tag 1 for User 2"
+	createdTag3, err := repo.Create(context.Background(), tag3)
+	require.NoError(t, err)
+	require.NotNil(t, createdTag3)
+
+	// Verify all tags exist
+	allTags, err := repo.GetAll(context.Background(), nil)
+	require.NoError(t, err)
+	assert.Len(t, allTags, 3)
+
+	// Count tags for each user before deletion
+	user1TagsBefore, err := repo.GetAll(context.Background(), &userID1)
+	require.NoError(t, err)
+	user2TagsBefore, err := repo.GetAll(context.Background(), &userID2)
+	require.NoError(t, err)
+	assert.Len(t, user1TagsBefore, 2)
+	assert.Len(t, user2TagsBefore, 1)
+
+	// Delete all tags for user 1
+	err = repo.DeleteByUserID(context.Background(), userID1)
+	require.NoError(t, err)
+
+	// Verify user 1's tags are gone but user 2's remain
+	user1TagsAfter, err := repo.GetAll(context.Background(), &userID1)
+	require.NoError(t, err)
+	user2TagsAfter, err := repo.GetAll(context.Background(), &userID2)
+	require.NoError(t, err)
+	assert.Len(t, user1TagsAfter, 0)
+	assert.Len(t, user2TagsAfter, 1)
+	assert.Equal(t, "Tag 1 for User 2", user2TagsAfter[0].Name)
+	assert.Equal(t, userID2, *user2TagsAfter[0].UserID)
+
+	// Delete all tags for user 2
+	err = repo.DeleteByUserID(context.Background(), userID2)
+	require.NoError(t, err)
+
+	// Verify no tags remain for user 2
+	finalUser2Tags, err := repo.GetAll(context.Background(), &userID2)
+	require.NoError(t, err)
+	assert.Len(t, finalUser2Tags, 0)
 }

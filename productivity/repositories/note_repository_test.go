@@ -1,11 +1,12 @@
 package repositories
 
 import (
-	"github.com/atomic-blend/backend/productivity/models"
-	"github.com/atomic-blend/backend/productivity/tests/utils/inmemorymongo"
 	"context"
 	"testing"
 	"time"
+
+	"github.com/atomic-blend/backend/productivity/models"
+	"github.com/atomic-blend/backend/productivity/tests/utils/inmemorymongo"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -170,6 +171,82 @@ func TestNoteRepository(t *testing.T) {
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "note not found")
 	})
+}
+
+func TestNoteRepository_DeleteByUserID(t *testing.T) {
+	repo, cleanup := setupNoteTest(t)
+	defer cleanup()
+
+	ctx := context.Background()
+
+	// Create test users
+	userID1 := primitive.NewObjectID()
+	userID2 := primitive.NewObjectID()
+
+	// Create notes for user 1
+	note1 := &models.NoteEntity{
+		Title:   stringPtr("Note 1 for User 1"),
+		Content: stringPtr("Content 1"),
+		User:    userID1,
+	}
+	createdNote1, err := repo.Create(ctx, note1)
+	require.NoError(t, err)
+	require.NotNil(t, createdNote1)
+
+	note2 := &models.NoteEntity{
+		Title:   stringPtr("Note 2 for User 1"),
+		Content: stringPtr("Content 2"),
+		User:    userID1,
+	}
+	createdNote2, err := repo.Create(ctx, note2)
+	require.NoError(t, err)
+	require.NotNil(t, createdNote2)
+
+	// Create notes for user 2
+	note3 := &models.NoteEntity{
+		Title:   stringPtr("Note 1 for User 2"),
+		Content: stringPtr("Content 3"),
+		User:    userID2,
+	}
+	createdNote3, err := repo.Create(ctx, note3)
+	require.NoError(t, err)
+	require.NotNil(t, createdNote3)
+
+	// Verify all notes exist
+	allNotes, err := repo.GetAll(ctx, nil)
+	require.NoError(t, err)
+	assert.GreaterOrEqual(t, len(allNotes), 3)
+
+	// Count notes for each user before deletion
+	user1NotesBefore, err := repo.GetAll(ctx, &userID1)
+	require.NoError(t, err)
+	user2NotesBefore, err := repo.GetAll(ctx, &userID2)
+	require.NoError(t, err)
+	assert.Len(t, user1NotesBefore, 2)
+	assert.Len(t, user2NotesBefore, 1)
+
+	// Delete all notes for user 1
+	err = repo.DeleteByUserID(ctx, userID1)
+	require.NoError(t, err)
+
+	// Verify user 1's notes are gone but user 2's remain
+	user1NotesAfter, err := repo.GetAll(ctx, &userID1)
+	require.NoError(t, err)
+	user2NotesAfter, err := repo.GetAll(ctx, &userID2)
+	require.NoError(t, err)
+	assert.Len(t, user1NotesAfter, 0)
+	assert.Len(t, user2NotesAfter, 1)
+	assert.Equal(t, "Note 1 for User 2", *user2NotesAfter[0].Title)
+	assert.Equal(t, userID2, user2NotesAfter[0].User)
+
+	// Delete all notes for user 2
+	err = repo.DeleteByUserID(ctx, userID2)
+	require.NoError(t, err)
+
+	// Verify no notes remain for user 2
+	finalUser2Notes, err := repo.GetAll(ctx, &userID2)
+	require.NoError(t, err)
+	assert.Len(t, finalUser2Notes, 0)
 }
 
 // Helper function to create string pointers

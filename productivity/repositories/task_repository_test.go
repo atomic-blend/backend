@@ -1,11 +1,12 @@
 package repositories
 
 import (
-	"github.com/atomic-blend/backend/productivity/models"
-	"github.com/atomic-blend/backend/productivity/tests/utils/inmemorymongo"
 	"context"
 	"testing"
 	"time"
+
+	"github.com/atomic-blend/backend/productivity/models"
+	"github.com/atomic-blend/backend/productivity/tests/utils/inmemorymongo"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -208,4 +209,65 @@ func TestTaskRepository_GetAll(t *testing.T) {
 		require.NoError(t, err)
 		assert.Len(t, allTasks, 2)
 	})
+}
+
+func TestTaskRepository_DeleteByUserID(t *testing.T) {
+	repo, cleanup := setupTaskTest(t)
+	defer cleanup()
+
+	// Create test users
+	userID1 := primitive.NewObjectID()
+	userID2 := primitive.NewObjectID()
+
+	// Create tasks for user 1
+	task1 := createTestTask()
+	task1.User = userID1
+	createdTask1, err := repo.Create(context.Background(), task1)
+	require.NoError(t, err)
+	require.NotNil(t, createdTask1)
+
+	task2 := createTestTask()
+	task2.Title = "Task 2 for User 1"
+	task2.User = userID1
+	createdTask2, err := repo.Create(context.Background(), task2)
+	require.NoError(t, err)
+	require.NotNil(t, createdTask2)
+
+	// Create tasks for user 2
+	task3 := createTestTask()
+	task3.Title = "Task 1 for User 2"
+	task3.User = userID2
+	createdTask3, err := repo.Create(context.Background(), task3)
+	require.NoError(t, err)
+	require.NotNil(t, createdTask3)
+
+	// Verify all tasks exist
+	allTasks, err := repo.GetAll(context.Background(), nil)
+	require.NoError(t, err)
+	assert.Len(t, allTasks, 3)
+
+	// Delete all tasks for user 1
+	err = repo.DeleteByUserID(context.Background(), userID1)
+	require.NoError(t, err)
+
+	// Verify only user 2's task remains
+	remainingTasks, err := repo.GetAll(context.Background(), nil)
+	require.NoError(t, err)
+	assert.Len(t, remainingTasks, 1)
+	assert.Equal(t, "Task 1 for User 2", remainingTasks[0].Title)
+	assert.Equal(t, userID2, remainingTasks[0].User)
+
+	// Verify user 1's tasks are gone
+	user1Tasks, err := repo.GetAll(context.Background(), &userID1)
+	require.NoError(t, err)
+	assert.Len(t, user1Tasks, 0)
+
+	// Delete all tasks for user 2
+	err = repo.DeleteByUserID(context.Background(), userID2)
+	require.NoError(t, err)
+
+	// Verify no tasks remain
+	finalTasks, err := repo.GetAll(context.Background(), nil)
+	require.NoError(t, err)
+	assert.Len(t, finalTasks, 0)
 }

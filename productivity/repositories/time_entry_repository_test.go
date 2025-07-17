@@ -1,10 +1,11 @@
 package repositories
 
 import (
-	"github.com/atomic-blend/backend/productivity/models"
-	"github.com/atomic-blend/backend/productivity/tests/utils/inmemorymongo"
 	"context"
 	"testing"
+
+	"github.com/atomic-blend/backend/productivity/models"
+	"github.com/atomic-blend/backend/productivity/tests/utils/inmemorymongo"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -208,4 +209,89 @@ func TestTimeEntryRepository_Delete(t *testing.T) {
 	// Try to find the deleted entry
 	_, err = repo.GetByID(context.Background(), createdEntry.ID.Hex())
 	assert.Error(t, err)
+}
+
+func TestTimeEntryRepository_DeleteByUserID(t *testing.T) {
+	repo, cleanup := setupTimeEntryTest(t)
+	defer cleanup()
+
+	// Create test users
+	userID1 := primitive.NewObjectID()
+	userID2 := primitive.NewObjectID()
+
+	// Create time entries for user 1
+	timeEntry1 := &models.TimeEntry{
+		User:      &userID1,
+		StartDate: "2025-05-28T10:00:00Z",
+		EndDate:   "2025-05-28T12:00:00Z",
+		Timer:     &[]bool{true}[0],
+		Pomodoro:  &[]bool{false}[0],
+		CreatedAt: "2025-05-28T10:00:00Z",
+		UpdatedAt: "2025-05-28T10:00:00Z",
+	}
+	createdEntry1, err := repo.Create(context.Background(), timeEntry1)
+	require.NoError(t, err)
+	require.NotNil(t, createdEntry1)
+
+	timeEntry2 := &models.TimeEntry{
+		User:      &userID1,
+		StartDate: "2025-05-28T14:00:00Z",
+		EndDate:   "2025-05-28T16:00:00Z",
+		Timer:     &[]bool{false}[0],
+		Pomodoro:  &[]bool{true}[0],
+		CreatedAt: "2025-05-28T14:00:00Z",
+		UpdatedAt: "2025-05-28T14:00:00Z",
+	}
+	createdEntry2, err := repo.Create(context.Background(), timeEntry2)
+	require.NoError(t, err)
+	require.NotNil(t, createdEntry2)
+
+	// Create time entries for user 2
+	timeEntry3 := &models.TimeEntry{
+		User:      &userID2,
+		StartDate: "2025-05-28T09:00:00Z",
+		EndDate:   "2025-05-28T11:00:00Z",
+		Timer:     &[]bool{true}[0],
+		Pomodoro:  &[]bool{false}[0],
+		CreatedAt: "2025-05-28T09:00:00Z",
+		UpdatedAt: "2025-05-28T09:00:00Z",
+	}
+	createdEntry3, err := repo.Create(context.Background(), timeEntry3)
+	require.NoError(t, err)
+	require.NotNil(t, createdEntry3)
+
+	// Verify all time entries exist
+	allEntries, err := repo.GetAll(context.Background(), nil)
+	require.NoError(t, err)
+	assert.GreaterOrEqual(t, len(allEntries), 3)
+
+	// Count time entries for each user before deletion
+	user1EntriesBefore, err := repo.GetAll(context.Background(), &userID1)
+	require.NoError(t, err)
+	user2EntriesBefore, err := repo.GetAll(context.Background(), &userID2)
+	require.NoError(t, err)
+	assert.Len(t, user1EntriesBefore, 2)
+	assert.Len(t, user2EntriesBefore, 1)
+
+	// Delete all time entries for user 1
+	err = repo.DeleteByUserID(context.Background(), userID1)
+	require.NoError(t, err)
+
+	// Verify user 1's time entries are gone but user 2's remain
+	user1EntriesAfter, err := repo.GetAll(context.Background(), &userID1)
+	require.NoError(t, err)
+	user2EntriesAfter, err := repo.GetAll(context.Background(), &userID2)
+	require.NoError(t, err)
+	assert.Len(t, user1EntriesAfter, 0)
+	assert.Len(t, user2EntriesAfter, 1)
+	assert.Equal(t, userID2, *user2EntriesAfter[0].User)
+
+	// Delete all time entries for user 2
+	err = repo.DeleteByUserID(context.Background(), userID2)
+	require.NoError(t, err)
+
+	// Verify no time entries remain for user 2
+	finalUser2Entries, err := repo.GetAll(context.Background(), &userID2)
+	require.NoError(t, err)
+	assert.Len(t, finalUser2Entries, 0)
 }

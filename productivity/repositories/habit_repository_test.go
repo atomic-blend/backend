@@ -1,11 +1,12 @@
 package repositories
 
 import (
-	"github.com/atomic-blend/backend/productivity/models"
-	"github.com/atomic-blend/backend/productivity/tests/utils/inmemorymongo"
 	"context"
 	"testing"
 	"time"
+
+	"github.com/atomic-blend/backend/productivity/models"
+	"github.com/atomic-blend/backend/productivity/tests/utils/inmemorymongo"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -337,4 +338,138 @@ func TestHabitRepository_DeleteEntry(t *testing.T) {
 		require.NoError(t, err)
 		assert.Empty(t, entries)
 	})
+}
+
+func TestHabitRepository_DeleteByUserID(t *testing.T) {
+	repo, cleanup := setupHabitTest(t)
+	defer cleanup()
+
+	// Create test users
+	userID1 := primitive.NewObjectID()
+	userID2 := primitive.NewObjectID()
+
+	// Create habits for user 1
+	habit1 := createTestHabit()
+	habit1.UserID = userID1
+	createdHabit1, err := repo.Create(context.Background(), habit1)
+	require.NoError(t, err)
+	require.NotNil(t, createdHabit1)
+
+	habit2 := createTestHabit()
+	habit2.UserID = userID1
+	name2 := "Habit 2 for User 1"
+	habit2.Name = &name2
+	createdHabit2, err := repo.Create(context.Background(), habit2)
+	require.NoError(t, err)
+	require.NotNil(t, createdHabit2)
+
+	// Create habits for user 2
+	habit3 := createTestHabit()
+	habit3.UserID = userID2
+	name3 := "Habit 1 for User 2"
+	habit3.Name = &name3
+	createdHabit3, err := repo.Create(context.Background(), habit3)
+	require.NoError(t, err)
+	require.NotNil(t, createdHabit3)
+
+	// Verify all habits exist
+	allHabits, err := repo.GetAll(context.Background(), nil)
+	require.NoError(t, err)
+	assert.Len(t, allHabits, 3)
+
+	// Delete all habits for user 1
+	err = repo.DeleteByUserID(context.Background(), userID1)
+	require.NoError(t, err)
+
+	// Verify only user 2's habit remains
+	remainingHabits, err := repo.GetAll(context.Background(), nil)
+	require.NoError(t, err)
+	assert.Len(t, remainingHabits, 1)
+	assert.Equal(t, "Habit 1 for User 2", *remainingHabits[0].Name)
+	assert.Equal(t, userID2, remainingHabits[0].UserID)
+
+	// Verify user 1's habits are gone
+	user1Habits, err := repo.GetAll(context.Background(), &userID1)
+	require.NoError(t, err)
+	assert.Len(t, user1Habits, 0)
+
+	// Delete all habits for user 2
+	err = repo.DeleteByUserID(context.Background(), userID2)
+	require.NoError(t, err)
+
+	// Verify no habits remain
+	finalHabits, err := repo.GetAll(context.Background(), nil)
+	require.NoError(t, err)
+	assert.Len(t, finalHabits, 0)
+}
+
+func TestHabitRepository_DeleteEntriesByUserID(t *testing.T) {
+	repo, cleanup := setupHabitTest(t)
+	defer cleanup()
+
+	// Create test users
+	userID1 := primitive.NewObjectID()
+	userID2 := primitive.NewObjectID()
+
+	// Create habits for both users
+	habit1 := createTestHabit()
+	habit1.UserID = userID1
+	createdHabit1, err := repo.Create(context.Background(), habit1)
+	require.NoError(t, err)
+
+	habit2 := createTestHabit()
+	habit2.UserID = userID2
+	createdHabit2, err := repo.Create(context.Background(), habit2)
+	require.NoError(t, err)
+
+	// Create habit entries for user 1
+	entry1 := createTestHabitEntry()
+	entry1.HabitID = createdHabit1.ID
+	entry1.UserID = userID1
+	_, err = repo.AddEntry(context.Background(), entry1)
+	require.NoError(t, err)
+
+	entry2 := createTestHabitEntry()
+	entry2.HabitID = createdHabit1.ID
+	entry2.UserID = userID1
+	_, err = repo.AddEntry(context.Background(), entry2)
+	require.NoError(t, err)
+
+	// Create habit entries for user 2
+	entry3 := createTestHabitEntry()
+	entry3.HabitID = createdHabit2.ID
+	entry3.UserID = userID2
+	_, err = repo.AddEntry(context.Background(), entry3)
+	require.NoError(t, err)
+
+	// Verify all entries exist
+	user1Entries, err := repo.GetEntriesByHabitID(context.Background(), createdHabit1.ID)
+	require.NoError(t, err)
+	assert.Len(t, user1Entries, 2)
+
+	user2Entries, err := repo.GetEntriesByHabitID(context.Background(), createdHabit2.ID)
+	require.NoError(t, err)
+	assert.Len(t, user2Entries, 1)
+
+	// Delete all habit entries for user 1
+	err = repo.DeleteEntriesByUserID(context.Background(), userID1)
+	require.NoError(t, err)
+
+	// Verify user 1's entries are gone but user 2's remain
+	user1EntriesAfter, err := repo.GetEntriesByHabitID(context.Background(), createdHabit1.ID)
+	require.NoError(t, err)
+	assert.Len(t, user1EntriesAfter, 0)
+
+	user2EntriesAfter, err := repo.GetEntriesByHabitID(context.Background(), createdHabit2.ID)
+	require.NoError(t, err)
+	assert.Len(t, user2EntriesAfter, 1)
+
+	// Delete all habit entries for user 2
+	err = repo.DeleteEntriesByUserID(context.Background(), userID2)
+	require.NoError(t, err)
+
+	// Verify no entries remain
+	user2EntriesFinal, err := repo.GetEntriesByHabitID(context.Background(), createdHabit2.ID)
+	require.NoError(t, err)
+	assert.Len(t, user2EntriesFinal, 0)
 }
