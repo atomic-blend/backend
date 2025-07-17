@@ -18,7 +18,7 @@ inputs:
   maizzle-directory:
     description: "Directory containing Maizzle email templates"
     required: false
-    default: "./maizzle"
+    default: ""
   codecov-token:
     description: "Codecov token for coverage upload"
     required: false
@@ -96,18 +96,21 @@ runs:
         fail_ci_if_error: false
 
     - name: Set up Node.js
+      if: ${{ inputs.maizzle-directory != '' }}
       uses: actions/setup-node@v3
       with:
         node-version: ${{ inputs.node-version }}
         cache: "npm"
-        cache-dependency-path: ${{ inputs.maizzle-directory }}/package-lock.json
+        cache-dependency-path: ${{inputs.working-directory}}/${{ inputs.maizzle-directory }}/package-lock.json
 
     - name: Install email template dependencies
+      if: ${{ inputs.maizzle-directory != '' }}
       shell: bash
       working-directory: ${{ inputs.maizzle-directory }}
       run: npm install
 
-    - name: Build email templates
+    - name: Build email templates"
+      if: ${{ inputs.maizzle-directory != '' }}
       shell: bash
       working-directory: ${{ inputs.maizzle-directory }}
       run: npm run build
