@@ -272,7 +272,6 @@ jobs:
           echo "Building Docker image for ${{ matrix.dir }} with version ${{ matrix.version }}"
           
           docker buildx build \
-            --context . \
             --platform linux/amd64,linux/arm64 \
             --push \
             --tag ghcr.io/atomic-blend/${{ matrix.dir }}:${{ matrix.version }} \
