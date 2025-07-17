@@ -177,16 +177,11 @@ jobs:
           echo "tags_to_push=$TAGS_TO_PUSH" >> $GITHUB_OUTPUT
           echo "successful_dirs=$SUCCESSFUL_DIRS" >> $GITHUB_OUTPUT
 
-      - name: Generate global changelog
-        run: |
-          chmod +x ./.github/scripts/generate_global_changelog.sh
-          ./.github/scripts/generate_global_changelog.sh ${{ steps.bump-versions.outputs.successful_dirs }}
-
       - name: Commit and push changes
         run: |
           if [ -n "$(git status --porcelain)" ]; then
-            # Add all CHANGELOG.md files and the global changelog
-            git add */CHANGELOG.md GLOBAL_CHANGELOG.md
+            # Add all CHANGELOG.md files
+            git add */CHANGELOG.md
             
             # Create commit message with all updated microservices
             COMMIT_MSG="chore(release): bump RC versions for"
