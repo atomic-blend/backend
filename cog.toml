@@ -1,5 +1,5 @@
 from_latest_tag = true
-tag_prefix = "auth-v"
+tag_prefix = "v"
 ignore_merge_commits = true
 disable_changelog = false
 disable_bump_commit = true
@@ -24,3 +24,5 @@ authors = []
 [bump_profiles]
 
 [packages]
+auth = { path="auth" }
+productivity = { path = "productivity"}
