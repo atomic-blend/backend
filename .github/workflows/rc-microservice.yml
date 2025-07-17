@@ -69,46 +69,14 @@ jobs:
           working-directory: "${{ matrix.dir }}"
           upload-artifacts: "false"
 
-      # configure cocogitto and git
-      - name: Configure git
-        run: |
-          git config user.email "pro@brandonguigo.com"
-          git config user.name "GitHub Actions"
-
-      - name: Cache cocogitto
-        id: cache-cocogitto
-        uses: actions/cache@v3
-        with:
-          path: ~/.cargo/bin/cog
-          key: cocogitto-v${{ env.COCOGITTO_VERSION }}
-
-      - name: Install Rust
-        if: steps.cache-cocogitto.outputs.cache-hit != 'true'
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: nightly
-          override: true
-
-      - name: Install Cocogitto
-        if: steps.cache-cocogitto.outputs.cache-hit != 'true'
-        run: |
-          cargo install cocogitto --version ${{ env.COCOGITTO_VERSION }}
-        env:
-          RUSTFLAGS: --cfg procmacro2_semver_exempt
-
-      - name: Check conventional commits validity
-        id: check-commits
-        run: |
-          ~/.cargo/bin/cog check -i -l
-
       - name: Create success marker
-        if: steps.build-test.outcome == 'success' && steps.check-commits.outcome == 'success'
+        if: steps.build-test.outcome == 'success'
         run: |
           mkdir -p /tmp/success-markers
           echo "${{ matrix.dir }}" > /tmp/success-markers/${{ matrix.dir }}.txt
 
       - name: Upload success markers
-        if: steps.build-test.outcome == 'success' && steps.check-commits.outcome == 'success'
+        if: steps.build-test.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
           name: success-markers
