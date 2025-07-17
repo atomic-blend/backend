@@ -26,3 +26,4 @@ authors = []
 [packages]
 auth = { path="auth" }
 productivity = { path="productivity" }
+grpc = { path="grpc" }
