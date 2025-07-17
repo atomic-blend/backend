@@ -8,7 +8,7 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/atomic-blend/backend/auth/tests/mocks"
-	"github.com/atomic-blend/backend/grpc/gen/productivity/v1"
+	productivityv1 "github.com/atomic-blend/backend/grpc/gen/productivity/v1"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"

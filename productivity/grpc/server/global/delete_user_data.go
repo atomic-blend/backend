@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"connectrpc.com/connect"
-	"github.com/atomic-blend/backend/grpc/gen/productivity/v1"
+	productivityv1 "github.com/atomic-blend/backend/grpc/gen/productivity/v1"
 	"github.com/rs/zerolog/log"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )

@@ -7,7 +7,7 @@ import (
 	"github.com/atomic-blend/backend/productivity/repositories"
 	"github.com/atomic-blend/backend/productivity/utils/db"
 
-	"github.com/atomic-blend/backend/grpc/gen/productivity/productivityconnect"
+	"github.com/atomic-blend/backend/grpc/gen/productivity/v1/productivityv1connect"
 	"github.com/rs/zerolog/log"
 )
 
@@ -23,7 +23,7 @@ func startGRPCServer() {
 	globalGRPCServer := globalGRPC.NewGrpcServer(taskRepo, habitRepo, noteRepo, tagRepo, folderRepo, timeEntryRepo)
 
 	// TODO: register gRPC services here
-	globalPath, globalHandler := productivityconnect.NewProductivityServiceHandler(globalGRPCServer)
+	globalPath, globalHandler := productivityv1connect.NewProductivityServiceHandler(globalGRPCServer)
 
 	// Créez un serveur HTTP mux
 	mux := http.NewServeMux()
