@@ -4,6 +4,9 @@ on:
   push:
     branches: [main]
 
+env:
+  COCOGITTO_VERSION: "6.3.0" # Specify the version of Cocogitto to use
+
 jobs:
   find-out-changes:
     runs-on: ubuntu-latest

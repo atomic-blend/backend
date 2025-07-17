@@ -5,6 +5,9 @@ on:
     branches: 
       - dev
 
+env:
+  COCOGITTO_VERSION: "6.3.0" # Specify the version of Cocogitto to use
+
 jobs:
   find-out-changes:
     runs-on: ubuntu-latest
@@ -45,13 +48,14 @@ jobs:
           fetch-depth: 0
 
       - name: Build and test backend services
+        id: build-test
         uses: ./.github/actions/build-and-test
         with:
           go-version: "1.21"
           node-version: "23.9"
           working-directory: "${{ matrix.dir }}"
           upload-artifacts: "false"
-      
+
       # configure cocogitto and git
       - name: Configure git
         run: |
@@ -80,27 +84,149 @@ jobs:
           RUSTFLAGS: --cfg procmacro2_semver_exempt
 
       - name: Check conventional commits validity
+        id: check-commits
         working-directory: "${{ matrix.dir }}"
         run: |
           ~/.cargo/bin/cog check
 
-      # run the bump_rc.sh script to bump the release candidate version
-      - name: Bump version
-        working-directory: "${{ matrix.dir }}"
+      - name: Create success marker
+        if: steps.build-test.outcome == 'success' && steps.check-commits.outcome == 'success'
         run: |
-          ./.github/scripts/bump_rc.sh
-      
+          mkdir -p /tmp/success-markers
+          echo "${{ matrix.dir }}" > /tmp/success-markers/${{ matrix.dir }}.txt
+
+      - name: Upload success markers
+        if: steps.build-test.outcome == 'success' && steps.check-commits.outcome == 'success'
+        uses: actions/upload-artifact@v3
+        with:
+          name: success-markers
+          path: /tmp/success-markers/${{ matrix.dir }}.txt
+
+  release-rc:
+    if: ${{ needs.build-and-test.result == 'success' }}
+    runs-on: ubuntu-22.04
+    needs:
+      - build-and-test
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Download success markers
+        uses: actions/download-artifact@v3
+        with:
+          name: success-markers
+          path: /tmp/success-markers
+
+      - name: Collect successful directories
+        id: collect-dirs
+        run: |
+          SUCCESSFUL_DIRS=""
+          if [ -d "/tmp/success-markers" ]; then
+            for file in /tmp/success-markers/*.txt; do
+              if [ -f "$file" ]; then
+                dir=$(cat "$file")
+                SUCCESSFUL_DIRS="$SUCCESSFUL_DIRS $dir"
+              fi
+            done
+          fi
+          
+          SUCCESSFUL_DIRS=$(echo $SUCCESSFUL_DIRS | tr -s ' ' | sed 's/^ *//' | sed 's/ *$//')
+          echo "directories=$SUCCESSFUL_DIRS" >> $GITHUB_OUTPUT
+          echo "Found successful directories: $SUCCESSFUL_DIRS"
+
+      - name: Configure git
+        run: |
+          git config user.email "pro@brandonguigo.com"
+          git config user.name "GitHub Actions"
+
+      - name: Cache cocogitto
+        id: cache-cocogitto
+        uses: actions/cache@v3
+        with:
+          path: ~/.cargo/bin/cog
+          key: cocogitto-v${{ env.COCOGITTO_VERSION }}
+
+      - name: Install Rust
+        if: steps.cache-cocogitto.outputs.cache-hit != 'true'
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          override: true
+
+      - name: Install Cocogitto
+        if: steps.cache-cocogitto.outputs.cache-hit != 'true'
+        run: |
+          cargo install cocogitto --version ${{ env.COCOGITTO_VERSION }}
+        env:
+          RUSTFLAGS: --cfg procmacro2_semver_exempt
+
+      - name: Bump versions for all successful microservices
+        id: bump-versions
+        run: |
+          SUCCESSFUL_DIRS="${{ steps.collect-dirs.outputs.directories }}"
+          TAGS_TO_PUSH=""
+          
+          if [ -z "$SUCCESSFUL_DIRS" ]; then
+            echo "No successful directories found"
+            exit 0
+          fi
+          
+          for dir in $SUCCESSFUL_DIRS; do
+            if [ -d "$dir" ]; then
+              echo "Bumping version for $dir"
+              ./.github/scripts/bump_rc.sh "$dir"
+              
+              # Get the new tag
+              cd "$dir"
+              NEW_TAG=$(git describe --abbrev=0 --tags)
+              TAGS_TO_PUSH="$TAGS_TO_PUSH $NEW_TAG"
+              cd ..
+              
+              echo "New tag for $dir: $NEW_TAG"
+            fi
+          done
+          
+          echo "tags_to_push=$TAGS_TO_PUSH" >> $GITHUB_OUTPUT
+          echo "successful_dirs=$SUCCESSFUL_DIRS" >> $GITHUB_OUTPUT
+
+      - name: Generate global changelog
+        run: |
+          chmod +x ./.github/scripts/generate_global_changelog.sh
+          ./.github/scripts/generate_global_changelog.sh ${{ steps.bump-versions.outputs.successful_dirs }}
+
       - name: Commit and push changes
         run: |
           if [ -n "$(git status --porcelain)" ]; then
-            git add CHANGELOG.md
-            git commit -m "chore(release): $(git describe --abbrev=0 --tags) [skip ci]"
-            git push https://${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git main
-            git push https://${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git tag $(git describe --abbrev=0 --tags)
+            # Add all CHANGELOG.md files and the global changelog
+            git add */CHANGELOG.md GLOBAL_CHANGELOG.md
+            
+            # Create commit message with all updated microservices
+            COMMIT_MSG="chore(release): bump RC versions for"
+            for dir in ${{ steps.bump-versions.outputs.successful_dirs }}; do
+              if [ -d "$dir" ]; then
+                cd "$dir"
+                NEW_TAG=$(git describe --abbrev=0 --tags)
+                COMMIT_MSG="$COMMIT_MSG $dir@$NEW_TAG"
+                cd ..
+              fi
+            done
+            COMMIT_MSG="$COMMIT_MSG [skip ci]"
+            
+            git commit -m "$COMMIT_MSG"
+            
+            # Push the commit
+            git push https://${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git dev
+            
+            # Push all tags
+            for tag in ${{ steps.bump-versions.outputs.tags_to_push }}; do
+              git push https://${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git tag "$tag"
+            done
           else
             echo "No changes to commit"
           fi
-      
+
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v2
         with:
@@ -113,18 +239,22 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Get tag
-        id: get-tag
+      - name: Build and push Docker images
         run: |
-          TAG=$(git describe --abbrev=0 --tags)
-          VERSION=$(echo $TAG | cut -d'-' -f2)
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: |
-            ghcr.io/${{ matrix.dir }}:${{ steps.get-tag.outputs.version }}
+          for dir in ${{ steps.bump-versions.outputs.successful_dirs }}; do
+            if [ -d "$dir" ]; then
+              cd "$dir"
+              TAG=$(git describe --abbrev=0 --tags)
+              VERSION=$(echo $TAG | sed 's/^[^-]*-v//')
+              
+              echo "Building Docker image for $dir with tag $VERSION"
+              
+              cd ..
+              docker buildx build \
+                --context . \
+                --platform linux/amd64,linux/arm64 \
+                --push \
+                --tag ghcr.io/atomic-blend/$dir:$VERSION \
+                .
+            fi
+          done
