@@ -78,3 +78,18 @@ runs:
         echo "Checking buf format..."
         buf format --diff --exit-code
         echo "buf format check completed successfully!"
+
+    - name: Generate protobuf files
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: buf generate
+
+    - name: Check for uncommitted changes
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: |
+        if ! git diff --quiet; then
+          echo "Generated files are outdated. Run 'buf generate'."
+          git diff
+          exit 1
+        fi
