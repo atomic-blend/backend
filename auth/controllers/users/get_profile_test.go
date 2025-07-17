@@ -1,13 +1,14 @@
 package users
 
 import (
-	"github.com/atomic-blend/backend/auth/auth"
-	"github.com/atomic-blend/backend/auth/models"
-	"github.com/atomic-blend/backend/auth/tests/mocks"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/atomic-blend/backend/auth/auth"
+	"github.com/atomic-blend/backend/auth/models"
+	"github.com/atomic-blend/backend/auth/tests/mocks"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
@@ -115,7 +116,7 @@ func TestGetMyProfile(t *testing.T) {
 			tc.setupMocks(mockUserRepo, mockUserRoleRepo)
 
 			// Create controller and router
-			controller := NewUserController(mockUserRepo, mockUserRoleRepo)
+			controller := NewUserController(mockUserRepo, mockUserRoleRepo, new(mocks.MockProductivityClient))
 			router := gin.New()
 			router.GET("/users/me", func(c *gin.Context) {
 				tc.setupAuth(c)

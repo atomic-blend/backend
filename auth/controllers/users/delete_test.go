@@ -1,14 +1,17 @@
 package users
 
 import (
-	"github.com/atomic-blend/backend/auth/auth"
-	"github.com/atomic-blend/backend/auth/models"
-	"github.com/atomic-blend/backend/auth/tests/mocks"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"github.com/atomic-blend/backend/auth/auth"
+	"github.com/atomic-blend/backend/auth/models"
+	"github.com/atomic-blend/backend/auth/tests/mocks"
+
+	"connectrpc.com/connect"
+	"github.com/atomic-blend/backend/grpc/gen/productivity"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -22,7 +25,7 @@ func TestDeleteAccount(t *testing.T) {
 	testCases := []struct {
 		name           string
 		setupAuth      func(*gin.Context)
-		setupMocks     func(*mocks.MockUserRepository, *mocks.MockUserRoleRepository)
+		setupMocks     func(*mocks.MockUserRepository, *mocks.MockUserRoleRepository, *mocks.MockProductivityClient)
 		expectedStatus int
 		expectedBody   map[string]string
 	}{
@@ -32,11 +35,15 @@ func TestDeleteAccount(t *testing.T) {
 				userID := primitive.NewObjectID()
 				c.Set("authUser", &auth.UserAuthInfo{UserID: userID})
 			},
-			setupMocks: func(userRepo *mocks.MockUserRepository, userRoleRepo *mocks.MockUserRoleRepository) {
+			setupMocks: func(userRepo *mocks.MockUserRepository, userRoleRepo *mocks.MockUserRoleRepository, productivityClient *mocks.MockProductivityClient) {
 				userID := primitive.NewObjectID()
 				user := &models.UserEntity{ID: &userID}
 				userRepo.On("FindByID", mock.Anything, mock.AnythingOfType("primitive.ObjectID")).Return(user, nil)
 				userRepo.On("Delete", mock.Anything, mock.AnythingOfType("string")).Return(nil)
+
+				// Mock successful productivity client call
+				productivityClient.On("DeleteUserData", mock.Anything, mock.Anything).Return(
+					&connect.Response[productivity.DeleteUserDataResponse]{}, nil)
 			},
 			expectedStatus: http.StatusOK,
 			expectedBody:   map[string]string{"message": "Account successfully deleted"},
@@ -44,7 +51,7 @@ func TestDeleteAccount(t *testing.T) {
 		{
 			name:      "Unauthorized - no auth user",
 			setupAuth: func(c *gin.Context) {},
-			setupMocks: func(userRepo *mocks.MockUserRepository, userRoleRepo *mocks.MockUserRoleRepository) {
+			setupMocks: func(userRepo *mocks.MockUserRepository, userRoleRepo *mocks.MockUserRoleRepository, productivityClient *mocks.MockProductivityClient) {
 			},
 			expectedStatus: http.StatusUnauthorized,
 			expectedBody:   map[string]string{"error": "Authentication required"},
@@ -55,7 +62,7 @@ func TestDeleteAccount(t *testing.T) {
 				userID := primitive.NewObjectID()
 				c.Set("authUser", &auth.UserAuthInfo{UserID: userID})
 			},
-			setupMocks: func(userRepo *mocks.MockUserRepository, userRoleRepo *mocks.MockUserRoleRepository) {
+			setupMocks: func(userRepo *mocks.MockUserRepository, userRoleRepo *mocks.MockUserRoleRepository, productivityClient *mocks.MockProductivityClient) {
 				userRepo.On("FindByID", mock.Anything, mock.AnythingOfType("primitive.ObjectID")).Return(nil, nil)
 			},
 			expectedStatus: http.StatusNotFound,
@@ -67,10 +74,14 @@ func TestDeleteAccount(t *testing.T) {
 				userID := primitive.NewObjectID()
 				c.Set("authUser", &auth.UserAuthInfo{UserID: userID})
 			},
-			setupMocks: func(userRepo *mocks.MockUserRepository, userRoleRepo *mocks.MockUserRoleRepository) {
+			setupMocks: func(userRepo *mocks.MockUserRepository, userRoleRepo *mocks.MockUserRoleRepository, productivityClient *mocks.MockProductivityClient) {
 				userID := primitive.NewObjectID()
 				user := &models.UserEntity{ID: &userID}
 				userRepo.On("FindByID", mock.Anything, mock.AnythingOfType("primitive.ObjectID")).Return(user, nil)
+
+				// Mock failing productivity client call
+				productivityClient.On("DeleteUserData", mock.Anything, mock.Anything).Return(
+					nil, assert.AnError)
 			},
 			expectedStatus: http.StatusInternalServerError,
 			expectedBody:   map[string]string{"error": "Failed to delete personal data: assert.AnError general error for testing"},
@@ -82,12 +93,13 @@ func TestDeleteAccount(t *testing.T) {
 			// Create mocks
 			mockUserRepo := new(mocks.MockUserRepository)
 			mockUserRoleRepo := new(mocks.MockUserRoleRepository)
+			mockProductivityClient := new(mocks.MockProductivityClient)
 
 			// Setup mocks
-			tc.setupMocks(mockUserRepo, mockUserRoleRepo)
+			tc.setupMocks(mockUserRepo, mockUserRoleRepo, mockProductivityClient)
 
 			// Create controller and router
-			controller := NewUserController(mockUserRepo, mockUserRoleRepo)
+			controller := NewUserController(mockUserRepo, mockUserRoleRepo, mockProductivityClient)
 
 			router := gin.New()
 			router.DELETE("/users/me", func(c *gin.Context) {
@@ -114,6 +126,7 @@ func TestDeleteAccount(t *testing.T) {
 			// Verify mock expectations
 			mockUserRepo.AssertExpectations(t)
 			mockUserRoleRepo.AssertExpectations(t)
+			mockProductivityClient.AssertExpectations(t)
 		})
 	}
 }

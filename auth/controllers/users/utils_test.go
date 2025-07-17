@@ -3,51 +3,67 @@ package users
 
 import (
 	"errors"
+	"net/http/httptest"
 	"testing"
 
+	"connectrpc.com/connect"
+	"github.com/atomic-blend/backend/auth/tests/mocks"
+	"github.com/atomic-blend/backend/grpc/gen/productivity"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-//TODO: replace the tests with mocks of gRPC calls to delete personal data
 func TestDeletePersonalData_Success(t *testing.T) {
 	// Setup
-	controller := &UserController{}
-	ctx := &gin.Context{}
+	mockUserRepo := new(mocks.MockUserRepository)
+	mockUserRoleRepo := new(mocks.MockUserRoleRepository)
+	mockProductivityClient := new(mocks.MockProductivityClient)
+
+	controller := NewUserController(mockUserRepo, mockUserRoleRepo, mockProductivityClient)
+
+	// Create gin context
+	gin.SetMode(gin.TestMode)
+	w := httptest.NewRecorder()
+	ctx, _ := gin.CreateTestContext(w)
+	req := httptest.NewRequest("DELETE", "/", nil)
+	ctx.Request = req
+
 	userID := primitive.NewObjectID()
 
-	// Create some mock tasks
-	// taskID1 := primitive.NewObjectID().Hex()
-	// taskID2 := primitive.NewObjectID().Hex()
-	// mockTasks := []*models.TaskEntity{
-	// 	{ID: taskID1},
-	// 	{ID: taskID2},
-	// }
-
-	// Expectations
-	// mockTaskRepo.On("GetAll", mock.Anything, &userID).Return(mockTasks, nil)
-	// for _, task := range mockTasks {
-	// 	mockTaskRepo.On("Delete", mock.Anything, task.ID).Return(nil)
-	// }
+	// Mock successful gRPC call
+	mockResponse := &connect.Response[productivity.DeleteUserDataResponse]{}
+	mockProductivityClient.On("DeleteUserData", mock.Anything, mock.Anything).Return(mockResponse, nil)
 
 	// Call the function
 	err := controller.DeletePersonalData(ctx, userID)
 
 	// Assertions
 	assert.NoError(t, err)
-	// mockTaskRepo.AssertExpectations(t)
+	mockProductivityClient.AssertExpectations(t)
 }
 
-func TestDeletePersonalData_GetAllError(t *testing.T) {
+func TestDeletePersonalData_gRPCError(t *testing.T) {
 	// Setup
-	controller := &UserController{}
-	ctx := &gin.Context{}
-	userID := primitive.NewObjectID()
-	expectedErr := errors.New("database error")
+	mockUserRepo := new(mocks.MockUserRepository)
+	mockUserRoleRepo := new(mocks.MockUserRoleRepository)
+	mockProductivityClient := new(mocks.MockProductivityClient)
 
-	// Expectations
-	// mockTaskRepo.On("GetAll", mock.Anything, &userID).Return(nil, expectedErr)
+	controller := NewUserController(mockUserRepo, mockUserRoleRepo, mockProductivityClient)
+
+	// Create gin context
+	gin.SetMode(gin.TestMode)
+	w := httptest.NewRecorder()
+	ctx, _ := gin.CreateTestContext(w)
+	req := httptest.NewRequest("DELETE", "/", nil)
+	ctx.Request = req
+
+	userID := primitive.NewObjectID()
+	expectedErr := errors.New("gRPC connection error")
+
+	// Mock failing gRPC call
+	mockProductivityClient.On("DeleteUserData", mock.Anything, mock.Anything).Return(nil, expectedErr)
 
 	// Call the function
 	err := controller.DeletePersonalData(ctx, userID)
@@ -55,34 +71,39 @@ func TestDeletePersonalData_GetAllError(t *testing.T) {
 	// Assertions
 	assert.Error(t, err)
 	assert.Equal(t, expectedErr, err)
-	// mockTaskRepo.AssertExpectations(t)
+	mockProductivityClient.AssertExpectations(t)
 }
 
-func TestDeletePersonalData_DeleteError(t *testing.T) {
+func TestDeletePersonalData_CorrectRequestData(t *testing.T) {
 	// Setup
-	controller := &UserController{}
-	ctx := &gin.Context{}
+	mockUserRepo := new(mocks.MockUserRepository)
+	mockUserRoleRepo := new(mocks.MockUserRoleRepository)
+	mockProductivityClient := new(mocks.MockProductivityClient)
+
+	controller := NewUserController(mockUserRepo, mockUserRoleRepo, mockProductivityClient)
+
+	// Create gin context
+	gin.SetMode(gin.TestMode)
+	w := httptest.NewRecorder()
+	ctx, _ := gin.CreateTestContext(w)
+	req := httptest.NewRequest("DELETE", "/", nil)
+	ctx.Request = req
+
 	userID := primitive.NewObjectID()
-	expectedErr := errors.New("delete error")
 
-	// Create some mock tasks
-	// taskID1 := primitive.NewObjectID().Hex()
-	// taskID2 := primitive.NewObjectID().Hex()
-	// mockTasks := []*models.TaskEntity{
-	// 	{ID: taskID1},
-	// 	{ID: taskID2},
-	// }
-
-	// Expectations
-	// mockTaskRepo.On("GetAll", mock.Anything, &userID).Return(mockTasks, nil)
-	// mockTaskRepo.On("Delete", mock.Anything, mockTasks[0].ID).Return(nil)         // First delete succeeds
-	// mockTaskRepo.On("Delete", mock.Anything, mockTasks[1].ID).Return(expectedErr) // Second delete fails
+	// Mock with basic validation that the request is properly formatted
+	mockResponse := &connect.Response[productivity.DeleteUserDataResponse]{}
+	mockProductivityClient.On("DeleteUserData",
+		mock.Anything,
+		mock.MatchedBy(func(req *connect.Request[productivity.DeleteUserDataRequest]) bool {
+			// Validate that the request message is not nil
+			return req.Msg != nil
+		})).Return(mockResponse, nil)
 
 	// Call the function
 	err := controller.DeletePersonalData(ctx, userID)
 
 	// Assertions
-	assert.Error(t, err)
-	assert.Equal(t, expectedErr, err)
-	// mockTaskRepo.AssertExpectations(t)
+	assert.NoError(t, err)
+	mockProductivityClient.AssertExpectations(t)
 }
