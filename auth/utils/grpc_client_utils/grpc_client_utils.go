@@ -5,6 +5,7 @@ import (
 	"os"
 )
 
+// GetServiceBaseURL retrieves the base URL for a given service from environment variables.
 func GetServiceBaseURL(service string) (string, error) {
 	var baseURL string
 	switch service {

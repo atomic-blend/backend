@@ -9,7 +9,8 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-func (s *grpcServer) DeleteUserData(ctx context.Context, req *connect.Request[productivity.DeleteUserDataRequest]) (*connect.Response[productivity.DeleteUserDataResponse], error) {
+// DeleteUserData deletes all user data across various repositories
+func (s *GrpcServer) DeleteUserData(ctx context.Context, req *connect.Request[productivity.DeleteUserDataRequest]) (*connect.Response[productivity.DeleteUserDataResponse], error) {
 	user := req.Msg.GetUser()
 	if user == nil {
 		log.Error().Msg("User is required")
