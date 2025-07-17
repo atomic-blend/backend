@@ -1,6 +1,11 @@
 package main
 
 import (
+	"context"
+	"os"
+	"strings"
+	"time"
+
 	"github.com/atomic-blend/backend/auth/auth"
 	"github.com/atomic-blend/backend/auth/controllers/admin"
 	"github.com/atomic-blend/backend/auth/controllers/health"
@@ -8,10 +13,6 @@ import (
 	"github.com/atomic-blend/backend/auth/controllers/webhooks"
 	"github.com/atomic-blend/backend/auth/models"
 	"github.com/atomic-blend/backend/auth/utils/db"
-	"context"
-	"os"
-	"strings"
-	"time"
 
 	"github.com/gin-contrib/cors"
 
@@ -43,6 +44,9 @@ func main() {
 		}
 		log.Fatal().Msg("✅ Disconnected from MongoDB")
 	}()
+
+	// start grpc server
+	go startGRPCServer()
 
 	models.RegisterValidators()
 

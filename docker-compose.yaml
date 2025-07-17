@@ -19,6 +19,7 @@ services:
     container_name: auth
     expose:
       - "8080"
+      - "50051"  # gRPC port
     volumes:
       - ./auth:/app
       - type: bind
