@@ -7,7 +7,7 @@ message UserDevice {
     string deviceID = 1;
     string deviceName = 2;
     string fcmToken = 3;
-    string deviceTimezone = 4;
+    optional string deviceTimezone = 4;
 }
 
 message GetUserDevicesRequest {
