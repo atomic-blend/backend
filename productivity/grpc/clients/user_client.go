@@ -7,9 +7,10 @@ import (
 	"connectrpc.com/connect"
 	"github.com/atomic-blend/backend/grpc/gen/auth"
 	"github.com/atomic-blend/backend/grpc/gen/auth/authconnect"
-	"github.com/atomic-blend/backend/productivity/utils/grpc_client_utils"
+	grpcclientutils "github.com/atomic-blend/backend/productivity/utils/grpc_client_utils"
 )
 
+// UserClient is the client for user-related gRPC operations
 type UserClient struct {
 	client authconnect.UserServiceClient
 }

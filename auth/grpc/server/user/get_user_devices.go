@@ -8,6 +8,7 @@ import (
 	"github.com/atomic-blend/backend/grpc/gen/auth"
 )
 
+// GetUserDevices is the gRPC method to retrieve user devices
 func (userGrpcServer *UserGrpcServer) GetUserDevices(ctx context.Context, req *connect.Request[auth.GetUserDevicesRequest]) (*connect.Response[auth.GetUserDevicesResponse], error) {
 	// Call the repository method to get user devices
 	user, err := userGrpcServer.userRepo.GetByID(ctx, req.Msg.User.Id)
