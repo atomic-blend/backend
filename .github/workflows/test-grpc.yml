@@ -22,13 +22,13 @@ jobs:
         uses: tj-actions/changed-files@v35
         with:
           dir_names: true
-          dir_names_max_depth: 1 # This is optional. If not provided, full subdirectories' paths will be provided. Use it if you need to trim the output. See docs for details: https://github.com/tj-actions/changed-files/tree/main#inputs.
+          dir_names_max_depth: 1
           json: true
           files: |
             grpc/**
           quotepath: false
 
-      - name: "Set output in the matrix format"
+      - name: Set output in the matrix format
         id: set-output
         run: echo "changed_directories={\"dir\":${{ steps.changed-files.outputs.all_changed_files }}}" >> "$GITHUB_OUTPUT"
 
@@ -45,5 +45,5 @@ jobs:
       - name: Test gRPC files
         uses: ./.github/actions/test-grpc
         with:
-          buf-version: '1.28.1'
+          buf-version: '1.55.1'
           working-directory: './grpc'
