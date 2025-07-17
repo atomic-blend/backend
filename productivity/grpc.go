@@ -14,8 +14,9 @@ import (
 func startGRPCServer() {
 	// Initialize repositories
 	taskRepo := repositories.NewTaskRepository(db.Database)
+	habitRepo := repositories.NewHabitRepository(db.Database)
 
-	globalGRPCServer := globalGRPC.NewGrpcServer(taskRepo)
+	globalGRPCServer := globalGRPC.NewGrpcServer(taskRepo, habitRepo)
 
 	// TODO: register gRPC services here
 	globalPath, globalHandler := productivityconnect.NewProductivityServiceHandler(globalGRPCServer)

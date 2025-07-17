@@ -1,10 +1,11 @@
 package repositories
 
 import (
-	"github.com/atomic-blend/backend/productivity/models"
-	"github.com/atomic-blend/backend/productivity/utils/db"
 	"context"
 	"time"
+
+	"github.com/atomic-blend/backend/productivity/models"
+	"github.com/atomic-blend/backend/productivity/utils/db"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -21,12 +22,14 @@ type HabitRepositoryInterface interface {
 	GetAll(ctx context.Context, userID *primitive.ObjectID) ([]*models.Habit, error)
 	Update(ctx context.Context, habit *models.Habit) (*models.Habit, error)
 	Delete(ctx context.Context, id primitive.ObjectID) error
+	DeleteByUserID(ctx context.Context, userID primitive.ObjectID) error
 
 	// Habit Entry methods
 	AddEntry(ctx context.Context, entry *models.HabitEntry) (*models.HabitEntry, error)
 	GetEntriesByHabitID(ctx context.Context, habitID primitive.ObjectID) ([]models.HabitEntry, error)
 	UpdateEntry(ctx context.Context, entry *models.HabitEntry) (*models.HabitEntry, error)
 	DeleteEntry(ctx context.Context, id primitive.ObjectID) error
+	DeleteEntriesByUserID(ctx context.Context, userID primitive.ObjectID) error
 }
 
 // HabitRepository provides methods to interact with habit data in the database
@@ -180,5 +183,19 @@ func (r *HabitRepository) UpdateEntry(ctx context.Context, entry *models.HabitEn
 // DeleteEntry removes a habit entry from the database
 func (r *HabitRepository) DeleteEntry(ctx context.Context, id primitive.ObjectID) error {
 	_, err := r.entryCollection.DeleteOne(ctx, bson.M{"_id": id})
+	return err
+}
+
+// DeleteByUserID deletes all habits for a specific user
+func (r *HabitRepository) DeleteByUserID(ctx context.Context, userID primitive.ObjectID) error {
+	filter := bson.M{"user_id": userID}
+	_, err := r.collection.DeleteMany(ctx, filter)
+	return err
+}
+
+// DeleteEntriesByUserID deletes all habit entries for a specific user
+func (r *HabitRepository) DeleteEntriesByUserID(ctx context.Context, userID primitive.ObjectID) error {
+	filter := bson.M{"user_id": userID}
+	_, err := r.entryCollection.DeleteMany(ctx, filter)
 	return err
 }

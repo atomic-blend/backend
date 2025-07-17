@@ -43,6 +43,22 @@ func (s *grpcServer) DeleteUserData(ctx context.Context, req *connect.Request[pr
 		}), nil
 	}
 
+	// Delete all habit entries for the user
+	if err := s.habitRepo.DeleteEntriesByUserID(ctx, userID); err != nil {
+		log.Error().Err(err).Msg("Failed to delete user habit entries")
+		return connect.NewResponse(&productivity.DeleteUserDataResponse{
+			Success: false,
+		}), nil
+	}
+
+	// Delete all habits for the user
+	if err := s.habitRepo.DeleteByUserID(ctx, userID); err != nil {
+		log.Error().Err(err).Msg("Failed to delete user habits")
+		return connect.NewResponse(&productivity.DeleteUserDataResponse{
+			Success: false,
+		}), nil
+	}
+
 	log.Info().Str("userID", userIDHex).Msg("Successfully deleted user data")
 
 	return connect.NewResponse(&productivity.DeleteUserDataResponse{

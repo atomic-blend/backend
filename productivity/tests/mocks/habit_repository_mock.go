@@ -1,8 +1,9 @@
 package mocks
 
 import (
-	"github.com/atomic-blend/backend/productivity/models"
 	"context"
+
+	"github.com/atomic-blend/backend/productivity/models"
 
 	"github.com/stretchr/testify/mock"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -52,6 +53,18 @@ func (m *MockHabitRepository) Update(ctx context.Context, habit *models.Habit) (
 // Delete deletes a habit by ID
 func (m *MockHabitRepository) Delete(ctx context.Context, id primitive.ObjectID) error {
 	args := m.Called(ctx, id)
+	return args.Error(0)
+}
+
+// DeleteByUserID deletes all habits for a specific user
+func (m *MockHabitRepository) DeleteByUserID(ctx context.Context, userID primitive.ObjectID) error {
+	args := m.Called(ctx, userID)
+	return args.Error(0)
+}
+
+// DeleteEntriesByUserID deletes all habit entries for a specific user
+func (m *MockHabitRepository) DeleteEntriesByUserID(ctx context.Context, userID primitive.ObjectID) error {
+	args := m.Called(ctx, userID)
 	return args.Error(0)
 }
 
