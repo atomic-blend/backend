@@ -15,10 +15,6 @@ inputs:
     description: "Working directory for the action"
     required: false
     default: "."
-  maizzle-directory:
-    description: "Directory containing Maizzle email templates"
-    required: false
-    default: ""
   codecov-token:
     description: "Codecov token for coverage upload"
     required: false
@@ -95,24 +91,37 @@ runs:
         token: ${{ inputs.codecov-token }}
         fail_ci_if_error: false
 
+    - name: Check if maizzle dir exists
+      shell: bash
+      id: check-maizzle-dir
+      working-directory: ${{ inputs.working-directory }}
+      run: |
+        if [ -n "maizzle" ] && [ -d "maizzle" ]; then
+          echo "maizzle-exists=true" >> "$GITHUB_OUTPUT"
+          echo "Maizzle directory found: maizzle"
+        else
+          echo "maizzle-exists=false" >> "$GITHUB_OUTPUT"
+          echo "Maizzle directory not found or not specified"
+        fi
+
     - name: Set up Node.js
-      if: ${{ inputs.maizzle-directory != '' }}
+      if: ${{ steps.check-maizzle-dir.outputs.maizzle-exists == 'true' }}
       uses: actions/setup-node@v3
       with:
         node-version: ${{ inputs.node-version }}
         cache: "npm"
-        cache-dependency-path: ${{inputs.working-directory}}/${{ inputs.maizzle-directory }}/package-lock.json
+        cache-dependency-path: ${{ inputs.working-directory }}/maizzle/package-lock.json
 
     - name: Install email template dependencies
-      if: ${{ inputs.maizzle-directory != '' }}
+      if: ${{ steps.check-maizzle-dir.outputs.maizzle-exists == 'true' }}
       shell: bash
-      working-directory: ${{ inputs.maizzle-directory }}
+      working-directory: ${{ inputs.working-directory }}/maizzle
       run: npm install
 
-    - name: Build email templates"
-      if: ${{ inputs.maizzle-directory != '' }}
+    - name: Build email templates
+      if: ${{ steps.check-maizzle-dir.outputs.maizzle-exists == 'true' }}
+      working-directory: ${{ inputs.working-directory }}/maizzle
       shell: bash
-      working-directory: ${{ inputs.maizzle-directory }}
       run: npm run build
 
 branding:

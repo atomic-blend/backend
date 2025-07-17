@@ -49,5 +49,4 @@ jobs:
           go-version: "1.21"
           node-version: "23.9"
           working-directory: "${{ matrix.dir }}"
-          maizzle-directory: "./maizzle"
           upload-artifacts: "false"
