@@ -1,0 +1,161 @@
+name: Build and Test
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  find-out-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      changed_directories: ${{ steps.set-output.outputs.changed_directories }} # The `dirs` doesn't exist in the outputs of changed-files@v35 action.
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Get changed files
+        id: changed-files
+        uses: tj-actions/changed-files@v35
+        with:
+          dir_names: true
+          dir_names_max_depth: 1 # This is optional. If not provided, full subdirectories' paths will be provided. Use it if you need to trim the output. See docs for details: https://github.com/tj-actions/changed-files/tree/main#inputs.
+          json: true
+          files: |
+            auth/**
+            productivity/**
+          quotepath: false
+
+      - name: "Set output in the matrix format"
+        id: set-output
+        run: echo "changed_directories={\"dir\":${{ steps.changed-files.outputs.all_changed_files }}}" >> "$GITHUB_OUTPUT"
+
+  build-and-test:
+    if: ${{ needs.find-out-changes.outputs.changed_directories != '' }} # Without it, the strategy parser will fail if the changed_directories is empty.
+    runs-on: ubuntu-22.04
+    strategy:
+      matrix: ${{fromJson(needs.find-out-changes.outputs.changed_directories)}}
+    needs:
+      - find-out-changes
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Build and test backend services
+        uses: ./.github/actions/build-and-test
+        with:
+          go-version: "1.21"
+          node-version: "23.9"
+          working-directory: "${{ matrix.dir }}"
+          maizzle-directory: "./maizzle"
+          upload-artifacts: "false"
+
+      # configure cocogitto and git
+      - name: Configure git
+        run: |
+          git config user.email "pro@brandonguigo.com"
+          git config user.name "GitHub Actions"
+
+      - name: Cache cocogitto
+        id: cache-cocogitto
+        uses: actions/cache@v3
+        with:
+          path: ~/.cargo/bin/cog
+          key: cocogitto-v${{ env.COCOGITTO_VERSION }}
+
+      - name: Install Rust
+        if: steps.cache-cocogitto.outputs.cache-hit != 'true'
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          override: true
+
+      - name: Install Cocogitto
+        if: steps.cache-cocogitto.outputs.cache-hit != 'true'
+        run: |
+          cargo install cocogitto --version ${{ env.COCOGITTO_VERSION }}
+        env:
+          RUSTFLAGS: --cfg procmacro2_semver_exempt
+
+      - name: Check conventional commits validity
+        run: |
+          ~/.cargo/bin/cog check
+
+      # run the bump.sh script to bump the version
+      - name: Bump version
+        run: |
+          ./.github/scripts/bump.sh
+
+      - name: Commit and push changes
+        run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            git add CHANGELOG.md
+            git commit -m "chore(release): $(git describe --abbrev=0 --tags) [skip ci]"
+            git push https://${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git main
+            git push https://${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git tag $(git describe --abbrev=0 --tags)
+          else
+            echo "No changes to commit"
+          fi
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Get tag
+        id: get-tag
+        run: |
+          TAG=$(git describe --abbrev=0 --tags)
+          VERSION=$(echo $TAG | cut -d'-' -f2)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ghcr.io/${{ matrix.dir }}:${{ steps.get-tag.outputs.version }}
+
+      # GitHub Release creation steps
+      - name: Extract changelog
+        id: extract-changelog
+        run: |
+          TAG=${{ steps.get-tag.outputs.tag }}
+          CLEAN_TAG=$(echo "$TAG" | sed 's/^v//')
+
+          if [ -f "CHANGELOG.md" ]; then
+            # Try different changelog entry formats
+            CHANGELOG=$(sed -n "/^## $TAG - /,/^## /p" CHANGELOG.md | sed '1d;$d')
+            
+            if [ -z "$CHANGELOG" ]; then
+              CHANGELOG=$(sed -n "/^## $CLEAN_TAG - /,/^## /p" CHANGELOG.md | sed '1d;$d')
+            fi
+            
+            if [ -z "$CHANGELOG" ]; then
+              CHANGELOG=$(sed -n "/^## \[$CLEAN_TAG\] - /,/^## /p" CHANGELOG.md | sed '1d;$d')
+            fi
+            
+            echo "$CHANGELOG" > release_notes.md
+          else
+            echo "No changelog found" > release_notes.md
+          fi
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.get-tag.outputs.tag }}
+          name: v${{ steps.get-tag.outputs.tag }}
+          body_path: release_notes.md
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
