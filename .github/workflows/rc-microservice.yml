@@ -9,7 +9,7 @@ env:
   COCOGITTO_VERSION: "6.3.0" # Specify the version of Cocogitto to use
 
 permissions:
-  contents: read
+  contents: write
   packages: write
   actions: write
 

@@ -7,6 +7,11 @@ on:
 env:
   COCOGITTO_VERSION: "6.3.0" # Specify the version of Cocogitto to use
 
+permissions:
+  contents: write
+  actions: write
+  packages: write
+
 jobs:
   find-out-changes:
     runs-on: ubuntu-latest
