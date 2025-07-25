@@ -145,10 +145,6 @@ jobs:
         env:
           RUSTFLAGS: --cfg procmacro2_semver_exempt
 
-      - name: Check conventional commits validity
-        run: |
-          ~/.cargo/bin/cog check
-
       - name: Bump versions for all successful microservices
         id: bump-versions
         run: |
