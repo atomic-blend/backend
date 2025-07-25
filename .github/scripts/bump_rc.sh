@@ -10,7 +10,7 @@ if [[ -z "$MICROSERVICE_DIR" ]]; then
 fi
 
 # Dynamic tag prefix based on microservice
-TAG_PREFIX="${MICROSERVICE_DIR}-v"
+TAG_PREFIX="${MICROSERVICE_DIR}/v"
 
 # Patterns
 FINAL_TAG_PATTERN="${TAG_PREFIX}[0-9]*.[0-9]*.[0-9]*"

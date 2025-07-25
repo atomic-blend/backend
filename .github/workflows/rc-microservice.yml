@@ -27,7 +27,8 @@ jobs:
       - name: Get last tag
         id: last-tag
         run: |
-          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          # Get the most recent tag by date, excluding '-rc' pre-releases
+          LAST_TAG=$(git for-each-ref --sort=-creatordate --format '%(refname:short)' refs/tags | head -n 1)
           if [ -z "$LAST_TAG" ]; then
             echo "No tags found, using HEAD~1"
             echo "last_tag=HEAD~1" >> $GITHUB_OUTPUT
@@ -183,7 +184,7 @@ jobs:
           TAGS_TO_PUSH=""
           for dir in $SUCCESSFUL_DIRS; do
             if [ -d "$dir" ]; then
-              TAG_PREFIX="${dir}-v"
+              TAG_PREFIX="${dir}/v"
               NEW_TAG=$(git tag --list "${TAG_PREFIX}*" | sort -V | tail -n 1)
               TAGS_TO_PUSH="$TAGS_TO_PUSH $NEW_TAG"
               echo "New tag for $dir: $NEW_TAG"
@@ -203,7 +204,7 @@ jobs:
             COMMIT_MSG="chore(release): bump RC versions for"
             for dir in ${{ steps.bump-versions.outputs.successful_dirs }}; do
               if [ -d "$dir" ]; then
-                TAG_PREFIX="${dir}-v"
+                TAG_PREFIX="${dir}/v"
                 NEW_TAG=$(git tag --list "${TAG_PREFIX}*" | sort -V | tail -n 1)
                 COMMIT_MSG="$COMMIT_MSG $dir@$NEW_TAG"
               fi
@@ -239,9 +240,9 @@ jobs:
           
           for dir in $SUCCESSFUL_DIRS; do
             if [ -d "$dir" ] && [ "$dir" != "grpc" ]; then
-              TAG_PREFIX="${dir}-v"
+              TAG_PREFIX="${dir}/v"
               TAG=$(git tag --list "${TAG_PREFIX}*" | sort -V | tail -n 1)
-              VERSION=$(echo $TAG | sed 's/^[^-]*-v//')
+              VERSION=$(echo $TAG | sed 's/^[^-]*\/v//')
               
               if [ "$FIRST" = "true" ]; then
                 FIRST=false
@@ -325,9 +326,9 @@ jobs:
           
           for dir in $ALL_SUCCESSFUL_DIRS; do
             if [ -d "$dir" ]; then
-              TAG_PREFIX="${dir}-v"
+              TAG_PREFIX="${dir}/v"
               TAG=$(git tag --list "${TAG_PREFIX}*" | sort -V | tail -n 1)
-              VERSION=$(echo $TAG | sed 's/^[^-]*-v//')
+              VERSION=$(echo $TAG | sed 's/^[^-]*\/v//')
               
               if [ "$FIRST" = "true" ]; then
                 FIRST=false
@@ -367,7 +368,7 @@ jobs:
         id: extract-changelog
         run: |
           TAG=${{ matrix.tag }}
-          CLEAN_TAG=$(echo "$TAG" | sed 's/^[^-]*-v//')
+          CLEAN_TAG=$(echo "$TAG" | sed 's/^[^-]*\/v//')
           
           if [ -f "${{ matrix.dir }}/CHANGELOG.md" ]; then
             # Try different changelog entry formats

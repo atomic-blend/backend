@@ -10,7 +10,7 @@ if [[ -z "$MICROSERVICE_DIR" ]]; then
 fi
 
 # Dynamic tag prefix based on microservice
-TAG_PREFIX="${MICROSERVICE_DIR}-v"
+TAG_PREFIX="${MICROSERVICE_DIR}/v"
 
 echo "Bumping final version for microservice: $MICROSERVICE_DIR"
 echo "Tag prefix: $TAG_PREFIX"

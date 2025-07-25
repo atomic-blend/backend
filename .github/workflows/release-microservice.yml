@@ -183,7 +183,7 @@ jobs:
           TAGS_TO_PUSH=""
           for dir in $SUCCESSFUL_DIRS; do
             if [ -d "$dir" ]; then
-              TAG_PREFIX="${dir}-v"
+              TAG_PREFIX="${dir}/v"
               NEW_TAG=$(git tag --list "${TAG_PREFIX}*" | grep -v -- '-rc' | sort -V | tail -n 1)
               TAGS_TO_PUSH="$TAGS_TO_PUSH $NEW_TAG"
               echo "New tag for $dir: $NEW_TAG"
@@ -203,7 +203,7 @@ jobs:
             COMMIT_MSG="chore(release): bump versions for"
             for dir in ${{ steps.bump-versions.outputs.successful_dirs }}; do
               if [ -d "$dir" ]; then
-                TAG_PREFIX="${dir}-v"
+                TAG_PREFIX="${dir}/v"
                 NEW_TAG=$(git tag --list "${TAG_PREFIX}*" | grep -v -- '-rc' | sort -V | tail -n 1)
                 COMMIT_MSG="$COMMIT_MSG $dir@$NEW_TAG"
               fi
@@ -239,9 +239,9 @@ jobs:
           
           for dir in $SUCCESSFUL_DIRS; do
             if [ -d "$dir" ] && [ "$dir" != "grpc" ]; then
-              TAG_PREFIX="${dir}-v"
+              TAG_PREFIX="${dir}/v"
               TAG=$(git tag --list "${TAG_PREFIX}*" | grep -v -- '-rc' | sort -V | tail -n 1)
-              VERSION=$(echo $TAG | sed 's/^[^-]*-v//')
+              VERSION=$(echo $TAG | sed 's/^[^-]*\/v//')
               
               if [ "$FIRST" = "true" ]; then
                 FIRST=false
@@ -323,9 +323,9 @@ jobs:
           
           for dir in $ALL_SUCCESSFUL_DIRS; do
             if [ -d "$dir" ]; then
-              TAG_PREFIX="${dir}-v"
+              TAG_PREFIX="${dir}/v"
               TAG=$(git tag --list "${TAG_PREFIX}*" | grep -v -- '-rc' | sort -V | tail -n 1)
-              VERSION=$(echo $TAG | sed 's/^[^-]*-v//')
+              VERSION=$(echo $TAG | sed 's/^[^-]*\/v//')
               
               if [ "$FIRST" = "true" ]; then
                 FIRST=false
@@ -365,7 +365,7 @@ jobs:
         id: extract-changelog
         run: |
           TAG=${{ matrix.tag }}
-          CLEAN_TAG=$(echo "$TAG" | sed 's/^[^-]*-v//')
+          CLEAN_TAG=$(echo "$TAG" | sed 's/^[^-]*\/v//')
           
           if [ -f "${{ matrix.dir }}/CHANGELOG.md" ]; then
             # Try different changelog entry formats
