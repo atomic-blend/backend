@@ -1,0 +1,57 @@
+name: Build and Test
+
+on:
+  pull_request:
+    branches: [dev]
+
+permissions:
+  contents: read
+  actions: write
+  packages: write
+
+jobs:
+  find-out-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      changed_directories: ${{ steps.set-output.outputs.changed_directories }} # The `dirs` doesn't exist in the outputs of changed-files@v35 action.
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Get changed files
+        id: changed-files
+        uses: tj-actions/changed-files@v41
+        with:
+          dir_names: true
+          dir_names_max_depth: 1 # This is optional. If not provided, full subdirectories' paths will be provided. Use it if you need to trim the output. See docs for details: https://github.com/tj-actions/changed-files/tree/main#inputs.
+          json: true
+          files: |
+            auth/**
+            productivity/**
+          quotepath: false
+
+      - name: "Set output in the matrix format"
+        id: set-output
+        run: echo "changed_directories={\"dir\":${{ steps.changed-files.outputs.all_changed_files }}}" >> "$GITHUB_OUTPUT"
+
+  build-and-test:
+    if: ${{ needs.find-out-changes.outputs.changed_directories != '' }} # Without it, the strategy parser will fail if the changed_directories is empty.
+    runs-on: ubuntu-22.04
+    strategy:
+      matrix: ${{fromJson(needs.find-out-changes.outputs.changed_directories)}}
+    needs:
+      - find-out-changes
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Build and test backend services
+        uses: ./.github/actions/build-and-test
+        with:
+          go-version: "1.21"
+          node-version: "23.9"
+          working-directory: "${{ matrix.dir }}"
+          upload-artifacts: "false"

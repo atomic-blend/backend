@@ -1,0 +1,413 @@
+name: Release RC for Microservices
+
+on:
+  push:
+    branches: 
+      - dev
+
+env:
+  COCOGITTO_VERSION: "6.3.0" # Specify the version of Cocogitto to use
+
+permissions:
+  contents: write
+  packages: write
+  actions: write
+
+
+jobs:
+  find-out-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      changed_directories: ${{ steps.set-output.outputs.changed_directories }} # The `dirs` doesn't exist in the outputs of changed-files@v35 action.
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Get last tag
+        id: last-tag
+        run: |
+          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          if [ -z "$LAST_TAG" ]; then
+            echo "No tags found, using HEAD~1"
+            echo "last_tag=HEAD~1" >> $GITHUB_OUTPUT
+          else
+            echo "Found last tag: $LAST_TAG"
+            echo "last_tag=$LAST_TAG" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Get changed files
+        id: changed-files
+        uses: tj-actions/changed-files@v41
+        with:
+          dir_names: true
+          dir_names_max_depth: 1 # This is optional. If not provided, full subdirectories' paths will be provided. Use it if you need to trim the output. See docs for details: https://github.com/tj-actions/changed-files/tree/main#inputs.
+          json: true
+          base_sha: ${{ steps.last-tag.outputs.last_tag }}
+          files: |
+            auth/**
+            productivity/**
+            grpc/**
+          quotepath: false
+
+      - name: "Set output in the matrix format"
+        id: set-output
+        run: echo "changed_directories={\"dir\":${{ steps.changed-files.outputs.all_changed_files }}}" >> "$GITHUB_OUTPUT"
+
+  build-and-test:
+    if: ${{ needs.find-out-changes.outputs.changed_directories != '' }} # Without it, the strategy parser will fail if the changed_directories is empty.
+    runs-on: ubuntu-22.04
+    strategy:
+      matrix: ${{fromJson(needs.find-out-changes.outputs.changed_directories)}}
+    needs:
+      - find-out-changes
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Build and test backend services
+        id: build-test
+        if: ${{ matrix.dir != 'grpc' }}
+        uses: ./.github/actions/build-and-test
+        with:
+          go-version: "1.21"
+          node-version: "23.9"
+          working-directory: "${{ matrix.dir }}"
+          upload-artifacts: "false"
+
+      - name: Test gRPC
+        id: test-grpc
+        if: ${{ matrix.dir == 'grpc' }}
+        uses: ./.github/actions/test-grpc
+        with:
+          buf-version: "1.55.1"
+          working-directory: "${{ matrix.dir }}"
+
+      - name: Create success marker
+        if: ${{ (matrix.dir != 'grpc' && steps.build-test.outcome == 'success') || (matrix.dir == 'grpc' && steps.test-grpc.outcome == 'success') }}
+        run: |
+          mkdir -p /tmp/success-markers
+          echo "${{ matrix.dir }}" > /tmp/success-markers/${{ matrix.dir }}.txt
+
+      - name: Upload success markers
+        if: ${{ (matrix.dir != 'grpc' && steps.build-test.outcome == 'success') || (matrix.dir == 'grpc' && steps.test-grpc.outcome == 'success') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: success-marker-${{ matrix.dir }}
+          path: /tmp/success-markers/${{ matrix.dir }}.txt
+
+  release-rc:
+    if: ${{ needs.build-and-test.result == 'success' }}
+    runs-on: ubuntu-22.04
+    needs:
+      - build-and-test
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Download success markers
+        uses: actions/download-artifact@v4
+        with:
+          pattern: success-marker-*
+          path: /tmp/success-markers
+          merge-multiple: true
+
+      - name: Collect successful directories
+        id: collect-dirs
+        run: |
+          SUCCESSFUL_DIRS=""
+          if [ -d "/tmp/success-markers" ]; then
+            for file in /tmp/success-markers/*.txt; do
+              if [ -f "$file" ]; then
+                dir=$(cat "$file")
+                SUCCESSFUL_DIRS="$SUCCESSFUL_DIRS $dir"
+              fi
+            done
+          fi
+          
+          SUCCESSFUL_DIRS=$(echo $SUCCESSFUL_DIRS | tr -s ' ' | sed 's/^ *//' | sed 's/ *$//')
+          echo "directories=$SUCCESSFUL_DIRS" >> $GITHUB_OUTPUT
+          echo "Found successful directories: $SUCCESSFUL_DIRS"
+
+      - name: Configure git
+        run: |
+          git config user.email "pro@brandonguigo.com"
+          git config user.name "GitHub Actions"
+
+      - name: Cache cocogitto
+        id: cache-cocogitto
+        uses: actions/cache@v3
+        with:
+          path: ~/.cargo/bin/cog
+          key: cocogitto-v${{ env.COCOGITTO_VERSION }}
+
+      - name: Install Rust
+        if: steps.cache-cocogitto.outputs.cache-hit != 'true'
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          override: true
+
+      - name: Install Cocogitto
+        if: steps.cache-cocogitto.outputs.cache-hit != 'true'
+        run: |
+          cargo install cocogitto --version ${{ env.COCOGITTO_VERSION }}
+        env:
+          RUSTFLAGS: --cfg procmacro2_semver_exempt
+
+      - name: Bump versions for all successful microservices
+        id: bump-versions
+        run: |
+          SUCCESSFUL_DIRS="${{ steps.collect-dirs.outputs.directories }}"
+          
+          if [ -z "$SUCCESSFUL_DIRS" ]; then
+            echo "No successful directories found"
+            exit 0
+          fi
+          
+          echo "Bumping versions for: $SUCCESSFUL_DIRS"
+          
+          # Bump version for each successful microservice
+          for dir in $SUCCESSFUL_DIRS; do
+            if [ -d "$dir" ]; then
+              echo "Bumping version for $dir"
+              ./.github/scripts/bump_rc.sh "$dir"
+            fi
+          done
+          
+          # Get the new tags for all microservices
+          TAGS_TO_PUSH=""
+          for dir in $SUCCESSFUL_DIRS; do
+            if [ -d "$dir" ]; then
+              TAG_PREFIX="${dir}-v"
+              NEW_TAG=$(git tag --list "${TAG_PREFIX}*" | sort -V | tail -n 1)
+              TAGS_TO_PUSH="$TAGS_TO_PUSH $NEW_TAG"
+              echo "New tag for $dir: $NEW_TAG"
+            fi
+          done
+          
+          echo "tags_to_push=$TAGS_TO_PUSH" >> $GITHUB_OUTPUT
+          echo "successful_dirs=$SUCCESSFUL_DIRS" >> $GITHUB_OUTPUT
+
+      - name: Commit and push changes
+        run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            # Add all CHANGELOG.md files
+            git add */CHANGELOG.md
+            
+            # Create commit message with all updated microservices
+            COMMIT_MSG="chore(release): bump RC versions for"
+            for dir in ${{ steps.bump-versions.outputs.successful_dirs }}; do
+              if [ -d "$dir" ]; then
+                TAG_PREFIX="${dir}-v"
+                NEW_TAG=$(git tag --list "${TAG_PREFIX}*" | sort -V | tail -n 1)
+                COMMIT_MSG="$COMMIT_MSG $dir@$NEW_TAG"
+              fi
+            done
+            COMMIT_MSG="$COMMIT_MSG [skip ci]"
+            
+            git commit -m "$COMMIT_MSG"
+            
+            # Push the commit
+            git push https://${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git dev
+            
+            # Push all tags
+            for tag in ${{ steps.bump-versions.outputs.tags_to_push }}; do
+              git push https://${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git tag "$tag"
+            done
+          else
+            echo "No changes to commit"
+          fi
+
+      - name: Prepare Docker build matrix
+        id: prepare-matrix
+        run: |
+          SUCCESSFUL_DIRS="${{ steps.bump-versions.outputs.successful_dirs }}"
+          
+          if [ -z "$SUCCESSFUL_DIRS" ]; then
+            echo "No successful directories found"
+            echo "matrix={\"include\":[]}" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          MATRIX_JSON='{"include":['
+          FIRST=true
+          
+          for dir in $SUCCESSFUL_DIRS; do
+            if [ -d "$dir" ] && [ "$dir" != "grpc" ]; then
+              TAG_PREFIX="${dir}-v"
+              TAG=$(git tag --list "${TAG_PREFIX}*" | sort -V | tail -n 1)
+              VERSION=$(echo $TAG | sed 's/^[^-]*-v//')
+              
+              if [ "$FIRST" = "true" ]; then
+                FIRST=false
+              else
+                MATRIX_JSON="$MATRIX_JSON,"
+              fi
+              
+              MATRIX_JSON="$MATRIX_JSON{\"dir\":\"$dir\",\"version\":\"$VERSION\",\"tag\":\"$TAG\"}"
+            fi
+          done
+          
+          MATRIX_JSON="$MATRIX_JSON]}"
+          echo "matrix=$MATRIX_JSON" >> $GITHUB_OUTPUT
+          echo "Docker build matrix: $MATRIX_JSON"
+
+    outputs:
+      docker_matrix: ${{ steps.prepare-matrix.outputs.matrix }}
+      all_successful_dirs: ${{ steps.bump-versions.outputs.successful_dirs }}
+
+  build-docker-images:
+    if: ${{ needs.release-rc.outputs.docker_matrix != '' && fromJson(needs.release-rc.outputs.docker_matrix).include[0] != null }}
+    runs-on: ubuntu-22.04
+    needs: release-rc
+    strategy:
+      matrix: ${{ fromJson(needs.release-rc.outputs.docker_matrix) }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+        
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push Docker image for ${{ matrix.dir }}
+        run: |
+          echo "Building Docker image for ${{ matrix.dir }} with version ${{ matrix.version }}"
+          
+          docker buildx build \
+            --platform linux/amd64,linux/arm64 \
+            --push \
+            --tag ghcr.io/atomic-blend/${{ matrix.dir }}:${{ matrix.version }} \
+            --file ${{ matrix.dir }}/Dockerfile \
+            ${{ matrix.dir }}/
+
+  prepare-github-releases:
+    runs-on: ubuntu-22.04
+    needs: 
+      - build-docker-images
+      - release-rc
+    if: always() && (needs.build-docker-images.result == 'success' || needs.build-docker-images.result == 'skipped') && needs.release-rc.result == 'success'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Prepare release matrix
+        id: prepare-release-matrix
+        run: |
+          ALL_SUCCESSFUL_DIRS="${{ needs.release-rc.outputs.all_successful_dirs }}"
+          
+          if [ -z "$ALL_SUCCESSFUL_DIRS" ]; then
+            echo "No successful directories found"
+            echo "matrix={\"include\":[]}" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          MATRIX_JSON='{"include":['
+          FIRST=true
+          
+          for dir in $ALL_SUCCESSFUL_DIRS; do
+            if [ -d "$dir" ]; then
+              TAG_PREFIX="${dir}-v"
+              TAG=$(git tag --list "${TAG_PREFIX}*" | sort -V | tail -n 1)
+              VERSION=$(echo $TAG | sed 's/^[^-]*-v//')
+              
+              if [ "$FIRST" = "true" ]; then
+                FIRST=false
+              else
+                MATRIX_JSON="$MATRIX_JSON,"
+              fi
+              
+              # Add type field to distinguish between grpc and docker services
+              if [ "$dir" == "grpc" ]; then
+                MATRIX_JSON="$MATRIX_JSON{\"dir\":\"$dir\",\"version\":\"$VERSION\",\"tag\":\"$TAG\",\"type\":\"grpc\"}"
+              else
+                MATRIX_JSON="$MATRIX_JSON{\"dir\":\"$dir\",\"version\":\"$VERSION\",\"tag\":\"$TAG\",\"type\":\"docker\"}"
+              fi
+            fi
+          done
+          
+          MATRIX_JSON="$MATRIX_JSON]}"
+          echo "matrix=$MATRIX_JSON" >> $GITHUB_OUTPUT
+          echo "Release matrix: $MATRIX_JSON"
+
+    outputs:
+      release_matrix: ${{ steps.prepare-release-matrix.outputs.matrix }}
+
+  create-all-releases:
+    if: ${{ needs.prepare-github-releases.outputs.release_matrix != '' && fromJson(needs.prepare-github-releases.outputs.release_matrix).include[0] != null }}
+    runs-on: ubuntu-22.04
+    needs: prepare-github-releases
+    strategy:
+      matrix: ${{ fromJson(needs.prepare-github-releases.outputs.release_matrix) }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Extract changelog for ${{ matrix.dir }}
+        id: extract-changelog
+        run: |
+          TAG=${{ matrix.tag }}
+          CLEAN_TAG=$(echo "$TAG" | sed 's/^[^-]*-v//')
+          
+          if [ -f "${{ matrix.dir }}/CHANGELOG.md" ]; then
+            # Try different changelog entry formats
+            CHANGELOG=$(sed -n "/^## $TAG - /,/^## /p" ${{ matrix.dir }}/CHANGELOG.md | sed '1d;$d')
+            
+            if [ -z "$CHANGELOG" ]; then
+              CHANGELOG=$(sed -n "/^## $CLEAN_TAG - /,/^## /p" ${{ matrix.dir }}/CHANGELOG.md | sed '1d;$d')
+            fi
+            
+            if [ -z "$CHANGELOG" ]; then
+              CHANGELOG=$(sed -n "/^## \[$CLEAN_TAG\] - /,/^## /p" ${{ matrix.dir }}/CHANGELOG.md | sed '1d;$d')
+            fi
+            
+            if [ -z "$CHANGELOG" ]; then
+              CHANGELOG=$(sed -n "/^## v$CLEAN_TAG - /,/^## /p" ${{ matrix.dir }}/CHANGELOG.md | sed '1d;$d')
+            fi
+            
+            echo "$CHANGELOG" > release_notes_${{ matrix.dir }}.md
+          else
+            if [ "${{ matrix.type }}" == "grpc" ]; then
+              echo "Release Candidate ${{ matrix.version }} for gRPC definitions" > release_notes_${{ matrix.dir }}.md
+              echo "" >> release_notes_${{ matrix.dir }}.md
+              echo "This is a release candidate build from the dev branch." >> release_notes_${{ matrix.dir }}.md
+              echo "" >> release_notes_${{ matrix.dir }}.md
+              echo "📋 **gRPC Protocol Definitions**: Protocol Buffer definitions and generated code" >> release_notes_${{ matrix.dir }}.md
+            else
+              echo "Release Candidate ${{ matrix.version }} for ${{ matrix.dir }} microservice" > release_notes_${{ matrix.dir }}.md
+              echo "" >> release_notes_${{ matrix.dir }}.md
+              echo "This is a release candidate build from the dev branch." >> release_notes_${{ matrix.dir }}.md
+              echo "" >> release_notes_${{ matrix.dir }}.md
+              echo "🐳 **Docker Image**: \`ghcr.io/atomic-blend/${{ matrix.dir }}:${{ matrix.version }}\`" >> release_notes_${{ matrix.dir }}.md
+            fi
+          fi
+
+      - name: Create GitHub Release for ${{ matrix.dir }}
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ matrix.tag }}
+          name: "${{ matrix.dir }} v${{ matrix.version }}"
+          body_path: release_notes_${{ matrix.dir }}.md
+          prerelease: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

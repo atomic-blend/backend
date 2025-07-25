@@ -1,13 +1,12 @@
 from_latest_tag = true
-tag_prefix = "v"
+tag_prefix = "grpc-v"
 ignore_merge_commits = true
 disable_changelog = false
 disable_bump_commit = true
-generate_mono_repository_global_tag = false
+generate_mono_repository_global_tag = true
 generate_mono_repository_package_tags = true
 branch_whitelist = []
 skip_ci = "[skip ci]"
-monorepo_version_separator = "/"
 skip_untracked = false
 pre_bump_hooks = []
 post_bump_hooks = []
@@ -25,6 +24,3 @@ authors = []
 [bump_profiles]
 
 [packages]
-auth = { path="auth" }
-productivity = { path="productivity" }
-grpc = { path="grpc" }

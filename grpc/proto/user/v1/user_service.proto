@@ -1,0 +1,23 @@
+syntax = "proto3";
+package user.v1;
+
+import "auth/v1/user.proto";
+
+message UserDevice {
+  string device_id = 1;
+  string device_name = 2;
+  string fcm_token = 3;
+  optional string device_timezone = 4;
+}
+
+message GetUserDevicesRequest {
+  auth.v1.User user = 1;
+}
+
+message GetUserDevicesResponse {
+  repeated UserDevice devices = 1;
+}
+
+service UserService {
+  rpc GetUserDevices(GetUserDevicesRequest) returns (GetUserDevicesResponse);
+}

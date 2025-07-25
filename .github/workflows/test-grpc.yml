@@ -1,0 +1,25 @@
+name: Test gRPC
+
+on:
+  pull_request:
+    branches: [dev]
+    paths:
+      - 'grpc/**'
+
+permissions:
+  contents: read
+
+jobs:
+  test-grpc:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Test gRPC files
+        uses: ./.github/actions/test-grpc
+        with:
+          buf-version: '1.55.1'
+          working-directory: './grpc'
