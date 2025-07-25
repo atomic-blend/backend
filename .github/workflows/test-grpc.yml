@@ -2,7 +2,7 @@ name: Test gRPC
 
 on:
   pull_request:
-    branches: [main, dev]
+    branches: [dev]
     paths:
       - 'grpc/**'
 
