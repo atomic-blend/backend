@@ -2,6 +2,24 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## grpc/v0.1.0 - 2025-07-25
+#### Bug Fixes
+- update auth to use the new v1 grpc - (b53419c) - Brandon Guigo
+- reformat files - (333f465) - Brandon Guigo
+- protobuf linter error - (c117bab) - Brandon Guigo
+- add ci/cd to grpc - (9c83e67) - Brandon Guigo
+- update grpc spec - (45786f9) - Brandon Guigo
+- add cog.toml for grpc + first release - (002d684) - Brandon Guigo
+#### Features
+- add grpc user service definition - (56bb77a) - Brandon Guigo
+- setup grpc gen + proto files - (2d3534e) - Brandon Guigo
+#### Miscellaneous Chores
+- **(release)** bump RC versions for auth@auth-v0.9.0-rc.5 grpc@grpc-v0.1.0-rc.1 productivity@productivity-v0.9.0-rc.5 [skip ci] - (1018550) - GitHub Actions
+- **(release)** bump RC versions for auth@auth-v0.9.0-rc.5 grpc@grpc-v0.1.0-rc.1 productivity@productivity-v0.9.0-rc.5 [skip ci] - (ff1fba8) - GitHub Actions
+- **(release)** bump RC versions for auth@auth-v0.9.0-rc.5 grpc@grpc-v0.1.0-rc.1 productivity@productivity-v0.9.0-rc.5 [skip ci] - (674f33c) - GitHub Actions
+
+- - -
+
 ## grpc/v0.1.0-rc.2 - 2025-07-25
 #### Bug Fixes
 - update auth to use the new v1 grpc - (b53419c) - Brandon Guigo
