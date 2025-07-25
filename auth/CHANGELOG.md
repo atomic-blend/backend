@@ -2,6 +2,67 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## auth/v0.1.0-rc.6 - 2025-07-25
+#### Bug Fixes
+- remove email sanitation to rely on the validation before - (cdc59f7) - Brandon Guigo
+- permissions for cicd + user repository sanitation - (61e3ff0) - Brandon Guigo
+- productivity tests - (225a739) - Brandon Guigo
+- auth tests - (9306f64) - Brandon Guigo
+- update auth to use the new v1 grpc - (b53419c) - Brandon Guigo
+- remove --context in docker build - (4edfa51) - Brandon Guigo
+- remove old cog.toml - (cab208f) - Brandon Guigo
+- setup cocogitto to work in a monorepo setup - (9f5e362) - Brandon Guigo
+- add global cog.toml - (14fa38f) - Brandon Guigo
+- linter - (6d2f946) - Brandon Guigo
+- bad import - (b285c8c) - Brandon Guigo
+- linter - (4a451f2) - Brandon Guigo
+- add missing github.com to go modules - (4f38ac7) - Brandon Guigo
+- change module name of productivity go module - (798aaa1) - Brandon Guigo
+- rename auth microservice module - (9e1fcb3) - Brandon Guigo
+- auth tests - (8fd3c3a) - Brandon Guigo
+- refresh token test - (516f38a) - Brandon Guigo
+- tests - (5607a1f) - Brandon Guigo
+#### Features
+- configure auth grpc client into productivity - (92a12df) - Brandon Guigo
+- add do grpc server - (58aaad9) - Brandon Guigo
+- add grpc user service definition - (56bb77a) - Brandon Guigo
+- add tests for auth gRPC call - (9c0c0a5) - Brandon Guigo
+- setup gRPC client in Auth - (a9c7209) - Brandon Guigo
+- add rc-microservice - (71aacb7) - Brandon Guigo
+- basic config of docker file - (350dc36) - Brandon Guigo
+- add is_subscribed field to jwt utils - (06a9859) - Brandon Guigo
+- add auth to productivity - (d8265ed) - Brandon Guigo
+- rename imports and clean files - (a6f6851) - Brandon Guigo
+- move api to auth directory - (1e038c9) - Brandon Guigo
+#### Miscellaneous Chores
+- **(release)** bump RC versions for auth@auth-v0.9.0-rc.5 grpc@grpc-v0.1.0-rc.1 productivity@productivity-v0.9.0-rc.5 [skip ci] - (ff1fba8) - GitHub Actions
+- **(release)** bump RC versions for auth@auth-v0.9.0-rc.5 grpc@grpc-v0.1.0-rc.1 productivity@productivity-v0.9.0-rc.5 [skip ci] - (674f33c) - GitHub Actions
+- **(release)** bump RC versions for auth@auth-v0.9.0-rc.4 productivity@productivity-v0.9.0-rc.4 [skip ci] - (bd65c6c) - GitHub Actions
+- **(release)** bump RC versions for auth@auth-v0.9.0-rc.3 productivity@productivity-v0.9.0-rc.3 [skip ci] - (3d21407) - GitHub Actions
+- **(release)** bump RC versions for auth@auth-v0.9.0-rc.2 productivity@productivity-v0.9.0-rc.2 [skip ci] - (d8786c4) - GitHub Actions
+- **(release)** bump RC versions for auth@auth-v0.9.0-rc.1 productivity@productivity-v0.9.0-rc.1 [skip ci] - (695f8d3) - GitHub Actions
+
+- - -
+
+## v0.6.0 - 2025-07-25
+#### Bug Fixes
+- linter issues - (30ac4ec) - Brandon Guigo
+#### Features
+- setup webhooks controller with static token security - (a8d110d) - Brandon Guigo
+
+- - -
+
+## v0.4.0 - 2025-07-25
+#### Bug Fixes
+- unauthenticated start reset password in independant table instead of in authenticated user controller - (0d24a0d) - Brandon Guigo
+- linting issues - (d74d1c7) - Brandon Guigo
+#### Features
+- get backup key endpoint + some adjustments - (48f7d9c) - Brandon Guigo
+- reset pwd endpoints the right wat, in public auth - (d5cecc7) - Brandon Guigo
+- restructure project by removing legacy API files - (03b28b0) - Brandon Guigo
+
+- - -
+
 ## auth/v0.1.0-rc.6 - 2025-07-17
 #### Bug Fixes
 - productivity tests - (225a739) - Brandon Guigo
