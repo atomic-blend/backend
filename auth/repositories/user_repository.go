@@ -161,8 +161,16 @@ func (r *UserRepository) Delete(ctx context.Context, id string) error {
 
 // FindByEmail finds a user by their email address
 func (r *UserRepository) FindByEmail(ctx context.Context, email string) (*models.UserEntity, error) {
+	// Validate email format
+	if !regexutils.IsValidEmail(email) {
+		return nil, errors.New("invalid email format")
+	}
+
+	// Sanitize email
+	sanitizedEmail := regexutils.SanitizeString(email)
+
 	var user models.UserEntity
-	err := r.collection.FindOne(ctx, bson.M{"email": regexutils.SanitizeString(email)}).Decode(&user)
+	err := r.collection.FindOne(ctx, bson.M{"email": sanitizedEmail}).Decode(&user)
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
 			return nil, errors.New("user not found")

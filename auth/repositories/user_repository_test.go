@@ -1,11 +1,12 @@
 package repositories
 
 import (
-	"github.com/atomic-blend/backend/auth/models"
-	"github.com/atomic-blend/backend/auth/tests/utils/inmemorymongo"
 	"context"
 	"testing"
 	"time"
+
+	"github.com/atomic-blend/backend/auth/models"
+	"github.com/atomic-blend/backend/auth/tests/utils/inmemorymongo"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
@@ -104,6 +105,11 @@ func TestUserRepository_FindByEmail(t *testing.T) {
 	_, err = repo.FindByEmail(context.Background(), "nonexistent@example.com")
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "user not found")
+
+	// Test with invalid email format
+	_, err = repo.FindByEmail(context.Background(), "invalid-email-format")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "invalid email format")
 }
 
 func TestUserRepository_Update(t *testing.T) {

@@ -6,6 +6,9 @@ on:
     paths:
       - 'grpc/**'
 
+permissions:
+  contents: read
+
 jobs:
   test-grpc:
     runs-on: ubuntu-latest
