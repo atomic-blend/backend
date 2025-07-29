@@ -1,19 +1,14 @@
 package auth
 
 import (
-	"github.com/atomic-blend/backend/productivity/repositories"
-	"github.com/atomic-blend/backend/productivity/utils/db"
-
 	"github.com/gin-gonic/gin"
 )
 
 // RequireRoleMiddleware applies the auth middleware followed by role checking to a specific route group
 // Example usage: RequireRoleMiddleware(router.Group("/admin"), "admin", userRepo)
 func RequireRoleMiddleware(group *gin.RouterGroup, roleName string) *gin.RouterGroup {
-	userRepo := repositories.NewUserRepository(db.Database)
-	userRoleRepo := repositories.NewUserRoleRepository(db.Database)
 	group.Use(Middleware())
-	group.Use(requireRoleHandler(roleName, userRepo, userRoleRepo))
+	group.Use(requireRoleHandler(roleName))
 	return group
 }
 

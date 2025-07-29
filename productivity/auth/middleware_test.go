@@ -1,53 +1,17 @@
-// filepath: /Users/brandonguigo/workspace/atomic-blend/backend/api/auth/middleware_test.go
 package auth
 
 import (
-	"github.com/atomic-blend/backend/productivity/models"
-	"github.com/atomic-blend/backend/productivity/utils/jwt"
-	"context"
-	"errors"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"testing"
 
+	"github.com/atomic-blend/backend/productivity/utils/jwt"
+
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
-
-// Mock repository interfaces for testing
-type UserRepositoryInterface interface {
-	FindByID(ctx context.Context, id primitive.ObjectID) (*models.UserEntity, error)
-}
-
-type UserRoleRepositoryInterface interface {
-	PopulateRoles(ctx context.Context, user *models.UserEntity) error
-}
-
-// Mock UserRepository
-type mockUserRepository struct {
-	mock.Mock
-}
-
-func (m *mockUserRepository) FindByID(ctx context.Context, id primitive.ObjectID) (*models.UserEntity, error) {
-	args := m.Called(ctx, id)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-	return args.Get(0).(*models.UserEntity), args.Error(1)
-}
-
-// Mock UserRoleRepository
-type mockUserRoleRepository struct {
-	mock.Mock
-}
-
-func (m *mockUserRoleRepository) PopulateRoles(ctx context.Context, user *models.UserEntity) error {
-	args := m.Called(ctx, user)
-	return args.Error(0)
-}
 
 func TestAuthMiddleware(t *testing.T) {
 	// Set Gin to test mode
@@ -192,7 +156,7 @@ func TestGetAuthUser(t *testing.T) {
 }
 
 // Helper function to wrap our mock repositories for testing
-func mockRoleHandler(roleName string, repo UserRepositoryInterface, roleRepo UserRoleRepositoryInterface) gin.HandlerFunc {
+func mockRoleHandler(roleName string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Get authenticated user info
 		authUser := GetAuthUser(c)
@@ -202,29 +166,19 @@ func mockRoleHandler(roleName string, repo UserRepositoryInterface, roleRepo Use
 			return
 		}
 
-		// Get user details from database to check roles
-		user, err := repo.FindByID(c, authUser.UserID)
-		if err != nil {
-			if err.Error() == "user not found" {
-				c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found"})
-			} else {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to verify user roles"})
-			}
+		// Check if Claims is nil
+		if authUser.Claims == nil || authUser.Claims.Roles == nil {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found"})
 			c.Abort()
 			return
 		}
 
-		err = roleRepo.PopulateRoles(c, user)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to verify user roles"})
-			c.Abort()
-			return
-		}
+		roles := *authUser.Claims.Roles
 
 		// Check if user has the required role
 		hasRole := false
-		for _, role := range user.Roles {
-			if role != nil && role.Name == roleName {
+		for _, role := range roles {
+			if role == roleName {
 				hasRole = true
 				break
 			}
@@ -247,14 +201,11 @@ func TestRequireRoleHandler(t *testing.T) {
 
 	t.Run("No Auth User", func(t *testing.T) {
 		// Setup mocks
-		userRepo := new(mockUserRepository)
-		userRoleRepo := new(mockUserRoleRepository)
-
 		w := httptest.NewRecorder()
 		c, _ := gin.CreateTestContext(w)
 
 		// Execute our test wrapper function
-		mockRoleHandler("admin", userRepo, userRoleRepo)(c)
+		mockRoleHandler("admin")(c)
 
 		// Assert
 		assert.Equal(t, http.StatusUnauthorized, w.Code)
@@ -263,57 +214,38 @@ func TestRequireRoleHandler(t *testing.T) {
 
 	t.Run("User Not Found", func(t *testing.T) {
 		// Setup mocks
-		userRepo := new(mockUserRepository)
-		userRoleRepo := new(mockUserRoleRepository)
-
 		userID := primitive.NewObjectID()
-		userRepo.On("FindByID", mock.Anything, userID).Return(nil, errors.New("user not found"))
 
 		w := httptest.NewRecorder()
 		c, _ := gin.CreateTestContext(w)
-		c.Set("authUser", &UserAuthInfo{UserID: userID})
+		// Set authUser with nil Claims to simulate user not found
+		c.Set("authUser", &UserAuthInfo{UserID: userID, Claims: nil})
 
 		// Execute our test wrapper function
-		mockRoleHandler("admin", userRepo, userRoleRepo)(c)
+		mockRoleHandler("admin")(c)
 
 		// Assert
 		assert.Equal(t, http.StatusUnauthorized, w.Code)
 		assert.Contains(t, w.Body.String(), "User not found")
-		userRepo.AssertExpectations(t)
 	})
 
 	t.Run("User Has Required Role", func(t *testing.T) {
 		// Setup mocks
-		userRepo := new(mockUserRepository)
-		userRoleRepo := new(mockUserRoleRepository)
-
 		userID := primitive.NewObjectID()
-		email := "test@example.com"
-		roleID := primitive.NewObjectID()
-
-		// Create user with admin role
-		user := &models.UserEntity{
-			ID:      &userID,
-			Email:   &email,
-			RoleIds: []*primitive.ObjectID{&roleID},
-			Roles: []*models.UserRoleEntity{
-				{
-					ID:   &roleID,
-					Name: "admin",
-				},
-			},
-		}
-
-		userRepo.On("FindByID", mock.Anything, userID).Return(user, nil)
-		userRoleRepo.On("PopulateRoles", mock.Anything, user).Return(nil)
-
+	
 		// Create a new router to test the middleware chain
 		router := gin.New()
 		router.Use(func(c *gin.Context) {
-			// Set auth user in context
-			c.Set("authUser", &UserAuthInfo{UserID: userID})
+			// Set auth user in context with proper Claims
+			roles := []string{"admin"}
+			c.Set("authUser", &UserAuthInfo{
+				UserID: userID,
+				Claims: &jwt.CustomClaims{
+					Roles: &roles,
+				},
+			})
 		})
-		router.Use(mockRoleHandler("admin", userRepo, userRoleRepo))
+		router.Use(mockRoleHandler("admin"))
 		router.GET("/", func(c *gin.Context) {
 			c.Status(http.StatusOK)
 		})
@@ -327,47 +259,30 @@ func TestRequireRoleHandler(t *testing.T) {
 
 		// Assert
 		assert.Equal(t, http.StatusOK, w.Code)
-		userRepo.AssertExpectations(t)
-		userRoleRepo.AssertExpectations(t)
 	})
 
 	t.Run("User Doesn't Have Required Role", func(t *testing.T) {
 		// Setup mocks
-		userRepo := new(mockUserRepository)
-		userRoleRepo := new(mockUserRoleRepository)
 
 		userID := primitive.NewObjectID()
-		email := "test@example.com"
-		roleID := primitive.NewObjectID()
-
-		// Create user with user role (not admin)
-		user := &models.UserEntity{
-			ID:      &userID,
-			Email:   &email,
-			RoleIds: []*primitive.ObjectID{&roleID},
-			Roles: []*models.UserRoleEntity{
-				{
-					ID:   &roleID,
-					Name: "user",
-				},
-			},
-		}
-
-		userRepo.On("FindByID", mock.Anything, userID).Return(user, nil)
-		userRoleRepo.On("PopulateRoles", mock.Anything, user).Return(nil)
-
+		
 		w := httptest.NewRecorder()
 		c, _ := gin.CreateTestContext(w)
-		c.Set("authUser", &UserAuthInfo{UserID: userID})
+		// Set authUser with user role (not admin)
+		roles := []string{"user"}
+		c.Set("authUser", &UserAuthInfo{
+			UserID: userID,
+			Claims: &jwt.CustomClaims{
+				Roles: &roles,
+			},
+		})
 
 		// Execute our test wrapper function
-		mockRoleHandler("admin", userRepo, userRoleRepo)(c)
+		mockRoleHandler("admin")(c)
 
 		// Assert
 		assert.Equal(t, http.StatusForbidden, w.Code)
 		assert.Contains(t, w.Body.String(), "Insufficient permissions")
-		userRepo.AssertExpectations(t)
-		userRoleRepo.AssertExpectations(t)
 	})
 }
 

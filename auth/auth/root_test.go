@@ -139,7 +139,7 @@ func TestRequireAuth(t *testing.T) {
 	// Create a test context for token generation
 	tempW := httptest.NewRecorder()
 	tempC, _ := gin.CreateTestContext(tempW)
-	tokenDetails, _ := jwt.GenerateToken(tempC, userID, jwt.AccessToken)
+	tokenDetails, _ := jwt.GenerateToken(tempC, userID, []string{"user"}, jwt.AccessToken)
 
 	w = httptest.NewRecorder()
 	req, _ = http.NewRequest("GET", "/test/protected", nil)
@@ -215,7 +215,7 @@ func TestRequireRoleMiddleware(t *testing.T) {
 		// Create a test context for token generation
 		tempW := httptest.NewRecorder()
 		tempC, _ := gin.CreateTestContext(tempW)
-		tokenDetails, _ := jwt.GenerateToken(tempC, userID, jwt.AccessToken)
+		tokenDetails, _ := jwt.GenerateToken(tempC, userID, []string{"user"}, jwt.AccessToken)
 
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("GET", "/admin/test", nil)
