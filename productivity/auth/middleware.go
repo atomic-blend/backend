@@ -2,7 +2,6 @@ package auth
 
 import (
 	"net/http"
-	"github.com/atomic-blend/backend/productivity/repositories"
 	"github.com/atomic-blend/backend/productivity/utils/jwt"
 	"strings"
 
@@ -89,7 +88,7 @@ func GetAuthUser(c *gin.Context) *UserAuthInfo {
 
 // requireRoleHandler checks if the authenticated user has the specified role
 // It must be used after RequireAuth or AuthMiddleware
-func requireRoleHandler(roleName string, userRepo *repositories.UserRepository, userRoleRepo *repositories.UserRoleRepository) gin.HandlerFunc {
+func requireRoleHandler(roleName string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Get authenticated user info
 		authUser := GetAuthUser(c)
@@ -99,31 +98,20 @@ func requireRoleHandler(roleName string, userRepo *repositories.UserRepository, 
 			return
 		}
 
-		// Get user details from database to check roles
-		user, err := userRepo.FindByID(c, authUser.UserID)
-		if err != nil {
-			log.Error().Err(err).Msg("Failed to verify user roles")
-			if err.Error() == "user not found" {
-				c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found"})
-			} else {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to verify user roles"})
-			}
+		// Check if Claims is nil
+		if authUser.Claims == nil || authUser.Claims.Roles == nil {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found"})
 			c.Abort()
 			return
 		}
-		err = userRoleRepo.PopulateRoles(c, user)
-		if err != nil {
-			log.Error().Err(err).Msg("Failed to verify user roles")
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to verify user roles"})
-			c.Abort()
-			return
-		}
-		log.Info().Msgf("User roles: %v", user.RoleIds)
+
+		roles := *authUser.Claims.Roles
+		log.Info().Msgf("User roles: %v", roles)
 
 		// Check if user has the required role
 		hasRole := false
-		for _, role := range user.Roles {
-			if role != nil && role.Name == roleName {
+		for _, role := range roles {
+			if role == roleName {
 				hasRole = true
 				break
 			}

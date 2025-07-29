@@ -36,7 +36,7 @@ func (s *Session) AuthMechanisms() []string {
 func (s *Session) Auth(mech string) (sasl.Server, error) {
 	return sasl.NewPlainServer(func(identity, username, password string) error {
 		if username != "username" || password != "password" {
-			return errors.New("Invalid username or password")
+			return errors.New("invalid_credentials")
 		}
 		s.auth = true
 		return nil

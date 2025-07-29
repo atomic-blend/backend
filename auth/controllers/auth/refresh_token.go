@@ -66,14 +66,20 @@ func (c *Controller) RefreshToken(ctx *gin.Context) {
 		return
 	}
 
+	// Generate role list
+	roles := make([]string, len(user.Roles))
+	for i, role := range user.Roles {
+		roles[i] = role.Name
+	}
+
 	// Generate new tokens
-	accessToken, err := jwt.GenerateToken(ctx, userID, jwt.AccessToken)
+	accessToken, err := jwt.GenerateToken(ctx, userID, roles, jwt.AccessToken)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate access token"})
 		return
 	}
 
-	refreshToken, err := jwt.GenerateToken(ctx, userID, jwt.RefreshToken)
+	refreshToken, err := jwt.GenerateToken(ctx, userID, roles, jwt.RefreshToken)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate refresh token"})
 		return

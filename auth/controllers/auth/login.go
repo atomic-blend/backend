@@ -1,10 +1,11 @@
 package auth
 
 import (
+	"net/http"
+
 	"github.com/atomic-blend/backend/auth/models"
 	"github.com/atomic-blend/backend/auth/utils/jwt"
 	"github.com/atomic-blend/backend/auth/utils/password"
-	"net/http"
 
 	"github.com/gin-gonic/gin"
 )
@@ -53,14 +54,20 @@ func (c *Controller) Login(ctx *gin.Context) {
 		return
 	}
 
+	// Generate role list
+	roles := make([]string, len(user.Roles))
+	for i, role := range user.Roles {
+		roles[i] = role.Name
+	}
+
 	// Generate tokens
-	accessToken, err := jwt.GenerateToken(ctx, *user.ID, jwt.AccessToken)
+	accessToken, err := jwt.GenerateToken(ctx, *user.ID, roles, jwt.AccessToken)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate access token"})
 		return
 	}
 
-	refreshToken, err := jwt.GenerateToken(ctx, *user.ID, jwt.RefreshToken)
+	refreshToken, err := jwt.GenerateToken(ctx, *user.ID, roles, jwt.RefreshToken)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate refresh token"})
 		return
@@ -70,7 +77,7 @@ func (c *Controller) Login(ctx *gin.Context) {
 	responseSafeUser := &models.UserEntity{
 		ID:        user.ID,
 		Email:     user.Email,
-		KeySet:   user.KeySet,
+		KeySet:    user.KeySet,
 		Roles:     user.Roles,
 		CreatedAt: user.CreatedAt,
 		UpdatedAt: user.UpdatedAt,

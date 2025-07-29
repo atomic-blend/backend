@@ -1,13 +1,14 @@
 package jwt
 
 import (
-	"github.com/atomic-blend/backend/auth/tests/utils/inmemorymongo"
-	"github.com/atomic-blend/backend/auth/utils/db"
 	"context"
 	"net/http/httptest"
 	"os"
 	"testing"
 	"time"
+
+	"github.com/atomic-blend/backend/auth/tests/utils/inmemorymongo"
+	"github.com/atomic-blend/backend/auth/utils/db"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
@@ -58,12 +59,15 @@ func TestGenerateToken(t *testing.T) {
 	ctx, _ := gin.CreateTestContext(w)
 
 	t.Run("should generate access token successfully", func(t *testing.T) {
-		td, err := GenerateToken(ctx, userID, AccessToken)
+		td, err := GenerateToken(ctx, userID, []string{
+			"admin",
+		}, AccessToken)
 
 		assert.NoError(t, err)
 		assert.NotEmpty(t, td.Token)
 		assert.Equal(t, AccessToken, td.TokenType)
 		assert.Equal(t, userID.Hex(), td.UserID)
+		assert.Equal(t, []string{"admin"}, td.Roles)
 		assert.True(t, td.ExpiresAt.After(time.Now()))
 	})
 }
@@ -86,7 +90,7 @@ func TestValidateToken(t *testing.T) {
 	ctx, _ := gin.CreateTestContext(w)
 
 	t.Run("should validate valid token successfully", func(t *testing.T) {
-		td, err := GenerateToken(ctx, userID, AccessToken)
+		td, err := GenerateToken(ctx, userID, []string{"admin"}, AccessToken)
 		assert.NoError(t, err)
 
 		claims, err := ValidateToken(td.Token, AccessToken)
@@ -94,6 +98,16 @@ func TestValidateToken(t *testing.T) {
 		assert.NotNil(t, claims)
 		assert.Equal(t, userID.Hex(), (*claims)["user_id"])
 		assert.Equal(t, string(AccessToken), (*claims)["type"])
+
+		// Convert roles from interface{} to []string
+		rolesInterface := (*claims)["roles"]
+		roles, ok := rolesInterface.([]interface{})
+		assert.True(t, ok)
+		expectedRoles := make([]string, len(roles))
+		for i, role := range roles {
+			expectedRoles[i] = role.(string)
+		}
+		assert.Equal(t, []string{"admin"}, expectedRoles)
 	})
 
 	t.Run("should fail with invalid token", func(t *testing.T) {
@@ -103,7 +117,7 @@ func TestValidateToken(t *testing.T) {
 	})
 
 	t.Run("should fail with wrong token type", func(t *testing.T) {
-		td, err := GenerateToken(ctx, userID, AccessToken)
+		td, err := GenerateToken(ctx, userID, []string{"admin"}, AccessToken)
 		assert.NoError(t, err)
 
 		claims, err := ValidateToken(td.Token, RefreshToken)
@@ -114,7 +128,7 @@ func TestValidateToken(t *testing.T) {
 
 	t.Run("should fail when SSO_SECRET not set", func(t *testing.T) {
 		os.Setenv("SSO_SECRET", "")
-		td, err := GenerateToken(ctx, userID, AccessToken)
+		td, err := GenerateToken(ctx, userID, []string{"admin"}, AccessToken)
 		assert.NoError(t, err) // Should still generate with default secret
 
 		claims, err := ValidateToken(td.Token, AccessToken)
