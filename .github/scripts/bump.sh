@@ -32,7 +32,8 @@ dry_run_output=$(~/.cargo/bin/cog bump --auto --package "$MICROSERVICE_DIR" --dr
   fi
 }
 
-expected_tag=$(echo "$dry_run_output" | tail -n 1 | tr -d '\n')
+# Extract the tag from the dry run output - look for the pattern like "grpc/v1.2.3"
+expected_tag=$(echo "$dry_run_output" | grep -E "${MICROSERVICE_DIR}/v[0-9]+\.[0-9]+\.[0-9]+" | tail -n 1 | tr -d '\n')
 
 # Now run the actual bump
 output=$(~/.cargo/bin/cog bump --auto --package "$MICROSERVICE_DIR" 2>&1) || {
@@ -49,5 +50,5 @@ output=$(~/.cargo/bin/cog bump --auto --package "$MICROSERVICE_DIR" 2>&1) || {
 }
 
 echo "Version bumped successfully"
-# Output the newly created tag
+# Output the newly created tag - get the actual tag from the dry run, not from the bump output
 echo "NEW_TAG:$expected_tag"

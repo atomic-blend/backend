@@ -97,7 +97,8 @@ dry_run_output=$(~/.cargo/bin/cog bump --auto --pre "$next_rc" --package "$MICRO
   fi
 }
 
-expected_tag=$(echo "$dry_run_output" | tail -n 1 | tr -d '\n')
+# Extract the tag from the dry run output - look for the pattern like "grpc/v1.2.3-rc.1"
+expected_tag=$(echo "$dry_run_output" | grep -E "${MICROSERVICE_DIR}/v[0-9]+\.[0-9]+\.[0-9]+-rc\.[0-9]+" | tail -n 1 | tr -d '\n')
 
 # Now run the actual bump
 output=$(~/.cargo/bin/cog bump --auto --pre "$next_rc" --package "$MICROSERVICE_DIR" 2>&1) || {
