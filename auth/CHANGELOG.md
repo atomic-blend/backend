@@ -2,6 +2,18 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## auth/v0.10.0-rc.1 - 2025-07-30
+#### Bug Fixes
+- reset rc in bump_rc.sh - (27409fa) - Brandon Guigo
+#### Features
+- refuse register when the key is not age_v1 - (0941d83) - Brandon Guigo
+- fix middleware and add mail api - (55ad4fd) - Brandon Guigo
+- setup mail-server - (8e5253e) - Brandon Guigo
+#### Miscellaneous Chores
+- **(release)** bump RC versions for [skip ci] - (857b142) - GitHub Actions
+
+- - -
+
 ## auth/v0.10.0-rc.6 - 2025-07-30
 #### Features
 - refuse register when the key is not age_v1 - (0941d83) - Brandon Guigo
