@@ -2,6 +2,17 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## productivity/v0.10.0 - 2025-07-30
+#### Features
+- fix middleware and add mail api - (b2f1de8) - Brandon Guigo
+#### Miscellaneous Chores
+- **(release)** bump RC versions for auth@auth/v0.10.0-rc.7 productivity@productivity/v0.10.0-rc.7 [skip ci] - (237cd67) - GitHub Actions
+- **(release)** bump RC versions for [skip ci] - (323ca64) - GitHub Actions
+- **(release)** bump RC versions for [skip ci] - (95c65ca) - GitHub Actions
+- **(release)** bump versions for auth@auth/v0.9.0 grpc@grpc/v0.1.0 productivity@productivity/v0.9.0 [skip ci] - (844f0fb) - GitHub Actions
+
+- - -
+
 ## productivity/v0.10.0-rc.7 - 2025-07-30
 #### Features
 - fix middleware and add mail api - (55ad4fd) - Brandon Guigo
