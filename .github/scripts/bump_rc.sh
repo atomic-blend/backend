@@ -84,18 +84,24 @@ fi
 echo "Running: cog bump --auto --pre $next_rc from root directory"
 
 # First, do a dry run to get the exact tag that would be created
-dry_run_output=$(~/.cargo/bin/cog bump --auto --pre "$next_rc" --package "$MICROSERVICE_DIR" --dry-run 2>&1) || {
-  dry_run_exit_code=$?
-  # Check if the dry run error is due to no conventional commits found
-  if [[ $dry_run_exit_code -eq 1 ]] && echo "$dry_run_output" | grep -qi "No conventional commits found"; then
-    echo "No conventional commits found to bump version - this is expected and considered successful"
-    exit 0
-  else
-    echo "Error: dry run failed"
-    echo "$dry_run_output"
-    exit 1
-  fi
-}
+dry_run_output=$(~/.cargo/bin/cog bump --auto --pre rc.1 --package "$MICROSERVICE_DIR" --dry-run 2>&1)
+dry_run_exit_code=$?
+
+echo "Dry run output: $dry_run_output"
+echo "Dry run exit code: $dry_run_exit_code"
+
+# Check if the dry run indicates no conventional commits found (regardless of exit code)
+if echo "$dry_run_output" | grep -qi "No conventional commits found"; then
+  echo "No conventional commits found to bump version - this is expected and considered successful"
+  exit 0
+fi
+
+# If dry run failed for other reasons, exit with error
+if [[ $dry_run_exit_code -ne 0 ]]; then
+  echo "Error: dry run failed"
+  echo "$dry_run_output"
+  exit 1
+fi
 
 # Extract the tag from the dry run output - look for the pattern like "grpc/v1.2.3-rc.1"
 expected_tag=$(echo "$dry_run_output" | grep -E "${MICROSERVICE_DIR}/v[0-9]+\.[0-9]+\.[0-9]+-rc\.[0-9]+" | tail -n 1 | tr -d '\n')
