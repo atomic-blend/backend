@@ -104,7 +104,7 @@ expected_tag=$(echo "$dry_run_output" | grep -E "${MICROSERVICE_DIR}/v[0-9]+\.[0
 output=$(~/.cargo/bin/cog bump --auto --pre "$next_rc" --package "$MICROSERVICE_DIR" 2>&1) || {
   exit_code=$?
   # Check if the error is due to no conventional commits found
-  if [[ $exit_code -eq 1 ]] && echo "$output" | grep -q "No conventional commits found"; then
+  if [[ $exit_code -eq 1 ]] && echo "$output" | grep -qi "No conventional commits found"; then
     echo "No conventional commits found to bump version - this is expected and considered successful"
     exit 0
   else

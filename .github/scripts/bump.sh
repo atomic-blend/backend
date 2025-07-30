@@ -21,6 +21,8 @@ echo "Running: cog bump --auto --package $MICROSERVICE_DIR"
 # First, do a dry run to get the exact tag that would be created
 dry_run_output=$(~/.cargo/bin/cog bump --auto --package "$MICROSERVICE_DIR" --dry-run 2>&1) || {
   dry_run_exit_code=$?
+  echo "Dry run output: $dry_run_output"
+  echo "Dry run exit code: $dry_run_exit_code"
   # Check if the dry run error is due to no conventional commits found
   if [[ $dry_run_exit_code -eq 1 ]] && echo "$dry_run_output" | grep -qi "No conventional commits found"; then
     echo "No conventional commits found to bump version - this is expected and considered successful"
@@ -36,8 +38,11 @@ dry_run_output=$(~/.cargo/bin/cog bump --auto --package "$MICROSERVICE_DIR" --dr
 expected_tag=$(echo "$dry_run_output" | grep -E "${MICROSERVICE_DIR}/v[0-9]+\.[0-9]+\.[0-9]+" | tail -n 1 | tr -d '\n')
 
 # Now run the actual bump
+echo "Running actual bump command..."
 output=$(~/.cargo/bin/cog bump --auto --package "$MICROSERVICE_DIR" 2>&1) || {
   exit_code=$?
+  echo "Actual bump failed with exit code: $exit_code"
+  echo "Actual bump output: $output"
   # Check if the error is due to no conventional commits found
   if [[ $exit_code -eq 1 ]] && echo "$output" | grep -qi "No conventional commits found"; then
     echo "No conventional commits found to bump version - this is expected and considered successful"
