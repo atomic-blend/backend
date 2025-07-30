@@ -2,6 +2,12 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## productivity/v0.10.0-rc.6 - 2025-07-30
+#### Features
+- fix middleware and add mail api - (55ad4fd) - Brandon Guigo
+
+- - -
+
 ## productivity/v0.1.0-rc.6 - 2025-07-25
 #### Bug Fixes
 - productivity tests - (225a739) - Brandon Guigo

@@ -2,6 +2,14 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## auth/v0.10.0-rc.6 - 2025-07-30
+#### Features
+- refuse register when the key is not age_v1 - (0941d83) - Brandon Guigo
+- fix middleware and add mail api - (55ad4fd) - Brandon Guigo
+- setup mail-server - (8e5253e) - Brandon Guigo
+
+- - -
+
 ## auth/v0.1.0-rc.6 - 2025-07-25
 #### Bug Fixes
 - remove email sanitation to rely on the validation before - (cdc59f7) - Brandon Guigo
