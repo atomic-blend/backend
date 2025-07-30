@@ -22,6 +22,18 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Get last tag
+        id: last-tag
+        run: |
+          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          if [ -z "$LAST_TAG" ]; then
+            echo "No tags found, using HEAD~1"
+            echo "last_tag=HEAD~1" >> $GITHUB_OUTPUT
+          else
+            echo "Found last tag: $LAST_TAG"
+            echo "last_tag=$LAST_TAG" >> $GITHUB_OUTPUT
+          fi
+
       - name: Get changed files
         id: changed-files
         uses: tj-actions/changed-files@v41
@@ -34,6 +46,7 @@ jobs:
             productivity/**
             grpc/**
           quotepath: false
+          base_sha: ${{ steps.last-tag.outputs.last_tag }}
 
       - name: "Set output in the matrix format"
         id: set-output
