@@ -29,6 +29,11 @@ func (c *Controller) Register(ctx *gin.Context) {
 		return
 	}
 
+	if req.KeySet.Type != nil && *req.KeySet.Type != "age_v1" {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid key set type"})
+		return
+	}
+
 	// Check if user already exists
 	existingUser, err := c.userRepo.FindByEmail(ctx, req.Email)
 	if err == nil && existingUser != nil {
