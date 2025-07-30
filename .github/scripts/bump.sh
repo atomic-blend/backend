@@ -17,4 +17,37 @@ echo "Tag prefix: $TAG_PREFIX"
 
 # Run cog bump from the root directory for final release
 echo "Running: cog bump --auto --package $MICROSERVICE_DIR"
-~/.cargo/bin/cog bump --auto --skip-untracked --package "$MICROSERVICE_DIR"
+
+# First, do a dry run to get the exact tag that would be created
+dry_run_output=$(~/.cargo/bin/cog bump --auto --package "$MICROSERVICE_DIR" --dry-run 2>&1) || {
+  dry_run_exit_code=$?
+  # Check if the dry run error is due to no conventional commits found
+  if [[ $dry_run_exit_code -eq 1 ]] && echo "$dry_run_output" | grep -q "No conventional commit found to bump current version"; then
+    echo "No conventional commits found to bump version - this is expected and considered successful"
+    exit 0
+  else
+    echo "Error: dry run failed"
+    echo "$dry_run_output"
+    exit 1
+  fi
+}
+
+expected_tag=$(echo "$dry_run_output" | tail -n 1 | tr -d '\n')
+
+# Now run the actual bump
+output=$(~/.cargo/bin/cog bump --auto --package "$MICROSERVICE_DIR" 2>&1) || {
+  exit_code=$?
+  # Check if the error is due to no conventional commits found
+  if [[ $exit_code -eq 1 ]] && echo "$output" | grep -q "No conventional commit found to bump current version"; then
+    echo "No conventional commits found to bump version - this is expected and considered successful"
+    exit 0
+  else
+    echo "Error: failed to bump version"
+    echo "$output"
+    exit 1
+  fi
+}
+
+echo "Version bumped successfully"
+# Output the newly created tag
+echo "NEW_TAG:$expected_tag"

@@ -27,8 +27,7 @@ jobs:
       - name: Get last tag
         id: last-tag
         run: |
-          # Get the most recent tag by date, excluding '-rc' pre-releases
-          LAST_TAG=$(git for-each-ref --sort=-creatordate --format '%(refname:short)' refs/tags | head -n 1)
+          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
           if [ -z "$LAST_TAG" ]; then
             echo "No tags found, using HEAD~1"
             echo "last_tag=HEAD~1" >> $GITHUB_OUTPUT
@@ -172,22 +171,20 @@ jobs:
           
           echo "Bumping versions for: $SUCCESSFUL_DIRS"
           
-          # Bump version for each successful microservice
-          for dir in $SUCCESSFUL_DIRS; do
-            if [ -d "$dir" ]; then
-              echo "Bumping version for $dir"
-              ./.github/scripts/bump_rc.sh "$dir"
-            fi
-          done
-          
-          # Get the new tags for all microservices
+          # Bump version for each successful microservice and capture new tags
           TAGS_TO_PUSH=""
           for dir in $SUCCESSFUL_DIRS; do
             if [ -d "$dir" ]; then
-              TAG_PREFIX="${dir}/v"
-              NEW_TAG=$(git tag --list "${TAG_PREFIX}*" | sort -V | tail -n 1)
-              TAGS_TO_PUSH="$TAGS_TO_PUSH $NEW_TAG"
-              echo "New tag for $dir: $NEW_TAG"
+              echo "Bumping version for $dir"
+              bump_output=$(./.github/scripts/bump_rc.sh "$dir")
+              echo "$bump_output"
+              
+              # Extract the NEW_TAG from the output
+              NEW_TAG=$(echo "$bump_output" | grep "^NEW_TAG:" | cut -d: -f2)
+              if [ -n "$NEW_TAG" ]; then
+                TAGS_TO_PUSH="$TAGS_TO_PUSH $NEW_TAG"
+                echo "New tag for $dir: $NEW_TAG"
+              fi
             fi
           done
           
@@ -202,11 +199,20 @@ jobs:
             
             # Create commit message with all updated microservices
             COMMIT_MSG="chore(release): bump RC versions for"
+            TAGS_TO_PUSH="${{ steps.bump-versions.outputs.tags_to_push }}"
+            
+            # Convert TAGS_TO_PUSH string to array
+            IFS=' ' read -ra TAGS_ARRAY <<< "$TAGS_TO_PUSH"
+            
             for dir in ${{ steps.bump-versions.outputs.successful_dirs }}; do
               if [ -d "$dir" ]; then
-                TAG_PREFIX="${dir}/v"
-                NEW_TAG=$(git tag --list "${TAG_PREFIX}*" | sort -V | tail -n 1)
-                COMMIT_MSG="$COMMIT_MSG $dir@$NEW_TAG"
+                # Find the tag for this directory
+                for tag in "${TAGS_ARRAY[@]}"; do
+                  if [[ "$tag" == "${dir}-v"* ]]; then
+                    COMMIT_MSG="$COMMIT_MSG $dir@$tag"
+                    break
+                  fi
+                done
               fi
             done
             COMMIT_MSG="$COMMIT_MSG [skip ci]"
@@ -228,6 +234,7 @@ jobs:
         id: prepare-matrix
         run: |
           SUCCESSFUL_DIRS="${{ steps.bump-versions.outputs.successful_dirs }}"
+          TAGS_TO_PUSH="${{ steps.bump-versions.outputs.tags_to_push }}"
           
           if [ -z "$SUCCESSFUL_DIRS" ]; then
             echo "No successful directories found"
@@ -238,19 +245,31 @@ jobs:
           MATRIX_JSON='{"include":['
           FIRST=true
           
+          # Convert TAGS_TO_PUSH string to array
+          IFS=' ' read -ra TAGS_ARRAY <<< "$TAGS_TO_PUSH"
+          
           for dir in $SUCCESSFUL_DIRS; do
             if [ -d "$dir" ] && [ "$dir" != "grpc" ]; then
-              TAG_PREFIX="${dir}/v"
-              TAG=$(git tag --list "${TAG_PREFIX}*" | sort -V | tail -n 1)
-              VERSION=$(echo $TAG | sed 's/^[^-]*\/v//')
+              # Find the tag for this directory
+              TAG=""
+              for tag in "${TAGS_ARRAY[@]}"; do
+                if [[ "$tag" == "${dir}-v"* ]]; then
+                  TAG="$tag"
+                  break
+                fi
+              done
               
-              if [ "$FIRST" = "true" ]; then
-                FIRST=false
-              else
-                MATRIX_JSON="$MATRIX_JSON,"
+              if [ -n "$TAG" ]; then
+                VERSION=$(echo $TAG | sed 's/^[^-]*-v//')
+                
+                if [ "$FIRST" = "true" ]; then
+                  FIRST=false
+                else
+                  MATRIX_JSON="$MATRIX_JSON,"
+                fi
+                
+                MATRIX_JSON="$MATRIX_JSON{\"dir\":\"$dir\",\"version\":\"$VERSION\",\"tag\":\"$TAG\"}"
               fi
-              
-              MATRIX_JSON="$MATRIX_JSON{\"dir\":\"$dir\",\"version\":\"$VERSION\",\"tag\":\"$TAG\"}"
             fi
           done
           
@@ -326,9 +345,9 @@ jobs:
           
           for dir in $ALL_SUCCESSFUL_DIRS; do
             if [ -d "$dir" ]; then
-              TAG_PREFIX="${dir}/v"
+              TAG_PREFIX="${dir}-v"
               TAG=$(git tag --list "${TAG_PREFIX}*" | sort -V | tail -n 1)
-              VERSION=$(echo $TAG | sed 's/^[^-]*\/v//')
+              VERSION=$(echo $TAG | sed 's/^[^-]*-v//')
               
               if [ "$FIRST" = "true" ]; then
                 FIRST=false
@@ -368,7 +387,7 @@ jobs:
         id: extract-changelog
         run: |
           TAG=${{ matrix.tag }}
-          CLEAN_TAG=$(echo "$TAG" | sed 's/^[^-]*\/v//')
+          CLEAN_TAG=$(echo "$TAG" | sed 's/^[^-]*-v//')
           
           if [ -f "${{ matrix.dir }}/CHANGELOG.md" ]; then
             # Try different changelog entry formats
