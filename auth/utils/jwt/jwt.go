@@ -1,11 +1,12 @@
 package jwt
 
 import (
-	"github.com/atomic-blend/backend/auth/utils/subscription"
 	"errors"
 	"fmt"
 	"os"
 	"time"
+
+	"github.com/atomic-blend/backend/auth/utils/subscription"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
@@ -31,13 +32,15 @@ type TokenDetails struct {
 	TokenType TokenType
 	ExpiresAt time.Time
 	UserID    string
+	Roles     []string
 }
 
 // GenerateToken creates a new JWT token
-func GenerateToken(ctx *gin.Context, userID primitive.ObjectID, tokenType TokenType) (*TokenDetails, error) {
+func GenerateToken(ctx *gin.Context, userID primitive.ObjectID, roles []string, tokenType TokenType) (*TokenDetails, error) {
 	var td TokenDetails
 	td.UserID = userID.Hex()
 	td.TokenType = tokenType
+	td.Roles = roles
 
 	var secretKey string
 	var expTime time.Duration
@@ -60,6 +63,7 @@ func GenerateToken(ctx *gin.Context, userID primitive.ObjectID, tokenType TokenT
 		"type":          string(tokenType),
 		"iat":           time.Now().Unix(),
 		"is_subscribed": isSubscribed,
+		"roles":         roles,
 	}
 
 	if tokenType == AccessToken {
