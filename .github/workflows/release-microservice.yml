@@ -198,7 +198,7 @@ jobs:
               if [ -d "$dir" ]; then
                 # Find the tag for this directory
                 for tag in "${TAGS_ARRAY[@]}"; do
-                  if [[ "$tag" == "${dir}-v"* ]]; then
+                  if [[ "$tag" == "${dir}/v"* ]]; then
                     COMMIT_MSG="$COMMIT_MSG $dir@$tag"
                     break
                   fi
@@ -243,14 +243,14 @@ jobs:
               # Find the tag for this directory
               TAG=""
               for tag in "${TAGS_ARRAY[@]}"; do
-                if [[ "$tag" == "${dir}-v"* ]]; then
+                if [[ "$tag" == "${dir}/v"* ]]; then
                   TAG="$tag"
                   break
                 fi
               done
               
               if [ -n "$TAG" ]; then
-                VERSION=$(echo $TAG | sed 's/^[^-]*-v//')
+                VERSION=$(echo $TAG | sed 's/^[^/]*\/v//')
                 
                 if [ "$FIRST" = "true" ]; then
                   FIRST=false
