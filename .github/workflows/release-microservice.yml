@@ -25,7 +25,7 @@ jobs:
       - name: Get last tag
         id: last-tag
         run: |
-          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          LAST_TAG=$(git tag --list | grep -E '^(auth|productivity|grpc)/v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1 || echo "")
           if [ -z "$LAST_TAG" ]; then
             echo "No tags found, using HEAD~1"
             echo "last_tag=HEAD~1" >> $GITHUB_OUTPUT
