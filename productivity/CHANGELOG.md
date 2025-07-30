@@ -2,6 +2,15 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## productivity/v0.10.0-rc.7 - 2025-07-30
+#### Features
+- fix middleware and add mail api - (55ad4fd) - Brandon Guigo
+#### Miscellaneous Chores
+- **(release)** bump RC versions for [skip ci] - (b0ebd24) - GitHub Actions
+- **(release)** bump RC versions for [skip ci] - (857b142) - GitHub Actions
+
+- - -
+
 ## productivity/v0.10.0-rc.1 - 2025-07-30
 #### Features
 - fix middleware and add mail api - (55ad4fd) - Brandon Guigo
