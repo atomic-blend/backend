@@ -181,13 +181,17 @@ jobs:
               
               # Extract the NEW_TAG from the output
               NEW_TAG=$(echo "$bump_output" | grep "^NEW_TAG:" | cut -d: -f2)
+              echo "DEBUG: Extracted NEW_TAG for $dir: '$NEW_TAG'"
               if [ -n "$NEW_TAG" ]; then
                 TAGS_TO_PUSH="$TAGS_TO_PUSH $NEW_TAG"
                 echo "New tag for $dir: $NEW_TAG"
+              else
+                echo "DEBUG: No NEW_TAG found for $dir"
               fi
             fi
           done
           
+          echo "DEBUG: Final TAGS_TO_PUSH = '$TAGS_TO_PUSH'"
           echo "tags_to_push=$TAGS_TO_PUSH" >> $GITHUB_OUTPUT
           echo "successful_dirs=$SUCCESSFUL_DIRS" >> $GITHUB_OUTPUT
 
@@ -236,8 +240,17 @@ jobs:
           SUCCESSFUL_DIRS="${{ steps.bump-versions.outputs.successful_dirs }}"
           TAGS_TO_PUSH="${{ steps.bump-versions.outputs.tags_to_push }}"
           
+          echo "DEBUG: SUCCESSFUL_DIRS = '$SUCCESSFUL_DIRS'"
+          echo "DEBUG: TAGS_TO_PUSH = '$TAGS_TO_PUSH'"
+          
           if [ -z "$SUCCESSFUL_DIRS" ]; then
             echo "No successful directories found"
+            echo "matrix={\"include\":[]}" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          if [ -z "$TAGS_TO_PUSH" ]; then
+            echo "No tags to push found"
             echo "matrix={\"include\":[]}" >> $GITHUB_OUTPUT
             exit 0
           fi
@@ -247,20 +260,25 @@ jobs:
           
           # Convert TAGS_TO_PUSH string to array
           IFS=' ' read -ra TAGS_ARRAY <<< "$TAGS_TO_PUSH"
+          echo "DEBUG: TAGS_ARRAY = ${TAGS_ARRAY[*]}"
           
           for dir in $SUCCESSFUL_DIRS; do
             if [ -d "$dir" ] && [ "$dir" != "grpc" ]; then
+              echo "DEBUG: Processing directory: $dir"
               # Find the tag for this directory
               TAG=""
               for tag in "${TAGS_ARRAY[@]}"; do
+                echo "DEBUG: Checking tag: $tag"
                 if [[ "$tag" == "${dir}-v"* ]]; then
                   TAG="$tag"
+                  echo "DEBUG: Found matching tag: $TAG"
                   break
                 fi
               done
               
               if [ -n "$TAG" ]; then
                 VERSION=$(echo $TAG | sed 's/^[^-]*-v//')
+                echo "DEBUG: Extracted version: $VERSION"
                 
                 if [ "$FIRST" = "true" ]; then
                   FIRST=false
@@ -269,6 +287,9 @@ jobs:
                 fi
                 
                 MATRIX_JSON="$MATRIX_JSON{\"dir\":\"$dir\",\"version\":\"$VERSION\",\"tag\":\"$TAG\"}"
+                echo "DEBUG: Added to matrix: $dir with version $VERSION and tag $TAG"
+              else
+                echo "DEBUG: No tag found for directory: $dir"
               fi
             fi
           done

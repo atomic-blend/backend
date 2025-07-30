@@ -59,17 +59,18 @@ else
     # Extract the new version that would be created
     new_version=$(echo "$temp_dry_run" | tail -n 1 | sed -E 's/.*\/v([0-9]+\.[0-9]+\.[0-9]+).*/\1/')
     echo "New version that would be created: $new_version"
+    echo "Current RC base version: $base_rc"
     
-    # Compare with current RC base version
-    if [[ -n "$base_rc" ]] && [[ "$new_version" > "$base_rc" ]]; then
+    # Compare with current RC base version using sort for proper version comparison
+    if [[ -n "$base_rc" ]] && [[ "$(echo -e "$new_version\n$base_rc" | sort -V | tail -n 1)" == "$new_version" ]] && [[ "$new_version" != "$base_rc" ]]; then
       # New version is higher than current RC version, reset to rc.1
       echo "New version $new_version is higher than current RC version $base_rc, starting new RC cycle: rc.1"
       next_rc="rc.1"
     else
-      # Same version, increment RC
+      # Same version or lower version, increment RC
       rc_number=$(echo "$latest_rc" | sed -nE 's/.*-rc\.([0-9]+)$/\1/p')
       next_rc="rc.$((rc_number + 1))"
-      echo "Same version, incrementing RC: $latest_rc → $next_rc"
+      echo "Same version or lower version, incrementing RC: $latest_rc → $next_rc"
     fi
   else
     # No conventional commits, increment RC
