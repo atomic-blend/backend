@@ -175,7 +175,17 @@ jobs:
           for dir in $SUCCESSFUL_DIRS; do
             if [ -d "$dir" ]; then
               echo "Bumping version for $dir"
-              bump_output=$(./.github/scripts/bump.sh "$dir")
+              bump_output=$(./.github/scripts/bump.sh "$dir" 2>&1) || {
+                echo "Bump script failed for $dir with output: $bump_output"
+                # Check if it's the expected "no conventional commits" case
+                if echo "$bump_output" | grep -q "No conventional commits found to bump version"; then
+                  echo "No conventional commits found for $dir - this is expected and considered successful"
+                  continue
+                else
+                  echo "Unexpected error for $dir"
+                  exit 1
+                fi
+              }
               echo "$bump_output"
               
               # Extract the NEW_TAG from the output
