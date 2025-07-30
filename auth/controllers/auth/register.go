@@ -29,6 +29,11 @@ func (c *Controller) Register(ctx *gin.Context) {
 		return
 	}
 
+	if req.KeySet.Type != nil && *req.KeySet.Type != "age_v1" {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid key set type"})
+		return
+	}
+
 	// Check if user already exists
 	existingUser, err := c.userRepo.FindByEmail(ctx, req.Email)
 	if err == nil && existingUser != nil {
@@ -78,14 +83,20 @@ func (c *Controller) Register(ctx *gin.Context) {
 		return
 	}
 
+	// Generate role list
+	roles := make([]string, len(newUser.Roles))
+	for i, role := range newUser.Roles {
+		roles[i] = role.Name
+	}
+
 	// Generate tokens
-	accessToken, err := jwt.GenerateToken(ctx, *newUser.ID, jwt.AccessToken)
+	accessToken, err := jwt.GenerateToken(ctx, *newUser.ID, roles, jwt.AccessToken)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate access token"})
 		return
 	}
 
-	refreshToken, err := jwt.GenerateToken(ctx, *newUser.ID, jwt.RefreshToken)
+	refreshToken, err := jwt.GenerateToken(ctx, *newUser.ID, roles, jwt.RefreshToken)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate refresh token"})
 		return

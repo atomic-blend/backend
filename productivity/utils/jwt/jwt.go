@@ -36,6 +36,7 @@ type CustomClaims struct {
 	UserID       *string `json:"user_id"`
 	IsSubscribed *bool   `json:"is_subscribed"`
 	Type         *string `json:"type"`
+	Roles        *[]string `json:"roles"`
 	jwt.RegisteredClaims
 }
 

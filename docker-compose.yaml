@@ -31,6 +31,45 @@ services:
     env_file:
       - .env
     command: air  # Hot-reloading for development
+
+  mail-server:
+    build:
+      context: ./mail-server
+      dockerfile: Dockerfile.dev  # Use a dev-specific Dockerfile
+    container_name: mail-server
+    ports:
+      - target: 1025
+        published: 1025
+        protocol: tcp
+        mode: host
+    env_file:
+      - .env
+    command: air
+    volumes:
+      - ./mail-server:/app
+      - type: bind
+        source: ${HOME}${USERPROFILE}/.netrc
+        target: /root/.netrc
+  
+  mail:
+    build:
+      context: ./mail
+      dockerfile: Dockerfile.dev  # Use a dev-specific Dockerfile
+    container_name: mail
+    expose:
+      - "8080"
+      - "50051"  # gRPC port
+    volumes:
+      - ./mail:/app
+      - type: bind
+        source: ${HOME}${USERPROFILE}/.netrc
+        target: /root/.netrc
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    env_file:
+      - .env
+    command: air  # Hot-reloading for development
   
   productivity:
     build:

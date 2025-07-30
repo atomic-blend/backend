@@ -1,16 +1,17 @@
 package auth
 
 import (
-	"github.com/atomic-blend/backend/auth/models"
-	"github.com/atomic-blend/backend/auth/tests/utils/inmemorymongo"
-	"github.com/atomic-blend/backend/auth/utils/db"
-	"github.com/atomic-blend/backend/auth/utils/jwt"
 	"context"
 	"errors"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"testing"
+
+	"github.com/atomic-blend/backend/auth/models"
+	"github.com/atomic-blend/backend/auth/tests/utils/inmemorymongo"
+	"github.com/atomic-blend/backend/auth/utils/db"
+	"github.com/atomic-blend/backend/auth/utils/jwt"
 
 	"github.com/atomic-blend/memongo"
 	"github.com/gin-gonic/gin"
@@ -165,7 +166,7 @@ func TestAuthMiddleware(t *testing.T) {
 		w := httptest.NewRecorder()
 		c, _ := gin.CreateTestContext(w)
 
-		tokenDetails, err := jwt.GenerateToken(c, userID, jwt.AccessToken)
+		tokenDetails, err := jwt.GenerateToken(c, userID, []string{"user"}, jwt.AccessToken)
 		assert.NoError(t, err, "Token generation should not fail")
 		assert.NotEmpty(t, tokenDetails.Token, "Token should not be empty")
 
@@ -485,7 +486,7 @@ func TestOptionalAuth(t *testing.T) {
 		w := httptest.NewRecorder()
 		c, _ := gin.CreateTestContext(w)
 
-		tokenDetails, err := jwt.GenerateToken(c, userID, jwt.AccessToken)
+		tokenDetails, err := jwt.GenerateToken(c, userID, []string{"user"}, jwt.AccessToken)
 		assert.NoError(t, err, "Token generation should not fail")
 
 		router := gin.New()
