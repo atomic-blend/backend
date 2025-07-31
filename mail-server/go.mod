@@ -15,6 +15,7 @@ require (
 )
 
 require (
+	github.com/emersion/go-message v0.18.2
 	github.com/joho/godotenv v1.5.1
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/rs/zerolog v1.33.0

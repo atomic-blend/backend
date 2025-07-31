@@ -1,9 +1,12 @@
 package smtpserver
 
 import (
+	"bytes"
 	"errors"
 	"io"
 
+	"github.com/atomic-blend/backend/mail-server/utils/amqp"
+	"github.com/emersion/go-message/mail"
 	"github.com/emersion/go-sasl"
 	"github.com/emersion/go-smtp"
 	"github.com/rs/zerolog/log"
@@ -56,14 +59,71 @@ func (s *Session) Rcpt(to string, opts *smtp.RcptOptions) error {
 }
 
 func (s *Session) Data(r io.Reader) error {
-	if !s.auth {
-		return smtp.ErrAuthRequired
-	}
-	if b, err := io.ReadAll(r); err != nil {
-		return err
-	} else {
-		log.Info().Msgf("Data: %s", string(b))
-	}
+	var buf bytes.Buffer
+    if _, err := io.Copy(&buf, r); err != nil {
+        return err
+    }
+
+    // Save a copy of full raw message for MongoDB
+    fullMessage := buf.Bytes()
+
+    // Parse message with go-message
+    mr, err := mail.CreateReader(bytes.NewReader(fullMessage))
+    if err != nil {
+        return err
+    }
+
+    // Extract headers (optional)
+    header := mr.Header
+    subject, _ := header.Subject()
+    from, _ := header.AddressList("From")
+    to, _ := header.AddressList("To")
+
+	// attachements is list of objects representing the attachments
+	attachments := []interface{}{}
+
+
+    // Iterate over parts (text + attachments)
+    for {
+        p, err := mr.NextPart()
+        if err == io.EOF {
+            break
+        } else if err != nil {
+            return err
+        }
+
+        switch h := p.Header.(type) {
+        case *mail.InlineHeader:
+            // Body part
+            body, _ := io.ReadAll(p.Body)
+            log.Printf("Body: %s", string(body))
+
+        case *mail.AttachmentHeader:
+            filename, _ := h.Filename()
+            contentType, _, _ := h.ContentType()
+
+            // Read attachment content
+            content, _ := io.ReadAll(p.Body)
+
+			attachments = append(attachments, map[string]interface{}{
+				"filename": filename,
+				"contentType": contentType,
+				"content": content,
+			})
+
+            log.Printf("Uploaded attachment: %s", filename)
+        }
+    }
+
+	log.Debug().Msgf("Attachments: %s", attachments)
+
+	amqp.PublishMessage("mail", "received", map[string]interface{}{
+		"from": from,
+		"to": to,
+		"subject": subject,
+		"attachments": attachments,
+	})
+
 	return nil
 }
 
