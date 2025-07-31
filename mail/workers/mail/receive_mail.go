@@ -8,6 +8,28 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+// MailContent represents the collected content from an email
+type MailContent struct {
+	Headers struct {
+		From      string
+		To        string
+		Subject   string
+		Date      string
+		MessageID string
+		Cc        string
+	}
+	TextContent string
+	HTMLContent string
+	Attachments []Attachment
+}
+
+// Attachment represents a file attachment
+type Attachment struct {
+	Filename    string
+	ContentType string
+	Data        []byte
+}
+
 func receiveMail(mimeContent string) {
 	// Create a reader from the MIME content string
 	reader := strings.NewReader(mimeContent)
@@ -21,12 +43,23 @@ func receiveMail(mimeContent string) {
 		return
 	}
 
+	// Initialize mail content structure
+	mailContent := &MailContent{
+		Attachments: make([]Attachment, 0),
+	}
+
 	// Extract basic email information
 	header := entity.Header
 	from := header.Get("From")
 	to := header.Get("To")
 	subject := header.Get("Subject")
 	date := header.Get("Date")
+
+	// Store headers
+	mailContent.Headers.From = from
+	mailContent.Headers.To = to
+	mailContent.Headers.Subject = subject
+	mailContent.Headers.Date = date
 
 	log.Info().
 		Str("from", from).
@@ -35,11 +68,16 @@ func receiveMail(mimeContent string) {
 		Str("date", date).
 		Msg("Received email")
 
-	// Process the message body
-	processMessageBody(entity)
+	// Process the message body and collect all content
+	processMessageBody(entity, mailContent)
+
+	// TODO: Upload all collected content to MongoDB and S3
+	// TODO: Create complete mail document with all content
+	// TODO: Upload attachments to S3
+	// TODO: Save mail document with S3 references to MongoDB
 }
 
-func processMessageBody(entity *message.Entity) {
+func processMessageBody(entity *message.Entity, mailContent *MailContent) {
 	// Get the media type of the message
 	mediaType, params, err := entity.Header.ContentType()
 	if err != nil {
@@ -54,14 +92,21 @@ func processMessageBody(entity *message.Entity) {
 
 	// Handle multipart messages
 	if strings.HasPrefix(mediaType, "multipart/") {
-		processMultipartMessage(entity)
+		processMultipartMessage(entity, mailContent)
 	} else {
 		// Handle single part message
-		processMessagePart(entity)
+		processMessagePart(entity, mailContent)
 	}
+
+	// TODO: Encrypt the mail content for mongodb
+	// TODO: Encrypt the attachments for s3
+
+	//TODO: upload the attachments to s3
+	//TODO: save the mail document with s3 references to mongodb
+	//TODO: upload the mail content to mongodb
 }
 
-func processMultipartMessage(entity *message.Entity) {
+func processMultipartMessage(entity *message.Entity, mailContent *MailContent) {
 	// Create a multipart reader
 	mr := entity.MultipartReader()
 	if mr == nil {
@@ -81,11 +126,11 @@ func processMultipartMessage(entity *message.Entity) {
 		}
 
 		// Process each part
-		processMessagePart(part)
+		processMessagePart(part, mailContent)
 	}
 }
 
-func processMessagePart(part *message.Entity) {
+func processMessagePart(part *message.Entity, mailContent *MailContent) {
 	// Read the part content
 	body, err := io.ReadAll(part.Body)
 	if err != nil {
@@ -135,19 +180,18 @@ func processMessagePart(part *message.Entity) {
 	switch {
 	case strings.HasPrefix(mediaType, "text/plain"):
 		log.Info().Str("textContent", string(body)).Msg("Plain text content")
-		// TODO: Store plain text content in MongoDB
-		// TODO: Create mail document with text content, headers, and metadata
-		// TODO: Save to mail collection in MongoDB
+		mailContent.TextContent = string(body)
 	case strings.HasPrefix(mediaType, "text/html"):
 		log.Info().Str("htmlContent", string(body)).Msg("HTML content")
-		// TODO: Store HTML content in MongoDB
-		// TODO: Create mail document with HTML content, headers, and metadata
-		// TODO: Save to mail collection in MongoDB
+		mailContent.HTMLContent = string(body)
 	default:
 		log.Info().Str("contentType", mediaType).Str("filename", filename).Msg("Other content type")
-		// TODO: Store other file types in S3 storage
-		// TODO: Use original filename or generate unique filename for the file
-		// TODO: Upload file bytes to S3 bucket with filename
-		// TODO: Store S3 file reference and original filename in MongoDB mail document
+		// TODO: Collect attachment data for later upload to S3
+		attachment := Attachment{
+			Filename:    filename,
+			ContentType: mediaType,
+			Data:        body,
+		}
+		mailContent.Attachments = append(mailContent.Attachments, attachment)
 	}
 }
