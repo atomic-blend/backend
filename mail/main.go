@@ -1,13 +1,15 @@
 package main
 
 import (
-	"github.com/atomic-blend/backend/mail/controllers/health"
-	"github.com/atomic-blend/backend/mail/models"
-	"github.com/atomic-blend/backend/mail/utils/db"
 	"context"
 	"os"
 	"strings"
 	"time"
+
+	"github.com/atomic-blend/backend/mail/controllers/health"
+	"github.com/atomic-blend/backend/mail/models"
+	"github.com/atomic-blend/backend/mail/utils/amqp"
+	"github.com/atomic-blend/backend/mail/utils/db"
 
 	"github.com/gin-contrib/cors"
 
@@ -37,9 +39,6 @@ func main() {
 	}()
 
 	models.RegisterValidators()
-
-	// start grpc server
-	go startGRPCServer()
 
 	// Setup router with middleware
 	router := gin.Default()
@@ -136,6 +135,25 @@ func main() {
 		port = "8080"
 	}
 
-	log.Info().Msgf("Server starting on port %s", port)
-	router.Run(":" + port) // listen and serve on 0.0.0.0:8080 (for windows "localhost:8080")
+	runEnv := os.Getenv("RUN")
+
+	// Conditionally start components based on runEnv
+	if runEnv == "" || runEnv == "worker" {
+		log.Info().Msg("Starting worker component")
+		amqp.InitConsumerAmqp()
+		go processMessages()
+	}
+
+	if runEnv == "" || runEnv == "api" {
+		log.Info().Msg("Starting API components (gRPC and routes)")
+		// start grpc server
+		go startGRPCServer()
+
+		log.Info().Msgf("Server starting on port %s", port)
+		router.Run(":" + port) // listen and serve on 0.0.0.0:8080 (for windows "localhost:8080")
+	} else {
+		// If only running worker, keep the process alive
+		log.Info().Msg("Running in worker-only mode, keeping process alive")
+		select {} // This will keep the process running indefinitely
+	}
 }
