@@ -18,8 +18,8 @@ func CheckRequiredEnvVar(varName string, configValue string, defaultValue string
 		if defaultValue != "" {
 			configValue = defaultValue
 		} else {
-			panic(varName + " is required")
 			log.Fatal().Msgf("%s is required", varName)
+			panic(varName + " is required")
 		}
 	}
 }
