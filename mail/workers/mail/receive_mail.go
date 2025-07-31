@@ -12,6 +12,8 @@ func receiveMail(mimeContent string) {
 	// Create a reader from the MIME content string
 	reader := strings.NewReader(mimeContent)
 
+	//TODO: send the email to rspamd via HTTP for spam detection
+
 	// Parse the MIME message
 	entity, err := message.Read(reader)
 	if err != nil {
@@ -32,10 +34,6 @@ func receiveMail(mimeContent string) {
 		Str("subject", subject).
 		Str("date", date).
 		Msg("Received email")
-
-	// TODO: Create base mail document with headers and metadata
-	// TODO: Initialize mail document with from, to, subject, date, messageId, etc.
-	// TODO: Generate unique mail ID for this email
 
 	// Process the message body
 	processMessageBody(entity)
@@ -59,7 +57,7 @@ func processMessageBody(entity *message.Entity) {
 		processMultipartMessage(entity)
 	} else {
 		// Handle single part message
-		processSinglePartMessage(entity)
+		processMessagePart(entity)
 	}
 }
 
@@ -84,43 +82,6 @@ func processMultipartMessage(entity *message.Entity) {
 
 		// Process each part
 		processMessagePart(part)
-	}
-}
-
-func processSinglePartMessage(entity *message.Entity) {
-	// Read the body content
-	body, err := io.ReadAll(entity.Body)
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to read message body")
-		return
-	}
-
-	// Get content type for this part
-	mediaType, _, err := entity.Header.ContentType()
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to get part content type")
-		return
-	}
-
-	log.Info().
-		Str("contentType", mediaType).
-		Int("bodySize", len(body)).
-		Msg("Single part message")
-
-	// Handle different content types
-	switch {
-	case strings.HasPrefix(mediaType, "text/plain"):
-		log.Info().Str("textContent", string(body)).Msg("Plain text content")
-		// TODO: Store plain text content in MongoDB
-		// TODO: Create mail document with text content, headers, and metadata
-		// TODO: Save to mail collection in MongoDB
-	case strings.HasPrefix(mediaType, "text/html"):
-		log.Info().Str("htmlContent", string(body)).Msg("HTML content")
-		// TODO: Store HTML content in MongoDB
-		// TODO: Create mail document with HTML content, headers, and metadata
-		// TODO: Save to mail collection in MongoDB
-	default:
-		log.Info().Str("contentType", mediaType).Msg("Other content type")
 	}
 }
 
@@ -173,17 +134,17 @@ func processMessagePart(part *message.Entity) {
 	// Handle different content types
 	switch {
 	case strings.HasPrefix(mediaType, "text/plain"):
-		log.Info().Str("textContent", string(body)).Msg("Plain text part")
+		log.Info().Str("textContent", string(body)).Msg("Plain text content")
 		// TODO: Store plain text content in MongoDB
 		// TODO: Create mail document with text content, headers, and metadata
 		// TODO: Save to mail collection in MongoDB
 	case strings.HasPrefix(mediaType, "text/html"):
-		log.Info().Str("htmlContent", string(body)).Msg("HTML part")
+		log.Info().Str("htmlContent", string(body)).Msg("HTML content")
 		// TODO: Store HTML content in MongoDB
 		// TODO: Create mail document with HTML content, headers, and metadata
 		// TODO: Save to mail collection in MongoDB
 	default:
-		log.Info().Str("contentType", mediaType).Str("filename", filename).Msg("Other content type part")
+		log.Info().Str("contentType", mediaType).Str("filename", filename).Msg("Other content type")
 		// TODO: Store other file types in S3 storage
 		// TODO: Use original filename or generate unique filename for the file
 		// TODO: Upload file bytes to S3 bucket with filename
