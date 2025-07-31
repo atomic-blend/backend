@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/atomic-blend/backend/mail/utils/amqp"
+	"github.com/atomic-blend/backend/mail/workers"
 	"github.com/rs/zerolog/log"
 )
 
@@ -11,17 +12,7 @@ func processMessages() {
 		routingKey := m.RoutingKey
 		body := m.Body
 
-		// do this in a separate mail module
-		switch exchange {
-		case "mail":
-			switch routingKey {
-			case "received":
-				//TODO:
-				log.Debug().Str("body", string(body)).Msg("Received message")
-			case "sent":
-				//TODO:
-				log.Debug().Str("body", string(body)).Msg("Sent message")
-			}
-		}
+		log.Debug().Str("exchange", exchange).Str("routingKey", routingKey).Msg("routing message to exchange")
+		workers.RouteMessage(exchange, routingKey, body)
 	}
 }
