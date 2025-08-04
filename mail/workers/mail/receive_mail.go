@@ -1,11 +1,14 @@
 package mail
 
 import (
+	"bytes"
 	"context"
+	"encoding/base64"
 	"io"
 	"strings"
 
 	"connectrpc.com/connect"
+	"filippo.io/age"
 	userv1 "github.com/atomic-blend/backend/grpc/gen/user/v1"
 	"github.com/atomic-blend/backend/mail/grpc/clients"
 	"github.com/atomic-blend/backend/mail/models"
@@ -140,15 +143,17 @@ func receiveMail(m *amqp.Delivery, payload ReceivedMailPayload) {
 	processMessageBody(entity, mailContent)
 
 	encryptedMails := make([]models.Mail, 0)
+	haveErrors := false
 
 	for _, rcpt := range strings.Split(mailContent.Headers.To, ",") {
 		log.Info().Str("rcpt", rcpt).Msg("Handling recepient")
 
-		// TODO: get the user public key from the auth service via grpc
+		// get the user public key from the auth service via grpc
 		log.Info().Str("rcpt", rcpt).Msg("Instantiating user client")
 		userClient, err := clients.NewUserClient()
 		if err != nil {
 			log.Error().Err(err).Msg("Failed to create user client")
+			haveErrors = true
 			continue
 		}
 
@@ -160,19 +165,61 @@ func receiveMail(m *amqp.Delivery, payload ReceivedMailPayload) {
 		})
 		if err != nil {
 			log.Error().Err(err).Msg("Failed to get user public key")
+			haveErrors = true
 			continue
 		}
 
 		log.Info().Str("rcpt", rcpt).Str("publicKey", rcptPublicKey.Msg.PublicKey).Msg("User public key")
 		log.Info().Interface("encryptedMails", encryptedMails).Msg("Encrypted mails")
 
-		// TODO: if not, reject the email for the recepient
+		userPublicKey := rcptPublicKey.Msg.PublicKey
 
-		//TODO: encrypt the mail content for mongodb with user's public key
+		// encrypt the mail content for mongodb with user's public key
+		log.Info().Str("rcpt", rcpt).Msg("Encrypting mail content")
+		recipient, err := age.ParseX25519Recipient(userPublicKey)
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to parse public key")
+			haveErrors = true
+			continue
+		}
+
+		out := &bytes.Buffer{}
+
+		w, err := age.Encrypt(out, recipient)
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to create encrypted file")
+			haveErrors = true
+			continue
+		}
+		if _, err := io.WriteString(w, "Black lives matter."); err != nil {
+			log.Error().Err(err).Msg("Failed to write to encrypted file")
+			haveErrors = true
+			continue
+		}
+		if err := w.Close(); err != nil {
+			log.Error().Err(err).Msg("Failed to close encrypted file")
+			haveErrors = true
+			continue
+		}
+
+		// use base64 decode + strings.NewReader to get the encrypted content when decrypting
+		// TODO: refactor the encryption / decryption logic into a dedicated util
+		encryptedContent := base64.StdEncoding.EncodeToString(out.Bytes())
+
+		log.Info().Str("rcpt", rcpt).Str("encryptedContent", encryptedContent).Msg("Encrypted mail content")
+
+		//TODO: encrypt other fields of the email (headers, etc...)
+
+		//TODO: encrypt the files in the attachments
 
 		//TODO: upload the attachments to s3
 
 		//TODO: save the mail document with s3 references to mongodb
+	}
+
+	if haveErrors {
+		log.Error().Msg("Errors occurred while processing email")
+		return
 	}
 
 	m.Ack(false)
