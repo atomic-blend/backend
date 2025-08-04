@@ -36,7 +36,7 @@ func main() {
 	}
 
 	// Get recipient(s)
-	fmt.Print("To (recipient email(s), comma-separated for multiple) [user1@brandonguigo.com]: ")
+	fmt.Print("To (recipient email(s), comma-separated for multiple) [user2@brandonguigo.com]: ")
 	recipientsInput, _ := reader.ReadString('\n')
 	recipientsInput = strings.TrimSpace(recipientsInput)
 	var recipients []string
@@ -46,7 +46,7 @@ func main() {
 			recipients[i] = strings.TrimSpace(r)
 		}
 	} else {
-		recipients = []string{"user1@brandonguigo.com"}
+		recipients = []string{"user2@brandonguigo.com"}
 	}
 
 	// Get CC recipients

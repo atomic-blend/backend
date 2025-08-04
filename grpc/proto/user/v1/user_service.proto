@@ -18,6 +18,16 @@ message GetUserDevicesResponse {
   repeated UserDevice devices = 1;
 }
 
+message GetUserPublicKeyRequest {
+  string email = 1;
+}
+
+message getUserPublicKeyResponse {
+  string userId = 1;
+  string publicKey = 2;
+}
+
 service UserService {
   rpc GetUserDevices(GetUserDevicesRequest) returns (GetUserDevicesResponse);
+  rpc GetUserPublicKey(GetUserPublicKeyRequest) returns (getUserPublicKeyResponse);
 }

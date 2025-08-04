@@ -1,9 +1,14 @@
 package mail
 
 import (
+	"context"
 	"io"
 	"strings"
 
+	"connectrpc.com/connect"
+	userv1 "github.com/atomic-blend/backend/grpc/gen/user/v1"
+	"github.com/atomic-blend/backend/mail/grpc/clients"
+	"github.com/atomic-blend/backend/mail/models"
 	"github.com/atomic-blend/backend/mail/utils/rspamd"
 	"github.com/emersion/go-message"
 	"github.com/rs/zerolog/log"
@@ -134,10 +139,33 @@ func receiveMail(m *amqp.Delivery, payload ReceivedMailPayload) {
 	// Process the message body and collect all content
 	processMessageBody(entity, mailContent)
 
+	encryptedMails := make([]models.Mail, 0)
+
 	for _, rcpt := range strings.Split(mailContent.Headers.To, ",") {
 		log.Info().Str("rcpt", rcpt).Msg("Handling recepient")
 
-		// TODO: check that each recepient is a valid user
+		// TODO: get the user public key from the auth service via grpc
+		log.Info().Str("rcpt", rcpt).Msg("Instantiating user client")
+		userClient, err := clients.NewUserClient()
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to create user client")
+			continue
+		}
+
+		log.Info().Str("rcpt", rcpt).Msg("Getting user public key")
+		rcptPublicKey, err := userClient.GetUserPublicKey(context.Background(), &connect.Request[userv1.GetUserPublicKeyRequest]{
+			Msg: &userv1.GetUserPublicKeyRequest{
+				Email: rcpt,
+			},
+		})
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to get user public key")
+			continue
+		}
+
+		log.Info().Str("rcpt", rcpt).Str("publicKey", rcptPublicKey.Msg.PublicKey).Msg("User public key")
+		log.Info().Interface("encryptedMails", encryptedMails).Msg("Encrypted mails")
+
 		// TODO: if not, reject the email for the recepient
 
 		//TODO: encrypt the mail content for mongodb with user's public key

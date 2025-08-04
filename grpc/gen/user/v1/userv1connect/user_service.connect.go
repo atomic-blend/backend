@@ -36,11 +36,15 @@ const (
 	// UserServiceGetUserDevicesProcedure is the fully-qualified name of the UserService's
 	// GetUserDevices RPC.
 	UserServiceGetUserDevicesProcedure = "/user.v1.UserService/GetUserDevices"
+	// UserServiceGetUserPublicKeyProcedure is the fully-qualified name of the UserService's
+	// GetUserPublicKey RPC.
+	UserServiceGetUserPublicKeyProcedure = "/user.v1.UserService/GetUserPublicKey"
 )
 
 // UserServiceClient is a client for the user.v1.UserService service.
 type UserServiceClient interface {
 	GetUserDevices(context.Context, *connect.Request[v1.GetUserDevicesRequest]) (*connect.Response[v1.GetUserDevicesResponse], error)
+	GetUserPublicKey(context.Context, *connect.Request[v1.GetUserPublicKeyRequest]) (*connect.Response[v1.GetUserPublicKeyResponse], error)
 }
 
 // NewUserServiceClient constructs a client for the user.v1.UserService service. By default, it uses
@@ -60,12 +64,19 @@ func NewUserServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(userServiceMethods.ByName("GetUserDevices")),
 			connect.WithClientOptions(opts...),
 		),
+		getUserPublicKey: connect.NewClient[v1.GetUserPublicKeyRequest, v1.GetUserPublicKeyResponse](
+			httpClient,
+			baseURL+UserServiceGetUserPublicKeyProcedure,
+			connect.WithSchema(userServiceMethods.ByName("GetUserPublicKey")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // userServiceClient implements UserServiceClient.
 type userServiceClient struct {
-	getUserDevices *connect.Client[v1.GetUserDevicesRequest, v1.GetUserDevicesResponse]
+	getUserDevices   *connect.Client[v1.GetUserDevicesRequest, v1.GetUserDevicesResponse]
+	getUserPublicKey *connect.Client[v1.GetUserPublicKeyRequest, v1.GetUserPublicKeyResponse]
 }
 
 // GetUserDevices calls user.v1.UserService.GetUserDevices.
@@ -73,9 +84,15 @@ func (c *userServiceClient) GetUserDevices(ctx context.Context, req *connect.Req
 	return c.getUserDevices.CallUnary(ctx, req)
 }
 
+// GetUserPublicKey calls user.v1.UserService.GetUserPublicKey.
+func (c *userServiceClient) GetUserPublicKey(ctx context.Context, req *connect.Request[v1.GetUserPublicKeyRequest]) (*connect.Response[v1.GetUserPublicKeyResponse], error) {
+	return c.getUserPublicKey.CallUnary(ctx, req)
+}
+
 // UserServiceHandler is an implementation of the user.v1.UserService service.
 type UserServiceHandler interface {
 	GetUserDevices(context.Context, *connect.Request[v1.GetUserDevicesRequest]) (*connect.Response[v1.GetUserDevicesResponse], error)
+	GetUserPublicKey(context.Context, *connect.Request[v1.GetUserPublicKeyRequest]) (*connect.Response[v1.GetUserPublicKeyResponse], error)
 }
 
 // NewUserServiceHandler builds an HTTP handler from the service implementation. It returns the path
@@ -91,10 +108,18 @@ func NewUserServiceHandler(svc UserServiceHandler, opts ...connect.HandlerOption
 		connect.WithSchema(userServiceMethods.ByName("GetUserDevices")),
 		connect.WithHandlerOptions(opts...),
 	)
+	userServiceGetUserPublicKeyHandler := connect.NewUnaryHandler(
+		UserServiceGetUserPublicKeyProcedure,
+		svc.GetUserPublicKey,
+		connect.WithSchema(userServiceMethods.ByName("GetUserPublicKey")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/user.v1.UserService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case UserServiceGetUserDevicesProcedure:
 			userServiceGetUserDevicesHandler.ServeHTTP(w, r)
+		case UserServiceGetUserPublicKeyProcedure:
+			userServiceGetUserPublicKeyHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -106,4 +131,8 @@ type UnimplementedUserServiceHandler struct{}
 
 func (UnimplementedUserServiceHandler) GetUserDevices(context.Context, *connect.Request[v1.GetUserDevicesRequest]) (*connect.Response[v1.GetUserDevicesResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("user.v1.UserService.GetUserDevices is not implemented"))
+}
+
+func (UnimplementedUserServiceHandler) GetUserPublicKey(context.Context, *connect.Request[v1.GetUserPublicKeyRequest]) (*connect.Response[v1.GetUserPublicKeyResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("user.v1.UserService.GetUserPublicKey is not implemented"))
 }
