@@ -7,6 +7,7 @@ import (
 	"errors"
 	"io"
 	"net"
+	"time"
 
 	"github.com/atomic-blend/backend/mail-server/utils/amqp"
 	"github.com/emersion/go-sasl"
@@ -94,14 +95,15 @@ func (s *Session) Data(r io.Reader) error {
 
 	// Prepare message data for Rspamd analysis
 	messageData := map[string]interface{}{
-		"content":    buf.String(),
-		"ip":         s.clientIP,
-		"hostname":   s.hostname,
-		"from":       s.from,
-		"rcpt":       s.rcpts,
-		"queue_id":   s.queueID,
-		"user":       s.user,
-		"deliver_to": s.rcpts[0], // Use first recipient as deliver_to
+		"content":     buf.String(),
+		"ip":          s.clientIP,
+		"hostname":    s.hostname,
+		"from":        s.from,
+		"rcpt":        s.rcpts,
+		"queue_id":    s.queueID,
+		"user":        s.user,
+		"deliver_to":  s.rcpts[0], // Use first recipient as deliver_to
+		"received_at": time.Now().Format(time.RFC3339),
 	}
 
 	amqp.PublishMessage("mail", "received", messageData)
