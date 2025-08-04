@@ -4,14 +4,15 @@ import (
 	"encoding/json"
 
 	"github.com/rs/zerolog/log"
+	"github.com/streadway/amqp"
 )
 
-func RouteMessage(routingKey string, body []byte) {
-	switch routingKey {
+func RouteMessage(message *amqp.Delivery) {
+	switch message.RoutingKey {
 	case "received":
 		// Parse the AMQP payload into our structured format
 		var payload ReceivedMailPayload
-		err := json.Unmarshal(body, &payload)
+		err := json.Unmarshal(message.Body, &payload)
 		if err != nil {
 			log.Error().Err(err).Msg("Error unmarshalling AMQP payload")
 			return
@@ -24,7 +25,7 @@ func RouteMessage(routingKey string, body []byte) {
 		}
 
 		// Call receiveMail with the complete payload
-		receiveMail(payload)
+		receiveMail(message, payload)
 	case "sent":
 		//routeSentMessage()
 	}
