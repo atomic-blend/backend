@@ -31,26 +31,26 @@ func TestSession_AuthMechanisms(t *testing.T) {
 	mechanisms := session.AuthMechanisms()
 
 	assert.Len(t, mechanisms, 1)
-	assert.Equal(t, sasl.Plain, mechanisms[0])
+	assert.Equal(t, sasl.Anonymous, mechanisms[0])
 }
 
 func TestSession_Auth(t *testing.T) {
-	t.Run("successful authentication", func(t *testing.T) {
+	t.Run("successful anonymous authentication", func(t *testing.T) {
 		session := &Session{}
-		server, err := session.Auth(sasl.Plain)
+		server, err := session.Auth(sasl.Anonymous)
 		assert.NoError(t, err)
 		assert.NotNil(t, server)
 
-		// Test successful login - SASL PLAIN format: authorization_id\0username\0password
-		_, _, err = server.Next([]byte("\x00username\x00password"))
+		// Test successful anonymous login - any trace string is accepted
+		_, _, err = server.Next([]byte("anonymous-trace"))
 		assert.NoError(t, err)
 		assert.True(t, session.auth)
-		assert.Equal(t, "username", session.user)
+		assert.Equal(t, "anonymous", session.user)
 	})
 
 	t.Run("auth mechanism returns server", func(t *testing.T) {
 		session := &Session{}
-		server, err := session.Auth(sasl.Plain)
+		server, err := session.Auth(sasl.Anonymous)
 		assert.NoError(t, err)
 		assert.NotNil(t, server)
 	})

@@ -10,6 +10,7 @@ This script provides an interactive command-line interface to send emails to you
 - **Multiple recipients** support (To, CC, BCC)
 - **File attachments** with proper MIME handling
 - **Custom SMTP server** configuration
+- **SMTP authentication** support using go-sasl
 - **Default values** for quick testing
 - **Multi-line email body** input
 - **Base64 encoding** for attachments (RFC 2045 compliant)
@@ -107,6 +108,15 @@ SMTP Server (press Enter for default localhost:1025):
 - **Default**: `localhost:1025`
 - **Custom**: Type different server address and port
 
+### 9. SMTP Authentication (Optional)
+```
+SMTP Username (press Enter to skip authentication): 
+SMTP Password: 
+```
+- **Skip**: Press Enter to use anonymous authentication
+- **Username**: Provide SMTP username for PLAIN authentication
+- **Password**: Provide SMTP password (hidden input)
+
 ## Example Session
 
 ```
@@ -129,6 +139,8 @@ END
 Do you want to attach a file? (y/n): y
 Enter file path to attach: /tmp/test.txt
 SMTP Server (press Enter for default localhost:1025): 
+SMTP Username (press Enter to skip authentication): 
+SMTP Password: 
 
 Connecting to localhost:1025...
 Email sent successfully!
@@ -149,10 +161,10 @@ Email sent successfully!
 - **Size handling**: No artificial size limits
 
 ### SMTP Configuration
-- **Authentication**: Plain text authentication
-- **Default credentials**: `username`/`password` (for local testing)
-- **Connection**: TCP connection to specified server
-- **Error handling**: Detailed error messages
+- **Authentication**: SASL authentication using go-sasl package
+- **Supported methods**: PLAIN and ANONYMOUS authentication
+- **Connection**: TCP connection to specified server using go-smtp package
+- **Error handling**: Detailed error messages for each step
 
 ## Troubleshooting
 
@@ -169,15 +181,16 @@ Email sent successfully!
    - Check file exists before running script
 
 3. **SMTP authentication errors**
-   - Default credentials are for local testing only
-   - Update authentication for production servers
+   - Ensure correct username and password
+   - Check if the SMTP server supports PLAIN authentication
+   - Verify server allows authentication on the specified port
 
 ### Debug Mode
 
 To see more detailed information, you can modify the script to add debug logging:
 
 ```go
-// Add before smtp.SendMail call
+// Add before client.Data() call
 fmt.Printf("Sending to: %v\n", allRecipients)
 fmt.Printf("Message size: %d bytes\n", len(message))
 ```

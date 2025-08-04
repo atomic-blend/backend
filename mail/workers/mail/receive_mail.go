@@ -109,24 +109,17 @@ func receiveMail(m *amqp.Delivery, payload ReceivedMailPayload) {
 		return
 	}
 
-	// Extract basic email information
-	header := entity.Header
-	from := header.Get("From")
-	to := header.Get("To")
-	subject := header.Get("Subject")
-	date := header.Get("Date")
-
 	// Store headers
-	mailContent.Headers.From = from
-	mailContent.Headers.To = to
-	mailContent.Headers.Subject = subject
-	mailContent.Headers.Date = date
+	mailContent.Headers.From = entity.Header.Get("From")
+	mailContent.Headers.To = entity.Header.Get("To")
+	mailContent.Headers.Subject = entity.Header.Get("Subject")
+	mailContent.Headers.Date = entity.Header.Get("Date")
 
 	log.Info().
-		Str("from", from).
-		Str("to", to).
-		Str("subject", subject).
-		Str("date", date).
+		Str("from", mailContent.Headers.From).
+		Str("to", mailContent.Headers.To).
+		Str("subject", mailContent.Headers.Subject).
+		Str("date", mailContent.Headers.Date).
 		Str("client_ip", payload.IP).
 		Str("hostname", payload.Hostname).
 		Str("queue_id", payload.QueueID).
@@ -141,12 +134,18 @@ func receiveMail(m *amqp.Delivery, payload ReceivedMailPayload) {
 	// Process the message body and collect all content
 	processMessageBody(entity, mailContent)
 
-	//TODO: check that each recepient is a valid user
+	for _, rcpt := range strings.Split(mailContent.Headers.To, ",") {
+		log.Info().Str("rcpt", rcpt).Msg("Handling recepient")
 
-	// TODO: Create complete mail document with all content
-	// TODO: encrypt the mail content for mongodb with user's public key
-	// TODO: save the mail document with s3 references to mongodb
-	// TODO: upload the attachments to s3
+		// TODO: check that each recepient is a valid user
+		// TODO: if not, reject the email for the recepient
+
+		//TODO: encrypt the mail content for mongodb with user's public key
+
+		//TODO: upload the attachments to s3
+
+		//TODO: save the mail document with s3 references to mongodb
+	}
 
 	m.Ack(false)
 }
