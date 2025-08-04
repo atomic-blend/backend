@@ -30,9 +30,9 @@ type Attachment struct {
 	Data        []byte
 }
 
-func receiveMail(mimeContent string) {
+func receiveMail(payload ReceivedMailPayload) {
 	// Create a reader from the MIME content string
-	reader := strings.NewReader(mimeContent)
+	reader := strings.NewReader(payload.Content)
 
 	//TODO: send the email to rspamd via HTTP for spam detection
 
@@ -66,6 +66,12 @@ func receiveMail(mimeContent string) {
 		Str("to", to).
 		Str("subject", subject).
 		Str("date", date).
+		Str("client_ip", payload.IP).
+		Str("hostname", payload.Hostname).
+		Str("queue_id", payload.QueueID).
+		Str("deliver_to", payload.DeliverTo).
+		Str("received_at", payload.ReceivedAt).
+		Interface("recipients", payload.Rcpt).
 		Msg("Received email")
 
 	// Process the message body and collect all content
