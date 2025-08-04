@@ -66,8 +66,28 @@ func receiveMail(payload ReceivedMailPayload) {
 		if len(checkResponse.Symbols) > 0 {
 			log.Info().Interface("symbols", checkResponse.Symbols).Msg("Rspamd triggered symbols")
 		}
-
-		// TODO: Handle spam actions (reject, quarantine, etc.) based on checkResponse.Action
+		
+		switch checkResponse.Action {
+		case "reject":
+			log.Info().Msg("Rejecting email")
+			// TODO: mark the email as spam
+		case "soft reject":
+			log.Info().Msg("Soft rejecting email")
+			// TODO: mark the email as spam
+		case "no action":
+			log.Info().Msg("No action taken")
+		case "add header":
+			log.Info().Msg("Adding spam header")
+			// TODO: mark the email as spam
+		case "rewrite subject":
+			log.Info().Msg("Rewrite subject")
+			// mark the email subject as needing a rewrite (only when sending, ignored on receiving)
+		case "greylist":
+			log.Info().Msg("Greylisting email")
+			// TODO: mark the email as greylisted
+		default:
+			log.Info().Msg("No action taken")
+		}
 	}
 
 	// Parse the MIME message
