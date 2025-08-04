@@ -4,6 +4,7 @@ import (
 	"io"
 	"strings"
 
+	"github.com/atomic-blend/backend/mail/utils/rspamd"
 	"github.com/emersion/go-message"
 	"github.com/rs/zerolog/log"
 )
@@ -34,7 +35,40 @@ func receiveMail(payload ReceivedMailPayload) {
 	// Create a reader from the MIME content string
 	reader := strings.NewReader(payload.Content)
 
-	//TODO: send the email to rspamd via HTTP for spam detection
+	// Send the email to rspamd via HTTP for spam detection
+	client := rspamd.NewClient(nil) // Use default config
+
+	checkRequest := &rspamd.CheckRequest{
+		Message:   []byte(payload.Content),
+		IP:        payload.IP,
+		Helo:      payload.Hostname,
+		Hostname:  payload.Hostname,
+		From:      payload.From,
+		Rcpt:      payload.Rcpt,
+		QueueID:   payload.QueueID,
+		User:      payload.User,
+		DeliverTo: payload.DeliverTo,
+	}
+
+	checkResponse, err := client.CheckMessage(checkRequest)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to check message with Rspamd")
+		// Continue processing even if Rspamd check fails
+	} else {
+		log.Info().
+			Str("action", checkResponse.Action).
+			Float64("score", checkResponse.Score).
+			Float64("required_score", checkResponse.RequiredScore).
+			Bool("is_spam", checkResponse.IsSpam()).
+			Msg("Rspamd check completed")
+
+		// Log triggered symbols if any
+		if len(checkResponse.Symbols) > 0 {
+			log.Info().Interface("symbols", checkResponse.Symbols).Msg("Rspamd triggered symbols")
+		}
+
+		// TODO: Handle spam actions (reject, quarantine, etc.) based on checkResponse.Action
+	}
 
 	// Parse the MIME message
 	entity, err := message.Read(reader)
@@ -151,11 +185,16 @@ func processMessagePart(part *message.Entity, mailContent *MailContent) {
 		return
 	}
 
-	// Get content disposition
-	disposition, dispositionParams, err := part.Header.ContentDisposition()
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to get content disposition")
-		return
+	// Get content disposition (optional - some parts may not have it)
+	disposition := ""
+	var dispositionParams map[string]string
+	if contentDisposition := part.Header.Get("Content-Disposition"); contentDisposition != "" {
+		disposition, dispositionParams, err = part.Header.ContentDisposition()
+		if err != nil {
+			log.Warn().Err(err).Msg("Failed to parse content disposition, continuing without it")
+			disposition = ""
+			dispositionParams = nil
+		}
 	}
 
 	// Extract filename from content disposition

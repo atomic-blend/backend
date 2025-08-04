@@ -64,6 +64,9 @@ services:
       - type: bind
         source: ${HOME}${USERPROFILE}/.netrc
         target: /root/.netrc
+    networks:
+      - default
+      - rspamd
     depends_on:
       mongodb:
         condition: service_healthy
@@ -143,9 +146,9 @@ services:
     networks:
       - rspamd
     ports:
-      - "127.0.0.1:11332:11332"
-      - "127.0.0.1:11333:11333"
-      - "127.0.0.1:11334:11334"
+      - "11332:11332"
+      - "11333:11333"
+      - "11334:11334"
     pull_policy: build
 # recommended for production
 #    read_only: true
