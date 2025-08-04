@@ -38,12 +38,15 @@ cloud.google.com/go/storage v1.14.0/go.mod h1:GrKmX003DSIwi9o29oFT7YDnHYwZoctc3f
 connectrpc.com/connect v1.18.1 h1:PAg7CjSAGvscaf6YZKUefjoih5Z/qYkyaTrBW8xvYPw=
 connectrpc.com/connect v1.18.1/go.mod h1:0292hj1rnx8oFrStN7cB4jjVBeqs+Yx5yDIC2prWDO8=
 dmitri.shuralyov.com/gpu/mtl v0.0.0-20190408044501-666a987793e9/go.mod h1:H6x//7gZCb22OMCxBHrMx7a5I7Hp++hsVxbQ4BYO7hU=
+filippo.io/age v1.2.1 h1:X0TZjehAZylOIj4DubWYU1vWQxv9bJpo+Uu2/LGhi1o=
+filippo.io/age v1.2.1/go.mod h1:JL9ew2lTN+Pyft4RiNGguFfOpewKwSHm5ayKD/A4004=
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/BurntSushi/xgb v0.0.0-20160522181843-27f122750802/go.mod h1:IVnqGOEym/WlBOVXweHU+Q+/VP0lqqI8lqeDx9IjBqo=
 github.com/acobaugh/osrelease v0.0.0-20181218015638-a93a0a55a249 h1:fMi9ZZ/it4orHj3xWrM6cLkVFcCbkXQALFUiNtHtCPs=
 github.com/acobaugh/osrelease v0.0.0-20181218015638-a93a0a55a249/go.mod h1:iU1PxQMQwoHZZWmMKrMkrNlY+3+p9vxIjpZOVyxWa0g=
 github.com/atomic-blend/backend/grpc v0.0.0-20250717174558-94e1a82ce107 h1:O5ayZbd2/Dr6esU4d8G+9TwFLx68/3ciGfXZKzorde8=
 github.com/atomic-blend/backend/grpc v0.0.0-20250717174558-94e1a82ce107/go.mod h1:myCzKWUYinI2ZDpxHJ+3NmUvzSTJ8e1vgp8zpGATaTY=
+github.com/atomic-blend/backend/grpc v0.1.0/go.mod h1:myCzKWUYinI2ZDpxHJ+3NmUvzSTJ8e1vgp8zpGATaTY=
 github.com/atomic-blend/memongo v0.0.0-20250305155718-adada7465e0f h1:USVU2p7/RTSOY1DV1aKhtTGvPEoHgHlqy9ZT2txoXlw=
 github.com/atomic-blend/memongo v0.0.0-20250305155718-adada7465e0f/go.mod h1:GlVBodZbIfTJdagvuzGxDFLpF8IbuxMaTXlP3agpt8w=
 github.com/bytedance/sonic v1.13.2 h1:8/H1FempDZqC4VqjptGo14QQlJx8VdZJegxs6wwfqpQ=
