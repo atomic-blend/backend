@@ -19,9 +19,12 @@ type MailContent struct {
 		MessageID string
 		Cc        string
 	}
-	TextContent string
-	HTMLContent string
-	Attachments []Attachment
+	TextContent    string
+	HTMLContent    string
+	Attachments    []Attachment
+	Rejected       bool
+	RewriteSubject bool
+	Greylisted     bool
 }
 
 // Attachment represents a file attachment
@@ -37,6 +40,13 @@ func receiveMail(payload ReceivedMailPayload) {
 
 	// Send the email to rspamd via HTTP for spam detection
 	client := rspamd.NewClient(nil) // Use default config
+
+	mailContent := &MailContent{
+		Attachments:    make([]Attachment, 0),
+		Rejected:       false,
+		RewriteSubject: false,
+		Greylisted:     false,
+	}
 
 	checkRequest := &rspamd.CheckRequest{
 		Message:   []byte(payload.Content),
@@ -66,25 +76,26 @@ func receiveMail(payload ReceivedMailPayload) {
 		if len(checkResponse.Symbols) > 0 {
 			log.Info().Interface("symbols", checkResponse.Symbols).Msg("Rspamd triggered symbols")
 		}
-		
+
 		switch checkResponse.Action {
 		case "reject":
 			log.Info().Msg("Rejecting email")
-			// TODO: mark the email as spam
+			mailContent.Rejected = true
 		case "soft reject":
 			log.Info().Msg("Soft rejecting email")
-			// TODO: mark the email as spam
+			mailContent.Rejected = true
 		case "no action":
 			log.Info().Msg("No action taken")
 		case "add header":
 			log.Info().Msg("Adding spam header")
-			// TODO: mark the email as spam
+			mailContent.RewriteSubject = true
 		case "rewrite subject":
 			log.Info().Msg("Rewrite subject")
 			// mark the email subject as needing a rewrite (only when sending, ignored on receiving)
+			mailContent.RewriteSubject = true
 		case "greylist":
 			log.Info().Msg("Greylisting email")
-			// TODO: mark the email as greylisted
+			mailContent.Greylisted = true
 		default:
 			log.Info().Msg("No action taken")
 		}
@@ -95,11 +106,6 @@ func receiveMail(payload ReceivedMailPayload) {
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to parse MIME message")
 		return
-	}
-
-	// Initialize mail content structure
-	mailContent := &MailContent{
-		Attachments: make([]Attachment, 0),
 	}
 
 	// Extract basic email information
@@ -126,6 +132,9 @@ func receiveMail(payload ReceivedMailPayload) {
 		Str("deliver_to", payload.DeliverTo).
 		Str("received_at", payload.ReceivedAt).
 		Interface("recipients", payload.Rcpt).
+		Bool("rejected", mailContent.Rejected).
+		Bool("rewrite_subject", mailContent.RewriteSubject).
+		Bool("greylisted", mailContent.Greylisted).
 		Msg("Received email")
 
 	// Process the message body and collect all content
