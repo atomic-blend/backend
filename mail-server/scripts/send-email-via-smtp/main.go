@@ -8,10 +8,12 @@ import (
 	"io"
 	"mime"
 	"mime/multipart"
-	"net/smtp"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/emersion/go-sasl"
+	"github.com/emersion/go-smtp"
 )
 
 func main() {
@@ -109,6 +111,18 @@ func main() {
 		smtpServer = smtpInput
 	}
 
+	// Get SMTP credentials if needed
+	fmt.Print("SMTP Username (press Enter to skip authentication): ")
+	usernameInput, _ := reader.ReadString('\n')
+	usernameInput = strings.TrimSpace(usernameInput)
+
+	var password string
+	if usernameInput != "" {
+		fmt.Print("SMTP Password: ")
+		passwordInput, _ := reader.ReadString('\n')
+		password = strings.TrimSpace(passwordInput)
+	}
+
 	// Create email message
 	var message []byte
 	var err error
@@ -127,15 +141,67 @@ func main() {
 	allRecipients := append(recipients, ccRecipients...)
 	allRecipients = append(allRecipients, bccRecipients...)
 
-	// Send email
+	// Send email using go-smtp
 	fmt.Printf("\nConnecting to %s...\n", smtpServer)
-	err = smtp.SendMail(smtpServer, nil, sender, allRecipients, message)
 
+	// Create SMTP client
+	client, err := smtp.Dial(smtpServer)
 	if err != nil {
-		fmt.Printf("Error sending email: %v\n", err)
-	} else {
-		fmt.Println("Email sent successfully!")
+		fmt.Printf("Error connecting to SMTP server: %v\n", err)
+		return
 	}
+	defer client.Close()
+
+	// Authenticate - use anonymous if no credentials provided
+	if usernameInput != "" {
+		auth := sasl.NewPlainClient("", usernameInput, password)
+		if err := client.Auth(auth); err != nil {
+			fmt.Printf("Error authenticating: %v\n", err)
+			return
+		}
+	} else {
+		// Use anonymous authentication
+		auth := sasl.NewAnonymousClient("anonymous")
+		if err := client.Auth(auth); err != nil {
+			fmt.Printf("Error with anonymous authentication: %v\n", err)
+			return
+		}
+	}
+
+	// Set sender
+	if err := client.Mail(sender, nil); err != nil {
+		fmt.Printf("Error setting sender: %v\n", err)
+		return
+	}
+
+	// Set recipients
+	for _, recipient := range allRecipients {
+		if err := client.Rcpt(recipient, nil); err != nil {
+			fmt.Printf("Error setting recipient %s: %v\n", recipient, err)
+			return
+		}
+	}
+
+	// Send message
+	writer, err := client.Data()
+	if err != nil {
+		fmt.Printf("Error starting message: %v\n", err)
+		return
+	}
+
+	_, err = writer.Write(message)
+	if err != nil {
+		fmt.Printf("Error writing message: %v\n", err)
+		return
+	}
+
+	err = writer.Close()
+	if err != nil {
+		fmt.Printf("Error closing message: %v\n", err)
+		return
+	}
+
+	fmt.Println("Email sent successfully!")
 }
 
 func createSimpleMessage(sender string, to, cc, bcc []string, subject, body string) []byte {

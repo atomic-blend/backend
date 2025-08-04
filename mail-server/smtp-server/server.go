@@ -53,16 +53,20 @@ type Session struct {
 // AuthMechanisms returns a slice of available auth mechanisms; only PLAIN is
 // supported in this example.
 func (s *Session) AuthMechanisms() []string {
-	return []string{sasl.Plain}
+	return []string{sasl.Anonymous}
 }
 
 // Auth is the handler for supported authenticators.
 func (s *Session) Auth(mech string) (sasl.Server, error) {
-	return sasl.NewPlainServer(func(identity, username, password string) error {
-		s.auth = true
-		s.user = username
-		return nil
-	}), nil
+	switch mech {
+	case sasl.Anonymous:
+		return sasl.NewAnonymousServer(func(trace string) error {
+			s.auth = true
+			return nil
+		}), nil
+	default:
+		return nil, smtp.ErrAuthUnsupported
+	}
 }
 
 func (s *Session) Mail(from string, opts *smtp.MailOptions) error {
