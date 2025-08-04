@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"crypto/rand"
 	"encoding/hex"
-	"errors"
 	"io"
 	"net"
 	"time"
@@ -60,9 +59,6 @@ func (s *Session) AuthMechanisms() []string {
 // Auth is the handler for supported authenticators.
 func (s *Session) Auth(mech string) (sasl.Server, error) {
 	return sasl.NewPlainServer(func(identity, username, password string) error {
-		if username != "username" || password != "password" {
-			return errors.New("invalid_credentials")
-		}
 		s.auth = true
 		s.user = username
 		return nil

@@ -7,6 +7,7 @@ import (
 	"github.com/atomic-blend/backend/mail/utils/rspamd"
 	"github.com/emersion/go-message"
 	"github.com/rs/zerolog/log"
+	"github.com/streadway/amqp"
 )
 
 // MailContent represents the collected content from an email
@@ -34,7 +35,7 @@ type Attachment struct {
 	Data        []byte
 }
 
-func receiveMail(payload ReceivedMailPayload) {
+func receiveMail(m *amqp.Delivery, payload ReceivedMailPayload) {
 	// Create a reader from the MIME content string
 	reader := strings.NewReader(payload.Content)
 
@@ -140,10 +141,14 @@ func receiveMail(payload ReceivedMailPayload) {
 	// Process the message body and collect all content
 	processMessageBody(entity, mailContent)
 
-	// TODO: Upload all collected content to MongoDB and S3
+	//TODO: check that each recepient is a valid user
+
 	// TODO: Create complete mail document with all content
-	// TODO: Upload attachments to S3
-	// TODO: Save mail document with S3 references to MongoDB
+	// TODO: encrypt the mail content for mongodb with user's public key
+	// TODO: save the mail document with s3 references to mongodb
+	// TODO: upload the attachments to s3
+
+	m.Ack(false)
 }
 
 func processMessageBody(entity *message.Entity, mailContent *MailContent) {
@@ -166,13 +171,6 @@ func processMessageBody(entity *message.Entity, mailContent *MailContent) {
 		// Handle single part message
 		processMessagePart(entity, mailContent)
 	}
-
-	// TODO: Encrypt the mail content for mongodb
-	// TODO: Encrypt the attachments for s3
-
-	//TODO: upload the attachments to s3
-	//TODO: save the mail document with s3 references to mongodb
-	//TODO: upload the mail content to mongodb
 }
 
 func processMultipartMessage(entity *message.Entity, mailContent *MailContent) {

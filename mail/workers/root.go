@@ -1,10 +1,13 @@
 package workers
 
-import "github.com/atomic-blend/backend/mail/workers/mail"
+import (
+	"github.com/atomic-blend/backend/mail/workers/mail"
+	"github.com/streadway/amqp"
+)
 
-func RouteMessage(exchange string, routingKey string, body []byte) {
-	switch exchange {
+func RouteMessage(message *amqp.Delivery) {
+	switch message.Exchange {
 	case "mail":
-		mail.RouteMessage(routingKey, body)
+		mail.RouteMessage(message)
 	}
 }

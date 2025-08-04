@@ -129,8 +129,7 @@ func main() {
 
 	// Send email
 	fmt.Printf("\nConnecting to %s...\n", smtpServer)
-	auth := smtp.PlainAuth("", "username", "password", "localhost")
-	err = smtp.SendMail(smtpServer, auth, sender, allRecipients, message)
+	err = smtp.SendMail(smtpServer, nil, sender, allRecipients, message)
 
 	if err != nil {
 		fmt.Printf("Error sending email: %v\n", err)
