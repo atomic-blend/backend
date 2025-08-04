@@ -23,6 +23,7 @@ type MailAttachment struct {
 
 type Mail struct {
 	ID          primitive.ObjectID  `bson:"_id" json:"id"`
+	UserID      primitive.ObjectID  `bson:"user_id" json:"user_id"`
 	Headers     MailHeaders         `bson:"headers" json:"headers"`
 	TextContent string              `bson:"text_content" json:"text_content"`
 	HTMLContent string              `bson:"html_content" json:"html_content"`

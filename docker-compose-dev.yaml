@@ -21,10 +21,11 @@ services:
       - "8080"
       - "50051"  # gRPC port
     volumes:
-      - ./auth:/app
+      - ./:/workspace
       - type: bind
         source: ${HOME}${USERPROFILE}/.netrc
         target: /root/.netrc
+    working_dir: /workspace/auth
     depends_on:
       mongodb:
         condition: service_healthy
@@ -33,6 +34,7 @@ services:
     command: air  # Hot-reloading for development
 
   mail-server:
+    working_dir: /workspace/mail-server
     build:
       context: ./mail-server
       dockerfile: Dockerfile.dev  # Use a dev-specific Dockerfile
@@ -46,12 +48,13 @@ services:
       - .env
     command: air
     volumes:
-      - ./mail-server:/app
+      - ./:/workspace
       - type: bind
         source: ${HOME}${USERPROFILE}/.netrc
         target: /root/.netrc
   
   mail:
+    working_dir: /workspace/mail
     build:
       context: ./mail
       dockerfile: Dockerfile.dev  # Use a dev-specific Dockerfile
@@ -60,7 +63,7 @@ services:
       - "8080"
       - "50051"  # gRPC port
     volumes:
-      - ./mail:/app
+      - ./:/workspace
       - type: bind
         source: ${HOME}${USERPROFILE}/.netrc
         target: /root/.netrc
@@ -75,6 +78,7 @@ services:
     command: air  # Hot-reloading for development
   
   productivity:
+    working_dir: /workspace/productivity
     build:
       context: ./productivity
       dockerfile: Dockerfile.dev  # Use a dev-specific Dockerfile
@@ -83,7 +87,7 @@ services:
       - "8080"
       - "50051"  # gRPC port
     volumes:
-      - ./productivity:/app
+      - ./:/workspace
       - type: bind
         source: ${HOME}${USERPROFILE}/.netrc
         target: /root/.netrc

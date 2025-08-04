@@ -31,3 +31,8 @@ func NewUserClient() (*UserClient, error) {
 func (u *UserClient) GetUserDevices(ctx context.Context, req *connect.Request[userv1.GetUserDevicesRequest]) (*connect.Response[userv1.GetUserDevicesResponse], error) {
 	return u.client.GetUserDevices(ctx, req)
 }
+
+// GetUserPublicKey calls the GetUserPublicKey method on the user service
+func (u *UserClient) GetUserPublicKey(ctx context.Context, req *connect.Request[userv1.GetUserPublicKeyRequest]) (*connect.Response[userv1.GetUserPublicKeyResponse], error) {
+	return u.client.GetUserPublicKey(ctx, req)
+}

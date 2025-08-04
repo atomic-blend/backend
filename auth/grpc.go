@@ -6,7 +6,7 @@ import (
 	userGrpc "github.com/atomic-blend/backend/auth/grpc/server/user"
 	"github.com/atomic-blend/backend/auth/repositories"
 	"github.com/atomic-blend/backend/auth/utils/db"
-	authconnect "github.com/atomic-blend/backend/grpc/gen/auth/authconnect"
+	userconnect "github.com/atomic-blend/backend/grpc/gen/user/v1/userv1connect"
 
 	"github.com/rs/zerolog/log"
 )
@@ -18,7 +18,7 @@ func startGRPCServer() {
 	UserGrpcServer := userGrpc.NewUserGrpcServer(userRepo)
 
 	// TODO: register gRPC services here
-	globalPath, globalHandler := authconnect.NewUserServiceHandler(UserGrpcServer)
+	globalPath, globalHandler := userconnect.NewUserServiceHandler(UserGrpcServer)
 
 	// Créez un serveur HTTP mux
 	mux := http.NewServeMux()
