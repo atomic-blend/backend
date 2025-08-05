@@ -5,9 +5,14 @@ meta {
 }
 
 get {
-  url: {{API_URL}}/mail/
+  url: {{API_URL}}/mail/?page=1&size=10
   body: none
   auth: inherit
+}
+
+params:query {
+  page: 1
+  size: 10
 }
 
 settings {

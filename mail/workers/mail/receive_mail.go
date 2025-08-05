@@ -20,6 +20,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 	"github.com/streadway/amqp"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 // MailContent represents the collected content from an email
@@ -267,6 +268,14 @@ func receiveMail(m *amqp.Delivery, payload ReceivedMailPayload) {
 			log.Info().Str("rcpt", rcpt).Msg("User not found, skipping")
 			continue
 		}
+
+		userID, err := primitive.ObjectIDFromHex(rcptPublicKey.Msg.UserId)
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to convert user ID to ObjectID")
+			haveErrors = true
+			continue
+		}
+		mailEntity.UserID = userID
 
 		log.Info().Str("rcpt", rcpt).Str("publicKey", rcptPublicKey.Msg.PublicKey).Msg("User public key")
 		log.Info().Interface("encryptedMails", encryptedMails).Msg("Encrypted mails")
