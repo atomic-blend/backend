@@ -21,8 +21,12 @@ type UserAuthInfo struct {
 // Can be applied to specific routes that require authentication
 func Middleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Get the Authorization header
+		// Get the Authorization header or authorization header
 		authHeader := c.GetHeader("Authorization")
+		if authHeader == "" {
+			authHeader = c.GetHeader("authorization")
+		}
+
 		if authHeader == "" {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization header is required"})
 			c.Abort()

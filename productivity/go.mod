@@ -1,6 +1,6 @@
 module github.com/atomic-blend/backend/productivity
 
-go 1.23.5
+go 1.24.5
 
 require (
 	github.com/appleboy/go-fcm v1.2.3
@@ -11,7 +11,7 @@ require (
 	github.com/stretchr/testify v1.10.0
 )
 
-require github.com/atomic-blend/backend/grpc v0.0.0-20250717174558-94e1a82ce107
+require github.com/atomic-blend/backend/grpc v0.1.0
 
 require (
 	cel.dev/expr v0.19.1 // indirect

@@ -22,6 +22,7 @@ const userCollection = "users"
 type UserRepositoryInterface interface {
 	Create(ctx context.Context, user *models.UserEntity) (*models.UserEntity, error)
 	GetByID(ctx context.Context, id string) (*models.UserEntity, error)
+	GetByEmail(ctx context.Context, email string) (*models.UserEntity, error)
 	Update(ctx context.Context, user *models.UserEntity) (*models.UserEntity, error)
 	Delete(ctx context.Context, id string) error
 	FindByEmail(ctx context.Context, email string) (*models.UserEntity, error)
@@ -107,6 +108,16 @@ func (r *UserRepository) GetByID(ctx context.Context, id string) (*models.UserEn
 		return nil, err
 	}
 
+	return &user, nil
+}
+
+// GetByEmail retrieves a user by their email address
+func (r *UserRepository) GetByEmail(ctx context.Context, email string) (*models.UserEntity, error) {
+	var user models.UserEntity
+	err := r.collection.FindOne(ctx, bson.M{"email": email}).Decode(&user)
+	if err != nil {
+		return nil, err
+	}
 	return &user, nil
 }
 

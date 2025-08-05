@@ -33,6 +33,8 @@ jobs:
             auth/**
             productivity/**
             grpc/**
+            mail/**
+            mail-server/**
           quotepath: false
 
       - name: "Set output in the matrix format"
@@ -57,7 +59,7 @@ jobs:
         if: ${{ matrix.dir != 'grpc' }}
         uses: ./.github/actions/build-and-test
         with:
-          go-version: "1.21"
+          go-version: "1.24.5"
           node-version: "23.9"
           working-directory: "${{ matrix.dir }}"
           maizzle-directory: "./maizzle"
