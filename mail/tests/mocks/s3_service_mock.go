@@ -53,8 +53,8 @@ func (m *MockS3Service) FileExists(ctx context.Context, s3Path, filename string)
 	return args.Bool(0), args.Error(1)
 }
 
-// GeneratePreSignedDownloadUrl generates a presigned download URL
-func (m *MockS3Service) GeneratePreSignedDownloadUrl(ctx context.Context, s3Path, filename string, expirationSeconds int64) (string, error) {
+// GeneratePreSignedDownloadURL generates a presigned download URL
+func (m *MockS3Service) GeneratePreSignedDownloadURL(ctx context.Context, s3Path, filename string, expirationSeconds int64) (string, error) {
 	args := m.Called(ctx, s3Path, filename, expirationSeconds)
 	return args.String(0), args.Error(1)
 }

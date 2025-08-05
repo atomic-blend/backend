@@ -21,13 +21,13 @@ import (
 func TestMailContent_Encrypt(t *testing.T) {
 	tests := []struct {
 		name      string
-		mail      *MailContent
+		mail      *Content
 		publicKey string
 		wantErr   bool
 	}{
 		{
 			name: "successful encryption",
-			mail: &MailContent{
+			mail: &Content{
 				Headers: struct {
 					From      string
 					To        string
@@ -63,7 +63,7 @@ func TestMailContent_Encrypt(t *testing.T) {
 		},
 		{
 			name: "empty content",
-			mail: &MailContent{
+			mail: &Content{
 				Headers: struct {
 					From      string
 					To        string
@@ -323,7 +323,7 @@ This is a test email content.`
 					userPublicKey := rcptPublicKey.Msg.PublicKey
 
 					// Create mail content
-					mailContent := &MailContent{
+					mailContent := &Content{
 						Headers: struct {
 							From      string
 							To        string
@@ -422,7 +422,7 @@ func TestProcessMessageBody(t *testing.T) {
 	tests := []struct {
 		name     string
 		mimeData string
-		want     *MailContent
+		want     *Content
 	}{
 		{
 			name: "plain text message",
@@ -432,7 +432,7 @@ Subject: Test
 Content-Type: text/plain
 
 This is plain text content.`,
-			want: &MailContent{
+			want: &Content{
 				TextContent: "This is plain text content.",
 				HTMLContent: "",
 				Attachments: []Attachment{},
@@ -446,7 +446,7 @@ Subject: Test
 Content-Type: text/html
 
 <html><body>This is HTML content.</body></html>`,
-			want: &MailContent{
+			want: &Content{
 				TextContent: "",
 				HTMLContent: "<html><body>This is HTML content.</body></html>",
 				Attachments: []Attachment{},
@@ -470,7 +470,7 @@ Content-Disposition: attachment; filename="test.txt"
 
 attachment content
 --boundary--`,
-			want: &MailContent{
+			want: &Content{
 				TextContent: "This is plain text.\n",
 				HTMLContent: "",
 				Attachments: []Attachment{
@@ -490,7 +490,7 @@ attachment content
 			entity, err := message.Read(strings.NewReader(tt.mimeData))
 			require.NoError(t, err)
 
-			mailContent := &MailContent{
+			mailContent := &Content{
 				Attachments: make([]Attachment, 0),
 			}
 
@@ -546,7 +546,7 @@ PDF content here
 	entity, err := message.Read(strings.NewReader(multipartMIME))
 	require.NoError(t, err)
 
-	mailContent := &MailContent{
+	mailContent := &Content{
 		Attachments: make([]Attachment, 0),
 	}
 
@@ -567,13 +567,13 @@ func TestProcessMessagePart(t *testing.T) {
 		disposition string
 		filename    string
 		body        string
-		expected    func(*MailContent)
+		expected    func(*Content)
 	}{
 		{
 			name:        "plain text part",
 			contentType: "text/plain",
 			body:        "Plain text content",
-			expected: func(mc *MailContent) {
+			expected: func(mc *Content) {
 				assert.Equal(t, "Plain text content", mc.TextContent)
 			},
 		},
@@ -581,7 +581,7 @@ func TestProcessMessagePart(t *testing.T) {
 			name:        "HTML part",
 			contentType: "text/html",
 			body:        "<html><body>HTML content</body></html>",
-			expected: func(mc *MailContent) {
+			expected: func(mc *Content) {
 				assert.Equal(t, "<html><body>HTML content</body></html>", mc.HTMLContent)
 			},
 		},
@@ -591,7 +591,7 @@ func TestProcessMessagePart(t *testing.T) {
 			disposition: "attachment",
 			filename:    "document.pdf",
 			body:        "PDF content",
-			expected: func(mc *MailContent) {
+			expected: func(mc *Content) {
 				assert.Equal(t, 1, len(mc.Attachments))
 				assert.Equal(t, "document.pdf", mc.Attachments[0].Filename)
 				assert.Equal(t, "application/pdf", mc.Attachments[0].ContentType)
@@ -612,7 +612,7 @@ func TestProcessMessagePart(t *testing.T) {
 			entity, err := message.Read(strings.NewReader(mimeData))
 			require.NoError(t, err)
 
-			mailContent := &MailContent{
+			mailContent := &Content{
 				Attachments: make([]Attachment, 0),
 			}
 

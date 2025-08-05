@@ -9,14 +9,14 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-// MailController handles mail related operations
-type MailController struct {
+// Controller handles mail related operations
+type Controller struct {
 	mailRepo repositories.MailRepositoryInterface
 }
 
 // NewMailController creates a new mail controller instance
-func NewMailController(mailRepo repositories.MailRepositoryInterface) *MailController {
-	return &MailController{
+func NewMailController(mailRepo repositories.MailRepositoryInterface) *Controller {
+	return &Controller{
 		mailRepo: mailRepo,
 	}
 }
@@ -35,7 +35,7 @@ func SetupRoutesWithMock(router *gin.Engine, mailRepo repositories.MailRepositor
 }
 
 // setupMailRoutes sets up the routes for mail controller
-func setupMailRoutes(router *gin.Engine, mailController *MailController) {
+func setupMailRoutes(router *gin.Engine, mailController *Controller) {
 	mailRoutes := router.Group("/mail")
 	auth.RequireAuth(mailRoutes)
 	{

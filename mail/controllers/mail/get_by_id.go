@@ -21,7 +21,7 @@ import (
 // @Failure 404 {object} map[string]interface{}
 // @Failure 500 {object} map[string]interface{}
 // @Router /mail/{id} [get]
-func (c *MailController) GetMailByID(ctx *gin.Context) {
+func (c *Controller) GetMailByID(ctx *gin.Context) {
 	// Get authenticated user from context
 	authUser := auth.GetAuthUser(ctx)
 	if authUser == nil {

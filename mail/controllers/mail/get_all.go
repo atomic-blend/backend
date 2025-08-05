@@ -30,7 +30,7 @@ type PaginatedMailResponse struct {
 // @Failure 400 {object} map[string]interface{}
 // @Failure 500 {object} map[string]interface{}
 // @Router /mail [get]
-func (c *MailController) GetAllMails(ctx *gin.Context) {
+func (c *Controller) GetAllMails(ctx *gin.Context) {
 	// Get authenticated user from context
 	authUser := auth.GetAuthUser(ctx)
 	if authUser == nil {

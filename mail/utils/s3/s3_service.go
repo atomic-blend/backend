@@ -17,23 +17,24 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// DEFAULT_PRESIGNED_URL_EXPIRATION_SECONDS is the default expiration time for presigned URLs
-const DEFAULT_PRESIGNED_URL_EXPIRATION_SECONDS = 900 // 15 minutes
+// defaultPresignedURLExpirationSeconds is the default expiration time for presigned URLs
+const defaultPresignedURLExpirationSeconds = 900 // 15 minutes
 
-// S3Service provides methods for interacting with AWS S3
-type S3Service struct {
+// Service provides methods for interacting with AWS S3
+type Service struct {
 	client *s3.Client
 	bucket string
 }
 
-func (s *S3Service) BulkDeleteFiles(ctx context.Context, uploadedKeys []string) {
+// BulkDeleteFiles deletes multiple files from S3
+func (s *Service) BulkDeleteFiles(ctx context.Context, uploadedKeys []string) {
 	for _, key := range uploadedKeys {
 		s.DeleteFile(ctx, nil, nil, &key)
 	}
 }
 
 // NewS3Service creates a new S3 service instance
-func NewS3Service(bucket string) (*S3Service, error) {
+func NewS3Service(bucket string) (*Service, error) {
 	// Load AWS configuration
 	endpoint := os.Getenv("AWS_ENDPOINT")
 	region := os.Getenv("AWS_REGION")
@@ -54,7 +55,7 @@ func NewS3Service(bucket string) (*S3Service, error) {
 		o.UsePathStyle = usePathStyleEndpoint
 	})
 
-	return &S3Service{
+	return &Service{
 		client: client,
 		bucket: bucket,
 	}, nil
@@ -62,7 +63,7 @@ func NewS3Service(bucket string) (*S3Service, error) {
 
 // GenerateUploadPayload generates a payload for uploading a file to S3
 // have the same signature as UploadFile, but return the payload instead of uploading for bulk upload
-func (s *S3Service) GenerateUploadPayload(ctx context.Context, data []byte, s3Path, filename string, metadata map[string]string) (*s3.PutObjectInput, error) {
+func (s *Service) GenerateUploadPayload(ctx context.Context, data []byte, s3Path, filename string, metadata map[string]string) (*s3.PutObjectInput, error) {
 	// Construct the full S3 key
 	s3Key := filepath.Join(s3Path, filename)
 
@@ -86,7 +87,7 @@ func (s *S3Service) GenerateUploadPayload(ctx context.Context, data []byte, s3Pa
 
 // BulkUploadFiles uploads multiple files given a list of payloads.
 // Auto rollback if there are errors
-func (s *S3Service) BulkUploadFiles(ctx context.Context, payloads []*s3.PutObjectInput) ([]string, error) {
+func (s *Service) BulkUploadFiles(ctx context.Context, payloads []*s3.PutObjectInput) ([]string, error) {
 	// Upload the files
 	var uploadedKeys []string
 	var haveErrors bool
@@ -117,7 +118,7 @@ func (s *S3Service) BulkUploadFiles(ctx context.Context, payloads []*s3.PutObjec
 
 // UploadFile uploads a file to S3 with the given path and filename
 // metadata is optional - if nil, no metadata will be added
-func (s *S3Service) UploadFile(ctx context.Context, data []byte, s3Path, filename string, metadata map[string]string) error {
+func (s *Service) UploadFile(ctx context.Context, data []byte, s3Path, filename string, metadata map[string]string) error {
 	// Construct the full S3 key
 	s3Key := filepath.Join(s3Path, filename)
 
@@ -162,7 +163,7 @@ func (s *S3Service) UploadFile(ctx context.Context, data []byte, s3Path, filenam
 }
 
 // DeleteFile deletes a file from S3
-func (s *S3Service) DeleteFile(ctx context.Context, s3Path, filename, s3Key *string) error {
+func (s *Service) DeleteFile(ctx context.Context, s3Path, filename, s3Key *string) error {
 	// Construct the full S3 key
 	if s3Key == nil {
 		s3Key = aws.String(filepath.Join(*s3Path, *filename))
@@ -198,7 +199,7 @@ func (s *S3Service) DeleteFile(ctx context.Context, s3Path, filename, s3Key *str
 }
 
 // FileExists checks if a file exists in S3
-func (s *S3Service) FileExists(ctx context.Context, s3Path, filename string) (bool, error) {
+func (s *Service) FileExists(ctx context.Context, s3Path, filename string) (bool, error) {
 	// Construct the full S3 key
 	s3Key := filepath.Join(s3Path, filename)
 
@@ -221,9 +222,9 @@ func (s *S3Service) FileExists(ctx context.Context, s3Path, filename string) (bo
 	return true, nil
 }
 
-// GeneratePreSignedDownloadUrl generates a pre-signed URL for downloading a file from S3
+// GeneratePreSignedDownloadURL generates a pre-signed URL for downloading a file from S3
 // The URL will be valid for the specified duration (in seconds)
-func (s *S3Service) GeneratePreSignedDownloadUrl(ctx context.Context, s3Path, filename string, expirationSeconds int64) (string, error) {
+func (s *Service) GeneratePreSignedDownloadURL(ctx context.Context, s3Path, filename string, expirationSeconds int64) (string, error) {
 	// Construct the full S3 key
 	s3Key := filepath.Join(s3Path, filename)
 

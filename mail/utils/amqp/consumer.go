@@ -15,8 +15,10 @@ var (
 	routingKeysRaw   = os.Getenv("AMQP_ROUTING_KEYS")
 )
 
+// Messages is the channel for the AMQP messages
 var Messages <-chan amqp.Delivery
 
+// InitConsumerAmqp initializes the AMQP consumer
 func InitConsumerAmqp() {
 	var err error
 	var q amqp.Queue
