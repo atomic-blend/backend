@@ -20,3 +20,5 @@ RUN apk add --no-cache ca-certificates curl
 
 COPY --from=dev go/bin/app /
 CMD ["/app"]
+
+EXPOSE 1025
