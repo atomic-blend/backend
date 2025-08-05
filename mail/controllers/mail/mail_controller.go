@@ -3,6 +3,7 @@ package mail
 import (
 	"github.com/atomic-blend/backend/mail/auth"
 	"github.com/atomic-blend/backend/mail/repositories"
+	"github.com/webstradev/gin-pagination/v2/pkg/pagination"
 
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -38,7 +39,7 @@ func setupMailRoutes(router *gin.Engine, mailController *MailController) {
 	mailRoutes := router.Group("/mail")
 	auth.RequireAuth(mailRoutes)
 	{
-		mailRoutes.GET("", mailController.GetAllMails)
+		mailRoutes.GET("", pagination.New(), mailController.GetAllMails)
 		mailRoutes.GET("/:id", mailController.GetMailByID)
 	}
 }

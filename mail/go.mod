@@ -1,11 +1,13 @@
 module github.com/atomic-blend/backend/mail
 
-go 1.23.5
+go 1.24
+
+toolchain go1.24.5
 
 require (
 	github.com/atomic-blend/memongo v0.0.0-20250305155718-adada7465e0f
 	github.com/gin-contrib/cors v1.7.5
-	github.com/gin-gonic/gin v1.10.0
+	github.com/gin-gonic/gin v1.10.1
 	github.com/stretchr/testify v1.10.0
 )
 
@@ -54,6 +56,7 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/spf13/afero v1.10.0 // indirect
 	github.com/stretchr/objx v0.5.2 // indirect
+	github.com/webstradev/gin-pagination/v2 v2.1.3 // indirect
 	github.com/xdg-go/pbkdf2 v1.0.0 // indirect
 	github.com/xdg-go/scram v1.1.2 // indirect
 	github.com/xdg-go/stringprep v1.0.4 // indirect
