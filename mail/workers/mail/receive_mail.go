@@ -1,17 +1,15 @@
 package mail
 
 import (
-	"bytes"
 	"context"
-	"encoding/base64"
 	"io"
 	"strings"
 
 	"connectrpc.com/connect"
-	"filippo.io/age"
 	userv1 "github.com/atomic-blend/backend/grpc/gen/user/v1"
 	"github.com/atomic-blend/backend/mail/grpc/clients"
 	"github.com/atomic-blend/backend/mail/models"
+	ageencryption "github.com/atomic-blend/backend/mail/utils/age_encryption"
 	"github.com/atomic-blend/backend/mail/utils/rspamd"
 	"github.com/emersion/go-message"
 	"github.com/rs/zerolog/log"
@@ -176,35 +174,12 @@ func receiveMail(m *amqp.Delivery, payload ReceivedMailPayload) {
 
 		// encrypt the mail content for mongodb with user's public key
 		log.Info().Str("rcpt", rcpt).Msg("Encrypting mail content")
-		recipient, err := age.ParseX25519Recipient(userPublicKey)
+		encryptedContent, err := ageencryption.EncryptString(userPublicKey, mailContent.TextContent)
 		if err != nil {
-			log.Error().Err(err).Msg("Failed to parse public key")
+			log.Error().Err(err).Msg("Failed to encrypt mail content")
 			haveErrors = true
 			continue
 		}
-
-		out := &bytes.Buffer{}
-
-		w, err := age.Encrypt(out, recipient)
-		if err != nil {
-			log.Error().Err(err).Msg("Failed to create encrypted file")
-			haveErrors = true
-			continue
-		}
-		if _, err := io.WriteString(w, "Black lives matter."); err != nil {
-			log.Error().Err(err).Msg("Failed to write to encrypted file")
-			haveErrors = true
-			continue
-		}
-		if err := w.Close(); err != nil {
-			log.Error().Err(err).Msg("Failed to close encrypted file")
-			haveErrors = true
-			continue
-		}
-
-		// use base64 decode + strings.NewReader to get the encrypted content when decrypting
-		// TODO: refactor the encryption / decryption logic into a dedicated util
-		encryptedContent := base64.StdEncoding.EncodeToString(out.Bytes())
 
 		log.Info().Str("rcpt", rcpt).Str("encryptedContent", encryptedContent).Msg("Encrypted mail content")
 
