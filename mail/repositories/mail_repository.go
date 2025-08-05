@@ -10,13 +10,15 @@ import (
 	bson "go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 const mailCollection = "mails"
 
 // MailRepositoryInterface defines the interface for mail repository operations
 type MailRepositoryInterface interface {
-	GetAll(ctx context.Context, userID primitive.ObjectID) ([]*models.Mail, error)
+	// GetAll retrieves mails for a user. If page and limit are >0, returns paginated results and total count. If page or limit <=0, returns all mails and total count.
+	GetAll(ctx context.Context, userID primitive.ObjectID, page, limit int64) ([]*models.Mail, int64, error)
 	GetByID(ctx context.Context, id primitive.ObjectID) (*models.Mail, error)
 	Create(ctx context.Context, mail *models.Mail) (*models.Mail, error)
 	CreateMany(ctx context.Context, mails []models.Mail) (bool, error)
@@ -37,22 +39,40 @@ func NewMailRepository(database *mongo.Database) MailRepositoryInterface {
 	}
 }
 
-// GetAll retrieves all mails for a user
-func (r *MailRepository) GetAll(ctx context.Context, userID primitive.ObjectID) ([]*models.Mail, error) {
+// GetAll retrieves mails for a user. If page and limit are >0, returns paginated results and total count. If page or limit <=0, returns all mails and total count.
+func (r *MailRepository) GetAll(ctx context.Context, userID primitive.ObjectID, page, limit int64) ([]*models.Mail, int64, error) {
 	filter := bson.M{"user_id": userID}
-
-	cursor, err := r.collection.Find(ctx, filter)
+	totalCount, err := r.collection.CountDocuments(ctx, filter)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
+	}
+
+	var opts []*options.FindOptions
+	if page > 0 && limit > 0 {
+		skip := (page - 1) * limit
+		opts = append(opts, &options.FindOptions{
+			Skip:  &skip,
+			Limit: &limit,
+		})
+	}
+
+	var cursor *mongo.Cursor
+	if len(opts) > 0 {
+		cursor, err = r.collection.Find(ctx, filter, opts[0])
+	} else {
+		cursor, err = r.collection.Find(ctx, filter)
+	}
+	if err != nil {
+		return nil, 0, err
 	}
 	defer cursor.Close(ctx)
 
 	var mails []*models.Mail
 	if err = cursor.All(ctx, &mails); err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
-	return mails, nil
+	return mails, totalCount, nil
 }
 
 // GetByID retrieves a mail by its ID

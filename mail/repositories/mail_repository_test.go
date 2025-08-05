@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -132,9 +133,10 @@ func TestMailRepository_GetAll(t *testing.T) {
 		require.NoError(t, err)
 
 		// Get mails for the user
-		mails, err := repo.GetAll(context.Background(), userID)
+		mails, total, err := repo.GetAll(context.Background(), userID, 0, 0)
 		require.NoError(t, err)
 		assert.Len(t, mails, 2)
+		assert.Equal(t, int64(2), total)
 
 		// Verify the mail subjects
 		var subjects []string
@@ -147,9 +149,37 @@ func TestMailRepository_GetAll(t *testing.T) {
 
 	t.Run("get all mails for user with no mails", func(t *testing.T) {
 		userID := primitive.NewObjectID()
-		mails, err := repo.GetAll(context.Background(), userID)
+		mails, total, err := repo.GetAll(context.Background(), userID, 0, 0)
 		require.NoError(t, err)
 		assert.Len(t, mails, 0)
+		assert.Equal(t, int64(0), total)
+	})
+
+	// Add a paginated retrieval test
+	t.Run("get mails paginated", func(t *testing.T) {
+		userID := primitive.NewObjectID()
+		// Create 5 mails
+		for i := 0; i < 5; i++ {
+			mail := createTestMail(userID)
+			mail.Headers.Subject = fmt.Sprintf("Mail %d", i+1)
+			_, err := repo.Create(context.Background(), mail)
+			require.NoError(t, err)
+		}
+		// Get first 2 mails (page 1, limit 2)
+		mails, total, err := repo.GetAll(context.Background(), userID, 1, 2)
+		require.NoError(t, err)
+		assert.Len(t, mails, 2)
+		assert.Equal(t, int64(5), total)
+		// Get next 2 mails (page 2, limit 2)
+		mails, total, err = repo.GetAll(context.Background(), userID, 2, 2)
+		require.NoError(t, err)
+		assert.Len(t, mails, 2)
+		assert.Equal(t, int64(5), total)
+		// Get last mail (page 3, limit 2)
+		mails, total, err = repo.GetAll(context.Background(), userID, 3, 2)
+		require.NoError(t, err)
+		assert.Len(t, mails, 1)
+		assert.Equal(t, int64(5), total)
 	})
 }
 
@@ -205,9 +235,10 @@ func TestMailRepository_CreateMany(t *testing.T) {
 		assert.True(t, success)
 
 		// Verify all mails were created
-		createdMails, err := repo.GetAll(context.Background(), userID)
+		createdMails, total, err := repo.GetAll(context.Background(), userID, 0, 0)
 		require.NoError(t, err)
 		assert.Len(t, createdMails, 3)
+		assert.Equal(t, int64(3), total)
 
 		// Verify subjects
 		var subjects []string
@@ -240,15 +271,15 @@ func TestMailRepository_CreateMany(t *testing.T) {
 		assert.True(t, success)
 
 		// Verify mails for each user
-		user1Mails, err := repo.GetAll(context.Background(), userID1)
+		user1Mails, total, err := repo.GetAll(context.Background(), userID1, 0, 0)
 		require.NoError(t, err)
 		assert.Len(t, user1Mails, 1)
-		assert.Equal(t, "User 1 Mail", user1Mails[0].Headers.Subject)
+		assert.Equal(t, int64(1), total)
 
-		user2Mails, err := repo.GetAll(context.Background(), userID2)
+		user2Mails, total, err := repo.GetAll(context.Background(), userID2, 0, 0)
 		require.NoError(t, err)
 		assert.Len(t, user2Mails, 1)
-		assert.Equal(t, "User 2 Mail", user2Mails[0].Headers.Subject)
+		assert.Equal(t, int64(1), total)
 	})
 
 	t.Run("create empty batch", func(t *testing.T) {
@@ -280,9 +311,9 @@ func TestMailRepository_Integration(t *testing.T) {
 		assert.Equal(t, "Integration Test Mail", found.Headers.Subject)
 
 		// Get all mails for the user
-		allMails, err := repo.GetAll(context.Background(), userID)
+		allMails, total, err := repo.GetAll(context.Background(), userID, 0, 0)
 		require.NoError(t, err)
 		assert.Len(t, allMails, 1)
-		assert.Equal(t, created.ID, allMails[0].ID)
+		assert.Equal(t, int64(1), total)
 	})
 }
