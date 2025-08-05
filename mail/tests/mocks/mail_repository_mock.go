@@ -13,13 +13,13 @@ type MockMailRepository struct {
 	mock.Mock
 }
 
-// GetAll retrieves all mails for a user
-func (m *MockMailRepository) GetAll(ctx context.Context, userID primitive.ObjectID) ([]*models.Mail, error) {
-	args := m.Called(ctx, userID)
+// GetAll retrieves mails for a user. If page and limit are >0, returns paginated results and total count. If page or limit <=0, returns all mails and total count.
+func (m *MockMailRepository) GetAll(ctx context.Context, userID primitive.ObjectID, page, limit int64) ([]*models.Mail, int64, error) {
+	args := m.Called(ctx, userID, page, limit)
 	if args.Get(0) == nil {
-		return nil, args.Error(1)
+		return nil, args.Get(1).(int64), args.Error(2)
 	}
-	return args.Get(0).([]*models.Mail), args.Error(1)
+	return args.Get(0).([]*models.Mail), args.Get(1).(int64), args.Error(2)
 }
 
 // GetByID retrieves a mail by its ID

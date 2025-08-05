@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/atomic-blend/backend/mail/controllers"
 	"github.com/atomic-blend/backend/mail/controllers/health"
 	"github.com/atomic-blend/backend/mail/models"
 	"github.com/atomic-blend/backend/mail/utils/amqp"
@@ -128,6 +129,7 @@ func main() {
 
 	// Register all routes
 	health.SetupRoutes(router, db.Database)
+	controllers.SetupAllControllers(router, db.Database)
 
 	// Define port
 	port := os.Getenv("PORT")
