@@ -3,15 +3,21 @@ package mail
 import (
 	"context"
 	"io"
+	"os"
 	"strings"
 
 	"connectrpc.com/connect"
 	userv1 "github.com/atomic-blend/backend/grpc/gen/user/v1"
 	"github.com/atomic-blend/backend/mail/grpc/clients"
 	"github.com/atomic-blend/backend/mail/models"
+	"github.com/atomic-blend/backend/mail/repositories"
 	ageencryption "github.com/atomic-blend/backend/mail/utils/age_encryption"
+	"github.com/atomic-blend/backend/mail/utils/db"
 	"github.com/atomic-blend/backend/mail/utils/rspamd"
+	"github.com/atomic-blend/backend/mail/utils/s3"
 	"github.com/emersion/go-message"
+	awss3 "github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 	"github.com/streadway/amqp"
 )
@@ -25,6 +31,7 @@ type MailContent struct {
 		Date      string
 		MessageID string
 		Cc        string
+		Bcc       string
 	}
 	TextContent    string
 	HTMLContent    string
@@ -41,7 +48,106 @@ type Attachment struct {
 	Data        []byte
 }
 
+func (m *MailContent) Encrypt(publicKey string) (*MailContent, error) {
+	encryptedMail := &MailContent{
+		Attachments:    make([]Attachment, 0),
+		Rejected:       m.Rejected,
+		RewriteSubject: m.RewriteSubject,
+		Greylisted:     m.Greylisted,
+	}
+
+	// encrypt the headers individually
+	encryptedFrom, err := ageencryption.EncryptString(publicKey, m.Headers.From)
+	if err != nil {
+		return nil, err
+	}
+	encryptedMail.Headers.From = encryptedFrom
+
+	encryptedTo, err := ageencryption.EncryptString(publicKey, m.Headers.To)
+	if err != nil {
+		return nil, err
+	}
+	encryptedMail.Headers.To = encryptedTo
+
+	encryptedSubject, err := ageencryption.EncryptString(publicKey, m.Headers.Subject)
+	if err != nil {
+		return nil, err
+	}
+	encryptedMail.Headers.Subject = encryptedSubject
+
+	encryptedDate, err := ageencryption.EncryptString(publicKey, m.Headers.Date)
+	if err != nil {
+		return nil, err
+	}
+	encryptedMail.Headers.Date = encryptedDate
+
+	encryptedMessageID, err := ageencryption.EncryptString(publicKey, m.Headers.MessageID)
+	if err != nil {
+		return nil, err
+	}
+	encryptedMail.Headers.MessageID = encryptedMessageID
+
+	encryptedCc, err := ageencryption.EncryptString(publicKey, m.Headers.Cc)
+	if m.Headers.Cc != "" {
+		if err != nil {
+			return nil, err
+		}
+		encryptedMail.Headers.Cc = encryptedCc
+	}
+
+	if m.Headers.Bcc != "" {
+		encryptedBcc, err := ageencryption.EncryptString(publicKey, m.Headers.Bcc)
+		if err != nil {
+			return nil, err
+		}
+		encryptedMail.Headers.Bcc = encryptedBcc
+	}
+
+	encryptedTextContent, err := ageencryption.EncryptString(publicKey, m.TextContent)
+	if err != nil {
+		return nil, err
+	}
+	encryptedMail.TextContent = encryptedTextContent
+
+	encryptedHtmlContent, err := ageencryption.EncryptString(publicKey, m.HTMLContent)
+	if err != nil {
+		return nil, err
+	}
+	encryptedMail.HTMLContent = encryptedHtmlContent
+
+	for _, attachment := range m.Attachments {
+		encryptedAttachment, err := ageencryption.EncryptBytes(publicKey, attachment.Data)
+		if err != nil {
+			return nil, err
+		}
+		encryptedFilename, err := ageencryption.EncryptString(publicKey, attachment.Filename)
+		if err != nil {
+			return nil, err
+		}
+
+		encryptedContentType, err := ageencryption.EncryptString(publicKey, attachment.ContentType)
+		if err != nil {
+			return nil, err
+		}
+
+		encryptedMail.Attachments = append(encryptedMail.Attachments, Attachment{
+			Filename:    encryptedFilename,
+			ContentType: encryptedContentType,
+			Data:        encryptedAttachment,
+		})
+	}
+
+	return encryptedMail, nil
+}
+
 func receiveMail(m *amqp.Delivery, payload ReceivedMailPayload) {
+	mailRepository := repositories.NewMailRepository(db.Database)
+	s3Service, err := s3.NewS3Service(os.Getenv("S3_BUCKET"))
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to create S3 service")
+		return
+	}
+
 	// Create a reader from the MIME content string
 	reader := strings.NewReader(payload.Content)
 
@@ -115,17 +221,10 @@ func receiveMail(m *amqp.Delivery, payload ReceivedMailPayload) {
 		return
 	}
 
-	// Store headers
-	mailContent.Headers.From = entity.Header.Get("From")
-	mailContent.Headers.To = entity.Header.Get("To")
-	mailContent.Headers.Subject = entity.Header.Get("Subject")
-	mailContent.Headers.Date = entity.Header.Get("Date")
-
 	log.Info().
-		Str("from", mailContent.Headers.From).
-		Str("to", mailContent.Headers.To).
-		Str("subject", mailContent.Headers.Subject).
-		Str("date", mailContent.Headers.Date).
+		Str("from", payload.From).
+		Interface("to", payload.Rcpt).
+		Str("date", payload.ReceivedAt).
 		Str("client_ip", payload.IP).
 		Str("hostname", payload.Hostname).
 		Str("queue_id", payload.QueueID).
@@ -141,10 +240,13 @@ func receiveMail(m *amqp.Delivery, payload ReceivedMailPayload) {
 	processMessageBody(entity, mailContent)
 
 	encryptedMails := make([]models.Mail, 0)
+	encryptedAttachments := make([]*awss3.PutObjectInput, 0)
 	haveErrors := false
 
-	for _, rcpt := range strings.Split(mailContent.Headers.To, ",") {
+	for _, rcpt := range payload.Rcpt {
 		log.Info().Str("rcpt", rcpt).Msg("Handling recepient")
+
+		mailEntity := &models.Mail{}
 
 		// get the user public key from the auth service via grpc
 		log.Info().Str("rcpt", rcpt).Msg("Instantiating user client")
@@ -162,8 +264,7 @@ func receiveMail(m *amqp.Delivery, payload ReceivedMailPayload) {
 			},
 		})
 		if err != nil {
-			log.Error().Err(err).Msg("Failed to get user public key")
-			haveErrors = true
+			log.Info().Str("rcpt", rcpt).Msg("User not found, skipping")
 			continue
 		}
 
@@ -174,28 +275,73 @@ func receiveMail(m *amqp.Delivery, payload ReceivedMailPayload) {
 
 		// encrypt the mail content for mongodb with user's public key
 		log.Info().Str("rcpt", rcpt).Msg("Encrypting mail content")
-		encryptedContent, err := ageencryption.EncryptString(userPublicKey, mailContent.TextContent)
+		encryptedMailContent, err := mailContent.Encrypt(userPublicKey)
 		if err != nil {
 			log.Error().Err(err).Msg("Failed to encrypt mail content")
 			haveErrors = true
 			continue
 		}
 
-		log.Info().Str("rcpt", rcpt).Str("encryptedContent", encryptedContent).Msg("Encrypted mail content")
+		log.Info().Str("rcpt", rcpt).Interface("encryptedContent", encryptedMailContent).Msg("Encrypted mail content")
 
-		//TODO: encrypt other fields of the email (headers, etc...)
+		// upload the attachments to s3 and store the references in the mail entity
+		for _, attachment := range encryptedMailContent.Attachments {
+			uniqueFileId := uuid.New().String()
+			payload, err := s3Service.GenerateUploadPayload(context.Background(), attachment.Data, "mail/attachments/"+rcptPublicKey.Msg.UserId, uniqueFileId, map[string]string{})
+			if err != nil {
+				log.Error().Err(err).Msg("Failed to upload attachment to S3")
+				haveErrors = true
+				continue
+			}
+			mailEntity.Attachments = append(mailEntity.Attachments, models.MailAttachment{
+				StoragePath: *payload.Key,
+				Filename:    attachment.Filename,
+				ContentType: attachment.ContentType,
+				StorageType: "s3",
+				Size:        int64(len(attachment.Data)),
+			})
+			encryptedAttachments = append(encryptedAttachments, payload)
+		}
 
-		//TODO: encrypt the files in the attachments
+		// set the mail entity fields
+		mailEntity.Headers.From = encryptedMailContent.Headers.From
+		mailEntity.Headers.To = encryptedMailContent.Headers.To
+		mailEntity.Headers.Subject = encryptedMailContent.Headers.Subject
+		mailEntity.Headers.Date = encryptedMailContent.Headers.Date
+		mailEntity.Headers.MessageID = encryptedMailContent.Headers.MessageID
+		mailEntity.Headers.Cc = encryptedMailContent.Headers.Cc
+		mailEntity.Headers.Bcc = encryptedMailContent.Headers.Bcc
 
-		//TODO: upload the attachments to s3
+		mailEntity.TextContent = encryptedMailContent.TextContent
+		mailEntity.HTMLContent = encryptedMailContent.HTMLContent
+		mailEntity.Rejected = mailContent.Rejected
+		mailEntity.RewriteSubject = mailContent.RewriteSubject
+		mailEntity.Greylisted = mailContent.Greylisted
 
-		//TODO: save the mail document with s3 references to mongodb
+		encryptedMails = append(encryptedMails, *mailEntity)
 	}
 
 	if haveErrors {
 		log.Error().Msg("Errors occurred while processing email")
 		return
 	}
+
+	// upload the attachments to s3 in bulk
+	err = s3Service.BulkUploadFiles(context.Background(), encryptedAttachments)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to upload attachments to S3")
+		return
+	}
+
+	// save the mail documents with s3 references to mongodb
+	_, err = mailRepository.CreateMany(context.Background(), encryptedMails)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to save mail documents to MongoDB")
+		return
+	}
+
+	//TODO: configure minio into docker compose for file storage
+	//TODO: configure env var for minio in docker compose
 
 	m.Ack(false)
 }

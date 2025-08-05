@@ -33,8 +33,27 @@ func EncryptString(publicKey string, plaintext string) (string, error) {
 		}
 
 		// use base64 decode + strings.NewReader to get the encrypted content when decrypting
-		// TODO: refactor the encryption / decryption logic into a dedicated util
 		encryptedContent := base64.StdEncoding.EncodeToString(out.Bytes())
 
 		return encryptedContent, nil
+}
+
+func EncryptBytes(publicKey string, plaintext []byte) ([]byte, error) {
+	recipient, err := age.ParseX25519Recipient(publicKey)
+	if err != nil {
+		return nil, err
+	}
+
+	out := &bytes.Buffer{}
+
+	w, err := age.Encrypt(out, recipient)
+	if err != nil {
+		return nil, err
+	}
+
+	if _, err := w.Write(plaintext); err != nil {
+		return nil, err
+	}
+
+	return out.Bytes(), nil
 }
