@@ -303,6 +303,7 @@ jobs:
     outputs:
       docker_matrix: ${{ steps.prepare-matrix.outputs.matrix }}
       all_successful_dirs: ${{ steps.bump-versions.outputs.successful_dirs }}
+      tags_to_push: ${{ steps.bump-versions.outputs.tags_to_push }}
 
   build-docker-images:
     if: ${{ needs.release-rc.outputs.docker_matrix != '' && fromJson(needs.release-rc.outputs.docker_matrix).include[0] != null }}
@@ -358,6 +359,7 @@ jobs:
           # Use the same tags that were used in Docker builds
           DOCKER_MATRIX='${{ needs.release-rc.outputs.docker_matrix }}'
           ALL_SUCCESSFUL_DIRS="${{ needs.release-rc.outputs.all_successful_dirs }}"
+          TAGS_TO_PUSH="${{ needs.release-rc.outputs.tags_to_push }}"
           
           if [ -z "$ALL_SUCCESSFUL_DIRS" ]; then
             echo "No successful directories found"
@@ -371,20 +373,36 @@ jobs:
           # Parse the Docker matrix to get the tags that were actually built
           DOCKER_INCLUDE=$(echo "$DOCKER_MATRIX" | jq -r '.include[] | "\(.dir):\(.version):\(.tag)"' 2>/dev/null || echo "")
           
+          # Convert TAGS_TO_PUSH string to array for grpc lookup
+          IFS=' ' read -ra TAGS_ARRAY <<< "$TAGS_TO_PUSH"
+          
           for dir in $ALL_SUCCESSFUL_DIRS; do
             if [ -d "$dir" ]; then
-              # Find the corresponding Docker build entry
-              DOCKER_ENTRY=$(echo "$DOCKER_INCLUDE" | grep "^${dir}:" || echo "")
+              # First, try to find the tag from cocogitto bump step
+              COCOGITTO_TAG=""
+              for tag in "${TAGS_ARRAY[@]}"; do
+                if [[ "$tag" == "${dir}/v"* ]]; then
+                  COCOGITTO_TAG="$tag"
+                  break
+                fi
+              done
               
-              if [ -n "$DOCKER_ENTRY" ]; then
-                # Extract version and tag from Docker build entry
-                VERSION=$(echo "$DOCKER_ENTRY" | cut -d: -f2)
-                TAG=$(echo "$DOCKER_ENTRY" | cut -d: -f3)
+              if [ -n "$COCOGITTO_TAG" ]; then
+                # Use the tag from cocogitto
+                TAG="$COCOGITTO_TAG"
+                VERSION=$(echo $TAG | sed 's/^[^/]*\/v//')
               else
-                # Fallback for grpc or if not found in Docker matrix
-                TAG_PREFIX="${dir}-v"
-                TAG=$(git tag --list "${TAG_PREFIX}*" | sort -V | tail -n 1)
-                VERSION=$(echo $TAG | sed 's/^[^-]*[-/]v//')
+                # Fallback to Docker build matrix for all directories
+                DOCKER_ENTRY=$(echo "$DOCKER_INCLUDE" | grep "^${dir}:" || echo "")
+                if [ -n "$DOCKER_ENTRY" ]; then
+                  VERSION=$(echo "$DOCKER_ENTRY" | cut -d: -f2)
+                  TAG=$(echo "$DOCKER_ENTRY" | cut -d: -f3)
+                else
+                  # Final fallback to git tags
+                  TAG_PREFIX="${dir}/v"
+                  TAG=$(git tag --list "${TAG_PREFIX}*" | sort -V | tail -n 1)
+                  VERSION=$(echo $TAG | sed 's/^[^/]*\/v//')
+                fi
               fi
               
               if [ -n "$TAG" ] && [ -n "$VERSION" ]; then
@@ -432,7 +450,7 @@ jobs:
           
           # Start building the consolidated release notes
           cat > consolidated_release_notes.md << EOF
-          # Release Candidate Build - $TIMESTAMP
+          ## $TIMESTAMP
           
           This is a consolidated release candidate build from the dev branch.
           
@@ -490,7 +508,7 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ steps.generate-release-notes.outputs.consolidated_tag }}
-          name: "Release Candidate Build - $(date -u +'%Y-%m-%d %H:%M UTC')"
+          name: "Release Candidate Build"
           body_path: consolidated_release_notes.md
           prerelease: true
         env:
