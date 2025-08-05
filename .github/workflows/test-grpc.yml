@@ -2,6 +2,7 @@ name: Test gRPC
 
 on:
   pull_request:
+    types: [review_requested, ready_for_review]
     branches: [dev]
     paths:
       - 'grpc/**'
