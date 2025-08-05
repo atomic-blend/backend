@@ -398,62 +398,86 @@ jobs:
     outputs:
       release_matrix: ${{ steps.prepare-release-matrix.outputs.matrix }}
 
-  prepare-all-releases:
+  create-consolidated-release:
     if: ${{ needs.prepare-github-releases.outputs.release_matrix != '' && fromJson(needs.prepare-github-releases.outputs.release_matrix).include[0] != null }}
     runs-on: ubuntu-22.04
     needs: prepare-github-releases
-    strategy:
-      matrix: ${{ fromJson(needs.prepare-github-releases.outputs.release_matrix) }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
 
-      - name: Extract changelog for ${{ matrix.dir }}
-        id: extract-changelog
+      - name: Generate consolidated release notes
+        id: generate-release-notes
         run: |
-          TAG=${{ matrix.tag }}
-          CLEAN_TAG=$(echo "$TAG" | sed 's/^[^-]*-v//')
+          RELEASE_MATRIX='${{ needs.prepare-github-releases.outputs.release_matrix }}'
+          RELEASE_INCLUDE=$(echo "$RELEASE_MATRIX" | jq -r '.include[] | "\(.dir):\(.version):\(.tag):\(.type)"' 2>/dev/null || echo "")
           
-          if [ -f "${{ matrix.dir }}/CHANGELOG.md" ]; then
-            # Try different changelog entry formats
-            CHANGELOG=$(sed -n "/^## $TAG - /,/^## /p" ${{ matrix.dir }}/CHANGELOG.md | sed '1d;$d')
-            
-            if [ -z "$CHANGELOG" ]; then
-              CHANGELOG=$(sed -n "/^## $CLEAN_TAG - /,/^## /p" ${{ matrix.dir }}/CHANGELOG.md | sed '1d;$d')
+          # Generate timestamp for the consolidated release
+          TIMESTAMP=$(date -u +"%Y-%m-%d %H:%M UTC")
+          
+          # Start building the consolidated release notes
+          cat > consolidated_release_notes.md << EOF
+          # Stable Release - $TIMESTAMP
+          
+          This is a consolidated stable release from the main branch.
+          
+          ## 📦 Released Components
+          
+          EOF
+          
+          # Process each component
+          DOCKER_SERVICES=""
+          GRPC_SERVICES=""
+          
+          while IFS= read -r line; do
+            if [ -n "$line" ]; then
+              DIR=$(echo "$line" | cut -d: -f1)
+              VERSION=$(echo "$line" | cut -d: -f2)
+              TAG=$(echo "$line" | cut -d: -f3)
+              TYPE=$(echo "$line" | cut -d: -f4)
+              
+              if [ "$TYPE" == "docker" ]; then
+                DOCKER_SERVICES="$DOCKER_SERVICES\n- **$DIR**: v$VERSION"
+                DOCKER_SERVICES="$DOCKER_SERVICES\n  - 🐳 Docker Image: \`ghcr.io/atomic-blend/$DIR:$VERSION\`"
+                DOCKER_SERVICES="$DOCKER_SERVICES\n  - 🏷️ Tag: \`$TAG\`"
+              elif [ "$TYPE" == "grpc" ]; then
+                GRPC_SERVICES="$GRPC_SERVICES\n- **$DIR**: v$VERSION"
+                GRPC_SERVICES="$GRPC_SERVICES\n  - 🏷️ Tag: \`$TAG\`"
+                GRPC_SERVICES="$GRPC_SERVICES\n  - 📋 gRPC Protocol Definitions"
+              fi
             fi
-            
-            if [ -z "$CHANGELOG" ]; then
-              CHANGELOG=$(sed -n "/^## \[$CLEAN_TAG\] - /,/^## /p" ${{ matrix.dir }}/CHANGELOG.md | sed '1d;$d')
-            fi
-            
-            if [ -z "$CHANGELOG" ]; then
-              CHANGELOG=$(sed -n "/^## v$CLEAN_TAG - /,/^## /p" ${{ matrix.dir }}/CHANGELOG.md | sed '1d;$d')
-            fi
-            
-            echo "$CHANGELOG" > release_notes_${{ matrix.dir }}.md
-          else
-            if [ "${{ matrix.type }}" == "grpc" ]; then
-              echo "Release ${{ matrix.version }} for gRPC definitions" > release_notes_${{ matrix.dir }}.md
-              echo "" >> release_notes_${{ matrix.dir }}.md
-              echo "This is a stable release from the main branch." >> release_notes_${{ matrix.dir }}.md
-              echo "" >> release_notes_${{ matrix.dir }}.md
-              echo "📋 **gRPC Protocol Definitions**: Protocol Buffer definitions and generated code" >> release_notes_${{ matrix.dir }}.md
-            else
-              echo "Release ${{ matrix.version }} for ${{ matrix.dir }} microservice" > release_notes_${{ matrix.dir }}.md
-              echo "" >> release_notes_${{ matrix.dir }}.md
-              echo "This is a stable release from the main branch." >> release_notes_${{ matrix.dir }}.md
-              echo "" >> release_notes_${{ matrix.dir }}.md
-              echo "🐳 **Docker Image**: \`ghcr.io/atomic-blend/${{ matrix.dir }}:${{ matrix.version }}\`" >> release_notes_${{ matrix.dir }}.md
-            fi
+          done <<< "$RELEASE_INCLUDE"
+          
+          # Add Docker services section
+          if [ -n "$DOCKER_SERVICES" ]; then
+            echo -e "\n### 🐳 Microservices" >> consolidated_release_notes.md
+            echo -e "$DOCKER_SERVICES" >> consolidated_release_notes.md
           fi
+          
+          # Add gRPC services section
+          if [ -n "$GRPC_SERVICES" ]; then
+            echo -e "\n### 📋 Shared Libraries" >> consolidated_release_notes.md
+            echo -e "$GRPC_SERVICES" >> consolidated_release_notes.md
+          fi
+          
+          # Add footer
+          cat >> consolidated_release_notes.md << EOF
+          
+          ---
+          
+          *This release was automatically generated by the CI/CD pipeline.*
+          EOF
+          
+          # Create a consolidated tag name
+          echo "consolidated_tag=release-$(date -u +%Y%m%d-%H%M%S)" >> $GITHUB_OUTPUT
 
-      - name: Create GitHub Release for ${{ matrix.dir }}
+      - name: Create Consolidated GitHub Release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: ${{ matrix.tag }}
-          name: "${{ matrix.dir }} v${{ matrix.version }}"
-          body_path: release_notes_${{ matrix.dir }}.md
+          tag_name: ${{ steps.generate-release-notes.outputs.consolidated_tag }}
+          name: "Stable Release - $(date -u +'%Y-%m-%d %H:%M UTC')"
+          body_path: consolidated_release_notes.md
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
