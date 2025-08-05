@@ -1,6 +1,6 @@
 module github.com/atomic-blend/backend/productivity
 
-go 1.23.5
+go 1.24.5
 
 require (
 	github.com/appleboy/go-fcm v1.2.3

@@ -14,7 +14,7 @@ type PaginatedMailResponse struct {
 	Mails      []*models.Mail `json:"mails"`
 	TotalCount int64          `json:"total_count"`
 	Page       int64          `json:"page,omitempty"`
-	Limit      int64          `json:"limit,omitempty"`
+	Size       int64          `json:"size,omitempty"`
 	TotalPages int64          `json:"total_pages,omitempty"`
 }
 
@@ -42,28 +42,21 @@ func (c *MailController) GetAllMails(ctx *gin.Context) {
 	page := ctx.GetInt("page")
 	size := ctx.GetInt("size")
 
-	var mails []*models.Mail
-	var totalCount int64
-	var err error
-
 	// Get mails with pagination
-	mails, totalCount, err = c.mailRepo.GetAll(ctx, authUser.UserID, int64(page), int64(size))
+	mails, totalCount, err := c.mailRepo.GetAll(ctx, authUser.UserID, int64(page), int64(size))
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
 	// Calculate total pages
-	totalPages := int64(0)
-	if size > 0 {
-		totalPages = (totalCount + int64(size) - 1) / int64(size)
-	}
+	totalPages := (totalCount + int64(size) - 1) / int64(size)
 
 	response := PaginatedMailResponse{
 		Mails:      mails,
 		TotalCount: totalCount,
 		Page:       int64(page),
-		Limit:      int64(size),
+		Size:       int64(size),
 		TotalPages: totalPages,
 	}
 

@@ -1,8 +1,6 @@
 module github.com/atomic-blend/backend/mail
 
-go 1.24
-
-toolchain go1.24.5
+go 1.24.5
 
 require (
 	github.com/atomic-blend/memongo v0.0.0-20250305155718-adada7465e0f
