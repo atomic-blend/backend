@@ -23,12 +23,12 @@ func InitConsumerAmqp() {
 	var err error
 	var q amqp.Queue
 
-	shortcuts.CheckRequiredEnvVar("AMQP_URL", AMQP_URL, "amqp://user:password@localhost:5672")
+	shortcuts.CheckRequiredEnvVar("AMQP_URL", amqpURL, "amqp://user:password@localhost:5672")
 	shortcuts.CheckRequiredEnvVar("AMQP_EXCHANGE_NAMES", exchangeNamesRaw, "")
 	shortcuts.CheckRequiredEnvVar("AMQP_QUEUE_NAME", queueName, "")
 	shortcuts.CheckRequiredEnvVar("AMQP_ROUTING_KEYS", routingKeysRaw, "")
 
-	conn, err = amqp.Dial(AMQP_URL)
+	conn, err = amqp.Dial(amqpURL)
 	shortcuts.FailOnError(err, "Failed to connect to RabbitMQ")
 
 	exchangeNames := strings.Split(exchangeNamesRaw, ",")
