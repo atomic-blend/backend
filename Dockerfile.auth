@@ -1,12 +1,15 @@
 FROM golang:1.24.5-alpine AS dev
 
 WORKDIR /app
+
+# Copy the entire monorepo
 COPY . /app/
+
+# Download dependencies
 RUN go mod download
 
-# install nodejs and npm for maizzle
-RUN apk add --update npm
-
+# Build from the auth directory to use go.work
+WORKDIR /app/auth
 RUN CGO_ENABLED=0 go build -o /go/bin/app
 
 FROM alpine:3.21
@@ -15,4 +18,4 @@ FROM alpine:3.21
 RUN apk add --no-cache ca-certificates curl
 
 COPY --from=dev go/bin/app /
-CMD ["/app"]
+CMD ["/app"] 

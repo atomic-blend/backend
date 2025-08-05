@@ -337,8 +337,8 @@ jobs:
             --platform linux/amd64,linux/arm64 \
             --push \
             --tag ghcr.io/atomic-blend/${{ matrix.dir }}:${{ matrix.version }} \
-            --file ${{ matrix.dir }}/Dockerfile \
-            ${{ matrix.dir }}/
+            --file docker/Dockerfile.${{ matrix.dir }} \
+            .
 
   prepare-github-releases:
     runs-on: ubuntu-22.04

@@ -297,7 +297,8 @@ jobs:
       - name: Build and push Docker image for ${{ matrix.dir }}
         uses: docker/build-push-action@v6
         with:
-          context: ${{ matrix.dir }}
+          context: .
+          file: docker/Dockerfile.${{ matrix.dir }}
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |

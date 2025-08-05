@@ -1,3 +1,4 @@
+c2sp.org/CCTV/age v0.0.0-20240306222714-3ec4d716e805 h1:u2qwJeEvnypw+OCPUHmoZE3IqwfuN5kgDfo5MLzpNM0=
 c2sp.org/CCTV/age v0.0.0-20240306222714-3ec4d716e805/go.mod h1:FomMrUJ2Lxt5jCLmZkG3FHa72zUprnhd3v/Z18Snm4w=
 cloud.google.com/go/accessapproval v1.8.2/go.mod h1:aEJvHZtpjqstffVwF/2mCXXSQmpskyzvw6zKLvLutZM=
 cloud.google.com/go/accesscontextmanager v1.9.2/go.mod h1:T0Sw/PQPyzctnkw1pdmGAKb7XBA84BqQzH0fSU7wzJU=
