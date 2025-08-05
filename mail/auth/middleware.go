@@ -27,8 +27,6 @@ func Middleware() gin.HandlerFunc {
 			authHeader = c.GetHeader("authorization")
 		}
 
-		log.Info().Msgf("Auth header: %s", authHeader)
-
 		if authHeader == "" {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization header is required"})
 			c.Abort()
