@@ -2,6 +2,17 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## grpc/v0.2.0-rc.1 - 2025-08-05
+#### Bug Fixes
+- grpc linter + mail in test ci/cd + fix error in smtp server test - (3b67a14) - Brandon Guigo
+#### Features
+- add bruno collections and fix errors - (b6b303c) - Brandon Guigo
+- update grpc to use latest version + configure dev docker compose to use go workspaces + add grpc to get public key - (370934b) - Brandon Guigo
+#### Miscellaneous Chores
+- **(release)** bump versions for auth@auth/v0.9.0 grpc@grpc/v0.1.0 productivity@productivity/v0.9.0 [skip ci] - (844f0fb) - GitHub Actions
+
+- - -
+
 ## grpc/v0.1.0 - 2025-07-25
 #### Bug Fixes
 - update auth to use the new v1 grpc - (b53419c) - Brandon Guigo

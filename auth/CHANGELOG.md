@@ -2,6 +2,15 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## auth/v0.11.0-rc.1 - 2025-08-05
+#### Bug Fixes
+- grpc linter + mail in test ci/cd + fix error in smtp server test - (3b67a14) - Brandon Guigo
+#### Features
+- add bruno collections and fix errors - (b6b303c) - Brandon Guigo
+- update grpc to use latest version + configure dev docker compose to use go workspaces + add grpc to get public key - (370934b) - Brandon Guigo
+
+- - -
+
 ## auth/v0.10.0-rc.7 - 2025-07-30
 #### Bug Fixes
 - test release - (09158ae) - Brandon Guigo
