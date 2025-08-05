@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
 	"path/filepath"
 	"time"
 
@@ -25,16 +26,33 @@ type S3Service struct {
 	bucket string
 }
 
+func (s *S3Service) BulkDeleteFiles(ctx context.Context, uploadedKeys []string) {
+	for _, key := range uploadedKeys {
+		s.DeleteFile(ctx, nil, nil, &key)
+	}
+}
+
 // NewS3Service creates a new S3 service instance
 func NewS3Service(bucket string) (*S3Service, error) {
 	// Load AWS configuration
-	cfg, err := config.LoadDefaultConfig(context.TODO())
+	endpoint := os.Getenv("AWS_ENDPOINT")
+	region := os.Getenv("AWS_REGION")
+	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithBaseEndpoint(endpoint), config.WithRegion(region))
 	if err != nil {
 		return nil, fmt.Errorf("failed to load AWS config: %w", err)
 	}
 
+	// check if AWS_USE_PATH_STYLE_ENDPOINT is set
+	usePathStyleEndpoint := false
+	if os.Getenv("AWS_USE_PATH_STYLE_ENDPOINT") == "true" {
+		log.Info().Msg("using path style endpoint")
+		usePathStyleEndpoint = true
+	}
+
 	// Create S3 client
-	client := s3.NewFromConfig(cfg)
+	client := s3.NewFromConfig(cfg, func(o *s3.Options) {
+		o.UsePathStyle = usePathStyleEndpoint
+	})
 
 	return &S3Service{
 		client: client,
@@ -68,7 +86,7 @@ func (s *S3Service) GenerateUploadPayload(ctx context.Context, data []byte, s3Pa
 
 // BulkUploadFiles uploads multiple files given a list of payloads.
 // Auto rollback if there are errors
-func (s *S3Service) BulkUploadFiles(ctx context.Context, payloads []*s3.PutObjectInput) error {
+func (s *S3Service) BulkUploadFiles(ctx context.Context, payloads []*s3.PutObjectInput) ([]string, error) {
 	// Upload the files
 	var uploadedKeys []string
 	var haveErrors bool
@@ -91,10 +109,10 @@ func (s *S3Service) BulkUploadFiles(ctx context.Context, payloads []*s3.PutObjec
 		for _, key := range uploadedKeys {
 			s.DeleteFile(ctx, nil, nil, &key)
 		}
-		return fmt.Errorf("failed to upload some files to S3")
+		return nil, fmt.Errorf("failed to upload some files to S3")
 	}
 
-	return nil
+	return uploadedKeys, nil
 }
 
 // UploadFile uploads a file to S3 with the given path and filename

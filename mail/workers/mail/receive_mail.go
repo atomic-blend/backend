@@ -15,8 +15,8 @@ import (
 	"github.com/atomic-blend/backend/mail/utils/db"
 	"github.com/atomic-blend/backend/mail/utils/rspamd"
 	"github.com/atomic-blend/backend/mail/utils/s3"
-	"github.com/emersion/go-message"
 	awss3 "github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/emersion/go-message"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 	"github.com/streadway/amqp"
@@ -142,7 +142,7 @@ func (m *MailContent) Encrypt(publicKey string) (*MailContent, error) {
 
 func receiveMail(m *amqp.Delivery, payload ReceivedMailPayload) {
 	mailRepository := repositories.NewMailRepository(db.Database)
-	s3Service, err := s3.NewS3Service(os.Getenv("S3_BUCKET"))
+	s3Service, err := s3.NewS3Service(os.Getenv("AWS_BUCKET"))
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to create S3 service")
 		return
@@ -327,7 +327,7 @@ func receiveMail(m *amqp.Delivery, payload ReceivedMailPayload) {
 	}
 
 	// upload the attachments to s3 in bulk
-	err = s3Service.BulkUploadFiles(context.Background(), encryptedAttachments)
+	uploadedKeys, err := s3Service.BulkUploadFiles(context.Background(), encryptedAttachments)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to upload attachments to S3")
 		return
@@ -337,11 +337,10 @@ func receiveMail(m *amqp.Delivery, payload ReceivedMailPayload) {
 	_, err = mailRepository.CreateMany(context.Background(), encryptedMails)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to save mail documents to MongoDB")
+		//TODO: rollback the uploaded keys
+		s3Service.BulkDeleteFiles(context.Background(), uploadedKeys)
 		return
 	}
-
-	//TODO: configure minio into docker compose for file storage
-	//TODO: configure env var for minio in docker compose
 
 	m.Ack(false)
 }
