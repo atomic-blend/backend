@@ -101,19 +101,32 @@ services:
   mongodb:
     image: mongo:8.0.4
     container_name: mongodb-atomic-blend
+    entrypoint: >
+      /bin/bash -c '
+      openssl rand -base64 756 > /data/keyfile.key &&
+      chmod 400 /data/keyfile.key &&
+      chown mongodb:mongodb /data/keyfile.key &&
+      /usr/local/bin/docker-entrypoint.sh mongod --replSet rs0 --keyFile /data/keyfile.key --bind_ip_all'
     restart: always
     ports:
-      - "27017:27017"
+      - 127.0.0.1:27017:27017
     environment:
       MONGO_INITDB_ROOT_USERNAME: mongo_user
       MONGO_INITDB_ROOT_PASSWORD: password
       MONGO_INITDB_DATABASE: cloudlinker
     volumes:
       - mongo_data:/data/db
+      - mongo_config:/data/configdb
     healthcheck:
-      test: echo 'db.runCommand("ping").ok' | mongosh mongodb://mongo_user:password@localhost:27017 --quiet
-      interval: 10s
-      retries: 5
+      test: mongosh
+        -u $${MONGO_INITDB_ROOT_USERNAME}
+        -p $${MONGO_INITDB_ROOT_PASSWORD}
+        --eval "try { rs.status() } catch (err) { rs.initiate({_id:'rs0',members:[{_id:0,host:'mongodb:27017',priority:1}]}) }" | mongosh --port 27017 --quiet
+      interval: 5s
+      timeout: 30s
+      start_period: 0s
+      start_interval: 1s
+      retries: 30
 
   rabbitmq:
     image: rabbitmq:4.1.2-management
@@ -218,6 +231,7 @@ networks:
 volumes:
   rabbitmq_data:
   mongo_data:
+  mongo_config:
   rspamd-compose-redis-data:
   rspamd-compose-rspamd-dbdir:
   minio_data:
