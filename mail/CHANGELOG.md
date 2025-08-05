@@ -2,6 +2,45 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## mail/v0.1.0-rc.3 - 2025-08-05
+#### Bug Fixes
+- centralize dockerfiles and allow build with grpc in the monorepo - (95b2dfc) - Brandon Guigo
+- amqp error - (9fdb4c3) - Brandon Guigo
+- linter for mail and mail-server - (401774e) - Brandon Guigo
+- grpc linter + mail in test ci/cd + fix error in smtp server test - (3b67a14) - Brandon Guigo
+- store the user id of the mail recipient inside the mail entity - (7fcba3c) - Brandon Guigo
+- migrate to the gin pagination package - (3d24866) - Brandon Guigo
+- test mail repository without many (transactions not supported) - (27f53d4) - Brandon Guigo
+- add tests for receive emails - (dd5c17d) - Brandon Guigo
+- receive email without attachement leads to no content disposition - (f8e0ac5) - Brandon Guigo
+- update entity - (ca1e74a) - Brandon Guigo
+- update processor mailContent struct - (86f0ba7) - Brandon Guigo
+- refactor - (e9552bc) - Brandon Guigo
+#### Features
+- add bruno collections and fix errors - (b6b303c) - Brandon Guigo
+- add email controller with pagination - (6f739c0) - Brandon Guigo
+- configure minio and rollback stored files when write to mongo fails - (100ad59) - Brandon Guigo
+- upload file and email to storage with transactions for all recipients - (3e69645) - Brandon Guigo
+- refactor encryption to a separate service - (4dd3fe1) - Brandon Guigo
+- encrypt the content of the mail with the user public key - (77489a1) - Brandon Guigo
+- update grpc to use latest version + configure dev docker compose to use go workspaces + add grpc to get public key - (370934b) - Brandon Guigo
+- make the smtp server handle anonymous auth mecanism + use emersion packages inside the test script - (e807664) - Brandon Guigo
+- ack the message when processing is done - (080b6fb) - Brandon Guigo
+- store the status of the spam check inside the mail content object - (3d897fc) - Brandon Guigo
+- add switch for handling return of rspamd - (59218b5) - Brandon Guigo
+- parse the newly added amqp message - (e38584a) - Brandon Guigo
+- configure rspamd and create the client in mail servoce - (efe70a3) - Brandon Guigo
+- setup email processor - (1734a8f) - Brandon Guigo
+- route received email to the worker processor - (6b7e34f) - Brandon Guigo
+- configure rabbitmq worker for mails - (98bf875) - Brandon Guigo
+- configure amqp consumer and producer - (325623a) - Brandon Guigo
+- fix middleware and add mail api - (b2f1de8) - Brandon Guigo
+#### Miscellaneous Chores
+- **(release)** bump RC versions for auth@auth/v0.11.0-rc.2 grpc@grpc/v0.2.0-rc.2 mail-server@mail-server/v0.1.0-rc.2 mail@mail/v0.1.0-rc.2 productivity@productivity/v0.11.0-rc.2 [skip ci] - (03832fc) - GitHub Actions
+- **(release)** bump RC versions for auth@auth/v0.11.0-rc.1 grpc@grpc/v0.2.0-rc.1 mail-server@mail-server/v0.1.0-rc.1 mail@mail/v0.1.0-rc.1 productivity@productivity/v0.11.0-rc.1 [skip ci] - (873e29b) - GitHub Actions
+
+- - -
+
 ## mail/v0.1.0-rc.2 - 2025-08-05
 #### Bug Fixes
 - amqp error - (9fdb4c3) - Brandon Guigo
