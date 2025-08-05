@@ -101,6 +101,15 @@ func main() {
 		fmt.Print("Enter file path to attach: ")
 		attachmentPath, _ = reader.ReadString('\n')
 		attachmentPath = strings.TrimSpace(attachmentPath)
+
+		// remove ' or " from the attachment path
+		attachmentPath = strings.Trim(attachmentPath, "'\"")
+
+		// check if the file exists
+		if _, err := os.Stat(attachmentPath); os.IsNotExist(err) {
+			fmt.Printf("File does not exist: %s\n", attachmentPath)
+			return
+		}
 	}
 
 	// Get custom SMTP server if needed
