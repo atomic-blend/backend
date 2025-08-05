@@ -22,12 +22,12 @@ message GetUserPublicKeyRequest {
   string email = 1;
 }
 
-message getUserPublicKeyResponse {
-  string userId = 1;
-  string publicKey = 2;
+message GetUserPublicKeyResponse {
+  string user_id = 1;
+  string public_key = 2;
 }
 
 service UserService {
   rpc GetUserDevices(GetUserDevicesRequest) returns (GetUserDevicesResponse);
-  rpc GetUserPublicKey(GetUserPublicKeyRequest) returns (getUserPublicKeyResponse);
+  rpc GetUserPublicKey(GetUserPublicKeyRequest) returns (GetUserPublicKeyResponse);
 }

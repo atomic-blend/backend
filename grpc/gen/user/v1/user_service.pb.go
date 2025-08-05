@@ -224,8 +224,8 @@ func (x *GetUserPublicKeyRequest) GetEmail() string {
 
 type GetUserPublicKeyResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	UserId        string                 `protobuf:"bytes,1,opt,name=userId,proto3" json:"userId,omitempty"`
-	PublicKey     string                 `protobuf:"bytes,2,opt,name=publicKey,proto3" json:"publicKey,omitempty"`
+	UserId        string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	PublicKey     string                 `protobuf:"bytes,2,opt,name=public_key,json=publicKey,proto3" json:"public_key,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -292,13 +292,14 @@ const file_user_v1_user_service_proto_rawDesc = "" +
 	"\x16GetUserDevicesResponse\x12-\n" +
 	"\adevices\x18\x01 \x03(\v2\x13.user.v1.UserDeviceR\adevices\"/\n" +
 	"\x17GetUserPublicKeyRequest\x12\x14\n" +
-	"\x05email\x18\x01 \x01(\tR\x05email\"P\n" +
-	"\x18getUserPublicKeyResponse\x12\x16\n" +
-	"\x06userId\x18\x01 \x01(\tR\x06userId\x12\x1c\n" +
-	"\tpublicKey\x18\x02 \x01(\tR\tpublicKey2\xb9\x01\n" +
+	"\x05email\x18\x01 \x01(\tR\x05email\"R\n" +
+	"\x18GetUserPublicKeyResponse\x12\x17\n" +
+	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x1d\n" +
+	"\n" +
+	"public_key\x18\x02 \x01(\tR\tpublicKey2\xb9\x01\n" +
 	"\vUserService\x12Q\n" +
 	"\x0eGetUserDevices\x12\x1e.user.v1.GetUserDevicesRequest\x1a\x1f.user.v1.GetUserDevicesResponse\x12W\n" +
-	"\x10GetUserPublicKey\x12 .user.v1.GetUserPublicKeyRequest\x1a!.user.v1.getUserPublicKeyResponseB\x95\x01\n" +
+	"\x10GetUserPublicKey\x12 .user.v1.GetUserPublicKeyRequest\x1a!.user.v1.GetUserPublicKeyResponseB\x95\x01\n" +
 	"\vcom.user.v1B\x10UserServiceProtoP\x01Z7github.com/atomic-blend/backend/grpc/gen/user/v1;userv1\xa2\x02\x03UXX\xaa\x02\aUser.V1\xca\x02\aUser\\V1\xe2\x02\x13User\\V1\\GPBMetadata\xea\x02\bUser::V1b\x06proto3"
 
 var (
@@ -319,7 +320,7 @@ var file_user_v1_user_service_proto_goTypes = []any{
 	(*GetUserDevicesRequest)(nil),    // 1: user.v1.GetUserDevicesRequest
 	(*GetUserDevicesResponse)(nil),   // 2: user.v1.GetUserDevicesResponse
 	(*GetUserPublicKeyRequest)(nil),  // 3: user.v1.GetUserPublicKeyRequest
-	(*GetUserPublicKeyResponse)(nil), // 4: user.v1.getUserPublicKeyResponse
+	(*GetUserPublicKeyResponse)(nil), // 4: user.v1.GetUserPublicKeyResponse
 	(*v1.User)(nil),                  // 5: auth.v1.User
 }
 var file_user_v1_user_service_proto_depIdxs = []int32{
@@ -328,7 +329,7 @@ var file_user_v1_user_service_proto_depIdxs = []int32{
 	1, // 2: user.v1.UserService.GetUserDevices:input_type -> user.v1.GetUserDevicesRequest
 	3, // 3: user.v1.UserService.GetUserPublicKey:input_type -> user.v1.GetUserPublicKeyRequest
 	2, // 4: user.v1.UserService.GetUserDevices:output_type -> user.v1.GetUserDevicesResponse
-	4, // 5: user.v1.UserService.GetUserPublicKey:output_type -> user.v1.getUserPublicKeyResponse
+	4, // 5: user.v1.UserService.GetUserPublicKey:output_type -> user.v1.GetUserPublicKeyResponse
 	4, // [4:6] is the sub-list for method output_type
 	2, // [2:4] is the sub-list for method input_type
 	2, // [2:2] is the sub-list for extension type_name

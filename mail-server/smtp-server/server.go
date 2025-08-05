@@ -62,6 +62,7 @@ func (s *Session) Auth(mech string) (sasl.Server, error) {
 	case sasl.Anonymous:
 		return sasl.NewAnonymousServer(func(trace string) error {
 			s.auth = true
+			s.user = "anonymous"
 			return nil
 		}), nil
 	default:
