@@ -23,8 +23,8 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-// MailContent represents the collected content from an email
-type MailContent struct {
+// Content represents the collected content from an email
+type Content struct {
 	Headers struct {
 		From      string
 		To        string
@@ -49,8 +49,9 @@ type Attachment struct {
 	Data        []byte
 }
 
-func (m *MailContent) Encrypt(publicKey string) (*MailContent, error) {
-	encryptedMail := &MailContent{
+// Encrypt encrypts the content using the age encryption library
+func (m *Content) Encrypt(publicKey string) (*Content, error) {
+	encryptedMail := &Content{
 		Attachments:    make([]Attachment, 0),
 		Rejected:       m.Rejected,
 		RewriteSubject: m.RewriteSubject,
@@ -110,11 +111,11 @@ func (m *MailContent) Encrypt(publicKey string) (*MailContent, error) {
 	}
 	encryptedMail.TextContent = encryptedTextContent
 
-	encryptedHtmlContent, err := ageencryption.EncryptString(publicKey, m.HTMLContent)
+	encryptedHTMLContent, err := ageencryption.EncryptString(publicKey, m.HTMLContent)
 	if err != nil {
 		return nil, err
 	}
-	encryptedMail.HTMLContent = encryptedHtmlContent
+	encryptedMail.HTMLContent = encryptedHTMLContent
 
 	for _, attachment := range m.Attachments {
 		encryptedAttachment, err := ageencryption.EncryptBytes(publicKey, attachment.Data)
@@ -155,7 +156,7 @@ func receiveMail(m *amqp.Delivery, payload ReceivedMailPayload) {
 	// Send the email to rspamd via HTTP for spam detection
 	client := rspamd.NewClient(nil) // Use default config
 
-	mailContent := &MailContent{
+	mailContent := &Content{
 		Attachments:    make([]Attachment, 0),
 		Rejected:       false,
 		RewriteSubject: false,
@@ -295,8 +296,8 @@ func receiveMail(m *amqp.Delivery, payload ReceivedMailPayload) {
 
 		// upload the attachments to s3 and store the references in the mail entity
 		for _, attachment := range encryptedMailContent.Attachments {
-			uniqueFileId := uuid.New().String()
-			payload, err := s3Service.GenerateUploadPayload(context.Background(), attachment.Data, "mail/attachments/"+rcptPublicKey.Msg.UserId, uniqueFileId, map[string]string{})
+			uniqueFileID := uuid.New().String()
+			payload, err := s3Service.GenerateUploadPayload(context.Background(), attachment.Data, "mail/attachments/"+rcptPublicKey.Msg.UserId, uniqueFileID, map[string]string{})
 			if err != nil {
 				log.Error().Err(err).Msg("Failed to upload attachment to S3")
 				haveErrors = true
@@ -354,7 +355,7 @@ func receiveMail(m *amqp.Delivery, payload ReceivedMailPayload) {
 	m.Ack(false)
 }
 
-func processMessageBody(entity *message.Entity, mailContent *MailContent) {
+func processMessageBody(entity *message.Entity, mailContent *Content) {
 	// Get the media type of the message
 	mediaType, params, err := entity.Header.ContentType()
 	if err != nil {
@@ -376,7 +377,7 @@ func processMessageBody(entity *message.Entity, mailContent *MailContent) {
 	}
 }
 
-func processMultipartMessage(entity *message.Entity, mailContent *MailContent) {
+func processMultipartMessage(entity *message.Entity, mailContent *Content) {
 	// Create a multipart reader
 	mr := entity.MultipartReader()
 	if mr == nil {
@@ -400,7 +401,7 @@ func processMultipartMessage(entity *message.Entity, mailContent *MailContent) {
 	}
 }
 
-func processMessagePart(part *message.Entity, mailContent *MailContent) {
+func processMessagePart(part *message.Entity, mailContent *Content) {
 	// Read the part content
 	body, err := io.ReadAll(part.Body)
 	if err != nil {

@@ -24,6 +24,7 @@ type MailAttachment struct {
 	Size        int64  `bson:"size" json:"size"`                 // File size in bytes
 }
 
+// Mail represents a mail message
 type Mail struct {
 	ID             primitive.ObjectID  `bson:"_id" json:"id"`
 	UserID         primitive.ObjectID  `bson:"user_id" json:"user_id"`

@@ -70,6 +70,7 @@ func (s *Session) Auth(mech string) (sasl.Server, error) {
 	}
 }
 
+// Mail is the handler for the MAIL command.
 func (s *Session) Mail(from string, opts *smtp.MailOptions) error {
 	if !s.auth {
 		return smtp.ErrAuthRequired
@@ -79,6 +80,7 @@ func (s *Session) Mail(from string, opts *smtp.MailOptions) error {
 	return nil
 }
 
+// Rcpt is the handler for the RCPT command.
 func (s *Session) Rcpt(to string, opts *smtp.RcptOptions) error {
 	if !s.auth {
 		return smtp.ErrAuthRequired
@@ -88,6 +90,7 @@ func (s *Session) Rcpt(to string, opts *smtp.RcptOptions) error {
 	return nil
 }
 
+// Data is the handler for the DATA command.
 func (s *Session) Data(r io.Reader) error {
 	var buf bytes.Buffer
 	if _, err := io.Copy(&buf, r); err != nil {
@@ -112,12 +115,14 @@ func (s *Session) Data(r io.Reader) error {
 	return nil
 }
 
+// Reset is the handler for the RESET command.
 func (s *Session) Reset() {
 	// Reset session data for new message
 	s.from = ""
 	s.rcpts = nil
 }
 
+// Logout is the handler for the LOGOUT command.
 func (s *Session) Logout() error {
 	return nil
 }

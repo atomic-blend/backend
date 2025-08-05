@@ -9,6 +9,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+// EncryptString encrypts a string using the age encryption library
 func EncryptString(publicKey string, plaintext string) (string, error) {
 	recipient, err := age.ParseX25519Recipient(publicKey)
 		if err != nil {
@@ -38,6 +39,7 @@ func EncryptString(publicKey string, plaintext string) (string, error) {
 		return encryptedContent, nil
 }
 
+// EncryptBytes encrypts a byte array using the age encryption library
 func EncryptBytes(publicKey string, plaintext []byte) ([]byte, error) {
 	recipient, err := age.ParseX25519Recipient(publicKey)
 	if err != nil {

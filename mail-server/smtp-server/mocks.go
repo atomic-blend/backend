@@ -31,6 +31,7 @@ type MockAMQP struct {
 	publishedMessages []map[string]interface{}
 }
 
+// PublishMessage publishes a message to the AMQP broker
 func (m *MockAMQP) PublishMessage(exchangeName string, topic string, message map[string]interface{}) {
 	m.publishedMessages = append(m.publishedMessages, message)
 }
