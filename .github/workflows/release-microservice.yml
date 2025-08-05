@@ -319,6 +319,8 @@ jobs:
       - name: Prepare release matrix
         id: prepare-release-matrix
         run: |
+          # Use the same tags that were used in Docker builds
+          DOCKER_MATRIX='${{ needs.release.outputs.docker_matrix }}'
           ALL_SUCCESSFUL_DIRS="${{ needs.release.outputs.all_successful_dirs }}"
           
           if [ -z "$ALL_SUCCESSFUL_DIRS" ]; then
@@ -330,23 +332,38 @@ jobs:
           MATRIX_JSON='{"include":['
           FIRST=true
           
+          # Parse the Docker matrix to get the tags that were actually built
+          DOCKER_INCLUDE=$(echo "$DOCKER_MATRIX" | jq -r '.include[] | "\(.dir):\(.version):\(.tag)"' 2>/dev/null || echo "")
+          
           for dir in $ALL_SUCCESSFUL_DIRS; do
             if [ -d "$dir" ]; then
-              TAG_PREFIX="${dir}-v"
-              TAG=$(git tag --list "${TAG_PREFIX}*" | grep -v -- '-rc' | sort -V | tail -n 1)
-              VERSION=$(echo $TAG | sed 's/^[^-]*-v//')
+              # Find the corresponding Docker build entry
+              DOCKER_ENTRY=$(echo "$DOCKER_INCLUDE" | grep "^${dir}:" || echo "")
               
-              if [ "$FIRST" = "true" ]; then
-                FIRST=false
+              if [ -n "$DOCKER_ENTRY" ]; then
+                # Extract version and tag from Docker build entry
+                VERSION=$(echo "$DOCKER_ENTRY" | cut -d: -f2)
+                TAG=$(echo "$DOCKER_ENTRY" | cut -d: -f3)
               else
-                MATRIX_JSON="$MATRIX_JSON,"
+                # Fallback for grpc or if not found in Docker matrix
+                TAG_PREFIX="${dir}-v"
+                TAG=$(git tag --list "${TAG_PREFIX}*" | sort -V | tail -n 1)
+                VERSION=$(echo $TAG | sed 's/^[^-]*[-/]v//')
               fi
               
-              # Add type field to distinguish between grpc and docker services
-              if [ "$dir" == "grpc" ]; then
-                MATRIX_JSON="$MATRIX_JSON{\"dir\":\"$dir\",\"version\":\"$VERSION\",\"tag\":\"$TAG\",\"type\":\"grpc\"}"
-              else
-                MATRIX_JSON="$MATRIX_JSON{\"dir\":\"$dir\",\"version\":\"$VERSION\",\"tag\":\"$TAG\",\"type\":\"docker\"}"
+              if [ -n "$TAG" ] && [ -n "$VERSION" ]; then
+                if [ "$FIRST" = "true" ]; then
+                  FIRST=false
+                else
+                  MATRIX_JSON="$MATRIX_JSON,"
+                fi
+                
+                # Add type field to distinguish between grpc and docker services
+                if [ "$dir" == "grpc" ]; then
+                  MATRIX_JSON="$MATRIX_JSON{\"dir\":\"$dir\",\"version\":\"$VERSION\",\"tag\":\"$TAG\",\"type\":\"grpc\"}"
+                else
+                  MATRIX_JSON="$MATRIX_JSON{\"dir\":\"$dir\",\"version\":\"$VERSION\",\"tag\":\"$TAG\",\"type\":\"docker\"}"
+                fi
               fi
             fi
           done
