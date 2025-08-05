@@ -1,6 +1,6 @@
 module github.com/atomic-blend/backend/grpc
 
-go 1.23.5
+go 1.24.5
 
 require (
 	connectrpc.com/connect v1.18.1 // indirect

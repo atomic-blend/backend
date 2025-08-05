@@ -39,7 +39,7 @@ func setupMailRoutes(router *gin.Engine, mailController *MailController) {
 	mailRoutes := router.Group("/mail")
 	auth.RequireAuth(mailRoutes)
 	{
-		mailRoutes.GET("", pagination.New(), mailController.GetAllMails)
+		mailRoutes.GET("/", pagination.New(), mailController.GetAllMails)
 		mailRoutes.GET("/:id", mailController.GetMailByID)
 	}
 }

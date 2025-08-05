@@ -1,0 +1,27 @@
+meta {
+  name: /login
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{API_URL}}/auth/login
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "email": "user2@brandonguigo.com",
+    "password": "Test123!"
+  }
+}
+
+script:post-response {
+  console.log(res.body);
+  bru.setEnvVar("AUTH_BEARER",res.body.accessToken)
+}
+
+settings {
+  encodeUrl: true
+}
