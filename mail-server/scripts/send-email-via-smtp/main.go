@@ -119,19 +119,6 @@ func main() {
 		smtpServer = smtpInput
 	}
 
-	// Get SMTP credentials if needed
-	fmt.Print("SMTP Username (press Enter to skip authentication): ")
-	usernameInput, _ := reader.ReadString('\n')
-	usernameInput = strings.TrimSpace(usernameInput)
-
-	var password string
-	if usernameInput != "" {
-		fmt.Print("SMTP Password: ")
-		passwordInput, _ := reader.ReadString('\n')
-		password = strings.TrimSpace(passwordInput)
-	}
-
-	// Create email message
 	var message []byte
 	var err error
 

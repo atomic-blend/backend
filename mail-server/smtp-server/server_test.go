@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/emersion/go-sasl"
-	"github.com/emersion/go-smtp"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -30,8 +29,7 @@ func TestSession_AuthMechanisms(t *testing.T) {
 
 	mechanisms := session.AuthMechanisms()
 
-	assert.Len(t, mechanisms, 1)
-	assert.Equal(t, sasl.Anonymous, mechanisms[0])
+	assert.Len(t, mechanisms, 0)
 }
 
 func TestSession_Auth(t *testing.T) {
@@ -74,9 +72,16 @@ func TestSession_Mail(t *testing.T) {
 		}
 
 		err := session.Mail("sender@example.com", nil)
-		assert.Error(t, err)
-		assert.Equal(t, smtp.ErrAuthRequired, err)
-		assert.Empty(t, session.from)
+		assert.NoError(t, err)
+		assert.Equal(t, "sender@example.com", session.from)
+	})
+
+	t.Run("mail from works without any session setup", func(t *testing.T) {
+		session := &Session{}
+
+		err := session.Mail("test@example.com", nil)
+		assert.NoError(t, err)
+		assert.Equal(t, "test@example.com", session.from)
 	})
 }
 
@@ -105,9 +110,18 @@ func TestSession_Rcpt(t *testing.T) {
 		}
 
 		err := session.Rcpt("recipient@example.com", nil)
-		assert.Error(t, err)
-		assert.Equal(t, smtp.ErrAuthRequired, err)
-		assert.Empty(t, session.rcpts)
+		assert.NoError(t, err)
+		assert.Len(t, session.rcpts, 1)
+		assert.Equal(t, "recipient@example.com", session.rcpts[0])
+	})
+
+	t.Run("rcpt to works without any session setup", func(t *testing.T) {
+		session := &Session{}
+
+		err := session.Rcpt("test@example.com", nil)
+		assert.NoError(t, err)
+		assert.Len(t, session.rcpts, 1)
+		assert.Equal(t, "test@example.com", session.rcpts[0])
 	})
 }
 
@@ -125,10 +139,10 @@ func TestSession_Data(t *testing.T) {
 	})
 
 	t.Run("data processing without recipients causes panic", func(t *testing.T) {
-		// Create session with authentication but no recipients
+		// Create session without recipients (authentication is no longer required)
 		session := &Session{
-			auth:     true,
-			user:     "username",
+			auth:     false, // Authentication is no longer required
+			user:     "",    // No user needed
 			clientIP: "192.168.1.1",
 			hostname: "test.example.com",
 			queueID:  "test-queue-id",
@@ -147,10 +161,10 @@ func TestSession_Data(t *testing.T) {
 	})
 
 	t.Run("data processing with valid recipients", func(t *testing.T) {
-		// Create session with authentication and recipients
+		// Create session with recipients (authentication is no longer required)
 		session := &Session{
-			auth:     true,
-			user:     "username",
+			auth:     false, // Authentication is no longer required
+			user:     "",    // No user needed since auth is not required
 			clientIP: "192.168.1.1",
 			hostname: "test.example.com",
 			queueID:  "test-queue-id",
@@ -162,7 +176,7 @@ func TestSession_Data(t *testing.T) {
 		testData := "Test email content\r\n"
 		reader := strings.NewReader(testData)
 
-		// This will panic due to AMQP not being initialized
+		// This will panic due to AMQP not being initialized in test environment
 		// We expect a panic due to nil pointer dereference in AMQP
 		assert.Panics(t, func() {
 			session.Data(reader)
@@ -211,8 +225,8 @@ func TestGenerateQueueID(t *testing.T) {
 // Helper function to create a test session
 func createTestSession() *Session {
 	return &Session{
-		auth:     true,
-		user:     "username",
+		auth:     false, // Authentication is no longer required
+		user:     "",    // No user needed since auth is not required
 		clientIP: "192.168.1.1",
 		hostname: "test.example.com",
 		queueID:  "test-queue-id",
