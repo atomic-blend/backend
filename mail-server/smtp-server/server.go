@@ -53,28 +53,23 @@ type Session struct {
 // AuthMechanisms returns a slice of available auth mechanisms; only PLAIN is
 // supported in this example.
 func (s *Session) AuthMechanisms() []string {
-	return []string{sasl.Anonymous}
+	return []string{}
 }
 
 // Auth is the handler for supported authenticators.
 func (s *Session) Auth(mech string) (sasl.Server, error) {
-	switch mech {
-	case sasl.Anonymous:
-		return sasl.NewAnonymousServer(func(trace string) error {
-			s.auth = true
-			s.user = "anonymous"
-			return nil
-		}), nil
-	default:
-		return nil, smtp.ErrAuthUnsupported
-	}
+	return sasl.NewAnonymousServer(func(trace string) error {
+		s.auth = true
+		s.user = "anonymous"
+		return nil
+	}), nil
 }
 
 // Mail is the handler for the MAIL command.
 func (s *Session) Mail(from string, opts *smtp.MailOptions) error {
-	if !s.auth {
-		return smtp.ErrAuthRequired
-	}
+	// if !s.auth {
+	// 	return smtp.ErrAuthRequired
+	// }
 	s.from = from
 	log.Info().Msgf("Mail from: %s", from)
 	return nil
@@ -82,9 +77,9 @@ func (s *Session) Mail(from string, opts *smtp.MailOptions) error {
 
 // Rcpt is the handler for the RCPT command.
 func (s *Session) Rcpt(to string, opts *smtp.RcptOptions) error {
-	if !s.auth {
-		return smtp.ErrAuthRequired
-	}
+	// if !s.auth {
+	// 	return smtp.ErrAuthRequired
+	// }
 	s.rcpts = append(s.rcpts, to)
 	log.Info().Msgf("Rcpt to: %s", to)
 	return nil

@@ -12,7 +12,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/emersion/go-sasl"
 	"github.com/emersion/go-smtp"
 )
 
@@ -161,23 +160,6 @@ func main() {
 	}
 	defer client.Close()
 
-	// Authenticate - use anonymous if no credentials provided
-	if usernameInput != "" {
-		auth := sasl.NewPlainClient("", usernameInput, password)
-		if err := client.Auth(auth); err != nil {
-			fmt.Printf("Error authenticating: %v\n", err)
-			return
-		}
-	} else {
-		// Use anonymous authentication
-		auth := sasl.NewAnonymousClient("anonymous")
-		if err := client.Auth(auth); err != nil {
-			fmt.Printf("Error with anonymous authentication: %v\n", err)
-			return
-		}
-	}
-
-	// Set sender
 	if err := client.Mail(sender, nil); err != nil {
 		fmt.Printf("Error setting sender: %v\n", err)
 		return
