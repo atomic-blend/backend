@@ -2,6 +2,28 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## auth/v0.11.0-rc.7 - 2025-08-08
+#### Miscellaneous Chores
+- **(release)** bump RC versions for auth@auth/v0.11.0-rc.6 grpc@grpc/v0.2.0-rc.6 mail-server@mail-server/v0.1.0-rc.6 mail@mail/v0.1.0-rc.6 productivity@productivity/v0.11.0-rc.6 [skip ci] - (e000019) - GitHub Actions
+- **(release)** bump RC versions for auth@auth/v0.11.0-rc.5 grpc@grpc/v0.2.0-rc.5 mail-server@mail-server/v0.1.0-rc.5 mail@mail/v0.1.0-rc.5 productivity@productivity/v0.11.0-rc.5 [skip ci] - (d55f603) - GitHub Actions
+- **(release)** bump RC versions for auth@auth/v0.11.0-rc.4 grpc@grpc/v0.2.0-rc.4 mail-server@mail-server/v0.1.0-rc.4 mail@mail/v0.1.0-rc.4 productivity@productivity/v0.11.0-rc.4 [skip ci] - (f890081) - GitHub Actions
+- **(release)** bump RC versions for auth@auth/v0.11.0-rc.3 grpc@grpc/v0.2.0-rc.3 mail-server@mail-server/v0.1.0-rc.3 mail@mail/v0.1.0-rc.3 productivity@productivity/v0.11.0-rc.3 [skip ci] - (ebe0561) - GitHub Actions
+
+- - -
+
+## productivity/v0.11.0-rc.3 - 2025-08-08
+#### Bug Fixes
+- centralize dockerfiles and allow build with grpc in the monorepo - (95b2dfc) - Brandon Guigo
+- grpc linter + mail in test ci/cd + fix error in smtp server test - (3b67a14) - Brandon Guigo
+#### Features
+- add bruno collections and fix errors - (b6b303c) - Brandon Guigo
+- update grpc to use latest version + configure dev docker compose to use go workspaces + add grpc to get public key - (370934b) - Brandon Guigo
+#### Miscellaneous Chores
+- **(release)** bump RC versions for auth@auth/v0.11.0-rc.2 grpc@grpc/v0.2.0-rc.2 mail-server@mail-server/v0.1.0-rc.2 mail@mail/v0.1.0-rc.2 productivity@productivity/v0.11.0-rc.2 [skip ci] - (03832fc) - GitHub Actions
+- **(release)** bump RC versions for auth@auth/v0.11.0-rc.1 grpc@grpc/v0.2.0-rc.1 mail-server@mail-server/v0.1.0-rc.1 mail@mail/v0.1.0-rc.1 productivity@productivity/v0.11.0-rc.1 [skip ci] - (873e29b) - GitHub Actions
+
+- - -
+
 ## auth/v0.11.0-rc.6 - 2025-08-07
 #### Miscellaneous Chores
 - **(release)** bump RC versions for auth@auth/v0.11.0-rc.5 grpc@grpc/v0.2.0-rc.5 mail-server@mail-server/v0.1.0-rc.5 mail@mail/v0.1.0-rc.5 productivity@productivity/v0.11.0-rc.5 [skip ci] - (d55f603) - GitHub Actions
