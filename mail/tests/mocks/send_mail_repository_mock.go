@@ -63,20 +63,3 @@ func (m *MockSendMailRepository) Delete(ctx context.Context, id primitive.Object
 	args := m.Called(ctx, id)
 	return args.Error(0)
 }
-
-func (m *MockSendMailRepository) ClaimPendingSentEmails(ctx context.Context) ([]*models.SendMail, error) {
-	args := m.Called(ctx)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-	return args.Get(0).([]*models.SendMail), args.Error(1)
-}
-
-// GetPendingSentEmails retrieves all pending sent emails for internal processing
-func (m *MockSendMailRepository) GetPendingSentEmails(ctx context.Context) ([]*models.SendMail, error) {
-	args := m.Called(ctx)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-	return args.Get(0).([]*models.SendMail), args.Error(1)
-}

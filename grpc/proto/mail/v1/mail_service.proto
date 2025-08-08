@@ -2,7 +2,6 @@ syntax = "proto3";
 package mail.v1;
 
 import "auth/v1/user.proto";
-import "mail/v1/mail.proto";
 
 message DeleteUserDataRequest {
   auth.v1.User user = 1;
@@ -12,25 +11,6 @@ message DeleteUserDataResponse {
   bool success = 1;
 }
 
-message GetPendingSentEmailsRequest {
-}
-
-message GetPendingSentEmailsResponse {
-  repeated mail.v1.Mail emails = 1; // List of pending sent emails
-}
-
-message UpdateSentEmailStatusRequest {
-  string email_id = 1; // ID of the email to update
-  string status = 2; // New status of the email
-}
-
-message UpdateSentEmailStatusResponse {
-  bool success = 1; // Indicates if the update was successful
-  optional string message = 2; // Additional message or error information
-}
-
 service MailService {
   rpc DeleteUserData(DeleteUserDataRequest) returns (DeleteUserDataResponse);
-  rpc GetPendingSentEmails(GetPendingSentEmailsRequest) returns (GetPendingSentEmailsResponse);
-  rpc UpdateSentEmailStatus(UpdateSentEmailStatusRequest) returns (UpdateSentEmailStatusResponse);
 }
