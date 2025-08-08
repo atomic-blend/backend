@@ -6,11 +6,15 @@ import (
 	"github.com/rs/zerolog/log"
 
 	mailconnect "github.com/atomic-blend/backend/grpc/gen/mail/v1/mailv1connect"
-	mailGrpcServer "github.com/atomic-blend/backend/mail/grpc/server/global"
+	mailGrpcServer "github.com/atomic-blend/backend/mail/grpc/server"
+	"github.com/atomic-blend/backend/mail/repositories"
+	"github.com/atomic-blend/backend/mail/utils/db"
 )
 
 func startGRPCServer() {
-	mailGrpcServer := mailGrpcServer.NewGrpcServer()
+	mailRepo := repositories.NewMailRepository(db.Database)
+	sendMailRepo := repositories.NewSendMailRepository(db.Database)
+	mailGrpcServer := mailGrpcServer.NewGrpcServer(mailRepo, sendMailRepo)
 
 	globalPath, globalHandler := mailconnect.NewMailServiceHandler(mailGrpcServer)
 

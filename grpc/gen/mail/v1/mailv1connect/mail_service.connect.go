@@ -36,11 +36,19 @@ const (
 	// MailServiceDeleteUserDataProcedure is the fully-qualified name of the MailService's
 	// DeleteUserData RPC.
 	MailServiceDeleteUserDataProcedure = "/mail.v1.MailService/DeleteUserData"
+	// MailServiceGetPendingSentEmailsProcedure is the fully-qualified name of the MailService's
+	// GetPendingSentEmails RPC.
+	MailServiceGetPendingSentEmailsProcedure = "/mail.v1.MailService/GetPendingSentEmails"
+	// MailServiceUpdateSentEmailStatusProcedure is the fully-qualified name of the MailService's
+	// UpdateSentEmailStatus RPC.
+	MailServiceUpdateSentEmailStatusProcedure = "/mail.v1.MailService/UpdateSentEmailStatus"
 )
 
 // MailServiceClient is a client for the mail.v1.MailService service.
 type MailServiceClient interface {
 	DeleteUserData(context.Context, *connect.Request[v1.DeleteUserDataRequest]) (*connect.Response[v1.DeleteUserDataResponse], error)
+	GetPendingSentEmails(context.Context, *connect.Request[v1.GetPendingSentEmailsRequest]) (*connect.Response[v1.GetPendingSentEmailsResponse], error)
+	UpdateSentEmailStatus(context.Context, *connect.Request[v1.UpdateSentEmailStatusRequest]) (*connect.Response[v1.UpdateSentEmailStatusResponse], error)
 }
 
 // NewMailServiceClient constructs a client for the mail.v1.MailService service. By default, it uses
@@ -60,12 +68,26 @@ func NewMailServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(mailServiceMethods.ByName("DeleteUserData")),
 			connect.WithClientOptions(opts...),
 		),
+		getPendingSentEmails: connect.NewClient[v1.GetPendingSentEmailsRequest, v1.GetPendingSentEmailsResponse](
+			httpClient,
+			baseURL+MailServiceGetPendingSentEmailsProcedure,
+			connect.WithSchema(mailServiceMethods.ByName("GetPendingSentEmails")),
+			connect.WithClientOptions(opts...),
+		),
+		updateSentEmailStatus: connect.NewClient[v1.UpdateSentEmailStatusRequest, v1.UpdateSentEmailStatusResponse](
+			httpClient,
+			baseURL+MailServiceUpdateSentEmailStatusProcedure,
+			connect.WithSchema(mailServiceMethods.ByName("UpdateSentEmailStatus")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // mailServiceClient implements MailServiceClient.
 type mailServiceClient struct {
-	deleteUserData *connect.Client[v1.DeleteUserDataRequest, v1.DeleteUserDataResponse]
+	deleteUserData        *connect.Client[v1.DeleteUserDataRequest, v1.DeleteUserDataResponse]
+	getPendingSentEmails  *connect.Client[v1.GetPendingSentEmailsRequest, v1.GetPendingSentEmailsResponse]
+	updateSentEmailStatus *connect.Client[v1.UpdateSentEmailStatusRequest, v1.UpdateSentEmailStatusResponse]
 }
 
 // DeleteUserData calls mail.v1.MailService.DeleteUserData.
@@ -73,9 +95,21 @@ func (c *mailServiceClient) DeleteUserData(ctx context.Context, req *connect.Req
 	return c.deleteUserData.CallUnary(ctx, req)
 }
 
+// GetPendingSentEmails calls mail.v1.MailService.GetPendingSentEmails.
+func (c *mailServiceClient) GetPendingSentEmails(ctx context.Context, req *connect.Request[v1.GetPendingSentEmailsRequest]) (*connect.Response[v1.GetPendingSentEmailsResponse], error) {
+	return c.getPendingSentEmails.CallUnary(ctx, req)
+}
+
+// UpdateSentEmailStatus calls mail.v1.MailService.UpdateSentEmailStatus.
+func (c *mailServiceClient) UpdateSentEmailStatus(ctx context.Context, req *connect.Request[v1.UpdateSentEmailStatusRequest]) (*connect.Response[v1.UpdateSentEmailStatusResponse], error) {
+	return c.updateSentEmailStatus.CallUnary(ctx, req)
+}
+
 // MailServiceHandler is an implementation of the mail.v1.MailService service.
 type MailServiceHandler interface {
 	DeleteUserData(context.Context, *connect.Request[v1.DeleteUserDataRequest]) (*connect.Response[v1.DeleteUserDataResponse], error)
+	GetPendingSentEmails(context.Context, *connect.Request[v1.GetPendingSentEmailsRequest]) (*connect.Response[v1.GetPendingSentEmailsResponse], error)
+	UpdateSentEmailStatus(context.Context, *connect.Request[v1.UpdateSentEmailStatusRequest]) (*connect.Response[v1.UpdateSentEmailStatusResponse], error)
 }
 
 // NewMailServiceHandler builds an HTTP handler from the service implementation. It returns the path
@@ -91,10 +125,26 @@ func NewMailServiceHandler(svc MailServiceHandler, opts ...connect.HandlerOption
 		connect.WithSchema(mailServiceMethods.ByName("DeleteUserData")),
 		connect.WithHandlerOptions(opts...),
 	)
+	mailServiceGetPendingSentEmailsHandler := connect.NewUnaryHandler(
+		MailServiceGetPendingSentEmailsProcedure,
+		svc.GetPendingSentEmails,
+		connect.WithSchema(mailServiceMethods.ByName("GetPendingSentEmails")),
+		connect.WithHandlerOptions(opts...),
+	)
+	mailServiceUpdateSentEmailStatusHandler := connect.NewUnaryHandler(
+		MailServiceUpdateSentEmailStatusProcedure,
+		svc.UpdateSentEmailStatus,
+		connect.WithSchema(mailServiceMethods.ByName("UpdateSentEmailStatus")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/mail.v1.MailService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case MailServiceDeleteUserDataProcedure:
 			mailServiceDeleteUserDataHandler.ServeHTTP(w, r)
+		case MailServiceGetPendingSentEmailsProcedure:
+			mailServiceGetPendingSentEmailsHandler.ServeHTTP(w, r)
+		case MailServiceUpdateSentEmailStatusProcedure:
+			mailServiceUpdateSentEmailStatusHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -106,4 +156,12 @@ type UnimplementedMailServiceHandler struct{}
 
 func (UnimplementedMailServiceHandler) DeleteUserData(context.Context, *connect.Request[v1.DeleteUserDataRequest]) (*connect.Response[v1.DeleteUserDataResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("mail.v1.MailService.DeleteUserData is not implemented"))
+}
+
+func (UnimplementedMailServiceHandler) GetPendingSentEmails(context.Context, *connect.Request[v1.GetPendingSentEmailsRequest]) (*connect.Response[v1.GetPendingSentEmailsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("mail.v1.MailService.GetPendingSentEmails is not implemented"))
+}
+
+func (UnimplementedMailServiceHandler) UpdateSentEmailStatus(context.Context, *connect.Request[v1.UpdateSentEmailStatusRequest]) (*connect.Response[v1.UpdateSentEmailStatusResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("mail.v1.MailService.UpdateSentEmailStatus is not implemented"))
 }
