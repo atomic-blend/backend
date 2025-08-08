@@ -43,8 +43,9 @@ func TestCreateSendMail(t *testing.T) {
 	ctx := context.Background()
 
 	userID := primitive.NewObjectID()
+	mailID := primitive.NewObjectID()
 	mail := &models.Mail{
-		ID:          primitive.NewObjectID(),
+		ID:          &mailID,
 		UserID:      userID,
 		TextContent: "Test email content",
 		Headers: map[string]string{
@@ -78,8 +79,9 @@ func TestGetSendMailByID(t *testing.T) {
 	ctx := context.Background()
 
 	userID := primitive.NewObjectID()
+	mailID := primitive.NewObjectID()
 	mail := &models.Mail{
-		ID:          primitive.NewObjectID(),
+		ID:          &mailID,
 		UserID:      userID,
 		TextContent: "Test email content",
 	}
@@ -111,8 +113,9 @@ func TestGetAllSendMails(t *testing.T) {
 
 	// Create multiple send mails
 	for i := 0; i < 5; i++ {
+		mailID := primitive.NewObjectID()
 		mail := &models.Mail{
-			ID:     primitive.NewObjectID(),
+			ID:     &mailID,
 			UserID: userID,
 		}
 		sendMail := &models.SendMail{
@@ -140,8 +143,9 @@ func TestUpdateSendMailStatus(t *testing.T) {
 	ctx := context.Background()
 
 	userID := primitive.NewObjectID()
+	mailID := primitive.NewObjectID()
 	mail := &models.Mail{
-		ID:     primitive.NewObjectID(),
+		ID:     &mailID,
 		UserID: userID,
 	}
 
@@ -172,8 +176,9 @@ func TestIncrementRetryCounter(t *testing.T) {
 	ctx := context.Background()
 
 	userID := primitive.NewObjectID()
+	mailID := primitive.NewObjectID()
 	mail := &models.Mail{
-		ID:     primitive.NewObjectID(),
+		ID:     &mailID,
 		UserID: userID,
 	}
 
@@ -207,8 +212,9 @@ func TestDeleteSendMail(t *testing.T) {
 	ctx := context.Background()
 
 	userID := primitive.NewObjectID()
+	mailID := primitive.NewObjectID()
 	mail := &models.Mail{
-		ID:     primitive.NewObjectID(),
+		ID:     &mailID,
 		UserID: userID,
 	}
 

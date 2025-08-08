@@ -32,7 +32,8 @@ func TestMailController_GetAllMails(t *testing.T) {
 			queryParams:    "",
 			expectedStatus: http.StatusOK,
 			setupMock: func(mockRepo *mocks.MockMailRepository, userID primitive.ObjectID) {
-				mails := []*models.Mail{{ID: primitive.NewObjectID(), UserID: userID}}
+				mailID := primitive.NewObjectID()
+				mails := []*models.Mail{{ID: &mailID, UserID: userID}}
 				mockRepo.On("GetAll", mock.Anything, userID, int64(1), int64(10)).Return(mails, int64(1), nil)
 			},
 			setupAuth: func(c *gin.Context, userID primitive.ObjectID) {
@@ -56,7 +57,8 @@ func TestMailController_GetAllMails(t *testing.T) {
 			queryParams:    "?page=3",
 			expectedStatus: http.StatusOK,
 			setupMock: func(mockRepo *mocks.MockMailRepository, userID primitive.ObjectID) {
-				mails := []*models.Mail{{ID: primitive.NewObjectID(), UserID: userID}}
+				mailID := primitive.NewObjectID()
+				mails := []*models.Mail{{ID: &mailID, UserID: userID}}
 				mockRepo.On("GetAll", mock.Anything, userID, int64(3), int64(10)).Return(mails, int64(1), nil)
 			},
 			setupAuth: func(c *gin.Context, userID primitive.ObjectID) {
@@ -68,7 +70,8 @@ func TestMailController_GetAllMails(t *testing.T) {
 			queryParams:    "?size=15",
 			expectedStatus: http.StatusOK,
 			setupMock: func(mockRepo *mocks.MockMailRepository, userID primitive.ObjectID) {
-				mails := []*models.Mail{{ID: primitive.NewObjectID(), UserID: userID}}
+				mailID := primitive.NewObjectID()
+				mails := []*models.Mail{{ID: &mailID, UserID: userID}}
 				mockRepo.On("GetAll", mock.Anything, userID, int64(1), int64(15)).Return(mails, int64(1), nil)
 			},
 			setupAuth: func(c *gin.Context, userID primitive.ObjectID) {
@@ -131,7 +134,7 @@ func TestMailController_GetMailByID(t *testing.T) {
 			expectedStatus: http.StatusOK,
 			setupMock: func(mockRepo *mocks.MockMailRepository, userID primitive.ObjectID, mailID primitive.ObjectID) {
 				mail := &models.Mail{
-					ID:     mailID,
+					ID:     &mailID,
 					UserID: userID,
 					Headers: map[string]string{
 						"Subject": "Test Email",

@@ -30,8 +30,9 @@ func TestSendMailController_GetSendMailByID(t *testing.T) {
 			sendMailID:     primitive.NewObjectID().Hex(),
 			expectedStatus: http.StatusOK,
 			setupMock: func(mockRepo *mocks.MockSendMailRepository, userID primitive.ObjectID, sendMailID primitive.ObjectID) {
+				mailID := primitive.NewObjectID()
 				mail := &models.Mail{
-					ID:     primitive.NewObjectID(),
+					ID:     &mailID,
 					UserID: userID,
 				}
 				sendMail := &models.SendMail{

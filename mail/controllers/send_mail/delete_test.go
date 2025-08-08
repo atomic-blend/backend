@@ -30,7 +30,8 @@ func TestSendMailController_DeleteSendMail(t *testing.T) {
 			sendMailID:     primitive.NewObjectID().Hex(),
 			expectedStatus: http.StatusNoContent,
 			setupMock: func(mockRepo *mocks.MockSendMailRepository, userID primitive.ObjectID, sendMailID primitive.ObjectID) {
-				mail := &models.Mail{ID: primitive.NewObjectID(), UserID: userID}
+				mailID := primitive.NewObjectID()
+				mail := &models.Mail{ID: &mailID, UserID: userID}
 				sendMail := &models.SendMail{
 					ID:         sendMailID,
 					Mail:       mail,

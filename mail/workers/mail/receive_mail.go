@@ -281,9 +281,9 @@ func receiveMail(m *amqp.Delivery, payload ReceivedMailPayload) {
 
 		mailEntity.TextContent = encryptedMailContent.TextContent
 		mailEntity.HTMLContent = encryptedMailContent.HTMLContent
-		mailEntity.Rejected = mailContent.Rejected
-		mailEntity.RewriteSubject = mailContent.RewriteSubject
-		mailEntity.Greylisted = mailContent.Greylisted
+		mailEntity.Rejected = boolPtr(encryptedMailContent.Rejected)
+		mailEntity.RewriteSubject = boolPtr(encryptedMailContent.RewriteSubject)
+		mailEntity.Greylisted = boolPtr(encryptedMailContent.Greylisted)
 
 		encryptedMails = append(encryptedMails, *mailEntity)
 	}
@@ -304,7 +304,6 @@ func receiveMail(m *amqp.Delivery, payload ReceivedMailPayload) {
 	_, err = mailRepository.CreateMany(context.Background(), encryptedMails)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to save mail documents to MongoDB")
-		//TODO: rollback the uploaded keys
 		s3Service.BulkDeleteFiles(context.Background(), uploadedKeys)
 		return
 	}
@@ -437,4 +436,11 @@ func processMessagePart(part *message.Entity, mailContent *Content) {
 		}
 		mailContent.Attachments = append(mailContent.Attachments, attachment)
 	}
+}
+
+func boolPtr(b bool) *bool {
+	if b {
+		return &b
+	}
+	return nil
 }
