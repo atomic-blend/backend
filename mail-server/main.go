@@ -31,6 +31,8 @@ func main() {
 
 	amqp.InitProducerAmqp()
 
+	go startCronWorker()
+
 	// instanciate the smtp backend
 	be := &smtpserver.Backend{}
 
