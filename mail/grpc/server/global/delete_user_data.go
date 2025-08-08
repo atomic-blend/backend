@@ -1,4 +1,4 @@
-package grpserver
+package user
 
 import (
 	"context"
