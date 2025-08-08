@@ -95,11 +95,11 @@ func createTestMail(userID primitive.ObjectID) *models.Mail {
 				Size:        1024,
 			},
 		},
-		Archived:       false,
-		Trashed:        false,
-		Greylisted:     false,
-		Rejected:       false,
-		RewriteSubject: false,
+		Archived:       nil,
+		Trashed:        nil,
+		Greylisted:     nil,
+		Rejected:       nil,
+		RewriteSubject: nil,
 		CreatedAt:      &now,
 		UpdatedAt:      &now,
 	}
@@ -137,11 +137,11 @@ func TestMailRepository_Create(t *testing.T) {
 		userID := primitive.NewObjectID()
 		mail := createTestMail(userID)
 		existingID := primitive.NewObjectID()
-		mail.ID = existingID
+		mail.ID = &existingID
 
 		created, err := repo.Create(context.Background(), mail)
 		require.NoError(t, err)
-		assert.Equal(t, existingID, created.ID)
+		assert.Equal(t, &existingID, created.ID)
 	})
 }
 
@@ -250,10 +250,10 @@ func TestMailRepository_GetByID(t *testing.T) {
 		created, err := repo.Create(context.Background(), mail)
 		require.NoError(t, err)
 
-		found, err := repo.GetByID(context.Background(), created.ID)
+		found, err := repo.GetByID(context.Background(), *created.ID)
 		require.NoError(t, err)
 		assert.NotNil(t, found)
-		assert.Equal(t, created.ID, found.ID)
+		assert.Equal(t, *created.ID, *found.ID)
 		assert.Equal(t, created.UserID, found.UserID)
 
 		// Compare headers using the helper function
@@ -387,10 +387,10 @@ func TestMailRepository_Integration(t *testing.T) {
 		assert.NotNil(t, created.ID)
 
 		// Get the mail by ID
-		found, err := repo.GetByID(context.Background(), created.ID)
+		found, err := repo.GetByID(context.Background(), *created.ID)
 		require.NoError(t, err)
 		assert.NotNil(t, found)
-		assert.Equal(t, created.ID, found.ID)
+		assert.Equal(t, *created.ID, *found.ID)
 
 		// Verify the subject using helper function
 		headers, err := convertHeadersToMap(found.Headers)

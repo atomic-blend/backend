@@ -95,9 +95,9 @@ func (r *MailRepository) GetByID(ctx context.Context, id primitive.ObjectID) (*m
 func (r *MailRepository) Create(ctx context.Context, mail *models.Mail) (*models.Mail, error) {
 	now := primitive.NewDateTimeFromTime(time.Now())
 
-	if mail.ID == primitive.NilObjectID {
+	if mail.ID == nil {
 		id := primitive.NewObjectID()
-		mail.ID = id
+		mail.ID = &id
 	}
 
 	mail.CreatedAt = &now
@@ -123,7 +123,8 @@ func (r *MailRepository) CreateMany(ctx context.Context, mails []models.Mail) (b
 
 	_, err = session.WithTransaction(ctx, func(sessCtx mongo.SessionContext) (interface{}, error) {
 		for _, mail := range mails {
-			mail.ID = primitive.NewObjectID()
+			id := primitive.NewObjectID()
+			mail.ID = &id
 			mail.CreatedAt = &now
 			mail.UpdatedAt = &now
 

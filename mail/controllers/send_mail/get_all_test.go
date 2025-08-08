@@ -32,7 +32,8 @@ func TestSendMailController_GetAllSendMails(t *testing.T) {
 			queryParams:    "",
 			expectedStatus: http.StatusOK,
 			setupMock: func(mockRepo *mocks.MockSendMailRepository, userID primitive.ObjectID) {
-				mail := &models.Mail{ID: primitive.NewObjectID(), UserID: userID}
+				mailID := primitive.NewObjectID()
+				mail := &models.Mail{ID: &mailID, UserID: userID}
 				sendMails := []*models.SendMail{{
 					ID:         primitive.NewObjectID(),
 					Mail:       mail,
