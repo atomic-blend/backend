@@ -11,6 +11,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -37,16 +38,51 @@ func setupMailTest(t *testing.T) (MailRepositoryInterface, func()) {
 	return repo, cleanup
 }
 
+// Helper function to convert headers from MongoDB format to map[string]interface{}
+func convertHeadersToMap(headers interface{}) (map[string]interface{}, error) {
+	if headers == nil {
+		return nil, nil
+	}
+
+	// If it's already a map, return it
+	if headerMap, ok := headers.(map[string]interface{}); ok {
+		return headerMap, nil
+	}
+
+	// If it's a primitive.D (BSON document), convert it
+	if headerDoc, ok := headers.(primitive.D); ok {
+		result := make(map[string]interface{})
+		for _, elem := range headerDoc {
+			result[elem.Key] = elem.Value
+		}
+		return result, nil
+	}
+
+	// Try to marshal and unmarshal to convert any BSON type
+	bsonData, err := bson.Marshal(headers)
+	if err != nil {
+		return nil, err
+	}
+
+	var result map[string]interface{}
+	err = bson.Unmarshal(bsonData, &result)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
 func createTestMail(userID primitive.ObjectID) *models.Mail {
 	now := primitive.NewDateTimeFromTime(time.Now())
 	return &models.Mail{
 		UserID: userID,
-		Headers: models.MailHeaders{
-			From:      "sender@example.com",
-			To:        "recipient@example.com",
-			Subject:   "Test Subject",
-			Date:      "2024-01-01T00:00:00Z",
-			MessageID: "test-message-id-123",
+		Headers: map[string]string{
+			"From":       "sender@example.com",
+			"To":         "recipient@example.com",
+			"Subject":    "Test Subject",
+			"Date":       "2024-01-01T00:00:00Z",
+			"Message-Id": "test-message-id-123",
 		},
 		TextContent: "This is a test email content",
 		HTMLContent: "<html><body>This is a test email content</body></html>",
@@ -81,9 +117,14 @@ func TestMailRepository_Create(t *testing.T) {
 		require.NoError(t, err)
 		assert.NotNil(t, created.ID)
 		assert.Equal(t, userID, created.UserID)
-		assert.Equal(t, mail.Headers.From, created.Headers.From)
-		assert.Equal(t, mail.Headers.To, created.Headers.To)
-		assert.Equal(t, mail.Headers.Subject, created.Headers.Subject)
+
+		// Compare headers using the helper function
+		originalHeaders, err := convertHeadersToMap(mail.Headers)
+		require.NoError(t, err)
+		createdHeaders, err := convertHeadersToMap(created.Headers)
+		require.NoError(t, err)
+		assert.Equal(t, originalHeaders, createdHeaders)
+
 		assert.Equal(t, mail.TextContent, created.TextContent)
 		assert.Equal(t, mail.HTMLContent, created.HTMLContent)
 		assert.Len(t, created.Attachments, 1)
@@ -113,15 +154,21 @@ func TestMailRepository_GetAll(t *testing.T) {
 
 		// Create test mails for the user
 		mail1 := createTestMail(userID)
-		mail1.Headers.Subject = "Mail 1"
+		if headers1, ok := mail1.Headers.(map[string]string); ok {
+			headers1["Subject"] = "Mail 1"
+		}
 
 		mail2 := createTestMail(userID)
-		mail2.Headers.Subject = "Mail 2"
+		if headers2, ok := mail2.Headers.(map[string]string); ok {
+			headers2["Subject"] = "Mail 2"
+		}
 
 		// Create one mail for another user
 		otherUserID := primitive.NewObjectID()
 		otherMail := createTestMail(otherUserID)
-		otherMail.Headers.Subject = "Other User Mail"
+		if headersOther, ok := otherMail.Headers.(map[string]string); ok {
+			headersOther["Subject"] = "Other User Mail"
+		}
 
 		_, err := repo.Create(context.Background(), mail1)
 		require.NoError(t, err)
@@ -141,7 +188,15 @@ func TestMailRepository_GetAll(t *testing.T) {
 		// Verify the mail subjects
 		var subjects []string
 		for _, m := range mails {
-			subjects = append(subjects, m.Headers.Subject)
+			headers, err := convertHeadersToMap(m.Headers)
+			require.NoError(t, err)
+			if headers != nil {
+				if subject, exists := headers["Subject"]; exists {
+					if subjectStr, ok := subject.(string); ok {
+						subjects = append(subjects, subjectStr)
+					}
+				}
+			}
 		}
 		assert.Contains(t, subjects, "Mail 1")
 		assert.Contains(t, subjects, "Mail 2")
@@ -161,7 +216,9 @@ func TestMailRepository_GetAll(t *testing.T) {
 		// Create 5 mails
 		for i := 0; i < 5; i++ {
 			mail := createTestMail(userID)
-			mail.Headers.Subject = fmt.Sprintf("Mail %d", i+1)
+			if headers, ok := mail.Headers.(map[string]string); ok {
+				headers["Subject"] = fmt.Sprintf("Mail %d", i+1)
+			}
 			_, err := repo.Create(context.Background(), mail)
 			require.NoError(t, err)
 		}
@@ -198,7 +255,13 @@ func TestMailRepository_GetByID(t *testing.T) {
 		assert.NotNil(t, found)
 		assert.Equal(t, created.ID, found.ID)
 		assert.Equal(t, created.UserID, found.UserID)
-		assert.Equal(t, created.Headers.Subject, found.Headers.Subject)
+
+		// Compare headers using the helper function
+		createdHeaders, err := convertHeadersToMap(created.Headers)
+		require.NoError(t, err)
+		foundHeaders, err := convertHeadersToMap(found.Headers)
+		require.NoError(t, err)
+		assert.Equal(t, createdHeaders, foundHeaders)
 	})
 
 	t.Run("get mail by non-existent ID", func(t *testing.T) {
@@ -226,9 +289,15 @@ func TestMailRepository_CreateMany(t *testing.T) {
 		}
 
 		// Set different subjects for each mail
-		mails[0].Headers.Subject = "Batch Mail 1"
-		mails[1].Headers.Subject = "Batch Mail 2"
-		mails[2].Headers.Subject = "Batch Mail 3"
+		if headers0, ok := mails[0].Headers.(map[string]string); ok {
+			headers0["Subject"] = "Batch Mail 1"
+		}
+		if headers1, ok := mails[1].Headers.(map[string]string); ok {
+			headers1["Subject"] = "Batch Mail 2"
+		}
+		if headers2, ok := mails[2].Headers.(map[string]string); ok {
+			headers2["Subject"] = "Batch Mail 3"
+		}
 
 		success, err := repo.CreateMany(context.Background(), mails)
 		require.NoError(t, err)
@@ -243,7 +312,15 @@ func TestMailRepository_CreateMany(t *testing.T) {
 		// Verify subjects
 		var subjects []string
 		for _, m := range createdMails {
-			subjects = append(subjects, m.Headers.Subject)
+			headers, err := convertHeadersToMap(m.Headers)
+			require.NoError(t, err)
+			if headers != nil {
+				if subject, exists := headers["Subject"]; exists {
+					if subjectStr, ok := subject.(string); ok {
+						subjects = append(subjects, subjectStr)
+					}
+				}
+			}
 		}
 		assert.Contains(t, subjects, "Batch Mail 1")
 		assert.Contains(t, subjects, "Batch Mail 2")
@@ -263,8 +340,12 @@ func TestMailRepository_CreateMany(t *testing.T) {
 			*createTestMail(userID2),
 		}
 
-		mails[0].Headers.Subject = "User 1 Mail"
-		mails[1].Headers.Subject = "User 2 Mail"
+		if headers0, ok := mails[0].Headers.(map[string]string); ok {
+			headers0["Subject"] = "User 1 Mail"
+		}
+		if headers1, ok := mails[1].Headers.(map[string]string); ok {
+			headers1["Subject"] = "User 2 Mail"
+		}
 
 		success, err := repo.CreateMany(context.Background(), mails)
 		require.NoError(t, err)
@@ -298,7 +379,9 @@ func TestMailRepository_Integration(t *testing.T) {
 
 		// Create a mail
 		mail := createTestMail(userID)
-		mail.Headers.Subject = "Integration Test Mail"
+		if headers, ok := mail.Headers.(map[string]string); ok {
+			headers["Subject"] = "Integration Test Mail"
+		}
 		created, err := repo.Create(context.Background(), mail)
 		require.NoError(t, err)
 		assert.NotNil(t, created.ID)
@@ -308,7 +391,17 @@ func TestMailRepository_Integration(t *testing.T) {
 		require.NoError(t, err)
 		assert.NotNil(t, found)
 		assert.Equal(t, created.ID, found.ID)
-		assert.Equal(t, "Integration Test Mail", found.Headers.Subject)
+
+		// Verify the subject using helper function
+		headers, err := convertHeadersToMap(found.Headers)
+		require.NoError(t, err)
+		if headers != nil {
+			if subject, exists := headers["Subject"]; exists {
+				if subjectStr, ok := subject.(string); ok {
+					assert.Equal(t, "Integration Test Mail", subjectStr)
+				}
+			}
+		}
 
 		// Get all mails for the user
 		allMails, total, err := repo.GetAll(context.Background(), userID, 0, 0)

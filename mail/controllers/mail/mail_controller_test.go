@@ -133,9 +133,9 @@ func TestMailController_GetMailByID(t *testing.T) {
 				mail := &models.Mail{
 					ID:     mailID,
 					UserID: userID,
-					Headers: models.MailHeaders{
-						Subject: "Test Email",
-						From:    "test@example.com",
+					Headers: map[string]string{
+						"Subject": "Test Email",
+						"From":    "test@example.com",
 					},
 				}
 				mockRepo.On("GetByID", mock.Anything, mailID).Return(mail, nil)

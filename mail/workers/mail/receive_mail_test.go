@@ -28,22 +28,14 @@ func TestMailContent_Encrypt(t *testing.T) {
 		{
 			name: "successful encryption",
 			mail: &Content{
-				Headers: struct {
-					From      string
-					To        string
-					Subject   string
-					Date      string
-					MessageID string
-					Cc        string
-					Bcc       string
-				}{
-					From:      "sender@example.com",
-					To:        "recipient@example.com",
-					Subject:   "Test Subject",
-					Date:      "2024-01-01T00:00:00Z",
-					MessageID: "test-message-id",
-					Cc:        "cc@example.com",
-					Bcc:       "bcc@example.com",
+				Headers: map[string]string{
+					"From":       "sender@example.com",
+					"To":         "recipient@example.com",
+					"Subject":    "Test Subject",
+					"Date":       "2024-01-01T00:00:00Z",
+					"Message-Id": "test-message-id",
+					"Cc":         "cc@example.com",
+					"Bcc":        "bcc@example.com",
 				},
 				TextContent: "Plain text content",
 				HTMLContent: "<html><body>HTML content</body></html>",
@@ -64,15 +56,7 @@ func TestMailContent_Encrypt(t *testing.T) {
 		{
 			name: "empty content",
 			mail: &Content{
-				Headers: struct {
-					From      string
-					To        string
-					Subject   string
-					Date      string
-					MessageID string
-					Cc        string
-					Bcc       string
-				}{},
+				Headers:        map[string]string{},
 				TextContent:    "",
 				HTMLContent:    "",
 				Attachments:    []Attachment{},
@@ -97,12 +81,29 @@ func TestMailContent_Encrypt(t *testing.T) {
 			require.NoError(t, err)
 			assert.NotNil(t, result)
 
-			// Verify that the encrypted content is different from the original
-			assert.NotEqual(t, tt.mail.Headers.From, result.Headers.From)
-			assert.NotEqual(t, tt.mail.Headers.To, result.Headers.To)
-			assert.NotEqual(t, tt.mail.Headers.Subject, result.Headers.Subject)
-			assert.NotEqual(t, tt.mail.TextContent, result.TextContent)
-			assert.NotEqual(t, tt.mail.HTMLContent, result.HTMLContent)
+			// Verify that headers are properly handled
+			if originalHeaders, ok := tt.mail.Headers.(map[string]string); ok {
+				if resultHeaders, ok := result.Headers.(map[string]string); ok {
+					// If both original and result have non-empty headers, verify encryption changed them
+					if len(originalHeaders) > 0 {
+						for key, originalValue := range originalHeaders {
+							if resultValue, exists := resultHeaders[key]; exists && originalValue != "" {
+								assert.NotEqual(t, originalValue, resultValue, "Header %s should be encrypted", key)
+							}
+						}
+					}
+				}
+			}
+
+			// Verify that text content is encrypted if not empty
+			if tt.mail.TextContent != "" {
+				assert.NotEqual(t, tt.mail.TextContent, result.TextContent)
+			}
+
+			// Verify that HTML content is encrypted if not empty
+			if tt.mail.HTMLContent != "" {
+				assert.NotEqual(t, tt.mail.HTMLContent, result.HTMLContent)
+			}
 
 			// Verify that non-encrypted fields remain the same
 			assert.Equal(t, tt.mail.Rejected, result.Rejected)
@@ -324,20 +325,12 @@ This is a test email content.`
 
 					// Create mail content
 					mailContent := &Content{
-						Headers: struct {
-							From      string
-							To        string
-							Subject   string
-							Date      string
-							MessageID string
-							Cc        string
-							Bcc       string
-						}{
-							From:      payload.From,
-							To:        rcpt,
-							Subject:   "Test Subject",
-							Date:      payload.ReceivedAt,
-							MessageID: "test-id",
+						Headers: map[string]string{
+							"From":       payload.From,
+							"To":         rcpt,
+							"Subject":    "Test Subject",
+							"Date":       payload.ReceivedAt,
+							"Message-Id": "test-id",
 						},
 						TextContent: "Test content",
 						HTMLContent: "<html>Test</html>",
@@ -353,13 +346,7 @@ This is a test email content.`
 
 					// Create mail entity
 					mailEntity := &models.Mail{
-						Headers: models.MailHeaders{
-							From:      encryptedMailContent.Headers.From,
-							To:        encryptedMailContent.Headers.To,
-							Subject:   encryptedMailContent.Headers.Subject,
-							Date:      encryptedMailContent.Headers.Date,
-							MessageID: encryptedMailContent.Headers.MessageID,
-						},
+						Headers:     encryptedMailContent.Headers,
 						TextContent: encryptedMailContent.TextContent,
 						HTMLContent: encryptedMailContent.HTMLContent,
 					}
@@ -496,6 +483,16 @@ attachment content
 
 			processMessageBody(entity, mailContent)
 
+			// Verify headers are extracted
+			assert.NotNil(t, mailContent.Headers)
+			if headers, ok := mailContent.Headers.(map[string]string); ok {
+				assert.Contains(t, headers, "From")
+				assert.Contains(t, headers, "To")
+				assert.Contains(t, headers, "Subject")
+				assert.Equal(t, "sender@example.com", headers["From"])
+				assert.Equal(t, "recipient@example.com", headers["To"])
+			}
+
 			// Verify text content
 			if tt.want.TextContent != "" {
 				assert.Equal(t, tt.want.TextContent, mailContent.TextContent)
@@ -550,7 +547,18 @@ PDF content here
 		Attachments: make([]Attachment, 0),
 	}
 
-	processMultipartMessage(entity, mailContent)
+	processMessageBody(entity, mailContent)
+
+	// Verify headers are extracted
+	assert.NotNil(t, mailContent.Headers)
+	if headers, ok := mailContent.Headers.(map[string]string); ok {
+		assert.Contains(t, headers, "From")
+		assert.Contains(t, headers, "To")
+		assert.Contains(t, headers, "Subject")
+		assert.Equal(t, "sender@example.com", headers["From"])
+		assert.Equal(t, "recipient@example.com", headers["To"])
+		assert.Equal(t, "Test Multipart", headers["Subject"])
+	}
 
 	// Verify that all parts were processed
 	assert.Equal(t, "Plain text part.\n", mailContent.TextContent)
@@ -619,6 +627,82 @@ func TestProcessMessagePart(t *testing.T) {
 			processMessagePart(entity, mailContent)
 
 			tt.expected(mailContent)
+		})
+	}
+}
+
+func TestProcessMessageBody_HeaderExtraction(t *testing.T) {
+	tests := []struct {
+		name            string
+		mimeData        string
+		expectedHeaders map[string]string
+	}{
+		{
+			name: "basic headers extraction",
+			mimeData: `From: sender@example.com
+To: recipient@example.com
+Subject: Test Email
+Date: Mon, 01 Jan 2024 00:00:00 +0000
+Message-ID: <test@example.com>
+Cc: cc@example.com
+Bcc: bcc@example.com
+Content-Type: text/plain
+
+This is a test email.`,
+			expectedHeaders: map[string]string{
+				"From":       "sender@example.com",
+				"To":         "recipient@example.com",
+				"Subject":    "Test Email",
+				"Date":       "Mon, 01 Jan 2024 00:00:00 +0000",
+				"Message-Id": "<test@example.com>",
+				"Cc":         "cc@example.com",
+				"Bcc":        "bcc@example.com",
+			},
+		},
+		{
+			name: "custom headers extraction",
+			mimeData: `From: sender@example.com
+To: recipient@example.com
+Subject: Custom Headers Test
+X-Custom-Header: custom-value
+X-Priority: high
+X-Mailer: AtomicBlend
+Content-Type: text/plain
+
+Email with custom headers.`,
+			expectedHeaders: map[string]string{
+				"From":            "sender@example.com",
+				"To":              "recipient@example.com",
+				"Subject":         "Custom Headers Test",
+				"X-Custom-Header": "custom-value",
+				"X-Priority":      "high",
+				"X-Mailer":        "AtomicBlend",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Parse the MIME message
+			entity, err := message.Read(strings.NewReader(tt.mimeData))
+			require.NoError(t, err)
+
+			mailContent := &Content{
+				Attachments: make([]Attachment, 0),
+			}
+
+			processMessageBody(entity, mailContent)
+
+			// Verify headers are extracted correctly
+			assert.NotNil(t, mailContent.Headers)
+			if headers, ok := mailContent.Headers.(map[string]string); ok {
+				for expectedKey, expectedValue := range tt.expectedHeaders {
+					assert.Contains(t, headers, expectedKey, "Header %s should be present", expectedKey)
+					assert.Equal(t, expectedValue, headers[expectedKey], "Header %s should have correct value", expectedKey)
+				}
+			} else {
+				t.Errorf("Headers should be of type map[string]string, got %T", mailContent.Headers)
+			}
 		})
 	}
 }

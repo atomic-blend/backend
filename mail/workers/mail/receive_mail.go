@@ -25,15 +25,7 @@ import (
 
 // Content represents the collected content from an email
 type Content struct {
-	Headers struct {
-		From      string
-		To        string
-		Subject   string
-		Date      string
-		MessageID string
-		Cc        string
-		Bcc       string
-	}
+	Headers        interface{}
 	TextContent    string
 	HTMLContent    string
 	Attachments    []Attachment
@@ -58,51 +50,22 @@ func (m *Content) Encrypt(publicKey string) (*Content, error) {
 		Greylisted:     m.Greylisted,
 	}
 
-	// encrypt the headers individually
-	encryptedFrom, err := ageencryption.EncryptString(publicKey, m.Headers.From)
-	if err != nil {
-		return nil, err
-	}
-	encryptedMail.Headers.From = encryptedFrom
-
-	encryptedTo, err := ageencryption.EncryptString(publicKey, m.Headers.To)
-	if err != nil {
-		return nil, err
-	}
-	encryptedMail.Headers.To = encryptedTo
-
-	encryptedSubject, err := ageencryption.EncryptString(publicKey, m.Headers.Subject)
-	if err != nil {
-		return nil, err
-	}
-	encryptedMail.Headers.Subject = encryptedSubject
-
-	encryptedDate, err := ageencryption.EncryptString(publicKey, m.Headers.Date)
-	if err != nil {
-		return nil, err
-	}
-	encryptedMail.Headers.Date = encryptedDate
-
-	encryptedMessageID, err := ageencryption.EncryptString(publicKey, m.Headers.MessageID)
-	if err != nil {
-		return nil, err
-	}
-	encryptedMail.Headers.MessageID = encryptedMessageID
-
-	encryptedCc, err := ageencryption.EncryptString(publicKey, m.Headers.Cc)
-	if m.Headers.Cc != "" {
-		if err != nil {
-			return nil, err
+	// encrypt all headers
+	if m.Headers != nil {
+		if headersMap, ok := m.Headers.(map[string]string); ok {
+			encryptedHeaders := make(map[string]string)
+			for key, value := range headersMap {
+				encryptedValue, err := ageencryption.EncryptString(publicKey, value)
+				if err != nil {
+					return nil, err
+				}
+				encryptedHeaders[key] = encryptedValue
+			}
+			encryptedMail.Headers = encryptedHeaders
+		} else {
+			// If Headers is not a map[string]string, leave it as is (no encryption)
+			encryptedMail.Headers = m.Headers
 		}
-		encryptedMail.Headers.Cc = encryptedCc
-	}
-
-	if m.Headers.Bcc != "" {
-		encryptedBcc, err := ageencryption.EncryptString(publicKey, m.Headers.Bcc)
-		if err != nil {
-			return nil, err
-		}
-		encryptedMail.Headers.Bcc = encryptedBcc
 	}
 
 	encryptedTextContent, err := ageencryption.EncryptString(publicKey, m.TextContent)
@@ -314,13 +277,7 @@ func receiveMail(m *amqp.Delivery, payload ReceivedMailPayload) {
 		}
 
 		// set the mail entity fields
-		mailEntity.Headers.From = encryptedMailContent.Headers.From
-		mailEntity.Headers.To = encryptedMailContent.Headers.To
-		mailEntity.Headers.Subject = encryptedMailContent.Headers.Subject
-		mailEntity.Headers.Date = encryptedMailContent.Headers.Date
-		mailEntity.Headers.MessageID = encryptedMailContent.Headers.MessageID
-		mailEntity.Headers.Cc = encryptedMailContent.Headers.Cc
-		mailEntity.Headers.Bcc = encryptedMailContent.Headers.Bcc
+		mailEntity.Headers = encryptedMailContent.Headers
 
 		mailEntity.TextContent = encryptedMailContent.TextContent
 		mailEntity.HTMLContent = encryptedMailContent.HTMLContent
@@ -356,6 +313,15 @@ func receiveMail(m *amqp.Delivery, payload ReceivedMailPayload) {
 }
 
 func processMessageBody(entity *message.Entity, mailContent *Content) {
+	// Extract all headers first
+	headers := make(map[string]string)
+	for field := entity.Header.Fields(); field.Next(); {
+		key := field.Key()
+		value, _ := field.Text()
+		headers[key] = value
+	}
+	mailContent.Headers = headers
+
 	// Get the media type of the message
 	mediaType, params, err := entity.Header.ContentType()
 	if err != nil {
@@ -366,7 +332,8 @@ func processMessageBody(entity *message.Entity, mailContent *Content) {
 	log.Info().
 		Str("mediaType", mediaType).
 		Interface("params", params).
-		Msg("Message content type")
+		Interface("headers", headers).
+		Msg("Message content type and headers")
 
 	// Handle multipart messages
 	if strings.HasPrefix(mediaType, "multipart/") {
