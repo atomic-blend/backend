@@ -1,0 +1,18 @@
+syntax = "proto3";
+package mail.v1;
+
+message MailAttachment {
+    string id = 1; // Unique identifier for the attachment
+    string content_type = 2; // MIME type of the attachment
+    string filename = 3; // Name of the file
+    bytes content = 4; // Content of the file
+}
+
+// Mail is the message that represents a mail entity.
+message Mail {
+    string id = 1; // Unique identifier for the mail
+    map<string, string> headers = 2; // Headers of the mail
+    string text_content = 3; // Text content of the mail
+    string html_content = 4; // HTML content of the mail
+    repeated MailAttachment attachments = 5; // Attachments of the mail
+}

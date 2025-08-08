@@ -24,6 +24,8 @@ type SendMailRepositoryInterface interface {
 	UpdateStatus(ctx context.Context, id primitive.ObjectID, status models.SendStatus) (*models.SendMail, error)
 	IncrementRetryCounter(ctx context.Context, id primitive.ObjectID) (*models.SendMail, error)
 	Delete(ctx context.Context, id primitive.ObjectID) error
+	// ClaimPendingSentEmails retrieves all pending sent emails for internal processing
+	ClaimPendingSentEmails(ctx context.Context) ([]*models.SendMail, error)
 }
 
 // SendMailRepository handles database operations related to send mails
@@ -201,4 +203,24 @@ func (r *SendMailRepository) Delete(ctx context.Context, id primitive.ObjectID) 
 
 	_, err := r.collection.UpdateOne(ctx, filter, update)
 	return err
+}
+
+// GetPendingSentEmails retrieves all pending sent emails for internal processing
+func (r *SendMailRepository) ClaimPendingSentEmails(ctx context.Context) ([]*models.SendMail, error) {
+	filter := bson.M{"send_status": bson.M{"$in": []models.SendStatus{models.SendStatusPending, models.SendStatusRetry}}}
+
+	//TODO: go a find one and update to claim the emails (set a claimed flag or similar + date + error message)
+	//TODO: return also the messages claimed for too long
+	cursor, err := r.collection.Find(ctx, filter)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var pendingEmails []*models.SendMail
+	if err = cursor.All(ctx, &pendingEmails); err != nil {
+		return nil, err
+	}
+
+	return pendingEmails, nil
 }
