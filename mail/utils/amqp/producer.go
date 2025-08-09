@@ -64,6 +64,12 @@ func InitProducerAmqp() {
 
 // PublishMessage publishes a message to the AMQP broker
 func PublishMessage(exchangeName string, topic string, message map[string]interface{}) {
+	// Skip publishing in test environment
+	if os.Getenv("GO_ENV") == "test" || ch == nil {
+		log.Debug().Msg("Skipping AMQP message publishing (test environment or no connection)")
+		return
+	}
+
 	log.Debug().Msg("Publishing message to AMQP")
 	log.Debug().Msgf("Exchange: %s, Topic: %s, Message: %v", exchangeName, topic, message)
 	log.Debug().Msg("Encoding message")

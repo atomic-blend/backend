@@ -21,3 +21,12 @@ func (m *MockUserClient) GetUserPublicKey(ctx context.Context, req *connect.Requ
 	}
 	return args.Get(0).(*connect.Response[userv1.GetUserPublicKeyResponse]), args.Error(1)
 }
+
+// GetUserDevices gets the devices for a user
+func (m *MockUserClient) GetUserDevices(ctx context.Context, req *connect.Request[userv1.GetUserDevicesRequest]) (*connect.Response[userv1.GetUserDevicesResponse], error) {
+	args := m.Called(ctx, req)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*connect.Response[userv1.GetUserDevicesResponse]), args.Error(1)
+}
