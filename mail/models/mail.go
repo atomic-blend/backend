@@ -29,3 +29,23 @@ type Mail struct {
 	CreatedAt      *primitive.DateTime `bson:"created_at,omitempty" json:"created_at,omitempty"`
 	UpdatedAt      *primitive.DateTime `bson:"updated_at,omitempty" json:"updated_at,omitempty"`
 }
+
+func (s *Mail) Encrypt(publicKey string) (*Mail, error) {
+	encryptedMail := &Mail{
+		ID:             s.ID,
+		UserID:         s.UserID,
+		Attachments:    s.Attachments,
+		Archived:       s.Archived,
+		Trashed:        s.Trashed,
+		Greylisted:     s.Greylisted,
+		Rejected:       s.Rejected,
+		RewriteSubject: s.RewriteSubject,
+		CreatedAt:      s.CreatedAt,
+		UpdatedAt:      s.UpdatedAt,
+	}
+
+	// Encrypt the mail data here
+
+	return encryptedMail, nil
+}
+

@@ -21,13 +21,13 @@ import (
 func TestMailContent_Encrypt(t *testing.T) {
 	tests := []struct {
 		name      string
-		mail      *Content
+		mail      *models.RawMail	
 		publicKey string
 		wantErr   bool
 	}{
 		{
 			name: "successful encryption",
-			mail: &Content{
+			mail: &models.RawMail{
 				Headers: map[string]string{
 					"From":       "sender@example.com",
 					"To":         "recipient@example.com",
@@ -39,7 +39,7 @@ func TestMailContent_Encrypt(t *testing.T) {
 				},
 				TextContent: "Plain text content",
 				HTMLContent: "<html><body>HTML content</body></html>",
-				Attachments: []Attachment{
+				Attachments: []models.RawAttachment{
 					{
 						Filename:    "test.txt",
 						ContentType: "text/plain",
@@ -55,11 +55,11 @@ func TestMailContent_Encrypt(t *testing.T) {
 		},
 		{
 			name: "empty content",
-			mail: &Content{
+			mail: &models.RawMail{
 				Headers:        map[string]string{},
 				TextContent:    "",
 				HTMLContent:    "",
-				Attachments:    []Attachment{},
+				Attachments:    []models.RawAttachment{},
 				Rejected:       false,
 				RewriteSubject: false,
 				Greylisted:     false,
@@ -324,7 +324,7 @@ This is a test email content.`
 					userPublicKey := rcptPublicKey.Msg.PublicKey
 
 					// Create mail content
-					mailContent := &Content{
+					mailContent := &models.RawMail{
 						Headers: map[string]string{
 							"From":       payload.From,
 							"To":         rcpt,
@@ -334,7 +334,7 @@ This is a test email content.`
 						},
 						TextContent: "Test content",
 						HTMLContent: "<html>Test</html>",
-						Attachments: []Attachment{},
+						Attachments: []models.RawAttachment{},
 					}
 
 					// Encrypt mail content
@@ -409,7 +409,7 @@ func TestProcessMessageBody(t *testing.T) {
 	tests := []struct {
 		name     string
 		mimeData string
-		want     *Content
+		want     *models.RawMail
 	}{
 		{
 			name: "plain text message",
@@ -419,10 +419,10 @@ Subject: Test
 Content-Type: text/plain
 
 This is plain text content.`,
-			want: &Content{
+			want: &models.RawMail{
 				TextContent: "This is plain text content.",
 				HTMLContent: "",
-				Attachments: []Attachment{},
+				Attachments: []models.RawAttachment{},
 			},
 		},
 		{
@@ -433,10 +433,10 @@ Subject: Test
 Content-Type: text/html
 
 <html><body>This is HTML content.</body></html>`,
-			want: &Content{
+			want: &models.RawMail{
 				TextContent: "",
 				HTMLContent: "<html><body>This is HTML content.</body></html>",
-				Attachments: []Attachment{},
+				Attachments: []models.RawAttachment{},
 			},
 		},
 		{
@@ -457,10 +457,10 @@ Content-Disposition: attachment; filename="test.txt"
 
 attachment content
 --boundary--`,
-			want: &Content{
+			want: &models.RawMail{
 				TextContent: "This is plain text.\n",
 				HTMLContent: "",
-				Attachments: []Attachment{
+				Attachments: []models.RawAttachment{
 					{
 						Filename:    "test.txt",
 						ContentType: "application/octet-stream",
@@ -477,8 +477,8 @@ attachment content
 			entity, err := message.Read(strings.NewReader(tt.mimeData))
 			require.NoError(t, err)
 
-			mailContent := &Content{
-				Attachments: make([]Attachment, 0),
+			mailContent := &models.RawMail{
+				Attachments: make([]models.RawAttachment, 0),
 			}
 
 			processMessageBody(entity, mailContent)
@@ -543,8 +543,8 @@ PDF content here
 	entity, err := message.Read(strings.NewReader(multipartMIME))
 	require.NoError(t, err)
 
-	mailContent := &Content{
-		Attachments: make([]Attachment, 0),
+	mailContent := &models.RawMail{
+		Attachments: make([]models.RawAttachment, 0),
 	}
 
 	processMessageBody(entity, mailContent)
@@ -575,13 +575,13 @@ func TestProcessMessagePart(t *testing.T) {
 		disposition string
 		filename    string
 		body        string
-		expected    func(*Content)
+		expected    func(*models.RawMail)
 	}{
 		{
 			name:        "plain text part",
 			contentType: "text/plain",
 			body:        "Plain text content",
-			expected: func(mc *Content) {
+			expected: func(mc *models.RawMail) {
 				assert.Equal(t, "Plain text content", mc.TextContent)
 			},
 		},
@@ -589,7 +589,7 @@ func TestProcessMessagePart(t *testing.T) {
 			name:        "HTML part",
 			contentType: "text/html",
 			body:        "<html><body>HTML content</body></html>",
-			expected: func(mc *Content) {
+			expected: func(mc *models.RawMail) {
 				assert.Equal(t, "<html><body>HTML content</body></html>", mc.HTMLContent)
 			},
 		},
@@ -599,7 +599,7 @@ func TestProcessMessagePart(t *testing.T) {
 			disposition: "attachment",
 			filename:    "document.pdf",
 			body:        "PDF content",
-			expected: func(mc *Content) {
+			expected: func(mc *models.RawMail) {
 				assert.Equal(t, 1, len(mc.Attachments))
 				assert.Equal(t, "document.pdf", mc.Attachments[0].Filename)
 				assert.Equal(t, "application/pdf", mc.Attachments[0].ContentType)
@@ -620,8 +620,8 @@ func TestProcessMessagePart(t *testing.T) {
 			entity, err := message.Read(strings.NewReader(mimeData))
 			require.NoError(t, err)
 
-			mailContent := &Content{
-				Attachments: make([]Attachment, 0),
+			mailContent := &models.RawMail{
+				Attachments: make([]models.RawAttachment, 0),
 			}
 
 			processMessagePart(entity, mailContent)
@@ -687,8 +687,8 @@ Email with custom headers.`,
 			entity, err := message.Read(strings.NewReader(tt.mimeData))
 			require.NoError(t, err)
 
-			mailContent := &Content{
-				Attachments: make([]Attachment, 0),
+			mailContent := &models.RawMail{
+				Attachments: make([]models.RawAttachment, 0),
 			}
 
 			processMessageBody(entity, mailContent)
