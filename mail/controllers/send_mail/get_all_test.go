@@ -69,10 +69,13 @@ func TestSendMailController_GetAllSendMails(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockRepo := &mocks.MockSendMailRepository{}
+			mockUserClient := &mocks.MockUserClient{}
+			mockAMQPService := &mocks.MockAMQPService{}
+			mockS3Service := &mocks.MockS3Service{}
 			userID := primitive.NewObjectID()
 			tt.setupMock(mockRepo, userID)
 
-			controller := NewSendMailController(mockRepo)
+			controller := NewSendMailController(mockRepo, mockUserClient, mockAMQPService, mockS3Service)
 
 			router := gin.New()
 			router.Use(func(c *gin.Context) {

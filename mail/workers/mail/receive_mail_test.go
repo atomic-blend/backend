@@ -21,14 +21,14 @@ import (
 func TestMailContent_Encrypt(t *testing.T) {
 	tests := []struct {
 		name      string
-		mail      *models.RawMail	
+		mail      *models.RawMail
 		publicKey string
 		wantErr   bool
 	}{
 		{
 			name: "successful encryption",
 			mail: &models.RawMail{
-				Headers: map[string]string{
+				Headers: map[string]interface{}{
 					"From":       "sender@example.com",
 					"To":         "recipient@example.com",
 					"Subject":    "Test Subject",
@@ -50,13 +50,13 @@ func TestMailContent_Encrypt(t *testing.T) {
 				RewriteSubject: false,
 				Greylisted:     false,
 			},
-			publicKey: "age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p",
+			publicKey: "age1jl76v4rmz5ukg9danl3v0zmyet9sqejmngs52wj9m497wgd02s9quq4qfl",
 			wantErr:   false,
 		},
 		{
 			name: "empty content",
 			mail: &models.RawMail{
-				Headers:        map[string]string{},
+				Headers:        map[string]interface{}{},
 				TextContent:    "",
 				HTMLContent:    "",
 				Attachments:    []models.RawAttachment{},
@@ -64,7 +64,7 @@ func TestMailContent_Encrypt(t *testing.T) {
 				RewriteSubject: false,
 				Greylisted:     false,
 			},
-			publicKey: "age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p",
+			publicKey: "age1jl76v4rmz5ukg9danl3v0zmyet9sqejmngs52wj9m497wgd02s9quq4qfl",
 			wantErr:   false,
 		},
 	}
@@ -116,7 +116,7 @@ func TestMailContent_Encrypt(t *testing.T) {
 
 func TestReceiveMail(t *testing.T) {
 	// Test data
-	testPublicKey := "age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p"
+	testPublicKey := "age1jl76v4rmz5ukg9danl3v0zmyet9sqejmngs52wj9m497wgd02s9quq4qfl"
 	testUserID := "user123"
 	testEmail := "test@example.com"
 

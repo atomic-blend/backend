@@ -5,11 +5,15 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 
+	"connectrpc.com/connect"
+	userv1 "github.com/atomic-blend/backend/grpc/gen/user/v1"
 	"github.com/atomic-blend/backend/mail/auth"
 	"github.com/atomic-blend/backend/mail/models"
 	"github.com/atomic-blend/backend/mail/tests/mocks"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
@@ -19,30 +23,37 @@ import (
 
 func TestSendMailController_CreateSendMail(t *testing.T) {
 	gin.SetMode(gin.TestMode)
+	// Set test environment
+	os.Setenv("GO_ENV", "test")
+	os.Setenv("AWS_BUCKET", "test-bucket")
+	defer func() {
+		os.Unsetenv("GO_ENV")
+		os.Unsetenv("AWS_BUCKET")
+	}()
 
 	tests := []struct {
 		name           string
 		requestBody    interface{}
 		expectedStatus int
 		setupMock      func(*mocks.MockSendMailRepository, primitive.ObjectID)
+		setupUserMock  func(*mocks.MockUserClient, primitive.ObjectID)
+		setupAMQPMock  func(*mocks.MockAMQPService, primitive.ObjectID)
+		setupS3Mock    func(*mocks.MockS3Service, primitive.ObjectID)
 		setupAuth      func(*gin.Context, primitive.ObjectID)
 	}{
 		{
 			name: "Success",
-			requestBody: CreateSendMailRequest{
-				Mail: &models.Mail{
-					TextContent: "Test email content",
-					Headers: map[string]string{
-						"Subject": "Test Email",
-						"From":    "test@example.com",
-					},
+			requestBody: models.RawMail{
+				Headers: map[string]interface{}{
+					"Subject": "Test Email",
+					"From":    "test@example.com",
 				},
+				TextContent: "Test email content",
 			},
 			expectedStatus: http.StatusCreated,
 			setupMock: func(mockRepo *mocks.MockSendMailRepository, userID primitive.ObjectID) {
 				mockRepo.On("Create", mock.Anything, mock.MatchedBy(func(sendMail *models.SendMail) bool {
 					return sendMail.Mail != nil &&
-						sendMail.Mail.UserID == userID &&
 						sendMail.SendStatus == models.SendStatusPending &&
 						sendMail.RetryCounter == nil // Should be nil when created
 				})).Return(&models.SendMail{
@@ -50,6 +61,31 @@ func TestSendMailController_CreateSendMail(t *testing.T) {
 					SendStatus:   models.SendStatusPending,
 					RetryCounter: nil, // Should be nil when created
 				}, nil)
+			},
+			setupUserMock: func(mockUserClient *mocks.MockUserClient, userID primitive.ObjectID) {
+				mockUserClient.On("GetUserPublicKey", mock.Anything, mock.MatchedBy(func(req *connect.Request[userv1.GetUserPublicKeyRequest]) bool {
+					return req.Msg.Id == userID.Hex()
+				})).Return(&connect.Response[userv1.GetUserPublicKeyResponse]{
+					Msg: &userv1.GetUserPublicKeyResponse{
+						PublicKey: "age1jl76v4rmz5ukg9danl3v0zmyet9sqejmngs52wj9m497wgd02s9quq4qfl",
+						UserId:    userID.Hex(),
+					},
+				}, nil)
+			},
+			setupAMQPMock: func(mockAMQPService *mocks.MockAMQPService, userID primitive.ObjectID) {
+				// Mock AMQP publish message
+				mockAMQPService.On("PublishMessage", "mail", "sent", mock.MatchedBy(func(message map[string]interface{}) bool {
+					// Verify that the message contains the expected fields
+					_, hasSendMailID := message["send_mail_id"]
+					_, hasContent := message["content"]
+					return hasSendMailID && hasContent
+				})).Return()
+			},
+			setupS3Mock: func(mockS3Service *mocks.MockS3Service, userID primitive.ObjectID) {
+				// Mock S3 operations for attachments (empty attachments in this test)
+				mockS3Service.On("BulkUploadFiles", mock.Anything, mock.MatchedBy(func(payloads []*s3.PutObjectInput) bool {
+					return len(payloads) == 0 // No attachments expected
+				})).Return([]string{}, nil)
 			},
 			setupAuth: func(c *gin.Context, userID primitive.ObjectID) {
 				c.Set("authUser", &auth.UserAuthInfo{UserID: userID})
@@ -60,26 +96,35 @@ func TestSendMailController_CreateSendMail(t *testing.T) {
 			requestBody:    "invalid json",
 			expectedStatus: http.StatusBadRequest,
 			setupMock:      func(mockRepo *mocks.MockSendMailRepository, userID primitive.ObjectID) {},
+			setupUserMock:  func(mockUserClient *mocks.MockUserClient, userID primitive.ObjectID) {},
+			setupAMQPMock:  func(mockAMQPService *mocks.MockAMQPService, userID primitive.ObjectID) {},
+			setupS3Mock:    func(mockS3Service *mocks.MockS3Service, userID primitive.ObjectID) {},
 			setupAuth: func(c *gin.Context, userID primitive.ObjectID) {
 				c.Set("authUser", &auth.UserAuthInfo{UserID: userID})
 			},
 		},
 		{
 			name:           "Missing mail field",
-			requestBody:    CreateSendMailRequest{},
+			requestBody:    models.RawMail{},
 			expectedStatus: http.StatusBadRequest,
 			setupMock:      func(mockRepo *mocks.MockSendMailRepository, userID primitive.ObjectID) {},
+			setupUserMock:  func(mockUserClient *mocks.MockUserClient, userID primitive.ObjectID) {},
+			setupAMQPMock:  func(mockAMQPService *mocks.MockAMQPService, userID primitive.ObjectID) {},
+			setupS3Mock:    func(mockS3Service *mocks.MockS3Service, userID primitive.ObjectID) {},
 			setupAuth: func(c *gin.Context, userID primitive.ObjectID) {
 				c.Set("authUser", &auth.UserAuthInfo{UserID: userID})
 			},
 		},
 		{
 			name: "Unauthorized",
-			requestBody: CreateSendMailRequest{
-				Mail: &models.Mail{TextContent: "Test"},
+			requestBody: models.RawMail{
+				TextContent: "Test",
 			},
 			expectedStatus: http.StatusUnauthorized,
 			setupMock:      func(mockRepo *mocks.MockSendMailRepository, userID primitive.ObjectID) {},
+			setupUserMock:  func(mockUserClient *mocks.MockUserClient, userID primitive.ObjectID) {},
+			setupAMQPMock:  func(mockAMQPService *mocks.MockAMQPService, userID primitive.ObjectID) {},
+			setupS3Mock:    func(mockS3Service *mocks.MockS3Service, userID primitive.ObjectID) {},
 			setupAuth:      func(c *gin.Context, userID primitive.ObjectID) {},
 		},
 	}
@@ -87,10 +132,17 @@ func TestSendMailController_CreateSendMail(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockRepo := &mocks.MockSendMailRepository{}
+			mockUserClient := &mocks.MockUserClient{}
+			mockAMQPService := &mocks.MockAMQPService{}
+			mockS3Service := &mocks.MockS3Service{}
 			userID := primitive.NewObjectID()
-			tt.setupMock(mockRepo, userID)
 
-			controller := NewSendMailController(mockRepo)
+			tt.setupMock(mockRepo, userID)
+			tt.setupUserMock(mockUserClient, userID)
+			tt.setupAMQPMock(mockAMQPService, userID)
+			tt.setupS3Mock(mockS3Service, userID)
+
+			controller := NewSendMailController(mockRepo, mockUserClient, mockAMQPService, mockS3Service)
 
 			router := gin.New()
 			router.Use(func(c *gin.Context) {
@@ -115,6 +167,9 @@ func TestSendMailController_CreateSendMail(t *testing.T) {
 			assert.Equal(t, tt.expectedStatus, w.Code)
 
 			mockRepo.AssertExpectations(t)
+			mockUserClient.AssertExpectations(t)
+			mockAMQPService.AssertExpectations(t)
+			mockS3Service.AssertExpectations(t)
 		})
 	}
 }

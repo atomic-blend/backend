@@ -4,15 +4,11 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"os"
 
 	"connectrpc.com/connect"
 	userv1 "github.com/atomic-blend/backend/grpc/gen/user/v1"
 	"github.com/atomic-blend/backend/mail/auth"
-	"github.com/atomic-blend/backend/mail/grpc/clients"
 	"github.com/atomic-blend/backend/mail/models"
-	"github.com/atomic-blend/backend/mail/utils/amqp"
-	"github.com/atomic-blend/backend/mail/utils/s3"
 	awss3 "github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
@@ -52,6 +48,12 @@ func (c *Controller) CreateSendMail(ctx *gin.Context) {
 		return
 	}
 
+	// Basic validation - ensure at least some content is provided
+	if rawMail.TextContent == "" && rawMail.HTMLContent == "" {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Mail content is required (either text or HTML)"})
+		return
+	}
+
 	// Normalize headers to preserve list structure
 	if rawMail.Headers != nil {
 		if headersMap, ok := rawMail.Headers.(map[string]interface{}); ok {
@@ -83,17 +85,8 @@ func (c *Controller) CreateSendMail(ctx *gin.Context) {
 	log.Debug().Interface("raw_mail", rawMail).Msg("Received raw mail for sending")
 
 	// get the user public key from the auth service via grpc
-	log.Info().Msg("Instantiating user client")
-	userClient, err := clients.NewUserClient()
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to create user client")
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user client"})
-		return
-	}
-
-	//TODO: [DONE] support getting user public key from userID
 	log.Info().Msg("Getting user public key")
-	userPublicKey, err := userClient.GetUserPublicKey(context.Background(), &connect.Request[userv1.GetUserPublicKeyRequest]{
+	userPublicKey, err := c.userClient.GetUserPublicKey(context.Background(), &connect.Request[userv1.GetUserPublicKeyRequest]{
 		Msg: &userv1.GetUserPublicKeyRequest{
 			Id: string(authUser.UserID.Hex()),
 		},
@@ -116,12 +109,6 @@ func (c *Controller) CreateSendMail(ctx *gin.Context) {
 
 	log.Debug().Interface("encrypted_mail", encryptedMail).Msg("Encrypted mail ready for sending")
 
-	s3Service, err := s3.NewS3Service(os.Getenv("AWS_BUCKET"))
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to create S3 service")
-		return
-	}
-
 	// Create send mail entity
 	sendMail := &models.SendMail{
 		Mail:       encryptedMail.ToMailEntity(),
@@ -133,7 +120,7 @@ func (c *Controller) CreateSendMail(ctx *gin.Context) {
 	encryptedAttachments := make([]*awss3.PutObjectInput, 0)
 	for _, attachment := range encryptedMail.Attachments {
 		uniqueFileID := uuid.New().String()
-		payload, err := s3Service.GenerateUploadPayload(context.Background(), attachment.Data, "send_mail/attachments/"+userPublicKey.Msg.UserId, uniqueFileID, map[string]string{})
+		payload, err := c.s3Service.GenerateUploadPayload(context.Background(), attachment.Data, "send_mail/attachments/"+userPublicKey.Msg.UserId, uniqueFileID, map[string]string{})
 		if err != nil {
 			log.Error().Err(err).Msg("Failed to upload attachment to S3")
 		}
@@ -148,9 +135,10 @@ func (c *Controller) CreateSendMail(ctx *gin.Context) {
 	}
 
 	// upload the attachments to s3 in bulk
-	uploadedKeys, err := s3Service.BulkUploadFiles(context.Background(), encryptedAttachments)
+	uploadedKeys, err := c.s3Service.BulkUploadFiles(context.Background(), encryptedAttachments)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to upload attachments to S3")
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to upload attachments"})
 		return
 	}
 
@@ -158,7 +146,7 @@ func (c *Controller) CreateSendMail(ctx *gin.Context) {
 	createdSendMail, err := c.sendMailRepo.Create(ctx, sendMail)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		s3Service.BulkDeleteFiles(context.Background(), uploadedKeys)
+		c.s3Service.BulkDeleteFiles(context.Background(), uploadedKeys)
 		return
 	}
 
@@ -168,8 +156,10 @@ func (c *Controller) CreateSendMail(ctx *gin.Context) {
 
 	log.Debug().Interface("send_mail", rawMail).Msg("Publishing send mail message to queue")
 
+	//TODO: update the tests
+
 	//TODO: [DONE] publish to message queue
-	amqp.PublishMessage("mail", "sent", map[string]interface{}{
+	c.amqpService.PublishMessage("mail", "sent", map[string]interface{}{
 		"send_mail_id": sendMail.ID.Hex(),
 		"content":      rawMail, // Use the raw mail content for processing
 	})

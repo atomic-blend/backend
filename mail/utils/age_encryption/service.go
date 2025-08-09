@@ -12,31 +12,31 @@ import (
 // EncryptString encrypts a string using the age encryption library
 func EncryptString(publicKey string, plaintext string) (string, error) {
 	recipient, err := age.ParseX25519Recipient(publicKey)
-		if err != nil {
-			log.Error().Err(err).Msg("Failed to parse public key")
-			return "", err
-		}
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to parse public key")
+		return "", err
+	}
 
-		out := &bytes.Buffer{}
+	out := &bytes.Buffer{}
 
-		w, err := age.Encrypt(out, recipient)
-		if err != nil {
-			log.Error().Err(err).Msg("Failed to create encrypted file")
-			return "", err
-		}
-		if _, err := io.WriteString(w, "Black lives matter."); err != nil {
-			log.Error().Err(err).Msg("Failed to write to encrypted file")
-			return "", err
-		}
-		if err := w.Close(); err != nil {
-			log.Error().Err(err).Msg("Failed to close encrypted file")
-			return "", err
-		}
+	w, err := age.Encrypt(out, recipient)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to create encrypted file")
+		return "", err
+	}
+	if _, err := io.WriteString(w, plaintext); err != nil {
+		log.Error().Err(err).Msg("Failed to write to encrypted file")
+		return "", err
+	}
+	if err := w.Close(); err != nil {
+		log.Error().Err(err).Msg("Failed to close encrypted file")
+		return "", err
+	}
 
-		// use base64 decode + strings.NewReader to get the encrypted content when decrypting
-		encryptedContent := base64.StdEncoding.EncodeToString(out.Bytes())
+	// use base64 decode + strings.NewReader to get the encrypted content when decrypting
+	encryptedContent := base64.StdEncoding.EncodeToString(out.Bytes())
 
-		return encryptedContent, nil
+	return encryptedContent, nil
 }
 
 // EncryptBytes encrypts a byte array using the age encryption library
