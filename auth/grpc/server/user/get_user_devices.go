@@ -37,19 +37,3 @@ func (userGrpcServer *UserGrpcServer) GetUserDevices(ctx context.Context, req *c
 
 	return connect.NewResponse(resp), nil
 }
-
-// GetUserPublicKey is the gRPC method to retrieve user public key
-func (userGrpcServer *UserGrpcServer) GetUserPublicKey(ctx context.Context, req *connect.Request[userv1.GetUserPublicKeyRequest]) (*connect.Response[userv1.GetUserPublicKeyResponse], error) {
-	// Call the repository method to get user public key
-	user, err := userGrpcServer.userRepo.GetByEmail(ctx, req.Msg.Email)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get user public key: %w", err))
-	}
-
-	resp := &userv1.GetUserPublicKeyResponse{
-		UserId:    user.ID.Hex(),
-		PublicKey: *user.KeySet.PublicKey,
-	}
-
-	return connect.NewResponse(resp), nil
-}

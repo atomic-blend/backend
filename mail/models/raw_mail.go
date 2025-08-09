@@ -85,3 +85,15 @@ func (m *RawMail) Encrypt(publicKey string) (*RawMail, error) {
 
 	return encryptedMail, nil
 }
+
+func (m *RawMail) ToMailEntity() *Mail {
+	return &Mail{
+		Headers:        m.Headers,
+		TextContent:    m.TextContent,
+		HTMLContent:    m.HTMLContent,
+		Attachments:    make([]MailAttachment, len(m.Attachments)),
+		Rejected:       &m.Rejected,
+		RewriteSubject: &m.RewriteSubject,
+		Greylisted:     &m.Greylisted,
+	}
+}
