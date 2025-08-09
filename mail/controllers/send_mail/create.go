@@ -2,6 +2,7 @@ package send_mail
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"os"
 
@@ -51,6 +52,36 @@ func (c *Controller) CreateSendMail(ctx *gin.Context) {
 		return
 	}
 
+	// Normalize headers to preserve list structure
+	if rawMail.Headers != nil {
+		if headersMap, ok := rawMail.Headers.(map[string]interface{}); ok {
+			normalizedHeaders := make(map[string]interface{})
+			for key, value := range headersMap {
+				switch v := value.(type) {
+				case []interface{}:
+					// Convert []interface{} to []string
+					stringSlice := make([]string, len(v))
+					for i, item := range v {
+						if str, ok := item.(string); ok {
+							stringSlice[i] = str
+						} else {
+							stringSlice[i] = fmt.Sprintf("%v", item)
+						}
+					}
+					normalizedHeaders[key] = stringSlice
+				default:
+					// Keep other types as they are
+					normalizedHeaders[key] = value
+				}
+			}
+			rawMail.Headers = normalizedHeaders
+		}
+	}
+
+	//TODO: check email validity here
+
+	log.Debug().Interface("raw_mail", rawMail).Msg("Received raw mail for sending")
+
 	// get the user public key from the auth service via grpc
 	log.Info().Msg("Instantiating user client")
 	userClient, err := clients.NewUserClient()
@@ -82,6 +113,8 @@ func (c *Controller) CreateSendMail(ctx *gin.Context) {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to encrypt mail"})
 		return
 	}
+
+	log.Debug().Interface("encrypted_mail", encryptedMail).Msg("Encrypted mail ready for sending")
 
 	s3Service, err := s3.NewS3Service(os.Getenv("AWS_BUCKET"))
 	if err != nil {
@@ -132,9 +165,6 @@ func (c *Controller) CreateSendMail(ctx *gin.Context) {
 	sendMail.ID = createdSendMail.ID
 	sendMail.CreatedAt = createdSendMail.CreatedAt
 	sendMail.UpdatedAt = createdSendMail.UpdatedAt
-
-	// TODO: fix headers null in db mail
-	//TODO: fix raw mail in payload have all the fields not defined
 
 	log.Debug().Interface("send_mail", rawMail).Msg("Publishing send mail message to queue")
 
