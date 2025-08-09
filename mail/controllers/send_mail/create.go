@@ -41,8 +41,8 @@ func (c *Controller) CreateSendMail(ctx *gin.Context) {
 	}
 
 	// Bind JSON payload
-	var req models.RawMail
-	if err := ctx.ShouldBindJSON(&req); err != nil {
+	var rawMail models.RawMail
+	if err := ctx.ShouldBindJSON(&rawMail); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -56,11 +56,11 @@ func (c *Controller) CreateSendMail(ctx *gin.Context) {
 		return
 	}
 
-	//TODO: support getting user public key from userID
+	//TODO: [DONE] support getting user public key from userID
 	log.Info().Msg("Getting user public key")
 	userPublicKey, err := userClient.GetUserPublicKey(context.Background(), &connect.Request[userv1.GetUserPublicKeyRequest]{
 		Msg: &userv1.GetUserPublicKeyRequest{
-			Email: string(authUser.UserID.Hex()),
+			Id: string(authUser.UserID.Hex()),
 		},
 	})
 	if err != nil {
@@ -71,12 +71,17 @@ func (c *Controller) CreateSendMail(ctx *gin.Context) {
 
 	log.Info().Str("public_key", userPublicKey.Msg.PublicKey).Msg("User public key retrieved successfully")
 
-	// TODO: transform the raw mail to an encrypted mail
-	encryptedMail := &models.Mail{}
+	// TODO: [DONE] transform the raw mail to an encrypted mail
+	encryptedMail, err := rawMail.Encrypt(userPublicKey.Msg.PublicKey)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to encrypt mail")
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to encrypt mail"})
+		return
+	}
 
 	// Create send mail entity
 	sendMail := &models.SendMail{
-		Mail:       encryptedMail,
+		Mail:       encryptedMail.ToMailEntity(),
 		SendStatus: models.SendStatusPending,
 		Trashed:    false,
 	}
@@ -92,10 +97,10 @@ func (c *Controller) CreateSendMail(ctx *gin.Context) {
 	sendMail.CreatedAt = createdSendMail.CreatedAt
 	sendMail.UpdatedAt = createdSendMail.UpdatedAt
 
-	//TODO: publish to message queue
+	//TODO: [DONE] publish to message queue
 	amqp.PublishMessage("mail", "mail:sent", map[string]interface{}{
 		"send_mail_id": sendMail.ID.Hex(),
-		"content":      sendMail.Mail,
+		"content":      rawMail, // Use the raw mail content for processing
 	})
 
 	ctx.JSON(http.StatusCreated, createdSendMail)
