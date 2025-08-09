@@ -1,7 +1,9 @@
 package models
 
 import (
-	"github.com/atomic-blend/backend/mail/utils/age_encryption"
+	"fmt"
+
+	ageencryption "github.com/atomic-blend/backend/mail/utils/age_encryption"
 )
 
 // RawMail represents the collected content from an email
@@ -33,18 +35,40 @@ func (m *RawMail) Encrypt(publicKey string) (*RawMail, error) {
 
 	// encrypt all headers
 	if m.Headers != nil {
-		if headersMap, ok := m.Headers.(map[string]string); ok {
-			encryptedHeaders := make(map[string]string)
+		if headersMap, ok := m.Headers.(map[string]interface{}); ok {
+			encryptedHeaders := make(map[string]interface{})
 			for key, value := range headersMap {
-				encryptedValue, err := ageencryption.EncryptString(publicKey, value)
-				if err != nil {
-					return nil, err
+				switch v := value.(type) {
+				case string:
+					encryptedValue, err := ageencryption.EncryptString(publicKey, v)
+					if err != nil {
+						return nil, err
+					}
+					encryptedHeaders[key] = encryptedValue
+				case []string:
+					// For slice of strings, encrypt each item and store as slice
+					encryptedSlice := make([]string, len(v))
+					for i, item := range v {
+						encryptedItem, err := ageencryption.EncryptString(publicKey, item)
+						if err != nil {
+							return nil, err
+						}
+						encryptedSlice[i] = encryptedItem
+					}
+					encryptedHeaders[key] = encryptedSlice
+				default:
+					// For other types, convert to string representation and encrypt
+					valueStr := fmt.Sprintf("%v", v)
+					encryptedValue, err := ageencryption.EncryptString(publicKey, valueStr)
+					if err != nil {
+						return nil, err
+					}
+					encryptedHeaders[key] = encryptedValue
 				}
-				encryptedHeaders[key] = encryptedValue
 			}
 			encryptedMail.Headers = encryptedHeaders
 		} else {
-			// If Headers is not a map[string]string, leave it as is (no encryption)
+			// If Headers is not a map[string]interface{}, leave it as is (no encryption)
 			encryptedMail.Headers = m.Headers
 		}
 	}
