@@ -131,6 +131,8 @@ func main() {
 	health.SetupRoutes(router, db.Database)
 	controllers.SetupAllControllers(router, db.Database)
 
+	amqp.InitProducerAmqp()
+
 	// Define port
 	port := os.Getenv("PORT")
 	if port == "" {

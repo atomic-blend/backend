@@ -1,13 +1,18 @@
 package send_mail
 
 import (
+	"context"
 	"net/http"
 
+	"connectrpc.com/connect"
+	userv1 "github.com/atomic-blend/backend/grpc/gen/user/v1"
 	"github.com/atomic-blend/backend/mail/auth"
+	"github.com/atomic-blend/backend/mail/grpc/clients"
 	"github.com/atomic-blend/backend/mail/models"
+	"github.com/atomic-blend/backend/mail/utils/amqp"
+	"github.com/rs/zerolog/log"
 
 	"github.com/gin-gonic/gin"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 // CreateSendMailRequest represents the request payload for creating a send mail
@@ -36,34 +41,62 @@ func (c *Controller) CreateSendMail(ctx *gin.Context) {
 	}
 
 	// Bind JSON payload
-	var req CreateSendMailRequest
+	var req models.RawMail
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	// Ensure the mail belongs to the authenticated user
-	if req.Mail.UserID == primitive.NilObjectID {
-		req.Mail.UserID = authUser.UserID
-	} else if req.Mail.UserID != authUser.UserID {
-		ctx.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
+	// get the user public key from the auth service via grpc
+	log.Info().Msg("Instantiating user client")
+	userClient, err := clients.NewUserClient()
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to create user client")
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user client"})
 		return
 	}
 
-	// Create send mail entity
-	sendMail := &models.SendMail{
-		Mail:         req.Mail,
-		SendStatus:   models.SendStatusPending,
-		RetryCounter: nil, // Will be managed by worker
-		Trashed:      false,
+	//TODO: support getting user public key from userID
+	log.Info().Msg("Getting user public key")
+	userPublicKey, err := userClient.GetUserPublicKey(context.Background(), &connect.Request[userv1.GetUserPublicKeyRequest]{
+		Msg: &userv1.GetUserPublicKeyRequest{
+			Email: string(authUser.UserID.Hex()),
+		},
+	})
+	if err != nil {
+		log.Info().Msg("User not found, skipping")
+		ctx.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		return
 	}
 
-	// Save to database
+	log.Info().Str("public_key", userPublicKey.Msg.PublicKey).Msg("User public key retrieved successfully")
+
+	// TODO: transform the raw mail to an encrypted mail
+	encryptedMail := &models.Mail{}
+
+	// Create send mail entity
+	sendMail := &models.SendMail{
+		Mail:       encryptedMail,
+		SendStatus: models.SendStatusPending,
+		Trashed:    false,
+	}
+
+	// TODO: setup transactional upload for mail with rollback on failure (s3 and mongo)
 	createdSendMail, err := c.sendMailRepo.Create(ctx, sendMail)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+
+	sendMail.ID = createdSendMail.ID
+	sendMail.CreatedAt = createdSendMail.CreatedAt
+	sendMail.UpdatedAt = createdSendMail.UpdatedAt
+
+	//TODO: publish to message queue
+	amqp.PublishMessage("mail", "mail:sent", map[string]interface{}{
+		"send_mail_id": sendMail.ID.Hex(),
+		"content":      sendMail.Mail,
+	})
 
 	ctx.JSON(http.StatusCreated, createdSendMail)
 }
