@@ -1,11 +1,20 @@
 package mail
 
 import (
+	"bytes"
+	"crypto"
+	"crypto/x509"
+	"encoding/pem"
+	"fmt"
 	"math"
 	"net"
+	"os"
 	"sort"
+	"strings"
 
 	"github.com/atomic-blend/backend/mail/models"
+	"github.com/emersion/go-message"
+	"github.com/emersion/go-msgauth/dkim"
 	"github.com/rs/zerolog/log"
 	"github.com/streadway/amqp"
 )
@@ -49,8 +58,120 @@ func handleSuccess(body []byte) {
 	//TODO: make the gRPC call to store the success in the DB
 }
 
+// loadDKIMPrivateKey loads the DKIM private key from the configured path
+func loadDKIMPrivateKey() (crypto.Signer, error) {
+	keyPath := "/app/dkim_private_key.pem"
+	if envPath := os.Getenv("DKIM_PRIVATE_KEY_PATH"); envPath != "" {
+		keyPath = envPath
+	}
+
+	keyData, err := os.ReadFile(keyPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read DKIM private key: %w", err)
+	}
+
+	block, _ := pem.Decode(keyData)
+	if block == nil {
+		return nil, fmt.Errorf("failed to decode PEM block from DKIM private key")
+	}
+
+	var privateKey crypto.Signer
+	switch block.Type {
+	case "RSA PRIVATE KEY":
+		rsaKey, err := x509.ParsePKCS1PrivateKey(block.Bytes)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse RSA private key: %w", err)
+		}
+		privateKey = rsaKey
+	case "PRIVATE KEY":
+		key, err := x509.ParsePKCS8PrivateKey(block.Bytes)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse PKCS8 private key: %w", err)
+		}
+		signer, ok := key.(crypto.Signer)
+		if !ok {
+			return nil, fmt.Errorf("parsed key does not implement crypto.Signer")
+		}
+		privateKey = signer
+	default:
+		return nil, fmt.Errorf("unsupported private key type: %s", block.Type)
+	}
+
+	return privateKey, nil
+}
+
+// convertMessageToString converts a message entity to a string for DKIM signing
+func convertMessageToString(msg *message.Entity) (string, error) {
+	var buf bytes.Buffer
+	if err := msg.WriteTo(&buf); err != nil {
+		return "", fmt.Errorf("failed to write message to buffer: %w", err)
+	}
+	return buf.String(), nil
+}
+
+// signEmailWithDKIM signs the email with DKIM if a private key is available
+func signEmailWithDKIM(rawMail models.RawMail) (string, error) {
+	// Convert mail to proper message format once
+	msg, err := rawMail.ToMessageEntity()
+	if err != nil {
+		return "", fmt.Errorf("failed_to_create_message")
+	}
+
+	// Check if we can sign the email
+	privateKey, err := loadDKIMPrivateKey()
+	if err != nil {
+		return "", fmt.Errorf("dkim_private_key_load_failed")
+	}
+
+	// Get the From domain for DKIM signing
+	fromHeader, ok := rawMail.Headers["From"].(string)
+	if !ok {
+		return "", fmt.Errorf("from_header_missing")
+	}
+
+	fromDomain := extractDomain(fromHeader)
+	if fromDomain == "" {
+		return "", fmt.Errorf("from_domain_extraction_failed")
+	}
+
+	// Convert message to string for DKIM signing
+	mailString, err := convertMessageToString(msg)
+	if err != nil {
+		return "", fmt.Errorf("message_to_string_conversion_failed")
+	}
+
+	r := strings.NewReader(mailString)
+
+	// Configure DKIM signing options
+	selector := "default"
+	if envSelector := os.Getenv("DKIM_SELECTOR"); envSelector != "" {
+		selector = envSelector
+	}
+
+	options := &dkim.SignOptions{
+		Domain:   fromDomain,
+		Selector: selector,
+		Signer:   privateKey,
+	}
+
+	var signedBuffer bytes.Buffer
+	if err := dkim.Sign(&signedBuffer, r, options); err != nil {
+		return "", fmt.Errorf("dkim_signing_failed")
+	}
+
+	log.Info().Str("domain", fromDomain).Msg("Email signed successfully with DKIM")
+	return signedBuffer.String(), nil
+}
+
 func sendEmail(mail models.RawMail) ([]string, error) {
 	log.Info().Interface("To", mail.Headers["To"]).Interface("From", mail.Headers["From"]).Msg("Sending email")
+
+	// Sign the email with DKIM first
+	signedEmail, err := signEmailWithDKIM(mail)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to process email for sending")
+		return []string{}, err
+	}
 
 	recipientsToRetry := []string{}
 
@@ -82,20 +203,25 @@ func sendEmail(mail models.RawMail) ([]string, error) {
 		})
 
 		log.Info().Str("recipient", recipient).Str("domain", domain).Str("mx_host", mxRecords[0].Host).Msg("Resolved MX record")
-		
-		// TODO: sign the email with DKIM if configured
 
 		sendSuccess := false
 		for _, mxRecord := range mxRecords {
-			log.Info().Str("recipient", recipient).Str("domain", domain).Str("mx_host", mxRecord.Host).Msg("Resolved MX record")
+			log.Info().Str("recipient", recipient).Str("domain", domain).Str("mx_host", mxRecord.Host).Msg("Attempting to send via MX record")
+
 			// TODO: send email via SMTP using mxRecord.Host, if failed, retry with the next MX record
+			// For now, just log the attempt
+			log.Info().Str("mx_host", mxRecord.Host).Str("signed_email_length", fmt.Sprintf("%d", len(signedEmail))).Msg("Would send signed email via SMTP")
+
+			// TODO: Implement actual SMTP sending here
+			// sendSuccess = sendViaSMTP(mxRecord.Host, signedEmail, recipient)
+			// if sendSuccess {
+			//     break
+			// }
 		}
 
 		if !sendSuccess {
 			recipientsToRetry = append(recipientsToRetry, recipient)
 		}
-
-		// TODO: send email via SMTP using mxRecords[0].Host, if failed, retry with the next MX record
 	}
 
 	return recipientsToRetry, nil
