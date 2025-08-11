@@ -116,6 +116,9 @@ func InitConsumerAmqp() {
 	)
 	shortcuts.FailOnError(err, "Error consuming the Queue")
 
+	// Set up connection monitoring
+	go monitorConnectionHealth()
+
 	// setup the retry queue
 	if getAMQPRetryEnabled(true) {
 		retryQueueName := getAMQPRetryQueueName(true)
@@ -163,6 +166,8 @@ func CloseConsumerConnection() {
 		consumerConn.Close()
 		consumerConn = nil
 	}
+	// Reset MailMessages to indicate connection is down
+	MailMessages = nil
 	log.Info().Msg("Consumer AMQP connection closed")
 }
 
@@ -187,10 +192,45 @@ func GetConsumerConnectionStatus() map[string]interface{} {
 
 // AreConsumerChannelsReady checks if the consumer channels are ready to receive messages
 func AreConsumerChannelsReady() bool {
+	// Check if the connection and channel are healthy
+	if !IsConsumerConnectionHealthy() {
+		return false
+	}
+	
 	// MailMessages should always be available
 	if MailMessages == nil {
 		return false
 	}
 
 	return true
+}
+
+// monitorConnectionHealth monitors the AMQP connection and channel health
+func monitorConnectionHealth() {
+	// Monitor connection close events
+	connClose := consumerConn.NotifyClose(make(chan *amqp.Error))
+	chClose := consumerCh.NotifyClose(make(chan *amqp.Error))
+
+	for {
+		select {
+		case err := <-connClose:
+			if err != nil {
+				log.Error().Err(err).Msg("❌ AMQP connection closed unexpectedly")
+			} else {
+				log.Warn().Msg("⚠️ AMQP connection closed")
+			}
+			// Reset MailMessages to indicate connection is down
+			MailMessages = nil
+			return
+		case err := <-chClose:
+			if err != nil {
+				log.Error().Err(err).Msg("❌ AMQP channel closed unexpectedly")
+			} else {
+				log.Warn().Msg("⚠️ AMQP channel closed")
+			}
+			// Reset MailMessages to indicate connection is down
+			MailMessages = nil
+			return
+		}
+	}
 }

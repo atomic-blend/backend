@@ -48,7 +48,7 @@ func handleTemporaryFailure(m *amqppackage.Delivery, body []byte, failedReason e
 	// Compute the delay before retrying
 	delay := computeDelay(retryCount)
 	log.Info().Msgf("Retrying in %d milliseconds", delay)
-	
+
 	//TODO: make the gRPC call to store the retry count, delay in the DB and the reason for failure
 	mailClient, err := getMailClient()
 	if err != nil {
@@ -104,10 +104,10 @@ func handleSuccess(message *amqppackage.Delivery) {
 
 	var messageWrapper map[string]interface{}
 	err = json.Unmarshal(message.Body, &messageWrapper)
-		if err != nil {
-			log.Error().Err(err).Msg("Error unmarshalling AMQP payload wrapper")
-			return
-		}
+	if err != nil {
+		log.Error().Err(err).Msg("Error unmarshalling AMQP payload wrapper")
+		return
+	}
 
 	sendEmailID, ok := messageWrapper["send_mail_id"].(string)
 	if !ok {
@@ -404,15 +404,6 @@ func processSendMailMessage(message *amqppackage.Delivery, rawMail models.RawMai
 
 	log.Info().Msg("Email sent successfully, sending success to mail service")
 	handleSuccess(message)
-
-	log.Info().Msg("Acknowledging message")
-
-	// If email sent successfully, acknowledge the message
-	if err := message.Ack(false); err != nil {
-		log.Error().Err(err).Msg("Failed to acknowledge message")
-	}
-
-	log.Info().Msg("Email sent successfully")
 
 	return nil
 }
