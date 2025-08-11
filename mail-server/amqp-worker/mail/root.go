@@ -1,3 +1,4 @@
+// Package mail contains the logic for processing mail messages
 package mail
 
 import (

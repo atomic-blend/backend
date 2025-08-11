@@ -29,8 +29,8 @@ func main() {
 		host = "0.0.0.0"
 	}
 
-	amqp.InitConsumerAmqp()
-	amqp.InitProducerAmqp()
+	amqp.InitConsumerAMQP()
+	amqp.InitProducerAMQP()
 
 	// launch the AMQP consumer in a goroutine
 	go processMessages()

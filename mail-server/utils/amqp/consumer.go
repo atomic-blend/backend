@@ -1,3 +1,4 @@
+// Package amqp contains the logic for the AMQP consumer
 package amqp
 
 import (
@@ -21,8 +22,8 @@ var consumerCh *amqp.Channel
 // MailMessages is the channel for the mail_queue AMQP messages
 var MailMessages <-chan amqp.Delivery
 
-// InitConsumerAmqp initializes the AMQP consumer
-func InitConsumerAmqp() {
+// InitConsumerAMQP initializes the AMQP consumer
+func InitConsumerAMQP() {
 	log.Debug().Msg("Initializing AMQP Consumer")
 	var err error
 	var q amqp.Queue
@@ -196,7 +197,7 @@ func AreConsumerChannelsReady() bool {
 	if !IsConsumerConnectionHealthy() {
 		return false
 	}
-	
+
 	// MailMessages should always be available
 	if MailMessages == nil {
 		return false
