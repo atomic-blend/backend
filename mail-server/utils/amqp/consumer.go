@@ -119,6 +119,35 @@ func InitConsumerAmqp() {
 	)
 	shortcuts.FailOnError(err, "Error consuming the Queue")
 
+	// setup the retry queue
+	if getAMQPRetryEnabled(true) {
+		retryQueueName := getAMQPRetryQueueName(true)
+		retryQueueArgs := amqp.Table{
+			"x-dead-letter-exchange":    getAMQPRetryExchange(true),
+			"x-dead-letter-routing-key": getAMQPRetryRoutingKey(true),
+		}
+
+		retryQueue, err := consumerCh.QueueDeclare(
+			retryQueueName, // name
+			true,           // durable
+			false,          // delete when unused
+			false,          // exclusive
+			false,          // no-wait
+			retryQueueArgs, // arguments
+		)
+		shortcuts.FailOnError(err, "Error declaring the Retry Queue")
+
+		//bind the retry queue to the exchange
+		err = consumerCh.QueueBind(
+			retryQueue.Name,              // name of the queue
+			getAMQPRetryRoutingKey(true), // bindingKey
+			getAMQPRetryExchange(true),   // sourceExchange
+			false,                        // noWait
+			nil,                          // arguments
+		)
+		shortcuts.FailOnError(err, "Error binding the Retry Queue")
+	}
+
 	log.Info().Msgf("📨 Started consuming from queue: %s", q.Name)
 
 	log.Info().Msgf("🎯 Consumer is now listening on queue '%s' for messages with routing key 'sent'", q.Name)
@@ -180,5 +209,15 @@ func GetConsumerConnectionStatus() map[string]interface{} {
 
 // AreConsumerChannelsReady checks if the consumer channels are ready to receive messages
 func AreConsumerChannelsReady() bool {
-	return MailMessages != nil && RetryMessages != nil
+	// MailMessages should always be available
+	if MailMessages == nil {
+		return false
+	}
+
+	// RetryMessages is only required if retry is enabled
+	if getAMQPRetryEnabled(false) && RetryMessages == nil {
+		return false
+	}
+
+	return true
 }

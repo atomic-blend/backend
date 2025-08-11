@@ -153,9 +153,6 @@ func (c *Controller) CreateSendMail(ctx *gin.Context) {
 
 	log.Debug().Interface("send_mail", rawMail).Msg("Publishing send mail message to queue")
 
-	//TODO: update the tests
-
-	//TODO: [DONE] publish to message queue
 	c.amqpService.PublishMessage("mail", "sent", map[string]interface{}{
 		"send_mail_id": sendMail.ID.Hex(),
 		"content":      rawMail, // Use the raw mail content for processing
