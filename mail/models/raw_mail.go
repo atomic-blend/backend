@@ -11,13 +11,13 @@ import (
 
 // RawMail represents the collected content from an email
 type RawMail struct {
-	Headers        map[string]interface{}
-	TextContent    string
-	HTMLContent    string
-	Attachments    []RawAttachment
-	Rejected       bool
-	RewriteSubject bool
-	Greylisted     bool
+	Headers        map[string]interface{} `json:"headers" binding:"required"`
+	TextContent    string                 `json:"text_content" binding:"required"`
+	HTMLContent    string                 `json:"html_content" binding:"required"`
+	Attachments    []RawAttachment        `json:"attachments"`
+	Rejected       bool                   `json:"rejected"`
+	RewriteSubject bool                   `json:"rewrite_subject"`
+	Greylisted     bool                   `json:"graylisted"`
 }
 
 // Attachment represents a file attachment
@@ -38,37 +38,37 @@ func (m *RawMail) Encrypt(publicKey string) (*RawMail, error) {
 
 	// encrypt all headers
 	if m.Headers != nil {
-			encryptedHeaders := make(map[string]interface{})
+		encryptedHeaders := make(map[string]interface{})
 		for key, value := range m.Headers {
 			switch v := value.(type) {
 			case string:
 				encryptedValue, err := ageencryption.EncryptString(publicKey, v)
 				if err != nil {
-						return nil, err
-					}
-					encryptedHeaders[key] = encryptedValue
-				case []string:
-					// For slice of strings, encrypt each item and store as slice
-					encryptedSlice := make([]string, len(v))
-					for i, item := range v {
-						encryptedItem, err := ageencryption.EncryptString(publicKey, item)
-						if err != nil {
-							return nil, err
-						}
-						encryptedSlice[i] = encryptedItem
-					}
-					encryptedHeaders[key] = encryptedSlice
-				default:
-					// For other types, convert to string representation and encrypt
-					valueStr := fmt.Sprintf("%v", v)
-					encryptedValue, err := ageencryption.EncryptString(publicKey, valueStr)
+					return nil, err
+				}
+				encryptedHeaders[key] = encryptedValue
+			case []string:
+				// For slice of strings, encrypt each item and store as slice
+				encryptedSlice := make([]string, len(v))
+				for i, item := range v {
+					encryptedItem, err := ageencryption.EncryptString(publicKey, item)
 					if err != nil {
 						return nil, err
 					}
-					encryptedHeaders[key] = encryptedValue
+					encryptedSlice[i] = encryptedItem
 				}
+				encryptedHeaders[key] = encryptedSlice
+			default:
+				// For other types, convert to string representation and encrypt
+				valueStr := fmt.Sprintf("%v", v)
+				encryptedValue, err := ageencryption.EncryptString(publicKey, valueStr)
+				if err != nil {
+					return nil, err
+				}
+				encryptedHeaders[key] = encryptedValue
 			}
-			encryptedMail.Headers = encryptedHeaders
+		}
+		encryptedMail.Headers = encryptedHeaders
 	}
 
 	encryptedTextContent, err := ageencryption.EncryptString(publicKey, m.TextContent)
