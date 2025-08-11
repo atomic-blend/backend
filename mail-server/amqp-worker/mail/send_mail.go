@@ -48,8 +48,11 @@ func sendEmail(to, subject, body string) error {
 }
 
 func processSendMailMessage(message *amqp.Delivery, rawMail models.RawMail) error {
-	// TODO: declare queue per worker
+	// TODO: [DONE] declare queue per worker
+
 	// TODO: lookup the message to check if it's a retry or not
+	
+
 	// TODO: implement the first send logic
 	// TODO: implement the retry logic
 	// TODO: store the latest reason for failure into DB via a gRPC call
