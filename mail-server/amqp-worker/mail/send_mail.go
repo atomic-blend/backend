@@ -70,9 +70,11 @@ func handlePermanentFailure(body []byte, err error) {
 	//TODO: make the gRPC call to store the failure reason in the DB + status to failed
 }
 
-func handleSuccess(body []byte) {
-	log.Info().Msgf("Message processed successfully: %s", body)
+func handleSuccess(message *amqppackage.Delivery) {
+	log.Info().Msgf("Message processed successfully: %s", message.Body)
 	//TODO: make the gRPC call to store the success in the DB
+
+	message.Ack(false)
 }
 
 // loadDKIMPrivateKey loads the DKIM private key from the configured path
@@ -193,7 +195,14 @@ func sendEmail(mail models.RawMail) ([]string, error) {
 	recipientsToRetry := []string{}
 
 	// TODO: if the email is a retry, use the list of failed recipients from the message headers
-	for _, recipient := range mail.Headers["To"].([]string) {
+	for _, recipientRaw := range mail.Headers["to"].([]interface{}) {
+		recipient, ok := recipientRaw.(string)
+		if !ok {
+			log.Error().Str("recipient", recipientRaw.(string)).Msg("Failed to convert recipient to string")
+			recipientsToRetry = append(recipientsToRetry, recipientRaw.(string))
+			continue
+		}
+
 		// Resolve the mail server via MX lookup
 		domain := extractDomain(recipient)
 		if domain == "" {
@@ -226,7 +235,7 @@ func sendEmail(mail models.RawMail) ([]string, error) {
 		for _, mxRecord := range mxRecords {
 			log.Info().Str("recipient", recipient).Str("domain", domain).Str("mx_host", mxRecord.Host).Msg("Attempting to send via MX record")
 
-			from, ok := mail.Headers["From"].(string)
+			from, ok := mail.Headers["from"].(string)
 			if !ok {
 				log.Error().Str("recipient", recipient).Msg("From header not found")
 				recipientsToRetry = append(recipientsToRetry, recipient)
@@ -321,7 +330,7 @@ func processSendMailMessage(message *amqppackage.Delivery, rawMail models.RawMai
 	isRetry := false
 	retryCount := 0
 
-	if (message.Headers["retry-count"] != nil) {
+	if message.Headers["retry-count"] != nil {
 		retryCountInt, ok := message.Headers["retry-count"].(int32)
 		if !ok {
 			retryCount = 0
@@ -346,7 +355,7 @@ func processSendMailMessage(message *amqppackage.Delivery, rawMail models.RawMai
 	}
 
 	log.Info().Msg("Email sent successfully, sending success to mail service")
-	handleSuccess(message.Body)
+	handleSuccess(message)
 
 	log.Info().Msg("Acknowledging message")
 
