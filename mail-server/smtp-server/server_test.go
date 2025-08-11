@@ -176,11 +176,10 @@ func TestSession_Data(t *testing.T) {
 		testData := "Test email content\r\n"
 		reader := strings.NewReader(testData)
 
-		// This will panic due to AMQP not being initialized in test environment
-		// We expect a panic due to nil pointer dereference in AMQP
-		assert.Panics(t, func() {
-			session.Data(reader)
-		})
+		// This should not panic with valid recipients in test environment
+		// The AMQP publishing is skipped in test environment
+		err := session.Data(reader)
+		assert.NoError(t, err)
 	})
 }
 

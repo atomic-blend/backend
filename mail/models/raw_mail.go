@@ -8,7 +8,7 @@ import (
 
 // RawMail represents the collected content from an email
 type RawMail struct {
-	Headers        interface{}
+	Headers        map[string]interface{}
 	TextContent    string
 	HTMLContent    string
 	Attachments    []RawAttachment
@@ -35,13 +35,12 @@ func (m *RawMail) Encrypt(publicKey string) (*RawMail, error) {
 
 	// encrypt all headers
 	if m.Headers != nil {
-		if headersMap, ok := m.Headers.(map[string]interface{}); ok {
 			encryptedHeaders := make(map[string]interface{})
-			for key, value := range headersMap {
-				switch v := value.(type) {
-				case string:
-					encryptedValue, err := ageencryption.EncryptString(publicKey, v)
-					if err != nil {
+		for key, value := range m.Headers {
+			switch v := value.(type) {
+			case string:
+				encryptedValue, err := ageencryption.EncryptString(publicKey, v)
+				if err != nil {
 						return nil, err
 					}
 					encryptedHeaders[key] = encryptedValue
@@ -67,10 +66,6 @@ func (m *RawMail) Encrypt(publicKey string) (*RawMail, error) {
 				}
 			}
 			encryptedMail.Headers = encryptedHeaders
-		} else {
-			// If Headers is not a map[string]interface{}, leave it as is (no encryption)
-			encryptedMail.Headers = m.Headers
-		}
 	}
 
 	encryptedTextContent, err := ageencryption.EncryptString(publicKey, m.TextContent)

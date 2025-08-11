@@ -82,15 +82,11 @@ func TestMailContent_Encrypt(t *testing.T) {
 			assert.NotNil(t, result)
 
 			// Verify that headers are properly handled
-			if originalHeaders, ok := tt.mail.Headers.(map[string]string); ok {
-				if resultHeaders, ok := result.Headers.(map[string]string); ok {
-					// If both original and result have non-empty headers, verify encryption changed them
-					if len(originalHeaders) > 0 {
-						for key, originalValue := range originalHeaders {
-							if resultValue, exists := resultHeaders[key]; exists && originalValue != "" {
-								assert.NotEqual(t, originalValue, resultValue, "Header %s should be encrypted", key)
-							}
-						}
+			// If both original and result have non-empty headers, verify encryption changed them
+			if len(tt.mail.Headers) > 0 {
+				for key, originalValue := range tt.mail.Headers {
+					if resultValue, exists := result.Headers[key]; exists && originalValue != "" {
+						assert.NotEqual(t, originalValue, resultValue, "Header %s should be encrypted", key)
 					}
 				}
 			}
@@ -325,7 +321,7 @@ This is a test email content.`
 
 					// Create mail content
 					mailContent := &models.RawMail{
-						Headers: map[string]string{
+						Headers: map[string]interface{}{
 							"From":       payload.From,
 							"To":         rcpt,
 							"Subject":    "Test Subject",
@@ -485,13 +481,11 @@ attachment content
 
 			// Verify headers are extracted
 			assert.NotNil(t, mailContent.Headers)
-			if headers, ok := mailContent.Headers.(map[string]string); ok {
-				assert.Contains(t, headers, "From")
-				assert.Contains(t, headers, "To")
-				assert.Contains(t, headers, "Subject")
-				assert.Equal(t, "sender@example.com", headers["From"])
-				assert.Equal(t, "recipient@example.com", headers["To"])
-			}
+			assert.Contains(t, mailContent.Headers, "From")
+			assert.Contains(t, mailContent.Headers, "To")
+			assert.Contains(t, mailContent.Headers, "Subject")
+			assert.Equal(t, "sender@example.com", mailContent.Headers["From"])
+			assert.Equal(t, "recipient@example.com", mailContent.Headers["To"])
 
 			// Verify text content
 			if tt.want.TextContent != "" {
@@ -551,14 +545,12 @@ PDF content here
 
 	// Verify headers are extracted
 	assert.NotNil(t, mailContent.Headers)
-	if headers, ok := mailContent.Headers.(map[string]string); ok {
-		assert.Contains(t, headers, "From")
-		assert.Contains(t, headers, "To")
-		assert.Contains(t, headers, "Subject")
-		assert.Equal(t, "sender@example.com", headers["From"])
-		assert.Equal(t, "recipient@example.com", headers["To"])
-		assert.Equal(t, "Test Multipart", headers["Subject"])
-	}
+	assert.Contains(t, mailContent.Headers, "From")
+	assert.Contains(t, mailContent.Headers, "To")
+	assert.Contains(t, mailContent.Headers, "Subject")
+	assert.Equal(t, "sender@example.com", mailContent.Headers["From"])
+	assert.Equal(t, "recipient@example.com", mailContent.Headers["To"])
+	assert.Equal(t, "Test Multipart", mailContent.Headers["Subject"])
 
 	// Verify that all parts were processed
 	assert.Equal(t, "Plain text part.\n", mailContent.TextContent)
@@ -695,13 +687,9 @@ Email with custom headers.`,
 
 			// Verify headers are extracted correctly
 			assert.NotNil(t, mailContent.Headers)
-			if headers, ok := mailContent.Headers.(map[string]string); ok {
-				for expectedKey, expectedValue := range tt.expectedHeaders {
-					assert.Contains(t, headers, expectedKey, "Header %s should be present", expectedKey)
-					assert.Equal(t, expectedValue, headers[expectedKey], "Header %s should have correct value", expectedKey)
-				}
-			} else {
-				t.Errorf("Headers should be of type map[string]string, got %T", mailContent.Headers)
+			for expectedKey, expectedValue := range tt.expectedHeaders {
+				assert.Contains(t, mailContent.Headers, expectedKey, "Header %s should be present", expectedKey)
+				assert.Equal(t, expectedValue, mailContent.Headers[expectedKey], "Header %s should have correct value", expectedKey)
 			}
 		})
 	}
