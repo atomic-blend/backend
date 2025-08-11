@@ -110,6 +110,126 @@ func (x *DeleteUserDataResponse) GetSuccess() bool {
 	return false
 }
 
+type UpdateMailStatusRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	EmailId       string                 `protobuf:"bytes,1,opt,name=email_id,json=emailId,proto3" json:"email_id,omitempty"`
+	Status        string                 `protobuf:"bytes,2,opt,name=status,proto3" json:"status,omitempty"`
+	FailureReason *string                `protobuf:"bytes,3,opt,name=failure_reason,json=failureReason,proto3,oneof" json:"failure_reason,omitempty"`
+	FailedAt      string                 `protobuf:"bytes,4,opt,name=failed_at,json=failedAt,proto3" json:"failed_at,omitempty"`
+	RetryCounter  *int32                 `protobuf:"varint,5,opt,name=retry_counter,json=retryCounter,proto3,oneof" json:"retry_counter,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateMailStatusRequest) Reset() {
+	*x = UpdateMailStatusRequest{}
+	mi := &file_mail_v1_mail_service_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateMailStatusRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateMailStatusRequest) ProtoMessage() {}
+
+func (x *UpdateMailStatusRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_mail_v1_mail_service_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateMailStatusRequest.ProtoReflect.Descriptor instead.
+func (*UpdateMailStatusRequest) Descriptor() ([]byte, []int) {
+	return file_mail_v1_mail_service_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *UpdateMailStatusRequest) GetEmailId() string {
+	if x != nil {
+		return x.EmailId
+	}
+	return ""
+}
+
+func (x *UpdateMailStatusRequest) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *UpdateMailStatusRequest) GetFailureReason() string {
+	if x != nil && x.FailureReason != nil {
+		return *x.FailureReason
+	}
+	return ""
+}
+
+func (x *UpdateMailStatusRequest) GetFailedAt() string {
+	if x != nil {
+		return x.FailedAt
+	}
+	return ""
+}
+
+func (x *UpdateMailStatusRequest) GetRetryCounter() int32 {
+	if x != nil && x.RetryCounter != nil {
+		return *x.RetryCounter
+	}
+	return 0
+}
+
+type UpdateMailStatusResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateMailStatusResponse) Reset() {
+	*x = UpdateMailStatusResponse{}
+	mi := &file_mail_v1_mail_service_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateMailStatusResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateMailStatusResponse) ProtoMessage() {}
+
+func (x *UpdateMailStatusResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_mail_v1_mail_service_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateMailStatusResponse.ProtoReflect.Descriptor instead.
+func (*UpdateMailStatusResponse) Descriptor() ([]byte, []int) {
+	return file_mail_v1_mail_service_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *UpdateMailStatusResponse) GetSuccess() bool {
+	if x != nil {
+		return x.Success
+	}
+	return false
+}
+
 var File_mail_v1_mail_service_proto protoreflect.FileDescriptor
 
 const file_mail_v1_mail_service_proto_rawDesc = "" +
@@ -118,9 +238,20 @@ const file_mail_v1_mail_service_proto_rawDesc = "" +
 	"\x15DeleteUserDataRequest\x12!\n" +
 	"\x04user\x18\x01 \x01(\v2\r.auth.v1.UserR\x04user\"2\n" +
 	"\x16DeleteUserDataResponse\x12\x18\n" +
-	"\asuccess\x18\x01 \x01(\bR\asuccess2`\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess\"\xe4\x01\n" +
+	"\x17UpdateMailStatusRequest\x12\x19\n" +
+	"\bemail_id\x18\x01 \x01(\tR\aemailId\x12\x16\n" +
+	"\x06status\x18\x02 \x01(\tR\x06status\x12*\n" +
+	"\x0efailure_reason\x18\x03 \x01(\tH\x00R\rfailureReason\x88\x01\x01\x12\x1b\n" +
+	"\tfailed_at\x18\x04 \x01(\tR\bfailedAt\x12(\n" +
+	"\rretry_counter\x18\x05 \x01(\x05H\x01R\fretryCounter\x88\x01\x01B\x11\n" +
+	"\x0f_failure_reasonB\x10\n" +
+	"\x0e_retry_counter\"4\n" +
+	"\x18UpdateMailStatusResponse\x12\x18\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess2\xb9\x01\n" +
 	"\vMailService\x12Q\n" +
-	"\x0eDeleteUserData\x12\x1e.mail.v1.DeleteUserDataRequest\x1a\x1f.mail.v1.DeleteUserDataResponseB\x95\x01\n" +
+	"\x0eDeleteUserData\x12\x1e.mail.v1.DeleteUserDataRequest\x1a\x1f.mail.v1.DeleteUserDataResponse\x12W\n" +
+	"\x10UpdateMailStatus\x12 .mail.v1.UpdateMailStatusRequest\x1a!.mail.v1.UpdateMailStatusResponseB\x95\x01\n" +
 	"\vcom.mail.v1B\x10MailServiceProtoP\x01Z7github.com/atomic-blend/backend/grpc/gen/mail/v1;mailv1\xa2\x02\x03MXX\xaa\x02\aMail.V1\xca\x02\aMail\\V1\xe2\x02\x13Mail\\V1\\GPBMetadata\xea\x02\bMail::V1b\x06proto3"
 
 var (
@@ -135,18 +266,22 @@ func file_mail_v1_mail_service_proto_rawDescGZIP() []byte {
 	return file_mail_v1_mail_service_proto_rawDescData
 }
 
-var file_mail_v1_mail_service_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
+var file_mail_v1_mail_service_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
 var file_mail_v1_mail_service_proto_goTypes = []any{
-	(*DeleteUserDataRequest)(nil),  // 0: mail.v1.DeleteUserDataRequest
-	(*DeleteUserDataResponse)(nil), // 1: mail.v1.DeleteUserDataResponse
-	(*v1.User)(nil),                // 2: auth.v1.User
+	(*DeleteUserDataRequest)(nil),    // 0: mail.v1.DeleteUserDataRequest
+	(*DeleteUserDataResponse)(nil),   // 1: mail.v1.DeleteUserDataResponse
+	(*UpdateMailStatusRequest)(nil),  // 2: mail.v1.UpdateMailStatusRequest
+	(*UpdateMailStatusResponse)(nil), // 3: mail.v1.UpdateMailStatusResponse
+	(*v1.User)(nil),                  // 4: auth.v1.User
 }
 var file_mail_v1_mail_service_proto_depIdxs = []int32{
-	2, // 0: mail.v1.DeleteUserDataRequest.user:type_name -> auth.v1.User
+	4, // 0: mail.v1.DeleteUserDataRequest.user:type_name -> auth.v1.User
 	0, // 1: mail.v1.MailService.DeleteUserData:input_type -> mail.v1.DeleteUserDataRequest
-	1, // 2: mail.v1.MailService.DeleteUserData:output_type -> mail.v1.DeleteUserDataResponse
-	2, // [2:3] is the sub-list for method output_type
-	1, // [1:2] is the sub-list for method input_type
+	2, // 2: mail.v1.MailService.UpdateMailStatus:input_type -> mail.v1.UpdateMailStatusRequest
+	1, // 3: mail.v1.MailService.DeleteUserData:output_type -> mail.v1.DeleteUserDataResponse
+	3, // 4: mail.v1.MailService.UpdateMailStatus:output_type -> mail.v1.UpdateMailStatusResponse
+	3, // [3:5] is the sub-list for method output_type
+	1, // [1:3] is the sub-list for method input_type
 	1, // [1:1] is the sub-list for extension type_name
 	1, // [1:1] is the sub-list for extension extendee
 	0, // [0:1] is the sub-list for field type_name
@@ -157,13 +292,14 @@ func file_mail_v1_mail_service_proto_init() {
 	if File_mail_v1_mail_service_proto != nil {
 		return
 	}
+	file_mail_v1_mail_service_proto_msgTypes[2].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_mail_v1_mail_service_proto_rawDesc), len(file_mail_v1_mail_service_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   2,
+			NumMessages:   4,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

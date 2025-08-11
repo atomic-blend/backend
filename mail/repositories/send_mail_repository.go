@@ -21,8 +21,7 @@ type SendMailRepositoryInterface interface {
 	GetAll(ctx context.Context, userID primitive.ObjectID, page, limit int64) ([]*models.SendMail, int64, error)
 	GetByID(ctx context.Context, id primitive.ObjectID) (*models.SendMail, error)
 	Create(ctx context.Context, sendMail *models.SendMail) (*models.SendMail, error)
-	UpdateStatus(ctx context.Context, id primitive.ObjectID, status models.SendStatus) (*models.SendMail, error)
-	IncrementRetryCounter(ctx context.Context, id primitive.ObjectID) (*models.SendMail, error)
+	Update(ctx context.Context, id primitive.ObjectID, update bson.M) (*models.SendMail, error)
 	Delete(ctx context.Context, id primitive.ObjectID) error
 }
 
@@ -128,55 +127,35 @@ func (r *SendMailRepository) Create(ctx context.Context, sendMail *models.SendMa
 	return sendMail, nil
 }
 
-// UpdateStatus updates the status of a send mail
-func (r *SendMailRepository) UpdateStatus(ctx context.Context, id primitive.ObjectID, status models.SendStatus) (*models.SendMail, error) {
+// Update updates a send mail by its ID
+func (r *SendMailRepository) Update(ctx context.Context, id primitive.ObjectID, update bson.M) (*models.SendMail, error) {
 	now := primitive.NewDateTimeFromTime(time.Now())
 
 	filter := bson.M{"_id": id}
-	update := bson.M{
+
+	// Merge the provided update with the updated_at timestamp
+	updateDoc := bson.M{
 		"$set": bson.M{
-			"send_status": status,
-			"updated_at":  now,
+			"updated_at": now,
 		},
 	}
 
-	var sendMail models.SendMail
-	err := r.collection.FindOneAndUpdate(ctx, filter, update, options.FindOneAndUpdate().SetReturnDocument(options.After)).Decode(&sendMail)
-	if err != nil {
-		if err == mongo.ErrNoDocuments {
-			return nil, nil
+	// Add the provided update fields to the $set operation
+	if setFields, exists := update["$set"]; exists {
+		if setMap, ok := setFields.(bson.M); ok {
+			for key, value := range setMap {
+				updateDoc["$set"].(bson.M)[key] = value
+			}
 		}
-		return nil, err
-	}
-
-	return &sendMail, nil
-}
-
-// IncrementRetryCounter increments the retry counter of a send mail and sets status to retry
-func (r *SendMailRepository) IncrementRetryCounter(ctx context.Context, id primitive.ObjectID) (*models.SendMail, error) {
-	now := primitive.NewDateTimeFromTime(time.Now())
-
-	filter := bson.M{"_id": id}
-
-	// First, check if retry_counter exists and initialize it if nil
-	update := []bson.M{
-		{
-			"$set": bson.M{
-				"retry_counter": bson.M{
-					"$cond": bson.M{
-						"if":   bson.M{"$eq": []interface{}{"$retry_counter", nil}},
-						"then": 1,
-						"else": bson.M{"$add": []interface{}{"$retry_counter", 1}},
-					},
-				},
-				"send_status": models.SendStatusRetry,
-				"updated_at":  now,
-			},
-		},
+	} else {
+		// If no $set in the provided update, add all fields to $set
+		for key, value := range update {
+			updateDoc["$set"].(bson.M)[key] = value
+		}
 	}
 
 	var sendMail models.SendMail
-	err := r.collection.FindOneAndUpdate(ctx, filter, update, options.FindOneAndUpdate().SetReturnDocument(options.After)).Decode(&sendMail)
+	err := r.collection.FindOneAndUpdate(ctx, filter, updateDoc, options.FindOneAndUpdate().SetReturnDocument(options.After)).Decode(&sendMail)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
 			return nil, nil

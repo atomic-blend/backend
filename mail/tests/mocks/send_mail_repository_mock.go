@@ -5,6 +5,7 @@ import (
 
 	"github.com/atomic-blend/backend/mail/models"
 	"github.com/stretchr/testify/mock"
+	bson "go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -40,18 +41,9 @@ func (m *MockSendMailRepository) Create(ctx context.Context, sendMail *models.Se
 	return args.Get(0).(*models.SendMail), args.Error(1)
 }
 
-// UpdateStatus updates the status of a send mail
-func (m *MockSendMailRepository) UpdateStatus(ctx context.Context, id primitive.ObjectID, status models.SendStatus) (*models.SendMail, error) {
-	args := m.Called(ctx, id, status)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-	return args.Get(0).(*models.SendMail), args.Error(1)
-}
-
-// IncrementRetryCounter increments the retry counter of a send mail and sets status to retry
-func (m *MockSendMailRepository) IncrementRetryCounter(ctx context.Context, id primitive.ObjectID) (*models.SendMail, error) {
-	args := m.Called(ctx, id)
+// Update updates a send mail by its ID
+func (m *MockSendMailRepository) Update(ctx context.Context, id primitive.ObjectID, update bson.M) (*models.SendMail, error) {
+	args := m.Called(ctx, id, update)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
