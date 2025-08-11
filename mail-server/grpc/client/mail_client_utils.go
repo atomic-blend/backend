@@ -12,11 +12,13 @@ func CreateUpdateMailStatusRequest(emailID, status string, failureReason *string
 	req := &mailv1.UpdateMailStatusRequest{
 		EmailId: emailID,
 		Status:  status,
-		FailedAt: time.Now().Format(time.RFC3339),
 	}
 
+	// Only set FailedAt when there's a failure reason
 	if failureReason != nil {
 		req.FailureReason = failureReason
+		failedAt := time.Now().Format(time.RFC3339)
+		req.FailedAt = &failedAt
 	}
 
 	if retryCounter != nil {

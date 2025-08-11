@@ -14,7 +14,7 @@ func GetServiceBaseURL(service string) (string, error) {
 		if envValue != "" {
 			baseURL = envValue
 		} else {
-			baseURL = "http://mail:8080" // Default value if not set
+			baseURL = "http://mail:50051" // Default value if not set
 		}
 	default:
 		return "", fmt.Errorf("unknown service: %s", service)

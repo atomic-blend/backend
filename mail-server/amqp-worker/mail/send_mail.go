@@ -2,6 +2,7 @@ package mail
 
 import (
 	"bytes"
+	"context"
 	"crypto"
 	"crypto/x509"
 	"encoding/json"
@@ -13,6 +14,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/atomic-blend/backend/mail-server/grpc/client"
 	"github.com/atomic-blend/backend/mail-server/utils/amqp"
 	"github.com/atomic-blend/backend/mail/models"
 	"github.com/emersion/go-message"
@@ -29,6 +31,8 @@ const (
 	BaseDelayMillis = 10000     // 10 seconds initial backoff
 )
 
+var mailClient *client.MailClient
+
 // computeDelay returns delay in ms using exponential backoff with x-day cap
 func computeDelay(retryCount int) int {
 	delay := BaseDelayMillis * int(math.Pow(2, float64(retryCount-1)))
@@ -38,13 +42,32 @@ func computeDelay(retryCount int) int {
 	return delay
 }
 
-func handleTemporaryFailure(m *amqppackage.Delivery, body []byte, err error, retryCount int, recipientsToRetry []string) {
-	log.Info().Msgf("Temporary failure for message: %s, error: %v, retry count: %d", body, err, retryCount)
+func handleTemporaryFailure(m *amqppackage.Delivery, body []byte, failedReason error, retryCount int, recipientsToRetry []string) {
+	log.Info().Msgf("Temporary failure for message: %s, error: %v, retry count: %d", body, failedReason, retryCount)
 
 	// Compute the delay before retrying
 	delay := computeDelay(retryCount)
 	log.Info().Msgf("Retrying in %d milliseconds", delay)
+	
 	//TODO: make the gRPC call to store the retry count, delay in the DB and the reason for failure
+	mailClient, err := getMailClient()
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to create mail client")
+		return
+	}
+
+	sendEmailID, ok := m.Headers["send_email_id"].(string)
+	if !ok {
+		log.Error().Msg("send_email_id not found in message headers")
+		return
+	}
+
+	req := client.CreateRetryStatusRequest(sendEmailID, failedReason.Error(), int32(retryCount))
+	_, err = mailClient.UpdateMailStatus(context.Background(), req)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to update mail status for retry")
+		return
+	}
 
 	// publish the message into the retry queue with the delay (Dead letter Queue to the original routing key)
 	message := make(map[string]interface{})
@@ -73,6 +96,31 @@ func handlePermanentFailure(body []byte, err error) {
 func handleSuccess(message *amqppackage.Delivery) {
 	log.Info().Msgf("Message processed successfully: %s", message.Body)
 	//TODO: make the gRPC call to store the success in the DB
+	mailClient, err := getMailClient()
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to create mail client")
+		return
+	}
+
+	var messageWrapper map[string]interface{}
+	err = json.Unmarshal(message.Body, &messageWrapper)
+		if err != nil {
+			log.Error().Err(err).Msg("Error unmarshalling AMQP payload wrapper")
+			return
+		}
+
+	sendEmailID, ok := messageWrapper["send_mail_id"].(string)
+	if !ok {
+		log.Error().Msg("send_email_id not found in message headers")
+		return
+	}
+
+	req := client.CreateSuccessStatusRequest(sendEmailID)
+	_, err = mailClient.UpdateMailStatus(context.Background(), req)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to update mail status for success")
+		return
+	}
 
 	message.Ack(false)
 }
@@ -367,4 +415,13 @@ func processSendMailMessage(message *amqppackage.Delivery, rawMail models.RawMai
 	log.Info().Msg("Email sent successfully")
 
 	return nil
+}
+
+func getMailClient() (*client.MailClient, error) {
+	mailClient, err := client.NewMailClient()
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to create mail client")
+		return nil, err
+	}
+	return mailClient, nil
 }
