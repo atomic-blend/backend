@@ -3,6 +3,7 @@ package amqp
 import (
 	"encoding/json"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -199,6 +200,10 @@ func PublishMessage(exchangeName string, topic string, message map[string]interf
 		ContentType: "application/json",
 		Body:        encodedPayload,
 		Timestamp:   time.Now(),
+	}
+
+	if headers != nil && (*headers)["delay"] != nil {
+		publishing.Expiration = strconv.Itoa((*headers)["delay"].(int))
 	}
 
 	// Add headers if provided
