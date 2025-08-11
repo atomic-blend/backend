@@ -38,7 +38,7 @@ func computeDelay(retryCount int) int {
 	return delay
 }
 
-func handleTemporaryFailure(body []byte, err error, retryCount int, recipientsToRetry []string) {
+func handleTemporaryFailure(m *amqppackage.Delivery, body []byte, err error, retryCount int, recipientsToRetry []string) {
 	log.Info().Msgf("Temporary failure for message: %s, error: %v, retry count: %d", body, err, retryCount)
 
 	// Compute the delay before retrying
@@ -54,11 +54,14 @@ func handleTemporaryFailure(body []byte, err error, retryCount int, recipientsTo
 		return
 	}
 
-	amqp.PublishMessage("mail", "retry_queue", message, &amqppackage.Table{
+	amqp.PublishMessage("mail", "send_retry", message, &amqppackage.Table{
 		"retry_count": retryCount,
 		"delay":       delay,
 		"recipients":  strings.Join(recipientsToRetry, ","),
 	})
+
+	// ack the original message
+	m.Ack(false)
 }
 
 // handlePermanentFailure handles messages that have permanently failed
@@ -296,30 +299,6 @@ func sendViaSMTP(host string, from string, to string, emailContent string) error
 	return nil
 }
 
-// extractFromFromSignedEmail extracts the From address from the signed email content
-func extractFromFromSignedEmail(signedEmail string) string {
-	lines := strings.SplitSeq(signedEmail, "\n")
-	for line := range lines {
-		if strings.HasPrefix(strings.ToLower(strings.TrimSpace(line)), "from:") {
-			// Extract the email address after "From: "
-			parts := strings.SplitN(line, ":", 2)
-			if len(parts) == 2 {
-				email := strings.TrimSpace(parts[1])
-				// Extract email from format like "Name <email@domain.com>" or just "email@domain.com"
-				if strings.Contains(email, "<") && strings.Contains(email, ">") {
-					start := strings.Index(email, "<") + 1
-					end := strings.Index(email, ">")
-					if start > 0 && end > start {
-						return email[start:end]
-					}
-				}
-				return email
-			}
-		}
-	}
-	return ""
-}
-
 // extractDomain extracts the domain part from an email address
 func extractDomain(email string) string {
 	atIndex := -1
@@ -357,7 +336,7 @@ func processSendMailMessage(message *amqppackage.Delivery, rawMail models.RawMai
 	recipientsToRetry, err := sendEmail(rawMail)
 	if err != nil && retryCount < MaxRetries {
 		retryCount++
-		handleTemporaryFailure(message.Body, err, retryCount, recipientsToRetry)
+		handleTemporaryFailure(message, message.Body, err, retryCount, recipientsToRetry)
 		return nil
 	} else if err != nil {
 		handlePermanentFailure(message.Body, err)
