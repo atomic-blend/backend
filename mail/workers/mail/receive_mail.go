@@ -230,7 +230,7 @@ func receiveMail(m *amqp.Delivery, payload ReceivedMailPayload) {
 
 func processMessageBody(entity *message.Entity, mailContent *models.RawMail) {
 	// Extract all headers first
-	headers := make(map[string]string)
+	headers := make(map[string]interface{})
 	for field := entity.Header.Fields(); field.Next(); {
 		key := field.Key()
 		value, _ := field.Text()

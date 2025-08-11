@@ -30,7 +30,7 @@ func handleTemporaryFailure(body []byte, err error, retryCount int) {
 	// Compute the delay before retrying
 	delay := computeDelay(retryCount)
 	log.Info().Msgf("Retrying in %d milliseconds", delay)
-	//TODO: make the gRPC call to store the retry count and delay in the DB
+	//TODO: make the gRPC call to store the retry count, delay in the DB and the reason for failure
 
 	// TODO: publish the message into the retry queue with the delay (Dead letter Queue to the original routing key)
 }
@@ -41,8 +41,8 @@ func handlePermanentFailure(body []byte, err error) {
 	//TODO: make the gRPC call to store the failure reason in the DB + status to failed
 }
 
-func sendEmail(to, subject, body string) error {
-	log.Printf("Sending email to %s: %s", to, subject)
+func sendEmail(mail models.RawMail) error {
+	log.Info().Interface("To", mail.Headers["To"]).Interface("From", mail.Headers["From"]).Msg("Sending email")
 	// TODO: implement actual email sending logic with MX resolve + SMTP sending
 	return nil
 }
@@ -50,13 +50,43 @@ func sendEmail(to, subject, body string) error {
 func processSendMailMessage(message *amqp.Delivery, rawMail models.RawMail) error {
 	// TODO: [DONE] declare queue per worker
 
-	// TODO: lookup the message to check if it's a retry or not
-	
+	// TODO: [DONE] lookup the message to check if it's a retry or not
+	isRetry := false
+	retryCount, ok := message.Headers["x-retry-count"].(int)
+	if !ok {
+		log.Error().Msg("Error getting retry count from message headers")
+		retryCount = 0
+		isRetry = true
+	} else {
+		log.Debug().Msgf("Retry count from message headers: %d", retryCount)
+	}
 
-	// TODO: implement the first send logic
-	// TODO: implement the retry logic
-	// TODO: store the latest reason for failure into DB via a gRPC call
-	// TODO: make gRPC calls when it's a definitive success
-	// TODO: make gRPC calls when it's a definitive failure
+	if !isRetry && retryCount > MaxRetries {
+		handlePermanentFailure(message.Body, nil) // No error, just a retry limit reached
+		return nil
+	}
+
+	err := sendEmail(rawMail)
+	if err != nil && retryCount < MaxRetries {
+		handleTemporaryFailure(message.Body, err, retryCount)
+		return nil
+	} else if err != nil {
+		handlePermanentFailure(message.Body, err)
+		return nil
+	}
+
+	log.Info().Msg("Email sent successfully, sending success to mail service")
+	//TODO: make the gRPC call to store the success in the DB
+
+
+	log.Info().Msg("Acknowledging message")
+
+	// If email sent successfully, acknowledge the message
+	if err := message.Ack(false); err != nil {
+		log.Error().Err(err).Msg("Failed to acknowledge message")
+	}
+
+	log.Info().Msg("Email sent successfully")
+
 	return nil
 }

@@ -22,5 +22,17 @@ func RouteMessage(message *amqp.Delivery) {
 
 		// Call sendMail with the complete payload
 		processSendMailMessage(message, payload)
+	case "send_retry":
+		// Parse the AMQP payload into our structured format
+		var payload models.RawMail
+		err := json.Unmarshal(message.Body, &payload)
+		if err != nil {
+			log.Error().Err(err).Msg("Error unmarshalling AMQP payload for retry")
+			return
+		}
+
+		// Call sendMail with the complete payload
+		processSendMailMessage(message, payload)
 	}
+
 }

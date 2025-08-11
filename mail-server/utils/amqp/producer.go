@@ -73,7 +73,7 @@ func InitProducerAmqp() {
 		log.Debug().Msg("DLQ declared, binding to queue")
 		err = ch.QueueBind(
 			"retry_queue", // name of the queue
-			"",            // bindingKey
+			"send_retry",  // bindingKey
 			"mail",        // sourceExchange
 			false,         // noWait
 			nil,           // arguments

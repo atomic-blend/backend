@@ -103,10 +103,10 @@ func InitConsumerAmqp() {
 		log.Debug().Msg("DLQ declared, binding to queue")
 		err = ch.QueueBind(
 			"retry_queue", // name of the queue
-			"", // bindingKey
-			"mail", // sourceExchange
-			false, // noWait
-			nil,   // arguments
+			"send_retry",  // bindingKey
+			"mail",        // sourceExchange
+			false,         // noWait
+			nil,           // arguments
 		)
 		shortcuts.FailOnError(err, "Error binding retry queue to exchange")
 		log.Debug().Msg("Retry queue bound to exchange")
@@ -131,13 +131,13 @@ func InitConsumerAmqp() {
 	if retryEnabled {
 		log.Debug().Msg("Starting retry queue consumer")
 		RetryMessages, err = ch.Consume(
-			"retry_queue", // queue
+			"retry_queue",  // queue
 			"retry_worker", // consumer
-			false,         // auto-ack
-			false,         // exclusive
-			false,         // no-local
-			false,         // no-wait
-			nil,           // args
+			false,          // auto-ack
+			false,          // exclusive
+			false,          // no-local
+			false,          // no-wait
+			nil,            // args
 		)
 		shortcuts.FailOnError(err, "Error consuming the Retry Queue")
 	} else {

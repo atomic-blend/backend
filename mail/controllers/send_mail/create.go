@@ -2,7 +2,6 @@ package send_mail
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 
 	"connectrpc.com/connect"
@@ -54,31 +53,29 @@ func (c *Controller) CreateSendMail(ctx *gin.Context) {
 		return
 	}
 
-	// Normalize headers to preserve list structure
-	if rawMail.Headers != nil {
-		if headersMap, ok := rawMail.Headers.(map[string]interface{}); ok {
-			normalizedHeaders := make(map[string]interface{})
-			for key, value := range headersMap {
-				switch v := value.(type) {
-				case []interface{}:
-					// Convert []interface{} to []string
-					stringSlice := make([]string, len(v))
-					for i, item := range v {
-						if str, ok := item.(string); ok {
-							stringSlice[i] = str
-						} else {
-							stringSlice[i] = fmt.Sprintf("%v", item)
-						}
-					}
-					normalizedHeaders[key] = stringSlice
-				default:
-					// Keep other types as they are
-					normalizedHeaders[key] = value
-				}
-			}
-			rawMail.Headers = normalizedHeaders
-		}
-	}
+	// // Normalize headers to preserve list structure
+	// if rawMail.Headers != nil {
+	// 	normalizedHeaders := make(map[string]interface{})
+	// 	for key, value := range rawMail.Headers {
+	// 		switch v := value.(type) {
+	// 		case []interface{}:
+	// 			// Convert []interface{} to []string
+	// 			stringSlice := make([]string, len(v))
+	// 			for i, item := range v {
+	// 				if str, ok := item.(string); ok {
+	// 					stringSlice[i] = str
+	// 				} else {
+	// 					stringSlice[i] = fmt.Sprintf("%v", item)
+	// 				}
+	// 			}
+	// 			normalizedHeaders[key] = stringSlice
+	// 		default:
+	// 			// Keep other types as they are
+	// 			normalizedHeaders[key] = value
+	// 		}
+	// 	}
+	// 	rawMail.Headers = normalizedHeaders
+	// }
 
 	//TODO: check email validity here
 
