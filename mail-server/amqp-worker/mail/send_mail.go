@@ -57,7 +57,7 @@ func handleTemporaryFailure(body []byte, err error, retryCount int, recipientsTo
 	amqp.PublishMessage("mail", "retry_queue", message, &amqppackage.Table{
 		"retry_count": retryCount,
 		"delay":       delay,
-		"recipients":  recipientsToRetry,
+		"recipients":  strings.Join(recipientsToRetry, ","),
 	})
 }
 
@@ -138,7 +138,7 @@ func signEmailWithDKIM(rawMail models.RawMail) (string, error) {
 	}
 
 	// Get the From domain for DKIM signing
-	fromHeader, ok := rawMail.Headers["From"].(string)
+	fromHeader, ok := rawMail.Headers["from"].(string)
 	if !ok {
 		return "", fmt.Errorf("from_header_missing")
 	}
@@ -189,6 +189,7 @@ func sendEmail(mail models.RawMail) ([]string, error) {
 
 	recipientsToRetry := []string{}
 
+	// TODO: if the email is a retry, use the list of failed recipients from the message headers
 	for _, recipient := range mail.Headers["To"].([]string) {
 		// Resolve the mail server via MX lookup
 		domain := extractDomain(recipient)

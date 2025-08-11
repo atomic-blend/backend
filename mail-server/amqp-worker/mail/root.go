@@ -12,7 +12,7 @@ import (
 func RouteMessage(message *amqp.Delivery) {
 	switch message.RoutingKey {
 	case "sent":
-		log.Info().Msg("Processing sent message")
+		log.Info().Msg("📤 Processing sent message")
 		// Parse the AMQP payload into our structured format
 		var payload models.RawMail
 		err := json.Unmarshal(message.Body, &payload)
@@ -24,7 +24,7 @@ func RouteMessage(message *amqp.Delivery) {
 		// Call sendMail with the complete payload
 		processSendMailMessage(message, payload)
 	case "send_retry":
-		log.Info().Msg("Processing send retry message")
+		log.Info().Msg("🔄 Processing send retry message")
 		// Parse the AMQP payload into our structured format
 		var payload models.RawMail
 		err := json.Unmarshal(message.Body, &payload)
@@ -35,6 +35,7 @@ func RouteMessage(message *amqp.Delivery) {
 
 		// Call sendMail with the complete payload
 		processSendMailMessage(message, payload)
+	default:
+		log.Warn().Str("routing_key", message.RoutingKey).Msg("⚠️ Unknown routing key, message not processed")
 	}
-
 }
