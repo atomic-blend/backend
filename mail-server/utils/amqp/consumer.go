@@ -91,30 +91,6 @@ func InitConsumerAmqp() {
 		shortcuts.FailOnError(err, "Error binding to the Queue")
 	}
 
-	retryEnabled := getAMQPRetryEnabled(true)
-	if retryEnabled {
-		log.Info().Msg("Retry queue is enabled, declaring retry DLQ")
-		// Declare the dead letter exchange for retries
-		ch.QueueDeclare("retry_queue", true, false, false, false, amqp.Table{
-			"x-dead-letter-exchange":    "mail",
-			"x-dead-letter-routing-key": "sent",
-		})
-
-		log.Debug().Msg("DLQ declared, binding to queue")
-		err = ch.QueueBind(
-			"retry_queue", // name of the queue
-			"send_retry",  // bindingKey
-			"mail",        // sourceExchange
-			false,         // noWait
-			nil,           // arguments
-		)
-		shortcuts.FailOnError(err, "Error binding retry queue to exchange")
-		log.Debug().Msg("Retry queue bound to exchange")
-
-	} else {
-		log.Info().Msg("Retry queue is disabled, skipping retry DLQ declaration")
-	}
-
 	log.Debug().Msgf("Queue bound to Exchange, starting Consume (consumer tag %q)", "worker")
 
 	MailMessages, err = ch.Consume(
@@ -128,7 +104,7 @@ func InitConsumerAmqp() {
 	)
 	shortcuts.FailOnError(err, "Error consuming the Queue")
 
-	if retryEnabled {
+	if getAMQPRetryEnabled(true) {
 		log.Debug().Msg("Starting retry queue consumer")
 		RetryMessages, err = ch.Consume(
 			"retry_queue",  // queue

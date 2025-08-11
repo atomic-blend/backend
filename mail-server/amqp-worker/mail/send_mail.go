@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto"
 	"crypto/x509"
+	"encoding/json"
 	"encoding/pem"
 	"fmt"
 	"math"
@@ -12,11 +13,13 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/atomic-blend/backend/mail-server/utils/amqp"
 	"github.com/atomic-blend/backend/mail/models"
 	"github.com/emersion/go-message"
 	"github.com/emersion/go-msgauth/dkim"
+	"github.com/emersion/go-smtp"
 	"github.com/rs/zerolog/log"
-	"github.com/streadway/amqp"
+	amqppackage "github.com/streadway/amqp"
 )
 
 const (
@@ -43,8 +46,19 @@ func handleTemporaryFailure(body []byte, err error, retryCount int, recipientsTo
 	log.Info().Msgf("Retrying in %d milliseconds", delay)
 	//TODO: make the gRPC call to store the retry count, delay in the DB and the reason for failure
 
-	// TODO: publish the message into the retry queue with the delay (Dead letter Queue to the original routing key)
-	// store the list of recipients that needs retry in the message headers
+	// publish the message into the retry queue with the delay (Dead letter Queue to the original routing key)
+	message := make(map[string]interface{})
+	err = json.Unmarshal(body, &message)
+	if err != nil {
+		log.Error().Err(err).Msg("Error unmarshalling message")
+		return
+	}
+
+	amqp.PublishMessage("mail", "retry_queue", message, &amqppackage.Table{
+		"retry_count": retryCount,
+		"delay":       delay,
+		"recipients":  recipientsToRetry,
+	})
 }
 
 // handlePermanentFailure handles messages that have permanently failed
@@ -208,23 +222,101 @@ func sendEmail(mail models.RawMail) ([]string, error) {
 		for _, mxRecord := range mxRecords {
 			log.Info().Str("recipient", recipient).Str("domain", domain).Str("mx_host", mxRecord.Host).Msg("Attempting to send via MX record")
 
-			// TODO: send email via SMTP using mxRecord.Host, if failed, retry with the next MX record
-			// For now, just log the attempt
-			log.Info().Str("mx_host", mxRecord.Host).Str("signed_email_length", fmt.Sprintf("%d", len(signedEmail))).Msg("Would send signed email via SMTP")
+			from, ok := mail.Headers["From"].(string)
+			if !ok {
+				log.Error().Str("recipient", recipient).Msg("From header not found")
+				recipientsToRetry = append(recipientsToRetry, recipient)
+				break
+			}
 
-			// TODO: Implement actual SMTP sending here
-			// sendSuccess = sendViaSMTP(mxRecord.Host, signedEmail, recipient)
-			// if sendSuccess {
-			//     break
-			// }
+			// Send email via SMTP using mxRecord.Host
+			err := sendViaSMTP(mxRecord.Host, from, recipient, signedEmail)
+			if err != nil {
+				log.Warn().Err(err).Str("mx_host", mxRecord.Host).Str("recipient", recipient).Msg("Failed to send via MX record, trying next one")
+				continue
+			}
+
+			// Success! Mark as sent and break out of the loop
+			sendSuccess = true
+			log.Info().Str("mx_host", mxRecord.Host).Str("recipient", recipient).Msg("Email sent successfully via SMTP")
+			break
 		}
 
 		if !sendSuccess {
 			recipientsToRetry = append(recipientsToRetry, recipient)
 		}
 	}
+	if len(recipientsToRetry) > 0 {
+		return recipientsToRetry, fmt.Errorf("failed_to_send_to_all_recipients")
+	}
 
-	return recipientsToRetry, nil
+	return nil, nil
+}
+
+// sendViaSMTP sends an email via SMTP to the specified host
+func sendViaSMTP(host string, from string, to string, emailContent string) error {
+	// Connect to the remote SMTP server
+	c, err := smtp.Dial(host + ":25")
+	if err != nil {
+		return fmt.Errorf("smtp_connection_failed: %w", err)
+	}
+	defer c.Quit()
+
+	// Set the sender
+	if err := c.Mail(from, nil); err != nil {
+		return fmt.Errorf("smtp_mail_command_failed: %w", err)
+	}
+
+	// Set the recipient
+	if err := c.Rcpt(to, nil); err != nil {
+		return fmt.Errorf("smtp_rcpt_command_failed: %w", err)
+	}
+
+	// Send the email body
+	wc, err := c.Data()
+	if err != nil {
+		return fmt.Errorf("smtp_data_command_failed: %w", err)
+	}
+
+	// Write the email content
+	_, err = fmt.Fprintf(wc, "%s", emailContent)
+	if err != nil {
+		wc.Close()
+		return fmt.Errorf("smtp_write_failed: %w", err)
+	}
+
+	// Close the data writer
+	err = wc.Close()
+	if err != nil {
+		return fmt.Errorf("smtp_data_close_failed: %w", err)
+	}
+
+	log.Info().Str("host", host).Str("from", from).Str("to", to).Msg("Email sent successfully via SMTP")
+	return nil
+}
+
+// extractFromFromSignedEmail extracts the From address from the signed email content
+func extractFromFromSignedEmail(signedEmail string) string {
+	lines := strings.SplitSeq(signedEmail, "\n")
+	for line := range lines {
+		if strings.HasPrefix(strings.ToLower(strings.TrimSpace(line)), "from:") {
+			// Extract the email address after "From: "
+			parts := strings.SplitN(line, ":", 2)
+			if len(parts) == 2 {
+				email := strings.TrimSpace(parts[1])
+				// Extract email from format like "Name <email@domain.com>" or just "email@domain.com"
+				if strings.Contains(email, "<") && strings.Contains(email, ">") {
+					start := strings.Index(email, "<") + 1
+					end := strings.Index(email, ">")
+					if start > 0 && end > start {
+						return email[start:end]
+					}
+				}
+				return email
+			}
+		}
+	}
+	return ""
 }
 
 // extractDomain extracts the domain part from an email address
@@ -244,7 +336,7 @@ func extractDomain(email string) string {
 	return email[atIndex+1:]
 }
 
-func processSendMailMessage(message *amqp.Delivery, rawMail models.RawMail) error {
+func processSendMailMessage(message *amqppackage.Delivery, rawMail models.RawMail) error {
 	// lookup the message to check if it's a retry or not
 	isRetry := false
 	retryCount, ok := message.Headers["x-retry-count"].(int)
@@ -263,6 +355,7 @@ func processSendMailMessage(message *amqp.Delivery, rawMail models.RawMail) erro
 
 	recipientsToRetry, err := sendEmail(rawMail)
 	if err != nil && retryCount < MaxRetries {
+		retryCount++
 		handleTemporaryFailure(message.Body, err, retryCount, recipientsToRetry)
 		return nil
 	} else if err != nil {

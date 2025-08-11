@@ -84,10 +84,9 @@ func PublishMessage(exchangeName string, topic string, message map[string]interf
 		false,        // mandatory
 		false,        // immediate
 		amqp.Publishing{
-			DeliveryMode: amqp.Transient,
-			ContentType:  "application/json",
-			Body:         encodedPayload,
-			Timestamp:    time.Now(),
+			ContentType: "application/json",
+			Body:        encodedPayload,
+			Timestamp:   time.Now(),
 		})
 	shortcuts.FailOnError(err, "Failed to publish a message")
 }

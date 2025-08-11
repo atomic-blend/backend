@@ -74,3 +74,11 @@ func getAMQPRetryExchange(isProducer bool) string {
 func getAMQPRetryRoutingKey(isProducer bool) string {
 	return getEnvWithFallback("RETRY_ROUTING_KEY", isProducer)
 }
+
+func getAMQPRetryQueueName(isProducer bool) string {
+	return getEnvWithFallback("RETRY_QUEUE_NAME", isProducer)
+}
+
+func getAMQPRetryBindingKey(isProducer bool) string {
+	return getEnvWithFallback("RETRY_BINDING_KEY", isProducer)
+}
