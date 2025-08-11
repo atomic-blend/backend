@@ -115,7 +115,7 @@ type UpdateMailStatusRequest struct {
 	EmailId       string                 `protobuf:"bytes,1,opt,name=email_id,json=emailId,proto3" json:"email_id,omitempty"`
 	Status        string                 `protobuf:"bytes,2,opt,name=status,proto3" json:"status,omitempty"`
 	FailureReason *string                `protobuf:"bytes,3,opt,name=failure_reason,json=failureReason,proto3,oneof" json:"failure_reason,omitempty"`
-	FailedAt      string                 `protobuf:"bytes,4,opt,name=failed_at,json=failedAt,proto3" json:"failed_at,omitempty"`
+	FailedAt      *string                `protobuf:"bytes,4,opt,name=failed_at,json=failedAt,proto3,oneof" json:"failed_at,omitempty"`
 	RetryCounter  *int32                 `protobuf:"varint,5,opt,name=retry_counter,json=retryCounter,proto3,oneof" json:"retry_counter,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -173,8 +173,8 @@ func (x *UpdateMailStatusRequest) GetFailureReason() string {
 }
 
 func (x *UpdateMailStatusRequest) GetFailedAt() string {
-	if x != nil {
-		return x.FailedAt
+	if x != nil && x.FailedAt != nil {
+		return *x.FailedAt
 	}
 	return ""
 }
@@ -238,14 +238,16 @@ const file_mail_v1_mail_service_proto_rawDesc = "" +
 	"\x15DeleteUserDataRequest\x12!\n" +
 	"\x04user\x18\x01 \x01(\v2\r.auth.v1.UserR\x04user\"2\n" +
 	"\x16DeleteUserDataResponse\x12\x18\n" +
-	"\asuccess\x18\x01 \x01(\bR\asuccess\"\xe4\x01\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess\"\xf7\x01\n" +
 	"\x17UpdateMailStatusRequest\x12\x19\n" +
 	"\bemail_id\x18\x01 \x01(\tR\aemailId\x12\x16\n" +
 	"\x06status\x18\x02 \x01(\tR\x06status\x12*\n" +
-	"\x0efailure_reason\x18\x03 \x01(\tH\x00R\rfailureReason\x88\x01\x01\x12\x1b\n" +
-	"\tfailed_at\x18\x04 \x01(\tR\bfailedAt\x12(\n" +
-	"\rretry_counter\x18\x05 \x01(\x05H\x01R\fretryCounter\x88\x01\x01B\x11\n" +
-	"\x0f_failure_reasonB\x10\n" +
+	"\x0efailure_reason\x18\x03 \x01(\tH\x00R\rfailureReason\x88\x01\x01\x12 \n" +
+	"\tfailed_at\x18\x04 \x01(\tH\x01R\bfailedAt\x88\x01\x01\x12(\n" +
+	"\rretry_counter\x18\x05 \x01(\x05H\x02R\fretryCounter\x88\x01\x01B\x11\n" +
+	"\x0f_failure_reasonB\f\n" +
+	"\n" +
+	"_failed_atB\x10\n" +
 	"\x0e_retry_counter\"4\n" +
 	"\x18UpdateMailStatusResponse\x12\x18\n" +
 	"\asuccess\x18\x01 \x01(\bR\asuccess2\xb9\x01\n" +

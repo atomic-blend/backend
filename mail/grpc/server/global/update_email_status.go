@@ -47,10 +47,18 @@ func (s *GrpcServer) UpdateMailStatus(ctx context.Context, req *connect.Request[
 	log.Debug().Interface("sendEmailId", sendEmailId).Msg("Updating email status")
 
 	update := bson.M{
-		"send_status":    status,
-		"failure_reason": failureReason,
-		"failed_at":      failedAt,
-		"retry_counter":  retryCounter,
+		"send_status": status,
+	}
+
+	// Only add optional fields if they are defined
+	if failureReason != "" {
+		update["failure_reason"] = failureReason
+	}
+	if failedAt != "" {
+		update["failed_at"] = failedAt
+	}
+	if retryCounter > 0 {
+		update["retry_counter"] = retryCounter
 	}
 
 	_, err = s.sendMailRepository.Update(ctx, sendEmailId, update)
