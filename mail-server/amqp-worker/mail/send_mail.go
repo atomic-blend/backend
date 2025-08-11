@@ -55,7 +55,7 @@ func handleTemporaryFailure(m *amqppackage.Delivery, body []byte, err error, ret
 	}
 
 	amqp.PublishMessage("mail", "send_retry", message, &amqppackage.Table{
-		"retry_count": retryCount,
+		"retry-count": retryCount,
 		"delay":       delay,
 		"recipients":  strings.Join(recipientsToRetry, ","),
 	})
@@ -319,13 +319,15 @@ func extractDomain(email string) string {
 func processSendMailMessage(message *amqppackage.Delivery, rawMail models.RawMail) error {
 	// lookup the message to check if it's a retry or not
 	isRetry := false
-	retryCount, ok := message.Headers["x-retry-count"].(int)
-	if !ok {
-		log.Error().Msg("Error getting retry count from message headers")
-		retryCount = 0
-		isRetry = true
-	} else {
-		log.Debug().Msgf("Retry count from message headers: %d", retryCount)
+	retryCount := 0
+
+	if (message.Headers["retry-count"] != nil) {
+		retryCountInt, ok := message.Headers["retry-count"].(int32)
+		if !ok {
+			retryCount = 0
+		} else {
+			retryCount = int(retryCountInt)
+		}
 	}
 
 	if !isRetry && retryCount > MaxRetries {
