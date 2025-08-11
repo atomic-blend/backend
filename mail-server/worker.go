@@ -35,18 +35,6 @@ func processMessages() {
 			log.Warn().Msg("📨 Mail message consumer stopped")
 		}()
 
-		// Process retry messages only if retry is enabled
-		if amqp.RetryMessages != nil {
-			go func() {
-				log.Info().Msg("🔄 Starting retry message consumer")
-				for m := range amqp.RetryMessages {
-					log.Info().Str("exchange", m.Exchange).Str("routing_key", m.RoutingKey).Msg("🔄 Processing retry message")
-					amqpworker.RouteMessage(&m)
-				}
-				log.Warn().Msg("🔄 Retry message consumer stopped")
-			}()
-		}
-
 		log.Info().Msg("✅ AMQP message processing worker started successfully")
 
 		// Keep this goroutine alive forever

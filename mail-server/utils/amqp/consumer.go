@@ -21,9 +21,6 @@ var consumerCh *amqp.Channel
 // MailMessages is the channel for the mail_queue AMQP messages
 var MailMessages <-chan amqp.Delivery
 
-// RetryMessages is the channel for the retry_queue AMQP messages
-var RetryMessages <-chan amqp.Delivery
-
 // InitConsumerAmqp initializes the AMQP consumer
 func InitConsumerAmqp() {
 	log.Debug().Msg("Initializing AMQP Consumer")
@@ -140,7 +137,7 @@ func InitConsumerAmqp() {
 		//bind the retry queue to the exchange
 		err = consumerCh.QueueBind(
 			retryQueue.Name,              // name of the queue
-			getAMQPRetryRoutingKey(true), // bindingKey
+			getAMQPRetryBindingKey(true), // bindingKey - use the retry binding key, not the retry routing key
 			getAMQPRetryExchange(true),   // sourceExchange
 			false,                        // noWait
 			nil,                          // arguments
@@ -149,25 +146,6 @@ func InitConsumerAmqp() {
 	}
 
 	log.Info().Msgf("📨 Started consuming from queue: %s", q.Name)
-
-	log.Info().Msgf("🎯 Consumer is now listening on queue '%s' for messages with routing key 'sent'", q.Name)
-
-	if getAMQPRetryEnabled(true) {
-		log.Debug().Msg("Starting retry queue consumer")
-		RetryMessages, err = consumerCh.Consume(
-			"retry_queue",  // queue
-			"retry_worker", // consumer
-			false,          // auto-ack
-			false,          // exclusive
-			false,          // no-local
-			false,          // no-wait
-			nil,            // args
-		)
-		shortcuts.FailOnError(err, "Error consuming the Retry Queue")
-		log.Info().Msg("🔄 Started consuming from retry queue: retry_queue")
-	} else {
-		log.Debug().Msg("Retry queue is disabled, skipping retry queue consumer")
-	}
 
 	log.Info().Msg("✅ Consumer AMQP connection established")
 	log.Info().Msgf("📋 Final status: Queue '%s' bound to exchange 'mail' with routing key 'sent'", queueName)
@@ -211,11 +189,6 @@ func GetConsumerConnectionStatus() map[string]interface{} {
 func AreConsumerChannelsReady() bool {
 	// MailMessages should always be available
 	if MailMessages == nil {
-		return false
-	}
-
-	// RetryMessages is only required if retry is enabled
-	if getAMQPRetryEnabled(false) && RetryMessages == nil {
 		return false
 	}
 
