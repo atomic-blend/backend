@@ -31,8 +31,6 @@ const (
 	BaseDelayMillis = 10000     // 10 seconds initial backoff
 )
 
-var mailClient *client.MailClient
-
 // computeDelay returns delay in ms using exponential backoff with x-day cap
 func computeDelay(retryCount int) int {
 	delay := BaseDelayMillis * int(math.Pow(2, float64(retryCount-1)))

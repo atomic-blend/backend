@@ -61,7 +61,7 @@ func reinitializeConsumer() error {
 	time.Sleep(2 * time.Second)
 
 	// Reinitialize the consumer
-	amqp.InitConsumerAmqp()
+	amqp.InitConsumerAMQP()
 
 	// Wait a moment for the connection to stabilize
 	time.Sleep(2 * time.Second)

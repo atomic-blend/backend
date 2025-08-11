@@ -1,3 +1,4 @@
+// Package client contains the logic for creating mail status requests
 package client
 
 import (

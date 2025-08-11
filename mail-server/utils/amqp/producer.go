@@ -22,8 +22,8 @@ var (
 var conn *amqp.Connection
 var ch *amqp.Channel
 
-// InitProducerAmqp initializes the AMQP producer
-func InitProducerAmqp() {
+// InitProducerAMQP initializes the AMQP producer
+func InitProducerAMQP() {
 	var err error
 
 	shortcuts.CheckRequiredEnvVar("MAIL_SERVER_PRODUCER_AMQP_URL or MAIL_SERVER_AMQP_URL or AMQP_URL", amqpURL, "amqp://user:password@localhost:5672/")
@@ -179,7 +179,7 @@ func PublishMessage(exchangeName string, topic string, message map[string]interf
 	// Check if connection and channel are healthy
 	if !IsConnectionHealthy() {
 		log.Warn().Msg("AMQP connection or channel is not available, attempting to reconnect")
-		InitProducerAmqp()
+		InitProducerAMQP()
 		if !IsConnectionHealthy() {
 			log.Error().Msg("Failed to establish AMQP connection, cannot publish message")
 			return

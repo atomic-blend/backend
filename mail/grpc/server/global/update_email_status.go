@@ -39,12 +39,12 @@ func (s *GrpcServer) UpdateMailStatus(ctx context.Context, req *connect.Request[
 	}
 
 	//TODO: update the email status in the database
-	sendEmailId, err := primitive.ObjectIDFromHex(emailID)
+	sendEmailID, err := primitive.ObjectIDFromHex(emailID)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("invalid email_id"))
 	}
 
-	log.Debug().Interface("sendEmailId", sendEmailId).Msg("Updating email status")
+	log.Debug().Interface("sendEmailId", sendEmailID).Msg("Updating email status")
 
 	update := bson.M{
 		"send_status": status,
@@ -61,7 +61,7 @@ func (s *GrpcServer) UpdateMailStatus(ctx context.Context, req *connect.Request[
 		update["retry_counter"] = retryCounter
 	}
 
-	_, err = s.sendMailRepository.Update(ctx, sendEmailId, update)
+	_, err = s.sendMailRepository.Update(ctx, sendEmailID, update)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
