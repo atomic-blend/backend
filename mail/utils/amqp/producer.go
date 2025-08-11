@@ -13,9 +13,9 @@ import (
 
 var (
 	// amqpURL is the URL of the AMQP broker
-	amqpURL = os.Getenv("AMQP_URL")
+	amqpURL = getAMQPURL(true)
 	// exchangeNames is the list of exchange names to use
-	exchangeNames = os.Getenv("AMQP_EXCHANGE_NAMES")
+	exchangeNames = getAMQPExchangeNames(true)
 )
 
 var conn *amqp.Connection
@@ -25,14 +25,14 @@ var ch *amqp.Channel
 func InitProducerAmqp() {
 	var err error
 
-	shortcuts.CheckRequiredEnvVar("AMQP_URL", amqpURL, "amqp://user:password@localhost:5672/")
-	shortcuts.CheckRequiredEnvVar("AMQP_QUEUE_NAME", queueName, "")
-	shortcuts.CheckRequiredEnvVar("AMQP_EXCHANGE_NAMES", exchangeNames, "")
+	shortcuts.CheckRequiredEnvVar("MAIL_SERVER_PRODUCER_AMQP_URL or MAIL_SERVER_AMQP_URL or AMQP_URL", amqpURL, "amqp://user:password@localhost:5672/")
+	shortcuts.CheckRequiredEnvVar("MAIL_SERVER_PRODUCER_AMQP_QUEUE_NAME or MAIL_SERVER_AMQP_QUEUE_NAME or AMQP_QUEUE_NAME", getAMQPQueueName(true), "")
+	shortcuts.CheckRequiredEnvVar("MAIL_SERVER_PRODUCER_AMQP_EXCHANGE_NAMES or MAIL_SERVER_AMQP_EXCHANGE_NAMES or AMQP_EXCHANGE_NAMES", exchangeNames, "")
 
 	//split exchange names
 	exchangeNames := strings.Split(exchangeNames, ",")
 
-	log.Debug().Msg("Connecting to AMQP")
+	log.Debug().Msg("Producer connecting to AMQP")
 	conn, err = amqp.Dial(amqpURL)
 	shortcuts.FailOnError(err, "Failed to connect to RabbitMQ")
 
@@ -41,6 +41,7 @@ func InitProducerAmqp() {
 	shortcuts.FailOnError(err, "Failed to open a channel")
 
 	log.Info().Msg("Declaring queue")
+	queueName := getAMQPQueueName(true)
 	_, err = ch.QueueDeclare(queueName, true, false, false, false, nil)
 	if err != nil {
 		log.Info().Err(err).Msg("Failed to declare a queue")
