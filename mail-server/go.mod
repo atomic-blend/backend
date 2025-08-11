@@ -3,6 +3,8 @@ module github.com/atomic-blend/backend/mail-server
 go 1.24.5
 
 require (
+	connectrpc.com/connect v1.16.0
+	github.com/atomic-blend/backend/grpc v0.0.0-00010101000000-000000000000
 	github.com/emersion/go-sasl v0.0.0-20241020182733-b788ff22d5a6
 	github.com/emersion/go-smtp v0.23.0
 )
@@ -25,3 +27,5 @@ require (
 	go.mongodb.org/mongo-driver v1.17.4
 	golang.org/x/sys v0.31.0 // indirect
 )
+
+replace github.com/atomic-blend/backend/grpc => ../grpc
