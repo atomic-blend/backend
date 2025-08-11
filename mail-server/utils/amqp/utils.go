@@ -59,3 +59,18 @@ func getAMQPQueueName(isProducer bool) string {
 func getAMQPRoutingKeys(isProducer bool) string {
 	return getEnvWithFallback("ROUTING_KEYS", isProducer)
 }
+
+// getAMQPRetryEnabled returns whether AMQP retry is enabled from environment variables
+func getAMQPRetryEnabled(isProducer bool) bool {
+	return getEnvWithFallback("RETRY_ENABLED", isProducer) == "true"
+}
+
+// getAMQPRetryExchange returns the AMQP retry exchange name from environment variables
+func getAMQPRetryExchange(isProducer bool) string {
+	return getEnvWithFallback("RETRY_EXCHANGE", isProducer)
+}
+
+// getAMQPRetryRoutingKey returns the AMQP retry routing key from environment variables
+func getAMQPRetryRoutingKey(isProducer bool) string {
+	return getEnvWithFallback("RETRY_ROUTING_KEY", isProducer)
+}

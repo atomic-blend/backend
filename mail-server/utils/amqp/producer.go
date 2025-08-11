@@ -40,13 +40,6 @@ func InitProducerAmqp() {
 	ch, err = conn.Channel()
 	shortcuts.FailOnError(err, "Failed to open a channel")
 
-	log.Info().Msg("Declaring queue")
-	queueName := getAMQPQueueName(true)
-	_, err = ch.QueueDeclare(queueName, true, false, false, false, nil)
-	if err != nil {
-		log.Info().Err(err).Msg("Failed to declare a queue")
-	}
-
 	for _, exchangeName := range exchangeNames {
 		log.Info().Str("exchange", exchangeName).Msg("Declaring exchange")
 		err = ch.ExchangeDeclare(
@@ -60,11 +53,42 @@ func InitProducerAmqp() {
 		)
 		shortcuts.FailOnError(err, "Failed to declare the Exchange")
 	}
+
+	log.Info().Msg("Declaring queue")
+	queueName := getAMQPQueueName(true)
+	_, err = ch.QueueDeclare(queueName, true, false, false, false, nil)
+	if err != nil {
+		log.Info().Err(err).Msg("Failed to declare a queue")
+	}
+
+	retryEnabled := getAMQPRetryEnabled(true)
+	if retryEnabled {
+		log.Info().Msg("Retry queue is enabled, declaring retry DLQ")
+		// Declare the dead letter exchange for retries
+		ch.QueueDeclare("retry_queue", true, false, false, false, amqp.Table{
+			"x-dead-letter-exchange":    "mail",
+			"x-dead-letter-routing-key": "sent",
+		})
+
+		log.Debug().Msg("DLQ declared, binding to queue")
+		err = ch.QueueBind(
+			"retry_queue", // name of the queue
+			"",            // bindingKey
+			"mail",        // sourceExchange
+			false,         // noWait
+			nil,           // arguments
+		)
+		shortcuts.FailOnError(err, "Error binding retry queue to exchange")
+		log.Debug().Msg("Retry queue bound to exchange")
+	} else {
+		log.Info().Msg("Retry queue is disabled, skipping retry DLQ declaration")
+	}
+
 	log.Info().Msg("✅\tAMQP connection established")
 }
 
 // PublishMessage publishes a message to the AMQP broker
-func PublishMessage(exchangeName string, topic string, message map[string]interface{}) {
+func PublishMessage(exchangeName string, topic string, message map[string]interface{}, headers *amqp.Table) {
 	// Skip publishing in test environment
 	if os.Getenv("GO_ENV") == "test" || ch == nil {
 		log.Debug().Msg("Skipping AMQP message publishing (test environment or no connection)")
