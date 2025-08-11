@@ -10,6 +10,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	bson "go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -161,7 +162,10 @@ func TestUpdateSendMailStatus(t *testing.T) {
 	// Wait a moment to ensure different timestamp
 	time.Sleep(time.Millisecond * 10)
 
-	updatedSendMail, err := repository.UpdateStatus(ctx, createdSendMail.ID, models.SendStatusSent)
+	update := bson.M{
+		"send_status": models.SendStatusSent,
+	}
+	updatedSendMail, err := repository.Update(ctx, createdSendMail.ID, update)
 
 	assert.NoError(t, err)
 	assert.NotNil(t, updatedSendMail)
@@ -169,7 +173,7 @@ func TestUpdateSendMailStatus(t *testing.T) {
 	assert.True(t, updatedSendMail.UpdatedAt.Time().After(createdSendMail.UpdatedAt.Time()))
 }
 
-func TestIncrementRetryCounter(t *testing.T) {
+func TestUpdateSendMailRetryCounter(t *testing.T) {
 	repository, cleanup := setupSendMailTest(t)
 	defer cleanup()
 
@@ -195,13 +199,19 @@ func TestIncrementRetryCounter(t *testing.T) {
 	// Wait a moment to ensure different timestamp
 	time.Sleep(time.Millisecond * 10)
 
-	updatedSendMail, err := repository.IncrementRetryCounter(ctx, createdSendMail.ID)
+	// Test updating retry counter and status
+	retryCount := 1
+	update := bson.M{
+		"retry_counter": &retryCount,
+		"send_status":   models.SendStatusRetry,
+	}
+	updatedSendMail, err := repository.Update(ctx, createdSendMail.ID, update)
 
 	assert.NoError(t, err)
 	assert.NotNil(t, updatedSendMail)
 	assert.Equal(t, models.SendStatusRetry, updatedSendMail.SendStatus)
 	assert.NotNil(t, updatedSendMail.RetryCounter)
-	assert.Equal(t, 1, *updatedSendMail.RetryCounter) // Should be 1 after first increment from nil
+	assert.Equal(t, 1, *updatedSendMail.RetryCounter)
 	assert.True(t, updatedSendMail.UpdatedAt.Time().After(createdSendMail.UpdatedAt.Time()))
 }
 

@@ -20,6 +20,8 @@ type SendMail struct {
 	Mail         *Mail               `bson:"mail" json:"mail"`
 	SendStatus   SendStatus          `bson:"send_status" json:"send_status"`
 	RetryCounter *int                `bson:"retry_counter" json:"retry_counter"`
+	FailureReason *string             `bson:"failure_reason" json:"failure_reason"`
+	FailedAt      *primitive.DateTime `bson:"failed_at" json:"failed_at"`
 	Trashed      bool                `bson:"trashed" json:"trashed"`
 	CreatedAt    *primitive.DateTime `bson:"created_at" json:"created_at"`
 	UpdatedAt    *primitive.DateTime `bson:"updated_at" json:"updated_at"`

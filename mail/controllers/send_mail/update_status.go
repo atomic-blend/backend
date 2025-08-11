@@ -7,6 +7,7 @@ import (
 	"github.com/atomic-blend/backend/mail/models"
 
 	"github.com/gin-gonic/gin"
+	bson "go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -80,7 +81,10 @@ func (c *Controller) UpdateSendMailStatus(ctx *gin.Context) {
 	}
 
 	// Update status
-	updatedSendMail, err := c.sendMailRepo.UpdateStatus(ctx, sendMailID, req.Status)
+	update := bson.M{
+		"send_status": req.Status,
+	}
+	updatedSendMail, err := c.sendMailRepo.Update(ctx, sendMailID, update)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

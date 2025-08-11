@@ -12,8 +12,8 @@ import (
 // RawMail represents the collected content from an email
 type RawMail struct {
 	Headers        map[string]interface{} `json:"headers" binding:"required"`
-	TextContent    string                 `json:"text_content" binding:"required"`
-	HTMLContent    string                 `json:"html_content" binding:"required"`
+	TextContent    string                 `json:"text_content"`
+	HTMLContent    string                 `json:"html_content"`
 	Attachments    []RawAttachment        `json:"attachments"`
 	Rejected       bool                   `json:"rejected"`
 	RewriteSubject bool                   `json:"rewrite_subject"`

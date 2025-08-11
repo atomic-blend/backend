@@ -36,11 +36,15 @@ const (
 	// MailServiceDeleteUserDataProcedure is the fully-qualified name of the MailService's
 	// DeleteUserData RPC.
 	MailServiceDeleteUserDataProcedure = "/mail.v1.MailService/DeleteUserData"
+	// MailServiceUpdateMailStatusProcedure is the fully-qualified name of the MailService's
+	// UpdateMailStatus RPC.
+	MailServiceUpdateMailStatusProcedure = "/mail.v1.MailService/UpdateMailStatus"
 )
 
 // MailServiceClient is a client for the mail.v1.MailService service.
 type MailServiceClient interface {
 	DeleteUserData(context.Context, *connect.Request[v1.DeleteUserDataRequest]) (*connect.Response[v1.DeleteUserDataResponse], error)
+	UpdateMailStatus(context.Context, *connect.Request[v1.UpdateMailStatusRequest]) (*connect.Response[v1.UpdateMailStatusResponse], error)
 }
 
 // NewMailServiceClient constructs a client for the mail.v1.MailService service. By default, it uses
@@ -60,12 +64,19 @@ func NewMailServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(mailServiceMethods.ByName("DeleteUserData")),
 			connect.WithClientOptions(opts...),
 		),
+		updateMailStatus: connect.NewClient[v1.UpdateMailStatusRequest, v1.UpdateMailStatusResponse](
+			httpClient,
+			baseURL+MailServiceUpdateMailStatusProcedure,
+			connect.WithSchema(mailServiceMethods.ByName("UpdateMailStatus")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // mailServiceClient implements MailServiceClient.
 type mailServiceClient struct {
-	deleteUserData *connect.Client[v1.DeleteUserDataRequest, v1.DeleteUserDataResponse]
+	deleteUserData   *connect.Client[v1.DeleteUserDataRequest, v1.DeleteUserDataResponse]
+	updateMailStatus *connect.Client[v1.UpdateMailStatusRequest, v1.UpdateMailStatusResponse]
 }
 
 // DeleteUserData calls mail.v1.MailService.DeleteUserData.
@@ -73,9 +84,15 @@ func (c *mailServiceClient) DeleteUserData(ctx context.Context, req *connect.Req
 	return c.deleteUserData.CallUnary(ctx, req)
 }
 
+// UpdateMailStatus calls mail.v1.MailService.UpdateMailStatus.
+func (c *mailServiceClient) UpdateMailStatus(ctx context.Context, req *connect.Request[v1.UpdateMailStatusRequest]) (*connect.Response[v1.UpdateMailStatusResponse], error) {
+	return c.updateMailStatus.CallUnary(ctx, req)
+}
+
 // MailServiceHandler is an implementation of the mail.v1.MailService service.
 type MailServiceHandler interface {
 	DeleteUserData(context.Context, *connect.Request[v1.DeleteUserDataRequest]) (*connect.Response[v1.DeleteUserDataResponse], error)
+	UpdateMailStatus(context.Context, *connect.Request[v1.UpdateMailStatusRequest]) (*connect.Response[v1.UpdateMailStatusResponse], error)
 }
 
 // NewMailServiceHandler builds an HTTP handler from the service implementation. It returns the path
@@ -91,10 +108,18 @@ func NewMailServiceHandler(svc MailServiceHandler, opts ...connect.HandlerOption
 		connect.WithSchema(mailServiceMethods.ByName("DeleteUserData")),
 		connect.WithHandlerOptions(opts...),
 	)
+	mailServiceUpdateMailStatusHandler := connect.NewUnaryHandler(
+		MailServiceUpdateMailStatusProcedure,
+		svc.UpdateMailStatus,
+		connect.WithSchema(mailServiceMethods.ByName("UpdateMailStatus")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/mail.v1.MailService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case MailServiceDeleteUserDataProcedure:
 			mailServiceDeleteUserDataHandler.ServeHTTP(w, r)
+		case MailServiceUpdateMailStatusProcedure:
+			mailServiceUpdateMailStatusHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -106,4 +131,8 @@ type UnimplementedMailServiceHandler struct{}
 
 func (UnimplementedMailServiceHandler) DeleteUserData(context.Context, *connect.Request[v1.DeleteUserDataRequest]) (*connect.Response[v1.DeleteUserDataResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("mail.v1.MailService.DeleteUserData is not implemented"))
+}
+
+func (UnimplementedMailServiceHandler) UpdateMailStatus(context.Context, *connect.Request[v1.UpdateMailStatusRequest]) (*connect.Response[v1.UpdateMailStatusResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("mail.v1.MailService.UpdateMailStatus is not implemented"))
 }
