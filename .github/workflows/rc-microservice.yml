@@ -50,6 +50,7 @@ jobs:
             grpc/**
             mail/**
             mail-server/**
+            shared/**
           quotepath: false
 
       - name: "Set output in the matrix format"
@@ -265,7 +266,7 @@ jobs:
           echo "DEBUG: TAGS_ARRAY = ${TAGS_ARRAY[*]}"
           
           for dir in $SUCCESSFUL_DIRS; do
-            if [ -d "$dir" ] && [ "$dir" != "grpc" ]; then
+            if [ -d "$dir" ] && [ "$dir" != "grpc" ] && [ "$dir" != "shared" ]; then
               echo "DEBUG: Processing directory: $dir"
               # Find the tag for this directory
               TAG=""
@@ -293,6 +294,8 @@ jobs:
               else
                 echo "DEBUG: No tag found for directory: $dir"
               fi
+            else
+              echo "DEBUG: Skipping directory $dir (grpc or shared library)"
             fi
           done
           
