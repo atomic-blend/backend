@@ -1,4 +1,4 @@
-package mocks
+package s3service
 
 import (
 	"context"
