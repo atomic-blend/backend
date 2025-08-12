@@ -1,4 +1,5 @@
-package utils
+// Package amqputils contains the AMQP utils
+package amqputils
 
 import (
 	"os"

@@ -1,3 +1,4 @@
+// Package models contains the models for the mail server
 package models
 
 import (

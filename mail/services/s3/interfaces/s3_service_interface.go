@@ -1,4 +1,4 @@
-package interfaces
+package s3interfaces
 
 import (
 	"context"

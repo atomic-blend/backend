@@ -1,4 +1,5 @@
-package utils
+// Package amqputils contains the AMQP consumer utils
+package amqputils
 
 import (
 	"os"
@@ -22,8 +23,8 @@ var consumerCh *amqp.Channel
 // Messages is the channel for the AMQP messages
 var Messages <-chan amqp.Delivery
 
-// InitConsumerAmqp initializes the AMQP consumer
-func InitConsumerAmqp() {
+// InitConsumerAMQP initializes the AMQP consumer
+func InitConsumerAMQP() {
 	log.Debug().Msg("Initializing AMQP Consumer")
 	var err error
 	var q amqp.Queue

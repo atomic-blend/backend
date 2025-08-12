@@ -1,3 +1,4 @@
+// Package ageencryptionservice contains the age encryption service
 package ageencryptionservice
 
 import (

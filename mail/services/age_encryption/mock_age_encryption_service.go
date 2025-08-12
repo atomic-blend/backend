@@ -11,7 +11,7 @@ type MockAgeEncryptionService struct {
 }
 
 // Ensure MockAgeEncryptionService implements the interface
-var _ interfaces.AgeEncryptionServiceInterface = (*MockAgeEncryptionService)(nil)
+var _ ageinterfaces.AgeEncryptionServiceInterface = (*MockAgeEncryptionService)(nil)
 
 // EncryptString encrypts a string using the age encryption library
 func (m *MockAgeEncryptionService) EncryptString(publicKey string, plaintext string) (string, error) {

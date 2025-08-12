@@ -1,7 +1,7 @@
 package amqpservice
 
 import (
-	"github.com/atomic-blend/backend/mail/services/amqp/interfaces"
+	amqpinterfaces "github.com/atomic-blend/backend/mail/services/amqp/interfaces"
 	"github.com/streadway/amqp"
 	"github.com/stretchr/testify/mock"
 )
@@ -12,20 +12,20 @@ type MockAMQPService struct {
 }
 
 // Ensure MockAMQPService implements the interface
-var _ interfaces.AMQPServiceInterface = (*MockAMQPService)(nil)
+var _ amqpinterfaces.AMQPServiceInterface = (*MockAMQPService)(nil)
 
 // PublishMessage publishes a message to the AMQP broker
 func (m *MockAMQPService) PublishMessage(exchangeName string, topic string, message map[string]interface{}) {
 	m.Called(exchangeName, topic, message)
 }
 
-// InitProducerAmqp initializes the AMQP producer
-func (m *MockAMQPService) InitProducerAmqp() {
+// InitProducerAMQP initializes the AMQP producer
+func (m *MockAMQPService) InitProducerAMQP() {
 	m.Called()
 }
 
-// InitConsumerAmqp initializes the AMQP consumer
-func (m *MockAMQPService) InitConsumerAmqp() {
+// InitConsumerAMQP initializes the AMQP consumer
+func (m *MockAMQPService) InitConsumerAMQP() {
 	m.Called()
 }
 

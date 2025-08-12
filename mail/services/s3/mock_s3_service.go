@@ -1,9 +1,10 @@
+// Package s3service defines s3 operations available
 package s3service
 
 import (
 	"context"
 
-	"github.com/atomic-blend/backend/mail/services/s3/interfaces"
+	s3interfaces "github.com/atomic-blend/backend/mail/services/s3/interfaces"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/stretchr/testify/mock"
 )
@@ -14,7 +15,7 @@ type MockS3Service struct {
 }
 
 // Ensure MockS3Service implements the interface
-var _ interfaces.S3ServiceInterface = (*MockS3Service)(nil)
+var _ s3interfaces.S3ServiceInterface = (*MockS3Service)(nil)
 
 // BulkDeleteFiles deletes multiple files from S3
 func (m *MockS3Service) BulkDeleteFiles(ctx context.Context, uploadedKeys []string) {

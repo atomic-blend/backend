@@ -1,4 +1,5 @@
-package utils
+// Package amqputils contains the AMQP producer utils
+package amqputils
 
 import (
 	"encoding/json"
@@ -22,8 +23,8 @@ var (
 var producerConn *amqp.Connection
 var producerCh *amqp.Channel
 
-// InitProducerAmqp initializes the AMQP producer
-func InitProducerAmqp() {
+// InitProducerAMQP initializes the AMQP producer
+func InitProducerAMQP() {
 	var err error
 
 	// Skip initialization in test environment

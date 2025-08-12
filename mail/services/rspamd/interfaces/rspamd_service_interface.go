@@ -1,4 +1,5 @@
-package rspamdservice
+// Package rspamdinterfaces contains the interfaces for the Rspamd service
+package rspamdinterfaces
 
 import rspamdclient "github.com/atomic-blend/backend/mail/services/rspamd/client"
 
