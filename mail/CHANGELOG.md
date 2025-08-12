@@ -2,6 +2,118 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## mail/v0.1.0-rc.10 - 2025-08-12
+#### Bug Fixes
+- linter issues + tests - (eb2203e) - Brandon Guigo
+- mail-server grpc errors - (b98aab3) - Brandon Guigo
+- error when sending a message through amqp - (e396868) - Brandon Guigo
+- tests and add a script to run all tests - (57a16fe) - Brandon Guigo
+- refactor mail-server - (fe43346) - Brandon Guigo
+- move in memory mongo to shared - (e18b6fa) - Brandon Guigo
+- move grpc client to shared package - (f08c198) - Brandon Guigo
+- move middleware package to shared directory - (51f2e0f) - Brandon Guigo
+- move utils into shared library - (f0f414b) - Brandon Guigo
+- move services into a shared directory - (d430c40) - Brandon Guigo
+- linter - (4f38427) - Brandon Guigo
+- refactor rspamd into a service - (ed641d2) - Brandon Guigo
+- move s3 service to his dir - (4675422) - Brandon Guigo
+- move amqp and age encryption utils to their services - (e56a537) - Brandon Guigo
+- move the mocks to their service directory - (32bcb47) - Brandon Guigo
+- age service interface - (09c426f) - Brandon Guigo
+- refactor s3 into a service - (758b273) - Brandon Guigo
+- refactor age into a service - (50386c6) - Brandon Guigo
+- refactor services to the structure i want - (147f357) - Brandon Guigo
+#### Miscellaneous Chores
+- **(release)** bump RC versions for auth@auth/v0.11.0-rc.9 grpc@grpc/v0.2.0-rc.9 mail-server@mail-server/v0.1.0-rc.9 mail@mail/v0.1.0-rc.9 productivity@productivity/v0.11.0-rc.9 [skip ci] - (5e5d565) - GitHub Actions
+
+- - -
+
+## productivity/v0.11.0-rc.9 - 2025-08-12
+#### Bug Fixes
+- make amqp utils in mail have independent channels and connections - (dba7637) - Brandon Guigo
+#### Miscellaneous Chores
+- **(release)** bump RC versions for auth@auth/v0.11.0-rc.8 grpc@grpc/v0.2.0-rc.8 mail-server@mail-server/v0.1.0-rc.8 mail@mail/v0.1.0-rc.8 productivity@productivity/v0.11.0-rc.8 [skip ci] - (34a482a) - GitHub Actions
+
+- - -
+
+## productivity/v0.11.0-rc.8 - 2025-08-12
+#### Bug Fixes
+- unit tests for mail-server - (556eacb) - Brandon Guigo
+- linter - (dc7b49b) - Brandon Guigo
+- linter - (e472637) - Brandon Guigo
+- parsing of the mail payload - (0cba80b) - Brandon Guigo
+- worker processing registers message - (0796c81) - Brandon Guigo
+- refactor code and tests to have amqp and s3 mockable via DI - (77aacb1) - Brandon Guigo
+- bugs with structure preservation when encrypting - (fc952ec) - Brandon Guigo
+- publishing error for message (routing key) - (6e3012d) - Brandon Guigo
+- revert: "feat: start of the implementation of the gRPC calls to manage the sending emails" - (ba1a891) - Brandon Guigo
+#### Features
+- make grpc call work - (c685348) - Brandon Guigo
+- add grpc call to update the mail status - (cc7f37d) - Brandon Guigo
+- continue work on sending the emails - (176f195) - Brandon Guigo
+- setup dkim signing - (0cf38ea) - Brandon Guigo
+- setup the structure of the send methods - (d0b53ed) - Brandon Guigo
+- make amqp consumer / producer configuration totally via - (5fcc202) - Brandon Guigo
+- add grpc to get public key via userid + encrypt the content of the mail - (4e4ff91) - Brandon Guigo
+- add a raw mail model to have a temporary entity to work on before encrypting + rabbit - (5e802d2) - Brandon Guigo
+- start of the implementation of the gRPC calls to manage the sending emails - (ef92c62) - Brandon Guigo
+- fix types and payloads - (32658b0) - Brandon Guigo
+- add send email model and controller - (cc42a89) - Brandon Guigo
+#### Miscellaneous Chores
+- **(release)** bump RC versions for auth@auth/v0.11.0-rc.7 grpc@grpc/v0.2.0-rc.7 mail-server@mail-server/v0.1.0-rc.7 mail@mail/v0.1.0-rc.7 productivity@productivity/v0.11.0-rc.7 [skip ci] - (24990d2) - GitHub Actions
+
+- - -
+
+## productivity/v0.11.0-rc.7 - 2025-08-12
+#### Features
+- store all the headers of the mail encrypted in DB - (ce1f7b2) - Brandon Guigo
+#### Miscellaneous Chores
+- **(release)** bump RC versions for auth@auth/v0.11.0-rc.6 grpc@grpc/v0.2.0-rc.6 mail-server@mail-server/v0.1.0-rc.6 mail@mail/v0.1.0-rc.6 productivity@productivity/v0.11.0-rc.6 [skip ci] - (e000019) - GitHub Actions
+- **(release)** bump RC versions for auth@auth/v0.11.0-rc.5 grpc@grpc/v0.2.0-rc.5 mail-server@mail-server/v0.1.0-rc.5 mail@mail/v0.1.0-rc.5 productivity@productivity/v0.11.0-rc.5 [skip ci] - (d55f603) - GitHub Actions
+- **(release)** bump RC versions for auth@auth/v0.11.0-rc.4 grpc@grpc/v0.2.0-rc.4 mail-server@mail-server/v0.1.0-rc.4 mail@mail/v0.1.0-rc.4 productivity@productivity/v0.11.0-rc.4 [skip ci] - (f890081) - GitHub Actions
+- **(release)** bump RC versions for auth@auth/v0.11.0-rc.3 grpc@grpc/v0.2.0-rc.3 mail-server@mail-server/v0.1.0-rc.3 mail@mail/v0.1.0-rc.3 productivity@productivity/v0.11.0-rc.3 [skip ci] - (ebe0561) - GitHub Actions
+
+- - -
+
+## productivity/v0.11.0-rc.3 - 2025-08-12
+#### Bug Fixes
+- centralize dockerfiles and allow build with grpc in the monorepo - (95b2dfc) - Brandon Guigo
+- amqp error - (9fdb4c3) - Brandon Guigo
+- linter for mail and mail-server - (401774e) - Brandon Guigo
+- grpc linter + mail in test ci/cd + fix error in smtp server test - (3b67a14) - Brandon Guigo
+- store the user id of the mail recipient inside the mail entity - (7fcba3c) - Brandon Guigo
+- migrate to the gin pagination package - (3d24866) - Brandon Guigo
+- test mail repository without many (transactions not supported) - (27f53d4) - Brandon Guigo
+- add tests for receive emails - (dd5c17d) - Brandon Guigo
+- receive email without attachement leads to no content disposition - (f8e0ac5) - Brandon Guigo
+- update entity - (ca1e74a) - Brandon Guigo
+- update processor mailContent struct - (86f0ba7) - Brandon Guigo
+- refactor - (e9552bc) - Brandon Guigo
+#### Features
+- add bruno collections and fix errors - (b6b303c) - Brandon Guigo
+- add email controller with pagination - (6f739c0) - Brandon Guigo
+- configure minio and rollback stored files when write to mongo fails - (100ad59) - Brandon Guigo
+- upload file and email to storage with transactions for all recipients - (3e69645) - Brandon Guigo
+- refactor encryption to a separate service - (4dd3fe1) - Brandon Guigo
+- encrypt the content of the mail with the user public key - (77489a1) - Brandon Guigo
+- update grpc to use latest version + configure dev docker compose to use go workspaces + add grpc to get public key - (370934b) - Brandon Guigo
+- make the smtp server handle anonymous auth mecanism + use emersion packages inside the test script - (e807664) - Brandon Guigo
+- ack the message when processing is done - (080b6fb) - Brandon Guigo
+- store the status of the spam check inside the mail content object - (3d897fc) - Brandon Guigo
+- add switch for handling return of rspamd - (59218b5) - Brandon Guigo
+- parse the newly added amqp message - (e38584a) - Brandon Guigo
+- configure rspamd and create the client in mail servoce - (efe70a3) - Brandon Guigo
+- setup email processor - (1734a8f) - Brandon Guigo
+- route received email to the worker processor - (6b7e34f) - Brandon Guigo
+- configure rabbitmq worker for mails - (98bf875) - Brandon Guigo
+- configure amqp consumer and producer - (325623a) - Brandon Guigo
+- fix middleware and add mail api - (b2f1de8) - Brandon Guigo
+#### Miscellaneous Chores
+- **(release)** bump RC versions for auth@auth/v0.11.0-rc.2 grpc@grpc/v0.2.0-rc.2 mail-server@mail-server/v0.1.0-rc.2 mail@mail/v0.1.0-rc.2 productivity@productivity/v0.11.0-rc.2 [skip ci] - (03832fc) - GitHub Actions
+- **(release)** bump RC versions for auth@auth/v0.11.0-rc.1 grpc@grpc/v0.2.0-rc.1 mail-server@mail-server/v0.1.0-rc.1 mail@mail/v0.1.0-rc.1 productivity@productivity/v0.11.0-rc.1 [skip ci] - (873e29b) - GitHub Actions
+
+- - -
+
 ## mail/v0.1.0-rc.9 - 2025-08-12
 #### Bug Fixes
 - make amqp utils in mail have independent channels and connections - (dba7637) - Brandon Guigo
