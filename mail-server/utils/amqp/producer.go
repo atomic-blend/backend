@@ -26,6 +26,12 @@ var ch *amqp.Channel
 func InitProducerAMQP() {
 	var err error
 
+	// Skip initialization in test environment
+	if os.Getenv("GO_ENV") == "test" {
+		log.Debug().Msg("Skipping AMQP producer initialization (test environment)")
+		return
+	}
+
 	shortcuts.CheckRequiredEnvVar("MAIL_SERVER_PRODUCER_AMQP_URL or MAIL_SERVER_AMQP_URL or AMQP_URL", amqpURL, "amqp://user:password@localhost:5672/")
 	shortcuts.CheckRequiredEnvVar("MAIL_SERVER_PRODUCER_AMQP_QUEUE_NAME or MAIL_SERVER_AMQP_QUEUE_NAME or AMQP_QUEUE_NAME", getAMQPQueueName(true), "")
 	shortcuts.CheckRequiredEnvVar("MAIL_SERVER_PRODUCER_AMQP_EXCHANGE_NAMES or MAIL_SERVER_PRODUCER_AMQP_EXCHANGE_NAMES or MAIL_SERVER_AMQP_EXCHANGE_NAMES", exchangeNames, "")
@@ -176,13 +182,16 @@ func PublishMessage(exchangeName string, topic string, message map[string]interf
 		return
 	}
 
-	// Check if connection and channel are healthy
-	if !IsConnectionHealthy() {
-		log.Warn().Msg("AMQP connection or channel is not available, attempting to reconnect")
-		InitProducerAMQP()
+	// In test mode, we don't need to check connection health
+	if os.Getenv("GO_ENV") != "test" {
+		// Check if connection and channel are healthy
 		if !IsConnectionHealthy() {
-			log.Error().Msg("Failed to establish AMQP connection, cannot publish message")
-			return
+			log.Warn().Msg("AMQP connection or channel is not available, attempting to reconnect")
+			InitProducerAMQP()
+			if !IsConnectionHealthy() {
+				log.Error().Msg("Failed to establish AMQP connection, cannot publish message")
+				return
+			}
 		}
 	}
 

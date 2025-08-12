@@ -25,6 +25,12 @@ var ch *amqp.Channel
 func InitProducerAmqp() {
 	var err error
 
+	// Skip initialization in test environment
+	if os.Getenv("GO_ENV") == "test" {
+		log.Debug().Msg("Skipping AMQP producer initialization (test environment)")
+		return
+	}
+
 	shortcuts.CheckRequiredEnvVar("MAIL_SERVER_PRODUCER_AMQP_URL or MAIL_SERVER_AMQP_URL or AMQP_URL", amqpURL, "amqp://user:password@localhost:5672/")
 	shortcuts.CheckRequiredEnvVar("MAIL_SERVER_PRODUCER_AMQP_QUEUE_NAME or MAIL_SERVER_AMQP_QUEUE_NAME or AMQP_QUEUE_NAME", getAMQPQueueName(true), "")
 	shortcuts.CheckRequiredEnvVar("MAIL_SERVER_PRODUCER_AMQP_EXCHANGE_NAMES or MAIL_SERVER_AMQP_EXCHANGE_NAMES or AMQP_EXCHANGE_NAMES", exchangeNames, "")
