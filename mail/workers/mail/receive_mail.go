@@ -7,7 +7,7 @@ import (
 
 	"connectrpc.com/connect"
 	userv1 "github.com/atomic-blend/backend/grpc/gen/user/v1"
-	"github.com/atomic-blend/backend/mail/grpc/clients"
+	userclient "github.com/atomic-blend/backend/shared/grpc/user"
 	"github.com/atomic-blend/backend/mail/models"
 	"github.com/atomic-blend/backend/mail/repositories"
 	rspamdservice "github.com/atomic-blend/backend/shared/services/rspamd"
@@ -132,7 +132,7 @@ func receiveMail(m *amqp.Delivery, payload ReceivedMailPayload) {
 
 		// get the user public key from the auth service via grpc
 		log.Info().Str("rcpt", rcpt).Msg("Instantiating user client")
-		userClient, err := clients.NewUserClient()
+		userClient, err := userclient.NewUserClient()
 		if err != nil {
 			log.Error().Err(err).Msg("Failed to create user client")
 			haveErrors = true
