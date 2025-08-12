@@ -11,6 +11,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
+// UpdateMailStatus updates the status of an email
 func (s *GrpcServer) UpdateMailStatus(ctx context.Context, req *connect.Request[mailv1.UpdateMailStatusRequest]) (*connect.Response[mailv1.UpdateMailStatusResponse], error) {
 	emailID := req.Msg.GetEmailId()
 	status := req.Msg.GetStatus()

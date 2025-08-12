@@ -30,6 +30,7 @@ type Mail struct {
 	UpdatedAt      *primitive.DateTime `bson:"updated_at,omitempty" json:"updated_at,omitempty"`
 }
 
+// Encrypt encrypts the mail data
 func (s *Mail) Encrypt(publicKey string) (*Mail, error) {
 	encryptedMail := &Mail{
 		ID:             s.ID,
