@@ -1,4 +1,4 @@
-package interfaces
+package amqpservice
 
 // AMQPServiceInterface defines the interface for AMQP operations
 type AMQPServiceInterface interface {
