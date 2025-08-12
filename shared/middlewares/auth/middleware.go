@@ -1,10 +1,11 @@
 package auth
 
 import (
+	"github.com/atomic-blend/backend/shared/repositories/user"
+	"github.com/atomic-blend/backend/shared/repositories/user_role"
+	"github.com/atomic-blend/backend/shared/utils/jwt"
 	"net/http"
 	"strings"
-
-	"github.com/atomic-blend/backend/shared/utils/jwt"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog/log"
@@ -14,19 +15,14 @@ import (
 // UserAuthInfo contains the authenticated user information
 type UserAuthInfo struct {
 	UserID primitive.ObjectID
-	Claims *jwt.CustomClaims
 }
 
 // Middleware verifies JWT tokens and adds user info to the context
 // Can be applied to specific routes that require authentication
 func Middleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Get the Authorization header or authorization header
+		// Get the Authorization header
 		authHeader := c.GetHeader("Authorization")
-		if authHeader == "" {
-			authHeader = c.GetHeader("authorization")
-		}
-
 		if authHeader == "" {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization header is required"})
 			c.Abort()
@@ -51,14 +47,15 @@ func Middleware() gin.HandlerFunc {
 		}
 
 		// Extract user ID from token claims
-		if claims.UserID == nil {
+		userIDStr, ok := (*claims)["user_id"].(string)
+		if !ok {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token: missing user_id claim"})
 			c.Abort()
 			return
 		}
 
 		// Convert string user ID to ObjectID
-		userID, err := primitive.ObjectIDFromHex(*claims.UserID)
+		userID, err := primitive.ObjectIDFromHex(userIDStr)
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid user ID in token"})
 			c.Abort()
@@ -68,7 +65,6 @@ func Middleware() gin.HandlerFunc {
 		// Set user info in context for use in subsequent handlers
 		c.Set("authUser", &UserAuthInfo{
 			UserID: userID,
-			Claims: claims,
 		})
 
 		c.Next()
@@ -93,7 +89,7 @@ func GetAuthUser(c *gin.Context) *UserAuthInfo {
 
 // requireRoleHandler checks if the authenticated user has the specified role
 // It must be used after RequireAuth or AuthMiddleware
-func requireRoleHandler(roleName string) gin.HandlerFunc {
+func requireRoleHandler(roleName string, userRepo *user.UserRepository, userRoleRepo *userrole.UserRoleRepository) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Get authenticated user info
 		authUser := GetAuthUser(c)
@@ -103,21 +99,31 @@ func requireRoleHandler(roleName string) gin.HandlerFunc {
 			return
 		}
 
-		// Check if Claims is nil
-		if authUser.Claims == nil || authUser.Claims.Roles == nil {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found"})
+		// Get user details from database to check roles
+		user, err := userRepo.FindByID(c, authUser.UserID)
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to verify user roles")
+			if err.Error() == "user not found" {
+				c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found"})
+			} else {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to verify user roles"})
+			}
 			c.Abort()
 			return
 		}
-
-		roles := *authUser.Claims.Roles
-
-		log.Info().Msgf("User roles: %v", roles)
+		err = userRoleRepo.PopulateRoles(c, user)
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to verify user roles")
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to verify user roles"})
+			c.Abort()
+			return
+		}
+		log.Info().Msgf("User roles: %v", user.RoleIds)
 
 		// Check if user has the required role
 		hasRole := false
-		for _, role := range roles {
-			if role == roleName {
+		for _, role := range user.Roles {
+			if role != nil && role.Name == roleName {
 				hasRole = true
 				break
 			}
@@ -164,16 +170,17 @@ func OptionalAuth() gin.HandlerFunc {
 		}
 
 		// Extract user ID from token claims
-
-		if claims.UserID == nil {
+		userIDStr, ok := (*claims)["user_id"].(string)
+		if !ok {
 			// Just continue without auth
 			c.Next()
 			return
 		}
 
 		// Convert string user ID to ObjectID
-		userID, err := primitive.ObjectIDFromHex(*claims.UserID)
+		userID, err := primitive.ObjectIDFromHex(userIDStr)
 		if err != nil {
+			// Just continue without auth
 			c.Next()
 			return
 		}

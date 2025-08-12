@@ -2,17 +2,35 @@
 package auth
 
 import (
-	"github.com/atomic-blend/backend/shared/utils/jwt"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/stretchr/testify/assert"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
+// generateTestToken creates a JWT token for testing without database dependencies
+func generateTestToken(userID primitive.ObjectID, secret string) (string, error) {
+	claims := jwt.MapClaims{
+		"sub":           userID.Hex(),
+		"user_id":       userID.Hex(),
+		"aud":           "atomic-blend",
+		"iss":           "atomic-blend",
+		"type":          "access",
+		"iat":           time.Now().Unix(),
+		"exp":           time.Now().Add(15 * time.Minute).Unix(),
+		"is_subscribed": false,
+		"roles":         []string{},
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString([]byte(secret))
+}
 
 // Simplified test for RequireAuth
 func TestRequireAuth(t *testing.T) {
@@ -21,7 +39,8 @@ func TestRequireAuth(t *testing.T) {
 
 	// Set a mock secret for testing
 	originalSecret := os.Getenv("SSO_SECRET")
-	os.Setenv("SSO_SECRET", "test_secret_for_require_auth")
+	testSecret := "test_secret_for_require_auth"
+	os.Setenv("SSO_SECRET", testSecret)
 	defer func() {
 		os.Setenv("SSO_SECRET", originalSecret)
 	}()
@@ -46,12 +65,14 @@ func TestRequireAuth(t *testing.T) {
 	assert.Equal(t, http.StatusUnauthorized, w.Code)
 
 	// Test with valid auth header
-	userID := primitive.NewObjectID()
-	tokenDetails, _ := jwt.GenerateToken(userID, jwt.AccessToken)
+	// Create a proper JWT token for testing
+	mockUserID := primitive.NewObjectID()
+	token, err := generateTestToken(mockUserID, testSecret)
+	assert.NoError(t, err)
 
 	w = httptest.NewRecorder()
 	req, _ = http.NewRequest("GET", "/test/protected", nil)
-	req.Header.Set("Authorization", "Bearer "+tokenDetails.Token)
+	req.Header.Set("Authorization", "Bearer "+token)
 	router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
@@ -64,7 +85,8 @@ func TestRequireRole(t *testing.T) {
 
 	// Set a mock secret for testing
 	originalSecret := os.Getenv("SSO_SECRET")
-	os.Setenv("SSO_SECRET", "test_secret_for_require_role")
+	testSecret := "test_secret_for_require_role"
+	os.Setenv("SSO_SECRET", testSecret)
 	defer func() {
 		os.Setenv("SSO_SECRET", originalSecret)
 	}()
@@ -102,12 +124,14 @@ func TestRequireRole(t *testing.T) {
 	assert.Equal(t, http.StatusUnauthorized, w.Code)
 
 	// Test with valid auth header (should pass both middlewares)
-	userID := primitive.NewObjectID()
-	tokenDetails, _ := jwt.GenerateToken(userID, jwt.AccessToken)
+	// Create a proper JWT token for testing
+	mockUserID := primitive.NewObjectID()
+	token, err := generateTestToken(mockUserID, testSecret)
+	assert.NoError(t, err)
 
 	w = httptest.NewRecorder()
 	req, _ = http.NewRequest("GET", "/admin/test", nil)
-	req.Header.Set("Authorization", "Bearer "+tokenDetails.Token)
+	req.Header.Set("Authorization", "Bearer "+token)
 	router.ServeHTTP(w, req)
 
 	// Should pass both middlewares and return 200

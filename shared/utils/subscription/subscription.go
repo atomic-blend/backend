@@ -1,8 +1,8 @@
 package subscription
 
 import (
-	"github.com/atomic-blend/backend/auth/repositories"
-	"github.com/atomic-blend/backend/auth/utils/db"
+	"github.com/atomic-blend/backend/shared/repositories/user"
+	"github.com/atomic-blend/backend/shared/utils/db"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -11,7 +11,7 @@ import (
 
 // IsUserSubscribed checks if a user has an active subscription
 func IsUserSubscribed(ctx *gin.Context, userID primitive.ObjectID) bool {
-	userRepo := repositories.NewUserRepository(db.Database)
+	userRepo := user.NewUserRepository(db.Database)
 
 	user, err := userRepo.FindByID(ctx, userID)
 	if err != nil {

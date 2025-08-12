@@ -6,6 +6,9 @@ import (
 	"os"
 	"time"
 
+	"github.com/atomic-blend/backend/shared/utils/subscription"
+
+	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/lestrrat-go/jwx/jwk"
 	"github.com/rs/zerolog/log"
@@ -29,22 +32,15 @@ type TokenDetails struct {
 	TokenType TokenType
 	ExpiresAt time.Time
 	UserID    string
-}
-
-// CustomClaims represents the custom claims in the JWT
-type CustomClaims struct {
-	UserID       *string   `json:"user_id"`
-	IsSubscribed *bool     `json:"is_subscribed"`
-	Type         *string   `json:"type"`
-	Roles        *[]string `json:"roles"`
-	jwt.RegisteredClaims
+	Roles     []string
 }
 
 // GenerateToken creates a new JWT token
-func GenerateToken(userID primitive.ObjectID, tokenType TokenType) (*TokenDetails, error) {
+func GenerateToken(ctx *gin.Context, userID primitive.ObjectID, roles []string, tokenType TokenType) (*TokenDetails, error) {
 	var td TokenDetails
 	td.UserID = userID.Hex()
 	td.TokenType = tokenType
+	td.Roles = roles
 
 	var secretKey string
 	var expTime time.Duration
@@ -57,13 +53,17 @@ func GenerateToken(userID primitive.ObjectID, tokenType TokenType) (*TokenDetail
 	expTime = 15 * time.Minute // 15 minutes for access token
 	td.ExpiresAt = time.Now().Add(expTime)
 
+	isSubscribed := subscription.IsUserSubscribed(ctx, userID)
+
 	claims := jwt.MapClaims{
-		"sub":     td.UserID,
-		"user_id": td.UserID,
-		"aud":     "atomic-blend",
-		"iss":     "atomic-blend",
-		"type":    string(tokenType),
-		"iat":     time.Now().Unix(),
+		"sub":           td.UserID,
+		"user_id":       td.UserID,
+		"aud":           "atomic-blend",
+		"iss":           "atomic-blend",
+		"type":          string(tokenType),
+		"iat":           time.Now().Unix(),
+		"is_subscribed": isSubscribed,
+		"roles":         roles,
 	}
 
 	if tokenType == AccessToken {
@@ -82,15 +82,15 @@ func GenerateToken(userID primitive.ObjectID, tokenType TokenType) (*TokenDetail
 }
 
 // ValidateToken verifies if a token is valid
-func ValidateToken(tokenString string, tokenType TokenType) (*CustomClaims, error) {
+func ValidateToken(tokenString string, tokenType TokenType) (*jwt.MapClaims, error) {
+
 	secretKey := os.Getenv("SSO_SECRET")
 	if secretKey == "" {
 		log.Error().Msg("SSO_SECRET not set")
 		return nil, errors.New("SSO_SECRET not set")
 	}
 
-	claims := &CustomClaims{}
-	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, errors.New("unexpected signing method")
 		}
@@ -101,16 +101,17 @@ func ValidateToken(tokenString string, tokenType TokenType) (*CustomClaims, erro
 		return nil, err
 	}
 
-	if !token.Valid {
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok || !token.Valid {
 		return nil, errors.New("invalid token")
 	}
 
 	// Verify token type
-	if *claims.Type != string(tokenType) {
+	if claims["type"] != string(tokenType) {
 		return nil, errors.New("invalid token type")
 	}
 
-	return claims, nil
+	return &claims, nil
 }
 
 // GenerateJWKS creates a new JSON Web Key Set

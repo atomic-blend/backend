@@ -1,10 +1,10 @@
 package subscription
 
 import (
-	"github.com/atomic-blend/backend/auth/models"
-	"github.com/atomic-blend/backend/auth/repositories"
+	"github.com/atomic-blend/backend/shared/models"
+	"github.com/atomic-blend/backend/shared/repositories/user"
 	"github.com/atomic-blend/backend/shared/test_utils/inmemorymongo"
-	"github.com/atomic-blend/backend/auth/utils/db"
+	"github.com/atomic-blend/backend/shared/utils/db"
 	"context"
 	"testing"
 	"time"
@@ -15,7 +15,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-func setupTestDB(t *testing.T) (*repositories.UserRepository, *gin.Context, func()) {
+func setupTestDB(t *testing.T) (*user.UserRepository, *gin.Context, func()) {
 	// Set Gin to test mode
 	gin.SetMode(gin.TestMode)
 
@@ -32,7 +32,7 @@ func setupTestDB(t *testing.T) (*repositories.UserRepository, *gin.Context, func
 
 	// Get database reference and create repository
 	database := client.Database("test_db")
-	repo := repositories.NewUserRepository(database)
+	repo := user.NewUserRepository(database)
 
 	// Set the global database for the subscription function to use
 	db.Database = database
@@ -51,7 +51,7 @@ func setupTestDB(t *testing.T) (*repositories.UserRepository, *gin.Context, func
 	return repo, ctx, cleanup
 }
 
-func createTestUser(t *testing.T, repo *repositories.UserRepository, purchases []*models.PurchaseEntity) *models.UserEntity {
+func createTestUser(t *testing.T, repo *user.UserRepository, purchases []*models.PurchaseEntity) *models.UserEntity {
 	email := "test@example.com"
 	password := "testpassword"
 	user := &models.UserEntity{

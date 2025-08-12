@@ -4,7 +4,7 @@ import (
 	"github.com/atomic-blend/backend/auth/models"
 	"github.com/atomic-blend/backend/auth/repositories"
 	"github.com/atomic-blend/backend/shared/test_utils/inmemorymongo"
-	"github.com/atomic-blend/backend/auth/utils/password"
+	"github.com/atomic-blend/backend/shared/utils/password"
 	"bytes"
 	"context"
 	"encoding/json"
