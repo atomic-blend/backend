@@ -527,7 +527,8 @@ func displayResults(results []*ServiceResult, startTime time.Time) {
 				fmt.Printf("\n❌ %s - Golint Failure:\n", result.Name)
 				fmt.Printf("Issues Found: %d\n", result.GolintResult.IssueCount)
 				if result.GolintResult.Output != "" {
-					fmt.Printf("Output: %s\n", result.GolintResult.Output)
+					fmt.Printf("Issues:\n")
+					displayGolintIssuesTable(result.GolintResult.Output)
 				}
 			}
 
@@ -555,5 +556,26 @@ func displayResults(results []*ServiceResult, startTime time.Time) {
 		os.Exit(1)
 	} else {
 		fmt.Printf("\n✅ All checks passed successfully!\n")
+	}
+}
+
+// displayGolintIssuesTable displays golint output in a simple, clean format
+func displayGolintIssuesTable(output string) {
+	lines := strings.Split(strings.TrimSpace(output), "\n")
+
+	for _, line := range lines {
+		if line == "" {
+			continue
+		}
+
+		parts := strings.SplitN(line, ":", 4) // filename:line:column:message
+		if len(parts) >= 4 {
+			filename := parts[0]
+			lineNum := parts[1]
+			message := strings.TrimSpace(parts[3])
+
+			// Simple format: filename:line: message
+			fmt.Printf("  %s:%s: %s\n", filename, lineNum, message)
+		}
 	}
 }

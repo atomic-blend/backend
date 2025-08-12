@@ -1,4 +1,4 @@
-// Package interfaces contains the interfaces for the mail-related gRPC operations
+// Package mailclient contains the interfaces for the mail-related gRPC operations
 package mailclient
 
 import (
