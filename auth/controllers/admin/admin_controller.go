@@ -1,7 +1,7 @@
 package admin
 
 import (
-	"github.com/atomic-blend/backend/auth/auth"
+	"github.com/atomic-blend/backend/shared/middlewares/auth"
 	"github.com/atomic-blend/backend/auth/controllers/admin/userrole"
 	"github.com/atomic-blend/backend/auth/repositories"
 

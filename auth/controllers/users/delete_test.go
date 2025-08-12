@@ -6,7 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/atomic-blend/backend/auth/auth"
+	"github.com/atomic-blend/backend/shared/middlewares/auth"
 	"github.com/atomic-blend/backend/auth/models"
 	"github.com/atomic-blend/backend/auth/tests/mocks"
 

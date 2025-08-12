@@ -1,9 +1,10 @@
 package webhooks
 
 import (
-	"github.com/atomic-blend/backend/auth/auth"
-	"github.com/atomic-blend/backend/auth/repositories"
 	"os"
+
+	"github.com/atomic-blend/backend/auth/repositories"
+	staticstringmiddleware "github.com/atomic-blend/backend/shared/middlewares/static_string"
 
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -31,7 +32,7 @@ func SetupRoutes(router *gin.Engine, db *mongo.Database) {
 
 	// Protected user routes (require authentication with static token from env)
 	bearerToken := "Bearer " + os.Getenv("REVENUE_CAT_WEBHOOK_TOKEN")
-	protectedUserRoutes := auth.RequireStaticStringMiddleware(revenueCatGroup, bearerToken)
+	protectedUserRoutes := staticstringmiddleware.RequireStaticStringMiddleware(revenueCatGroup, bearerToken)
 	{
 		protectedUserRoutes.POST("", webhooksController.HandleRevenueCatWebhook)
 	}
