@@ -1,7 +1,7 @@
 package db
 
 import (
-	"github.com/atomic-blend/backend/mail/tests/utils/inmemorymongo"
+	"github.com/atomic-blend/backend/shared/test_utils/inmemorymongo"
 	"fmt"
 	"os"
 	"testing"
