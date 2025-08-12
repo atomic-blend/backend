@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/atomic-blend/backend/auth/tests/utils/inmemorymongo"
+	"github.com/atomic-blend/backend/shared/test_utils/inmemorymongo"
 	"github.com/atomic-blend/backend/auth/utils/db"
 
 	"github.com/gin-gonic/gin"
