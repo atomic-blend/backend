@@ -15,8 +15,8 @@ type MockAMQPService struct {
 var _ amqpinterfaces.AMQPServiceInterface = (*MockAMQPService)(nil)
 
 // PublishMessage publishes a message to the AMQP broker
-func (m *MockAMQPService) PublishMessage(exchangeName string, topic string, message map[string]interface{}) {
-	m.Called(exchangeName, topic, message)
+func (m *MockAMQPService) PublishMessage(exchangeName string, topic string, message map[string]interface{}, headers *amqp.Table) {
+	m.Called(exchangeName, topic, message, headers)
 }
 
 // InitProducerAMQP initializes the AMQP producer

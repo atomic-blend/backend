@@ -8,5 +8,5 @@ type AMQPServiceInterface interface {
 	Messages() <-chan amqp.Delivery
 	InitProducerAMQP()
 	InitConsumerAMQP()
-	PublishMessage(exchangeName string, topic string, message map[string]interface{})
+	PublishMessage(exchangeName string, topic string, message map[string]interface{}, headers *amqp.Table)
 }

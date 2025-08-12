@@ -1,9 +1,9 @@
 package sendmail
 
 import (
-	"github.com/atomic-blend/backend/shared/middlewares/auth"
-	userclient "github.com/atomic-blend/backend/shared/grpc/user"
 	"github.com/atomic-blend/backend/mail/repositories"
+	userclient "github.com/atomic-blend/backend/shared/grpc/user"
+	"github.com/atomic-blend/backend/shared/middlewares/auth"
 	amqpservice "github.com/atomic-blend/backend/shared/services/amqp"
 	amqpinterfaces "github.com/atomic-blend/backend/shared/services/amqp/interfaces"
 	s3service "github.com/atomic-blend/backend/shared/services/s3"

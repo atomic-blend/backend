@@ -72,7 +72,7 @@ func InitProducerAMQP() {
 }
 
 // PublishMessage publishes a message to the AMQP broker
-func PublishMessage(exchangeName string, topic string, message map[string]interface{}) {
+func PublishMessage(exchangeName string, topic string, message map[string]interface{}, headers *amqp.Table) {
 	// Skip publishing in test environment
 	if os.Getenv("GO_ENV") == "test" || producerCh == nil {
 		log.Debug().Msg("Skipping AMQP message publishing (test environment or no connection)")
@@ -95,6 +95,7 @@ func PublishMessage(exchangeName string, topic string, message map[string]interf
 			ContentType: "application/json",
 			Body:        encodedPayload,
 			Timestamp:   time.Now(),
+			Headers:     *headers,
 		})
 	shortcuts.FailOnError(err, "Failed to publish a message")
 }

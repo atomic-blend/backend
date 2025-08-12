@@ -1,4 +1,4 @@
-package client
+package mailclient
 
 import (
 	"context"
@@ -7,8 +7,7 @@ import (
 	"connectrpc.com/connect"
 	mailv1 "github.com/atomic-blend/backend/grpc/gen/mail/v1"
 	"github.com/atomic-blend/backend/grpc/gen/mail/v1/mailv1connect"
-	"github.com/atomic-blend/backend/mail-server/grpc/interfaces"
-	grpcclientutils "github.com/atomic-blend/backend/mail-server/utils/grpc_client_utils"
+	grpcclientutils "github.com/atomic-blend/backend/shared/utils/grpc_client_utils"
 )
 
 // MailClient is the client for mail-related gRPC operations
@@ -16,7 +15,7 @@ type MailClient struct {
 	client mailv1connect.MailServiceClient
 }
 
-var _ interfaces.MailClientInterface = (*MailClient)(nil)
+var _ MailClientInterface = (*MailClient)(nil)
 
 // NewMailClient creates a new mail client
 func NewMailClient() (*MailClient, error) {

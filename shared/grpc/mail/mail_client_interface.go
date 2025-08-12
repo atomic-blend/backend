@@ -1,5 +1,5 @@
 // Package interfaces contains the interfaces for the mail-related gRPC operations
-package interfaces
+package mailclient
 
 import (
 	"context"

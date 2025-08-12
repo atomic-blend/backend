@@ -1,5 +1,5 @@
-// Package client contains the logic for creating mail status requests
-package client
+// Package mailclient contains the logic for creating mail status requests
+package mailclient
 
 import (
 	"time"
