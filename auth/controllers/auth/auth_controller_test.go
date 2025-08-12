@@ -1,10 +1,13 @@
 package auth
 
 import (
-	"github.com/atomic-blend/backend/auth/models"
-	"github.com/atomic-blend/backend/auth/repositories"
 	"reflect"
 	"testing"
+
+	"github.com/atomic-blend/backend/auth/repositories"
+	"github.com/atomic-blend/backend/shared/models"
+	userrepo "github.com/atomic-blend/backend/shared/repositories/user"
+	userrolerepo "github.com/atomic-blend/backend/shared/repositories/user_role"
 
 	"github.com/stretchr/testify/assert"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -12,8 +15,8 @@ import (
 
 func TestNewController(t *testing.T) {
 	// Create mock repositories
-	mockUserRepo := &repositories.UserRepository{}
-	mockUserRoleRepo := &repositories.UserRoleRepository{}
+	mockUserRepo := &userrepo.UserRepository{}
+	mockUserRoleRepo := &userrolerepo.UserRoleRepository{}
 	mockResetPasswordRepo := &repositories.UserResetPasswordRequestRepository{}
 
 	// Create a new controller
@@ -86,12 +89,12 @@ func TestControllerStructure(t *testing.T) {
 		// Check userRepo field
 		userRepoField, found := controllerType.FieldByName("userRepo")
 		assert.True(t, found, "userRepo field should exist")
-		assert.Equal(t, "repositories.UserRepositoryInterface", userRepoField.Type.String())
+		assert.Equal(t, "user.UserRepositoryInterface", userRepoField.Type.String())
 
 		// Check userRoleRepo field
 		userRoleRepoField, found := controllerType.FieldByName("userRoleRepo")
 		assert.True(t, found, "userRoleRepo field should exist")
-		assert.Equal(t, "repositories.UserRoleRepositoryInterface", userRoleRepoField.Type.String())
+		assert.Equal(t, "userrole.UserRoleRepositoryInterface", userRoleRepoField.Type.String())
 	})
 }
 

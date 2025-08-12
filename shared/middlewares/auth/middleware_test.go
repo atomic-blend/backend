@@ -8,7 +8,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/atomic-blend/backend/auth/models"
+	"github.com/atomic-blend/backend/shared/models"
 	"github.com/atomic-blend/backend/shared/test_utils/inmemorymongo"
 	"github.com/atomic-blend/backend/shared/utils/db"
 	"github.com/atomic-blend/backend/shared/utils/jwt"

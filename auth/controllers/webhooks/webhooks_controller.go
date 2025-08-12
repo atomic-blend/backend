@@ -3,7 +3,7 @@ package webhooks
 import (
 	"os"
 
-	"github.com/atomic-blend/backend/auth/repositories"
+	userrepo "github.com/atomic-blend/backend/shared/repositories/user"
 	staticstringmiddleware "github.com/atomic-blend/backend/shared/middlewares/static_string"
 
 	"github.com/gin-gonic/gin"
@@ -12,11 +12,11 @@ import (
 
 // Controller handles webhooks from external services like RevenueCat
 type Controller struct {
-	userRepo repositories.UserRepositoryInterface
+	userRepo userrepo.UserRepositoryInterface
 }
 
 // NewWebhooksController creates a new instance of WebhooksController
-func NewWebhooksController(userRepo repositories.UserRepositoryInterface) *Controller {
+func NewWebhooksController(userRepo userrepo.UserRepositoryInterface) *Controller {
 	return &Controller{
 		userRepo: userRepo,
 	}
@@ -24,7 +24,7 @@ func NewWebhooksController(userRepo repositories.UserRepositoryInterface) *Contr
 
 // SetupRoutes configures all user-related routes
 func SetupRoutes(router *gin.Engine, db *mongo.Database) {
-	userRepo := repositories.NewUserRepository(db)
+	userRepo := userrepo.NewUserRepository(db)
 	webhooksController := NewWebhooksController(userRepo)
 
 	// Public user routes (if any)

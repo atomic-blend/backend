@@ -11,7 +11,7 @@ import (
 	"github.com/atomic-blend/backend/auth/controllers/health"
 	"github.com/atomic-blend/backend/auth/controllers/users"
 	"github.com/atomic-blend/backend/auth/controllers/webhooks"
-	"github.com/atomic-blend/backend/auth/models"
+	"github.com/atomic-blend/backend/shared/models"
 	"github.com/atomic-blend/backend/shared/utils/db"
 
 	"github.com/gin-contrib/cors"
