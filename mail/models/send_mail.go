@@ -23,9 +23,9 @@ type SendMail struct {
 	ID           primitive.ObjectID  `bson:"_id" json:"id"`
 	Mail         *Mail               `bson:"mail" json:"mail"`
 	SendStatus   SendStatus          `bson:"send_status" json:"send_status"`
-	RetryCounter *int                `bson:"retry_counter" json:"retry_counter"`
-	FailureReason *string             `bson:"failure_reason" json:"failure_reason"`
-	FailedAt      *primitive.DateTime `bson:"failed_at" json:"failed_at"`
+	RetryCounter *int                `bson:"retry_counter,omitempty" json:"retry_counter,omitempty"`
+	FailureReason *string             `bson:"failure_reason,omitempty" json:"failure_reason,omitempty"`
+	FailedAt      *primitive.DateTime `bson:"failed_at,omitempty" json:"failed_at,omitempty"`
 	Trashed      bool                `bson:"trashed" json:"trashed"`
 	CreatedAt    *primitive.DateTime `bson:"created_at" json:"created_at"`
 	UpdatedAt    *primitive.DateTime `bson:"updated_at" json:"updated_at"`
