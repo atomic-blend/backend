@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/atomic-blend/backend/mail/utils/jwt"
+	"github.com/atomic-blend/backend/shared/utils/jwt"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog/log"

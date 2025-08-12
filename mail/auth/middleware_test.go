@@ -6,7 +6,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/atomic-blend/backend/mail/utils/jwt"
+	"github.com/atomic-blend/backend/shared/utils/jwt"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"

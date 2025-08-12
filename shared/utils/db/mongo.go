@@ -1,7 +1,7 @@
 package db
 
 import (
-	"github.com/atomic-blend/backend/mail/utils/shortcuts"	
+	"github.com/atomic-blend/backend/shared/utils/shortcuts"	
 	"context"
 	"fmt"
 	"os"

@@ -13,7 +13,7 @@ import (
 	rspamdservice "github.com/atomic-blend/backend/shared/services/rspamd"
 	rspamdclient "github.com/atomic-blend/backend/shared/services/rspamd/client"
 	s3service "github.com/atomic-blend/backend/shared/services/s3"
-	"github.com/atomic-blend/backend/mail/utils/db"
+	"github.com/atomic-blend/backend/shared/utils/db"
 	awss3 "github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/emersion/go-message"
 	"github.com/google/uuid"
