@@ -1,4 +1,4 @@
-package clients
+package userclient
 
 import (
 	"context"
@@ -7,7 +7,6 @@ import (
 	"connectrpc.com/connect"
 	userv1 "github.com/atomic-blend/backend/grpc/gen/user/v1"
 	"github.com/atomic-blend/backend/grpc/gen/user/v1/userv1connect"
-	"github.com/atomic-blend/backend/mail/grpc/interfaces"
 	grpcclientutils "github.com/atomic-blend/backend/shared/utils/grpc_client_utils"
 )
 
@@ -16,7 +15,7 @@ type UserClient struct {
 	client userv1connect.UserServiceClient
 }
 
-var _ interfaces.UserClientInterface = (*UserClient)(nil)
+var _ UserClientInterface = (*UserClient)(nil)
 
 // NewUserClient creates a new user client
 func NewUserClient() (*UserClient, error) {
