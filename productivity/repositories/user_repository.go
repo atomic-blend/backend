@@ -13,7 +13,7 @@ import (
 
 	"github.com/atomic-blend/backend/productivity/models"
 	"github.com/atomic-blend/backend/shared/utils/db"
-	regexutils "github.com/atomic-blend/backend/productivity/utils/regex"
+	regexutils "github.com/atomic-blend/backend/shared/utils/regex"
 )
 
 const userCollection = "users"

@@ -13,8 +13,8 @@ import (
 	"github.com/atomic-blend/backend/productivity/models"
 	"github.com/atomic-blend/backend/productivity/repositories"
 	"github.com/atomic-blend/backend/shared/utils/db"
-	fcmutils "github.com/atomic-blend/backend/productivity/utils/fcm_utils"
-	"github.com/atomic-blend/backend/productivity/utils/shortcuts"
+	fcmutils "github.com/atomic-blend/backend/shared/utils/fcm_utils"
+	"github.com/atomic-blend/backend/shared/utils/shortcuts"
 
 	fcm "github.com/appleboy/go-fcm"
 	"github.com/rs/zerolog/log"
