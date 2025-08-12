@@ -19,7 +19,6 @@ type UserAuthInfo struct {
 	Claims *jwt.CustomClaims
 }
 
-
 // Middleware verifies JWT tokens and adds user info to the context
 // Can be applied to specific routes that require authentication
 func Middleware() gin.HandlerFunc {
@@ -92,7 +91,7 @@ func GetAuthUser(c *gin.Context) *UserAuthInfo {
 
 // requireRoleHandler checks if the authenticated user has the specified role
 // It must be used after RequireAuth or AuthMiddleware
-func requireRoleHandler(roleName string, userRepo *user.UserRepository, userRoleRepo *userrole.UserRoleRepository) gin.HandlerFunc {
+func requireRoleHandler(roleName string, userRepo *user.Repository, userRoleRepo *userrole.Repository) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Get authenticated user info
 		authUser := GetAuthUser(c)

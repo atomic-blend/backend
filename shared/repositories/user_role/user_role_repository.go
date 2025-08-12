@@ -15,8 +15,8 @@ import (
 
 const userRoleCollection = "user_roles"
 
-// UserRoleRepositoryInterface defines methods that a UserRoleRepository must implement
-type UserRoleRepositoryInterface interface {
+// Interface defines methods that a UserRoleRepository must implement
+type Interface interface {
 	Create(ctx context.Context, role *models.UserRoleEntity) (*models.UserRoleEntity, error)
 	GetByID(ctx context.Context, id primitive.ObjectID) (*models.UserRoleEntity, error)
 	GetAll(ctx context.Context) ([]*models.UserRoleEntity, error)
@@ -27,26 +27,26 @@ type UserRoleRepositoryInterface interface {
 	PopulateRoles(context context.Context, user *models.UserEntity) error
 }
 
-// UserRoleRepository provides methods to interact with user role data in the database
-type UserRoleRepository struct {
+// Repository provides methods to interact with user role data in the database
+type Repository struct {
 	collection *mongo.Collection
 }
 
 // Ensure UserRoleRepository implements UserRoleRepositoryInterface
-var _ UserRoleRepositoryInterface = (*UserRoleRepository)(nil)
+var _ Interface = (*Repository)(nil)
 
 // NewUserRoleRepository creates a new instance of UserRoleRepository
-func NewUserRoleRepository(database *mongo.Database) *UserRoleRepository {
+func NewUserRoleRepository(database *mongo.Database) *Repository {
 	if database == nil {
 		database = db.Database
 	}
-	return &UserRoleRepository{
+	return &Repository{
 		collection: database.Collection(userRoleCollection),
 	}
 }
 
 // Create adds a new user role to the database
-func (r *UserRoleRepository) Create(ctx context.Context, role *models.UserRoleEntity) (*models.UserRoleEntity, error) {
+func (r *Repository) Create(ctx context.Context, role *models.UserRoleEntity) (*models.UserRoleEntity, error) {
 	// Generate an ID if not provided
 	if role.ID == nil {
 		id := primitive.NewObjectID()
@@ -67,7 +67,7 @@ func (r *UserRoleRepository) Create(ctx context.Context, role *models.UserRoleEn
 }
 
 // GetByID retrieves a user role by its ID
-func (r *UserRoleRepository) GetByID(ctx context.Context, id primitive.ObjectID) (*models.UserRoleEntity, error) {
+func (r *Repository) GetByID(ctx context.Context, id primitive.ObjectID) (*models.UserRoleEntity, error) {
 	var role models.UserRoleEntity
 	err := r.collection.FindOne(ctx, bson.M{"_id": id}).Decode(&role)
 	if err != nil {
@@ -80,7 +80,7 @@ func (r *UserRoleRepository) GetByID(ctx context.Context, id primitive.ObjectID)
 }
 
 // GetAll retrieves all user roles
-func (r *UserRoleRepository) GetAll(ctx context.Context) ([]*models.UserRoleEntity, error) {
+func (r *Repository) GetAll(ctx context.Context) ([]*models.UserRoleEntity, error) {
 	var roles []*models.UserRoleEntity
 
 	cursor, err := r.collection.Find(ctx, bson.M{})
@@ -97,7 +97,7 @@ func (r *UserRoleRepository) GetAll(ctx context.Context) ([]*models.UserRoleEnti
 }
 
 // GetByName retrieves a user role by its name
-func (r *UserRoleRepository) GetByName(ctx context.Context, name string) (*models.UserRoleEntity, error) {
+func (r *Repository) GetByName(ctx context.Context, name string) (*models.UserRoleEntity, error) {
 	var role models.UserRoleEntity
 	err := r.collection.FindOne(ctx, bson.M{"name": name}).Decode(&role)
 	if err != nil {
@@ -110,7 +110,7 @@ func (r *UserRoleRepository) GetByName(ctx context.Context, name string) (*model
 }
 
 // Update modifies an existing user role in the database
-func (r *UserRoleRepository) Update(ctx context.Context, role *models.UserRoleEntity) (*models.UserRoleEntity, error) {
+func (r *Repository) Update(ctx context.Context, role *models.UserRoleEntity) (*models.UserRoleEntity, error) {
 	if role.ID == nil {
 		return nil, errors.New("role ID is required for update")
 	}
@@ -135,7 +135,7 @@ func (r *UserRoleRepository) Update(ctx context.Context, role *models.UserRoleEn
 }
 
 // Delete removes a user role from the database by ID
-func (r *UserRoleRepository) Delete(ctx context.Context, id primitive.ObjectID) error {
+func (r *Repository) Delete(ctx context.Context, id primitive.ObjectID) error {
 	result, err := r.collection.DeleteOne(ctx, bson.M{"_id": id})
 	if err != nil {
 		return err
@@ -149,7 +149,7 @@ func (r *UserRoleRepository) Delete(ctx context.Context, id primitive.ObjectID) 
 }
 
 // FindOrCreate finds a role by name or creates it if it doesn't exist
-func (r *UserRoleRepository) FindOrCreate(ctx context.Context, roleName string) (*models.UserRoleEntity, error) {
+func (r *Repository) FindOrCreate(ctx context.Context, roleName string) (*models.UserRoleEntity, error) {
 	// Try to find the role first
 	role, err := r.GetByName(ctx, roleName)
 	if err == nil {
@@ -176,7 +176,7 @@ func (r *UserRoleRepository) FindOrCreate(ctx context.Context, roleName string) 
 }
 
 // PopulateRoles populates the roles for the given user
-func (r *UserRoleRepository) PopulateRoles(context context.Context, user *models.UserEntity) error {
+func (r *Repository) PopulateRoles(context context.Context, user *models.UserEntity) error {
 	roles := make([]*models.UserRoleEntity, 0)
 	for _, roleID := range user.RoleIds {
 		role, err := r.GetByID(context, *roleID)

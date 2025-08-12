@@ -5,8 +5,8 @@ import (
 	rspamdinterfaces "github.com/atomic-blend/backend/shared/services/rspamd/interfaces"
 )
 
-// RspamdServiceWrapper wraps the existing rspamd functionality
-type RspamdServiceWrapper struct {
+// Wrapper wraps the existing rspamd functionality
+type Wrapper struct {
 	client *rspamdclient.Client
 }
 
@@ -14,7 +14,7 @@ type RspamdServiceWrapper struct {
 func NewRspamdService() rspamdinterfaces.RspamdServiceInterface {
 	config := rspamdclient.DefaultConfig()
 	client := rspamdclient.NewClient(config)
-	return &RspamdServiceWrapper{
+	return &Wrapper{
 		client: client,
 	}
 }
@@ -22,27 +22,27 @@ func NewRspamdService() rspamdinterfaces.RspamdServiceInterface {
 // NewRspamdServiceWithConfig creates a new rspamd service wrapper with custom config
 func NewRspamdServiceWithConfig(config *rspamdclient.Config) rspamdinterfaces.RspamdServiceInterface {
 	client := rspamdclient.NewClient(config)
-	return &RspamdServiceWrapper{
+	return &Wrapper{
 		client: client,
 	}
 }
 
 // CheckMessage sends a message to Rspamd for spam checking
-func (r *RspamdServiceWrapper) CheckMessage(req *rspamdclient.CheckRequest) (*rspamdclient.CheckResponse, error) {
+func (r *Wrapper) CheckMessage(req *rspamdclient.CheckRequest) (*rspamdclient.CheckResponse, error) {
 	return r.client.CheckMessage(req)
 }
 
 // Ping sends a ping request to check if Rspamd is available
-func (r *RspamdServiceWrapper) Ping() error {
+func (r *Wrapper) Ping() error {
 	return r.client.Ping()
 }
 
 // NewClient creates a new Rspamd client with the given configuration
-func (r *RspamdServiceWrapper) NewClient(config *rspamdclient.Config) *rspamdclient.Client {
+func (r *Wrapper) NewClient(config *rspamdclient.Config) *rspamdclient.Client {
 	return rspamdclient.NewClient(config)
 }
 
 // DefaultConfig returns default configuration with environment variable support
-func (r *RspamdServiceWrapper) DefaultConfig() *rspamdclient.Config {
+func (r *Wrapper) DefaultConfig() *rspamdclient.Config {
 	return rspamdclient.DefaultConfig()
 }

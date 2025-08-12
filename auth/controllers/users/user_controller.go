@@ -12,13 +12,13 @@ import (
 
 // UserController handles user profile related operations
 type UserController struct {
-	userRepo           userrepo.UserRepositoryInterface
-	userRoleRepo       userrolerepo.UserRoleRepositoryInterface
-	productivityClient productivityclient.ProductivityClientInterface
+	userRepo           userrepo.Interface
+	userRoleRepo       userrolerepo.Interface
+	productivityClient productivityclient.Interface
 }
 
 // NewUserController creates a new profile controller instance
-func NewUserController(userRepo userrepo.UserRepositoryInterface, userRoleRepo userrolerepo.UserRoleRepositoryInterface, productivityClient productivityclient.ProductivityClientInterface) *UserController {
+func NewUserController(userRepo userrepo.Interface, userRoleRepo userrolerepo.Interface, productivityClient productivityclient.Interface) *UserController {
 	return &UserController{
 		userRepo:           userRepo,
 		userRoleRepo:       userRoleRepo,

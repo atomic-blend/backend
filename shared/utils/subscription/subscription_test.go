@@ -1,13 +1,14 @@
 package subscription
 
 import (
+	"context"
+	"testing"
+	"time"
+
 	"github.com/atomic-blend/backend/shared/models"
 	"github.com/atomic-blend/backend/shared/repositories/user"
 	"github.com/atomic-blend/backend/shared/test_utils/inmemorymongo"
 	"github.com/atomic-blend/backend/shared/utils/db"
-	"context"
-	"testing"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
@@ -15,7 +16,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-func setupTestDB(t *testing.T) (*user.UserRepository, *gin.Context, func()) {
+func setupTestDB(t *testing.T) (*user.Repository, *gin.Context, func()) {
 	// Set Gin to test mode
 	gin.SetMode(gin.TestMode)
 
@@ -51,7 +52,7 @@ func setupTestDB(t *testing.T) (*user.UserRepository, *gin.Context, func()) {
 	return repo, ctx, cleanup
 }
 
-func createTestUser(t *testing.T, repo *user.UserRepository, purchases []*models.PurchaseEntity) *models.UserEntity {
+func createTestUser(t *testing.T, repo *user.Repository, purchases []*models.PurchaseEntity) *models.UserEntity {
 	email := "test@example.com"
 	password := "testpassword"
 	user := &models.UserEntity{

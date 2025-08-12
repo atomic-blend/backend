@@ -15,7 +15,7 @@ type UserClient struct {
 	client userv1connect.UserServiceClient
 }
 
-var _ UserClientInterface = (*UserClient)(nil)
+var _ Interface = (*UserClient)(nil)
 
 // NewUserClient creates a new user client
 func NewUserClient() (*UserClient, error) {

@@ -1,12 +1,6 @@
 package auth
 
 import (
-	"github.com/atomic-blend/backend/shared/models"	
-	userrepo "github.com/atomic-blend/backend/shared/repositories/user"
-	userrolerepo "github.com/atomic-blend/backend/shared/repositories/user_role"
-	"github.com/atomic-blend/backend/shared/test_utils/inmemorymongo"
-	"github.com/atomic-blend/backend/shared/utils/db"
-	"github.com/atomic-blend/backend/shared/utils/jwt"
 	"context"
 	"encoding/json"
 	"errors"
@@ -15,6 +9,13 @@ import (
 	"os"
 	"testing"
 	"time"
+
+	"github.com/atomic-blend/backend/shared/models"
+	userrepo "github.com/atomic-blend/backend/shared/repositories/user"
+	userrolerepo "github.com/atomic-blend/backend/shared/repositories/user_role"
+	"github.com/atomic-blend/backend/shared/test_utils/inmemorymongo"
+	"github.com/atomic-blend/backend/shared/utils/db"
+	"github.com/atomic-blend/backend/shared/utils/jwt"
 
 	"github.com/gin-gonic/gin"
 	jwtlib "github.com/golang-jwt/jwt/v5"
@@ -25,7 +26,7 @@ import (
 )
 
 // setupTestDB creates an in-memory MongoDB for testing
-func setupTestDB(t *testing.T) (userrepo.UserRepositoryInterface, userrolerepo.UserRoleRepositoryInterface, func()) {
+func setupTestDB(t *testing.T) (userrepo.Interface, userrolerepo.Interface, func()) {
 	// Set Gin to test mode
 	gin.SetMode(gin.TestMode)
 
@@ -156,8 +157,8 @@ func (c *TestController) RefreshToken(ctx *gin.Context) {
 
 // Create a new TestController
 func NewTestController(
-	userRepo userrepo.UserRepositoryInterface,
-	userRoleRepo userrolerepo.UserRoleRepositoryInterface,
+	userRepo userrepo.Interface,
+	userRoleRepo userrolerepo.Interface,
 	mockJWTValidator func(string, jwt.TokenType) (*jwtlib.MapClaims, error),
 ) *TestController {
 	return &TestController{
@@ -171,15 +172,15 @@ func NewTestController(
 
 type RefreshTokenTestSuite struct {
 	suite.Suite
-	userRepo     userrepo.UserRepositoryInterface
-	userRoleRepo userrolerepo.UserRoleRepositoryInterface
+	userRepo     userrepo.Interface
+	userRoleRepo userrolerepo.Interface
 	controller   *TestController
 	router       *gin.Engine
 	cleanup      func()
 }
 
 // createTestUser creates a test user with optional purchase data
-func createTestUser(t *testing.T, repo userrepo.UserRepositoryInterface, purchases []*models.PurchaseEntity) *models.UserEntity {
+func createTestUser(t *testing.T, repo userrepo.Interface, purchases []*models.PurchaseEntity) *models.UserEntity {
 	email := "test@example.com"
 	password := "testpassword"
 	keySet := models.EncryptionKey{
@@ -204,7 +205,7 @@ func createTestUser(t *testing.T, repo userrepo.UserRepositoryInterface, purchas
 }
 
 // createTestRole creates a test role
-func createTestRole(t *testing.T, repo userrolerepo.UserRoleRepositoryInterface) *models.UserRoleEntity {
+func createTestRole(t *testing.T, repo userrolerepo.Interface) *models.UserRoleEntity {
 	role := &models.UserRoleEntity{
 		Name: "user",
 	}

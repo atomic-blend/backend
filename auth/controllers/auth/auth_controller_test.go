@@ -15,8 +15,8 @@ import (
 
 func TestNewController(t *testing.T) {
 	// Create mock repositories
-	mockUserRepo := &userrepo.UserRepository{}
-	mockUserRoleRepo := &userrolerepo.UserRoleRepository{}
+	mockUserRepo := &userrepo.Repository{}
+	mockUserRoleRepo := &userrolerepo.Repository{}
 	mockResetPasswordRepo := &repositories.UserResetPasswordRequestRepository{}
 
 	// Create a new controller
@@ -89,12 +89,12 @@ func TestControllerStructure(t *testing.T) {
 		// Check userRepo field
 		userRepoField, found := controllerType.FieldByName("userRepo")
 		assert.True(t, found, "userRepo field should exist")
-		assert.Equal(t, "user.UserRepositoryInterface", userRepoField.Type.String())
+		assert.Equal(t, "user.Interface", userRepoField.Type.String())
 
 		// Check userRoleRepo field
 		userRoleRepoField, found := controllerType.FieldByName("userRoleRepo")
 		assert.True(t, found, "userRoleRepo field should exist")
-		assert.Equal(t, "userrole.UserRoleRepositoryInterface", userRoleRepoField.Type.String())
+		assert.Equal(t, "userrole.Interface", userRoleRepoField.Type.String())
 	})
 }
 
