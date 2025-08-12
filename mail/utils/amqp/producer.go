@@ -18,8 +18,9 @@ var (
 	exchangeNames = getAMQPExchangeNames(true)
 )
 
-var conn *amqp.Connection
-var ch *amqp.Channel
+// Producer-specific connection variables
+var producerConn *amqp.Connection
+var producerCh *amqp.Channel
 
 // InitProducerAmqp initializes the AMQP producer
 func InitProducerAmqp() {
@@ -31,31 +32,31 @@ func InitProducerAmqp() {
 		return
 	}
 
-	shortcuts.CheckRequiredEnvVar("MAIL_SERVER_PRODUCER_AMQP_URL or MAIL_SERVER_AMQP_URL or AMQP_URL", amqpURL, "amqp://user:password@localhost:5672/")
-	shortcuts.CheckRequiredEnvVar("MAIL_SERVER_PRODUCER_AMQP_QUEUE_NAME or MAIL_SERVER_AMQP_QUEUE_NAME or AMQP_QUEUE_NAME", getAMQPQueueName(true), "")
-	shortcuts.CheckRequiredEnvVar("MAIL_SERVER_PRODUCER_AMQP_EXCHANGE_NAMES or MAIL_SERVER_AMQP_EXCHANGE_NAMES or AMQP_EXCHANGE_NAMES", exchangeNames, "")
+	shortcuts.CheckRequiredEnvVar("MAIL_PRODUCER_AMQP_URL or MAIL_AMQP_URL or AMQP_URL", amqpURL, "amqp://user:password@localhost:5672/")
+	shortcuts.CheckRequiredEnvVar("MAIL_PRODUCER_AMQP_QUEUE_NAME or MAIL_AMQP_QUEUE_NAME or AMQP_QUEUE_NAME", getAMQPQueueName(true), "")
+	shortcuts.CheckRequiredEnvVar("MAIL_PRODUCER_AMQP_EXCHANGE_NAMES or MAIL_AMQP_EXCHANGE_NAMES or AMQP_EXCHANGE_NAMES", exchangeNames, "")
 
 	//split exchange names
-	exchangeNames := strings.Split(exchangeNames, ",")
+	exchangeNamesList := strings.Split(exchangeNames, ",")
 
 	log.Debug().Msg("Producer connecting to AMQP")
-	conn, err = amqp.Dial(amqpURL)
+	producerConn, err = amqp.Dial(amqpURL)
 	shortcuts.FailOnError(err, "Failed to connect to RabbitMQ")
 
 	log.Debug().Msg("Opening a channel")
-	ch, err = conn.Channel()
+	producerCh, err = producerConn.Channel()
 	shortcuts.FailOnError(err, "Failed to open a channel")
 
 	log.Info().Msg("Declaring queue")
 	queueName := getAMQPQueueName(true)
-	_, err = ch.QueueDeclare(queueName, true, false, false, false, nil)
+	_, err = producerCh.QueueDeclare(queueName, true, false, false, false, nil)
 	if err != nil {
 		log.Info().Err(err).Msg("Failed to declare a queue")
 	}
 
-	for _, exchangeName := range exchangeNames {
+	for _, exchangeName := range exchangeNamesList {
 		log.Info().Str("exchange", exchangeName).Msg("Declaring exchange")
-		err = ch.ExchangeDeclare(
+		err = producerCh.ExchangeDeclare(
 			exchangeName, // name
 			"topic",      // type
 			true,         // durable
@@ -72,7 +73,7 @@ func InitProducerAmqp() {
 // PublishMessage publishes a message to the AMQP broker
 func PublishMessage(exchangeName string, topic string, message map[string]interface{}) {
 	// Skip publishing in test environment
-	if os.Getenv("GO_ENV") == "test" || ch == nil {
+	if os.Getenv("GO_ENV") == "test" || producerCh == nil {
 		log.Debug().Msg("Skipping AMQP message publishing (test environment or no connection)")
 		return
 	}
@@ -84,7 +85,7 @@ func PublishMessage(exchangeName string, topic string, message map[string]interf
 	shortcuts.FailOnError(err, "Failed to encode message")
 
 	log.Debug().Msg("Publishing message")
-	err = ch.Publish(
+	err = producerCh.Publish(
 		exchangeName, // exchange
 		topic,        // routing key
 		false,        // mandatory
@@ -95,4 +96,22 @@ func PublishMessage(exchangeName string, topic string, message map[string]interf
 			Timestamp:   time.Now(),
 		})
 	shortcuts.FailOnError(err, "Failed to publish a message")
+}
+
+// CloseProducerConnection closes the producer AMQP connection
+func CloseProducerConnection() {
+	if producerCh != nil {
+		producerCh.Close()
+		producerCh = nil
+	}
+	if producerConn != nil {
+		producerConn.Close()
+		producerConn = nil
+	}
+	log.Info().Msg("Producer AMQP connection closed")
+}
+
+// IsProducerConnectionHealthy checks if the producer AMQP connection is healthy
+func IsProducerConnectionHealthy() bool {
+	return producerConn != nil && producerCh != nil && !producerConn.IsClosed()
 }

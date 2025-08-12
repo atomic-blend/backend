@@ -8,7 +8,7 @@ const workerName = "MAIL"
 
 // getEnvWithFallback returns environment variable value with hierarchical fallback
 // If isProducer is true, uses "PRODUCER" prefix, otherwise uses "CONSUMER" prefix
-// Fallback order: MAIL_SERVER_{PRODUCER/CONSUMER}_AMQP_{suffix} -> MAIL_SERVER_AMQP_{suffix} -> AMQP_{suffix}
+// Fallback order: MAIL_{PRODUCER/CONSUMER}_AMQP_{suffix} -> MAIL_AMQP_{suffix} -> AMQP_{suffix}
 func getEnvWithFallback(suffix string, isProducer bool) string {
 	// Skip environment variable checks in test mode
 	if os.Getenv("GO_ENV") == "test" {
@@ -63,4 +63,27 @@ func getAMQPQueueName(isProducer bool) string {
 // Then falls back to MAIL_SERVER_AMQP_ROUTING_KEYS, then AMQP_ROUTING_KEYS
 func getAMQPRoutingKeys(isProducer bool) string {
 	return getEnvWithFallback("ROUTING_KEYS", isProducer)
+}
+
+// getAMQPRetryEnabled returns whether AMQP retry is enabled from environment variables
+func getAMQPRetryEnabled(isProducer bool) bool {
+	return getEnvWithFallback("RETRY_ENABLED", isProducer) == "true"
+}
+
+// getAMQPRetryExchange returns the AMQP retry exchange name from environment variables
+func getAMQPRetryExchange(isProducer bool) string {
+	return getEnvWithFallback("RETRY_EXCHANGE", isProducer)
+}
+
+// getAMQPRetryRoutingKey returns the AMQP retry routing key from environment variables
+func getAMQPRetryRoutingKey(isProducer bool) string {
+	return getEnvWithFallback("RETRY_ROUTING_KEY", isProducer)
+}
+
+func getAMQPRetryQueueName(isProducer bool) string {
+	return getEnvWithFallback("RETRY_QUEUE_NAME", isProducer)
+}
+
+func getAMQPRetryBindingKey(isProducer bool) string {
+	return getEnvWithFallback("RETRY_BINDING_KEY", isProducer)
 }
