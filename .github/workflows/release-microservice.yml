@@ -47,6 +47,7 @@ jobs:
             grpc/**
             mail/**
             mail-server/**
+            shared/**
           quotepath: false
           base_sha: ${{ steps.last-tag.outputs.last_tag }}
 
@@ -260,7 +261,7 @@ jobs:
           IFS=' ' read -ra TAGS_ARRAY <<< "$TAGS_TO_PUSH"
           
           for dir in $SUCCESSFUL_DIRS; do
-            if [ -d "$dir" ] && [ "$dir" != "grpc" ]; then
+            if [ -d "$dir" ] && [ "$dir" != "grpc" ] && [ "$dir" != "shared" ]; then
               # Find the tag for this directory
               TAG=""
               for tag in "${TAGS_ARRAY[@]}"; do
@@ -281,6 +282,8 @@ jobs:
                 
                 MATRIX_JSON="$MATRIX_JSON{\"dir\":\"$dir\",\"version\":\"$VERSION\",\"tag\":\"$TAG\"}"
               fi
+            else
+              echo "Skipping directory $dir (grpc or shared library)"
             fi
           done
           
