@@ -12,6 +12,7 @@ import (
 	"net"
 	"os"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/atomic-blend/backend/mail-server/grpc/client"
@@ -24,14 +25,25 @@ import (
 	amqppackage "github.com/streadway/amqp"
 )
 
-const (
-	// MaxRetries is the maximum number of retries for a mail
-	MaxRetries      = 5
-	// MaxDelayMillis is the maximum delay for a mail
-	MaxDelayMillis  = 172800000 // 2 days in ms
-	// BaseDelayMillis is the base delay for a mail
-	BaseDelayMillis = 10000     // 10 seconds initial backoff
+var (
+	// MaxRetries is the maximum number of retries for a mail (configurable via MAX_RETRIES env var)
+	MaxRetries = getEnvAsInt("MAX_RETRIES", 5)
+	// MaxDelayMillis is the maximum delay for a mail (configurable via MAX_DELAY_MILLIS env var)
+	MaxDelayMillis = getEnvAsInt("MAX_DELAY_MILLIS", 172800000) // 2 days in ms
+	// BaseDelayMillis is the base delay for a mail (configurable via BASE_DELAY_MILLIS env var)
+	BaseDelayMillis = getEnvAsInt("BASE_DELAY_MILLIS", 10000) // 10 seconds initial backoff
 )
+
+// getEnvAsInt retrieves an environment variable as an integer with a default value
+func getEnvAsInt(key string, defaultValue int) int {
+	if value := os.Getenv(key); value != "" {
+		if intValue, err := strconv.Atoi(value); err == nil {
+			return intValue
+		}
+		log.Warn().Str("key", key).Str("value", value).Int("default", defaultValue).Msg("Invalid environment variable value, using default")
+	}
+	return defaultValue
+}
 
 // computeDelay returns delay in ms using exponential backoff with x-day cap
 func computeDelay(retryCount int) int {
