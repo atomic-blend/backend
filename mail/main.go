@@ -10,7 +10,7 @@ import (
 	"github.com/atomic-blend/backend/mail/controllers/health"
 	"github.com/atomic-blend/backend/mail/models"
 	amqpservice "github.com/atomic-blend/backend/shared/services/amqp"
-	"github.com/atomic-blend/backend/mail/utils/db"
+	"github.com/atomic-blend/backend/shared/utils/db"
 
 	"github.com/gin-contrib/cors"
 

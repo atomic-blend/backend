@@ -5,7 +5,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/atomic-blend/backend/mail/utils/shortcuts"
+	"github.com/atomic-blend/backend/shared/utils/shortcuts"
 	"github.com/rs/zerolog/log"
 	"github.com/streadway/amqp"
 )

@@ -8,7 +8,7 @@ import (
 	mailconnect "github.com/atomic-blend/backend/grpc/gen/mail/v1/mailv1connect"
 	mailGrpcServer "github.com/atomic-blend/backend/mail/grpc/server/global"
 	"github.com/atomic-blend/backend/mail/repositories"
-	"github.com/atomic-blend/backend/mail/utils/db"
+	"github.com/atomic-blend/backend/shared/utils/db"
 )
 
 func startGRPCServer() {
