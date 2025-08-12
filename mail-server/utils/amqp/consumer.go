@@ -2,6 +2,7 @@
 package amqp
 
 import (
+	"os"
 	"strings"
 
 	"github.com/atomic-blend/backend/mail/utils/shortcuts"
@@ -27,6 +28,12 @@ func InitConsumerAMQP() {
 	log.Debug().Msg("Initializing AMQP Consumer")
 	var err error
 	var q amqp.Queue
+
+	// Skip initialization in test environment
+	if os.Getenv("GO_ENV") == "test" {
+		log.Debug().Msg("Skipping AMQP consumer initialization (test environment)")
+		return
+	}
 
 	shortcuts.CheckRequiredEnvVar("MAIL_SERVER_CONSUMER_AMQP_URL or MAIL_SERVER_AMQP_URL or AMQP_URL", getAMQPURL(false), "amqp://user:password@localhost:5672")
 	shortcuts.CheckRequiredEnvVar("MAIL_SERVER_CONSUMER_AMQP_EXCHANGE_NAMES or MAIL_SERVER_AMQP_EXCHANGE_NAMES or AMQP_EXCHANGE_NAMES", exchangeNamesRaw, "")

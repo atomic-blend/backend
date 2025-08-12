@@ -10,12 +10,17 @@ const workerName = "MAIL"
 // If isProducer is true, uses "PRODUCER" prefix, otherwise uses "CONSUMER" prefix
 // Fallback order: MAIL_SERVER_{PRODUCER/CONSUMER}_AMQP_{suffix} -> MAIL_SERVER_AMQP_{suffix} -> AMQP_{suffix}
 func getEnvWithFallback(suffix string, isProducer bool) string {
+	// Skip environment variable checks in test mode
+	if os.Getenv("GO_ENV") == "test" {
+		return "test_value"
+	}
+
 	prefix := "CONSUMER"
 	if isProducer {
 		prefix = "PRODUCER"
 	}
 
-	// Try specific producer/consumer variable firs
+	// Try specific producer/consumer variable first
 	if value := os.Getenv(workerName + "_AMQP_" + prefix + "_" + suffix); value != "" {
 		return value
 	}

@@ -2,12 +2,18 @@ package smtpserver
 
 import (
 	"encoding/hex"
+	"os"
 	"strings"
 	"testing"
 
 	"github.com/emersion/go-sasl"
 	"github.com/stretchr/testify/assert"
 )
+
+func init() {
+	// Set test environment for all tests in this package
+	os.Setenv("GO_ENV", "test")
+}
 
 func TestSession_Creation(t *testing.T) {
 	t.Run("session creation returns valid session", func(t *testing.T) {
