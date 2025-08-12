@@ -1,4 +1,4 @@
-package ageencryptionservice
+package interfaces
 
 // AgeEncryptionServiceInterface defines the interface for age encryption operations
 type AgeEncryptionServiceInterface interface {
