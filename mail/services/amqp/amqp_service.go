@@ -1,4 +1,4 @@
-package services
+package amqpservice
 
 import (
 	"github.com/atomic-blend/backend/mail/services/interfaces"

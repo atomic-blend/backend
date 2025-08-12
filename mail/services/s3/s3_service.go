@@ -1,10 +1,9 @@
-package services
+package s3service
 
 import (
 	"context"
 	"os"
 
-	"github.com/atomic-blend/backend/mail/services/interfaces"
 	"github.com/atomic-blend/backend/mail/utils/s3"
 	awss3 "github.com/aws/aws-sdk-go-v2/service/s3"
 )
@@ -15,7 +14,7 @@ type S3ServiceWrapper struct {
 }
 
 // NewS3Service creates a new S3 service wrapper
-func NewS3Service() (interfaces.S3ServiceInterface, error) {
+func NewS3Service() (S3ServiceInterface, error) {
 	s3Service, err := s3.NewS3Service(os.Getenv("AWS_BUCKET"))
 	if err != nil {
 		return nil, err
