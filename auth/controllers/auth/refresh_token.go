@@ -1,7 +1,7 @@
 package auth
 
 import (
-	"github.com/atomic-blend/backend/auth/models"
+	"github.com/atomic-blend/backend/shared/models"
 	"github.com/atomic-blend/backend/shared/utils/jwt"
 	"net/http"
 	"strings"

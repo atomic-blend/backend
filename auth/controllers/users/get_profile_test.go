@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/atomic-blend/backend/shared/middlewares/auth"
-	"github.com/atomic-blend/backend/auth/models"
+	"github.com/atomic-blend/backend/shared/models"
 	"github.com/atomic-blend/backend/auth/tests/mocks"
 
 	"github.com/gin-gonic/gin"

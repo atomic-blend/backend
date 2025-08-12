@@ -1,18 +1,18 @@
 package userrole
 
 import (
-	"github.com/atomic-blend/backend/auth/repositories"
+	userrolerepo "github.com/atomic-blend/backend/shared/repositories/user_role"
 
 	"github.com/gin-gonic/gin"
 )
 
 // Controller handles user role related operations
 type Controller struct {
-	userRoleRepo repositories.UserRoleRepositoryInterface
+	userRoleRepo userrolerepo.UserRoleRepositoryInterface
 }
 
 // NewUserRoleController creates a new user role controller instance
-func NewUserRoleController(userRoleRepo repositories.UserRoleRepositoryInterface) *Controller {
+func NewUserRoleController(userRoleRepo userrolerepo.UserRoleRepositoryInterface) *Controller {
 	return &Controller{
 		userRoleRepo: userRoleRepo,
 	}

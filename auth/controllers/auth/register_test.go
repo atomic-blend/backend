@@ -1,8 +1,10 @@
 package auth
 
 import (
-	"github.com/atomic-blend/backend/auth/models"
+	"github.com/atomic-blend/backend/shared/models"
 	"github.com/atomic-blend/backend/auth/repositories"
+	userrepo "github.com/atomic-blend/backend/shared/repositories/user"
+	userrolerepo "github.com/atomic-blend/backend/shared/repositories/user_role"
 	"github.com/atomic-blend/backend/shared/test_utils/inmemorymongo"
 	"github.com/atomic-blend/backend/shared/utils/db"
 	"bytes"
@@ -56,8 +58,8 @@ func TestRegister(t *testing.T) {
 	}()
 
 	// Create user repository
-	userRepo := repositories.NewUserRepository(database)
-	userRoleRepo := repositories.NewUserRoleRepository(database)
+	userRepo := userrepo.NewUserRepository(database)
+	userRoleRepo := userrolerepo.NewUserRoleRepository(database)
 	resetPasswordRepo := repositories.NewUserResetPasswordRequestRepository(database)
 
 	// Create controller
