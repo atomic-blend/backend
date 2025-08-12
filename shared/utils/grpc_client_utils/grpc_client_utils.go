@@ -16,6 +16,20 @@ func GetServiceBaseURL(service string) (string, error) {
 		} else {
 			baseURL = "http://auth:50051" // Default value if not set
 		}
+	case "productivity":
+		envValue := os.Getenv("PRODUCTIVITY_GRPC_HOST")
+		if envValue != "" {
+			baseURL = envValue
+		} else {
+			baseURL = "http://productivity:50052" // Default value if not set
+		}
+	case "mail":
+		envValue := os.Getenv("MAIL_GRPC_HOST")
+		if envValue != "" {
+			baseURL = envValue
+		} else {
+			baseURL = "http://mail:50054" // Default value if not set
+		}
 	default:
 		return "", fmt.Errorf("unknown service: %s", service)
 	}

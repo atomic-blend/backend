@@ -8,11 +8,15 @@ import (
 )
 
 // AMQPServiceWrapper wraps the existing AMQP functionality
-type AMQPServiceWrapper struct{}
+type AMQPServiceWrapper struct {
+	workerName string
+}
 
 // NewAMQPService creates a new AMQP service wrapper
-func NewAMQPService() amqpinterfaces.AMQPServiceInterface {
-	return &AMQPServiceWrapper{}
+func NewAMQPService(workerName string) amqpinterfaces.AMQPServiceInterface {
+	return &AMQPServiceWrapper{
+		workerName: workerName,
+	}
 }
 
 // PublishMessage publishes a message to the AMQP broker
@@ -22,12 +26,12 @@ func (a *AMQPServiceWrapper) PublishMessage(exchangeName string, topic string, m
 
 // InitProducerAMQP initializes the AMQP producer
 func (a *AMQPServiceWrapper) InitProducerAMQP() {
-	amqputils.InitProducerAMQP()
+	amqputils.InitProducerAMQP(a.workerName)
 }
 
 // InitConsumerAMQP initializes the AMQP consumer
 func (a *AMQPServiceWrapper) InitConsumerAMQP() {
-	amqputils.InitConsumerAMQP()
+	amqputils.InitConsumerAMQP(a.workerName)
 }
 
 // Messages returns the AMQP messages

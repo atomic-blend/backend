@@ -127,13 +127,14 @@ func main() {
 		log.Info().Msg("No CORS configuration found, skipping CORS setup")
 	}
 
+	amqpService := amqpservice.NewAMQPService("MAIL")
+	amqpService.InitProducerAMQP()
+
 	// Register all routes
 	health.SetupRoutes(router, db.Database)
-	controllers.SetupAllControllers(router, db.Database)
+	controllers.SetupAllControllers(router, db.Database, amqpService)
 
-	amqpService := amqpservice.NewAMQPService()
-
-	amqpService.InitProducerAMQP()
+	
 
 	// Define port
 	port := os.Getenv("PORT")

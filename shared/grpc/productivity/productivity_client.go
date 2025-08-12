@@ -5,9 +5,9 @@ import (
 	"net/http"
 
 	"connectrpc.com/connect"
-	grpcclientutils "github.com/atomic-blend/backend/shared/utils/grpc_client_utils"
-	"github.com/atomic-blend/backend/grpc/gen/productivity/v1"
+	productivityv1 "github.com/atomic-blend/backend/grpc/gen/productivity/v1"
 	"github.com/atomic-blend/backend/grpc/gen/productivity/v1/productivityv1connect"
+	grpcclientutils "github.com/atomic-blend/backend/shared/utils/grpc_client_utils"
 )
 
 // ProductivityClient wraps the real gRPC productivity client
@@ -22,7 +22,7 @@ func NewProductivityClient() (*ProductivityClient, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	client := productivityv1connect.NewProductivityServiceClient(httpClient, baseURL)
 	return &ProductivityClient{client: client}, nil
 }

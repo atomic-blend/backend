@@ -6,7 +6,7 @@ use (
 	./mail
 	./mail-server
 	./productivity
-	./shared
 	./scripts/run-tests-and-lint
 	./scripts/send-email-via-smtp
+	./shared
 )

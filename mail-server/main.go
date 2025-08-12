@@ -5,14 +5,12 @@ import (
 	"time"
 
 	smtpserver "github.com/atomic-blend/backend/mail-server/smtp-server"
-	amqp "github.com/atomic-blend/backend/shared/services/amqp"
+	"github.com/atomic-blend/backend/mail-server/utils/amqp"
 	"github.com/emersion/go-smtp"
 	"github.com/joho/godotenv"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
-
-var AmqpService = amqp.NewAMQPService()
 
 func main() {
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
@@ -31,8 +29,8 @@ func main() {
 		host = "0.0.0.0"
 	}
 
-	AmqpService.InitConsumerAMQP()
-	AmqpService.InitProducerAMQP()
+	amqp.InitConsumerAMQP()
+	amqp.InitProducerAMQP()
 
 	// launch the AMQP consumer in a goroutine
 	go processMessages()
