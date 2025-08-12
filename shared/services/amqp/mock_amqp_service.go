@@ -1,7 +1,7 @@
 package amqpservice
 
 import (
-	amqpinterfaces "github.com/atomic-blend/backend/mail/services/amqp/interfaces"
+	amqpinterfaces "github.com/atomic-blend/backend/shared/services/amqp/interfaces"
 	"github.com/streadway/amqp"
 	"github.com/stretchr/testify/mock"
 )
