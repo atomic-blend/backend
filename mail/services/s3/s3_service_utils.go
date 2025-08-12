@@ -17,9 +17,6 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// defaultPresignedURLExpirationSeconds is the default expiration time for presigned URLs
-const defaultPresignedURLExpirationSeconds = 900 // 15 minutes
-
 // Service provides methods for interacting with AWS S3
 type Service struct {
 	client *s3.Client

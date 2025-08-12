@@ -1,7 +1,9 @@
+// Package rspamdservice contains the mock Rspamd service
 package rspamdservice
 
 import (
 	rspamdclient "github.com/atomic-blend/backend/mail/services/rspamd/client"
+	rspamdinterfaces "github.com/atomic-blend/backend/mail/services/rspamd/interfaces"
 	"github.com/stretchr/testify/mock"
 )
 
@@ -11,7 +13,7 @@ type MockRspamdService struct {
 }
 
 // Ensure MockRspamdService implements the interface
-var _ RspamdServiceInterface = (*MockRspamdService)(nil)
+var _ rspamdinterfaces.RspamdServiceInterface = (*MockRspamdService)(nil)
 
 // CheckMessage sends a message to Rspamd for spam checking
 func (m *MockRspamdService) CheckMessage(req *rspamdclient.CheckRequest) (*rspamdclient.CheckResponse, error) {

@@ -1,6 +1,9 @@
 package rspamdservice
 
-import rspamdclient "github.com/atomic-blend/backend/mail/services/rspamd/client"
+import (
+	rspamdclient "github.com/atomic-blend/backend/mail/services/rspamd/client"
+	rspamdinterfaces "github.com/atomic-blend/backend/mail/services/rspamd/interfaces"
+)
 
 // RspamdServiceWrapper wraps the existing rspamd functionality
 type RspamdServiceWrapper struct {
@@ -8,7 +11,7 @@ type RspamdServiceWrapper struct {
 }
 
 // NewRspamdService creates a new rspamd service wrapper
-func NewRspamdService() RspamdServiceInterface {
+func NewRspamdService() rspamdinterfaces.RspamdServiceInterface {
 	config := rspamdclient.DefaultConfig()
 	client := rspamdclient.NewClient(config)
 	return &RspamdServiceWrapper{
@@ -17,7 +20,7 @@ func NewRspamdService() RspamdServiceInterface {
 }
 
 // NewRspamdServiceWithConfig creates a new rspamd service wrapper with custom config
-func NewRspamdServiceWithConfig(config *rspamdclient.Config) RspamdServiceInterface {
+func NewRspamdServiceWithConfig(config *rspamdclient.Config) rspamdinterfaces.RspamdServiceInterface {
 	client := rspamdclient.NewClient(config)
 	return &RspamdServiceWrapper{
 		client: client,

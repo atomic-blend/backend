@@ -133,7 +133,7 @@ func main() {
 
 	amqpService := amqpservice.NewAMQPService()
 
-	amqpService.InitProducerAmqp()
+	amqpService.InitProducerAMQP()
 
 	// Define port
 	port := os.Getenv("PORT")
@@ -146,7 +146,7 @@ func main() {
 	// Conditionally start components based on runEnv
 	if runEnv == "" || runEnv == "worker" {
 		log.Info().Msg("Starting worker component")
-		amqpService.InitConsumerAmqp()
+		amqpService.InitConsumerAMQP()
 		go processMessages(amqpService)
 	}
 

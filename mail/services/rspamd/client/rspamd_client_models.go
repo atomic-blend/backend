@@ -1,3 +1,4 @@
+// Package rspamdclient contains the Rspamd client models
 package rspamdclient
 
 import (
@@ -115,7 +116,7 @@ type CheckResponse struct {
 
 	// MilterConfig is the milter configuration used for this message.
 	// Contains milter-specific settings and configuration.
-	MilterConfig map[string]interface{} `json:"milter,omitempty"`
+	MilterConfig map[string]interface{} `json:"milter_config,omitempty"`
 
 	// URLReputation contains URL reputation information if available.
 	// Provides reputation scores for URLs found in the message.

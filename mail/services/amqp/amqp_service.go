@@ -1,8 +1,9 @@
+// Package amqpservice contains the AMQP service
 package amqpservice
 
 import (
-	"github.com/atomic-blend/backend/mail/services/amqp/interfaces"
-	"github.com/atomic-blend/backend/mail/services/amqp/utils"
+	amqpinterfaces "github.com/atomic-blend/backend/mail/services/amqp/interfaces"
+	amqputils "github.com/atomic-blend/backend/mail/services/amqp/utils"
 	"github.com/streadway/amqp"
 )
 
@@ -10,26 +11,26 @@ import (
 type AMQPServiceWrapper struct{}
 
 // NewAMQPService creates a new AMQP service wrapper
-func NewAMQPService() interfaces.AMQPServiceInterface {
+func NewAMQPService() amqpinterfaces.AMQPServiceInterface {
 	return &AMQPServiceWrapper{}
 }
 
 // PublishMessage publishes a message to the AMQP broker
 func (a *AMQPServiceWrapper) PublishMessage(exchangeName string, topic string, message map[string]interface{}) {
-	utils.PublishMessage(exchangeName, topic, message)
+	amqputils.PublishMessage(exchangeName, topic, message)
 }
 
-// InitProducerAmqp initializes the AMQP producer
-func (a *AMQPServiceWrapper) InitProducerAmqp() {
-	utils.InitProducerAmqp()
+// InitProducerAMQP initializes the AMQP producer
+func (a *AMQPServiceWrapper) InitProducerAMQP() {
+	amqputils.InitProducerAMQP()
 }
 
-// InitConsumerAmqp initializes the AMQP consumer
-func (a *AMQPServiceWrapper) InitConsumerAmqp() {
-	utils.InitConsumerAmqp()
+// InitConsumerAMQP initializes the AMQP consumer
+func (a *AMQPServiceWrapper) InitConsumerAMQP() {
+	amqputils.InitConsumerAMQP()
 }
 
 // Messages returns the AMQP messages
 func (a *AMQPServiceWrapper) Messages() <-chan amqp.Delivery {
-	return utils.Messages
+	return amqputils.Messages
 }

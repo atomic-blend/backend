@@ -1,3 +1,4 @@
+// Package sendmail contains the controller for the send mail endpoint
 package sendmail
 
 import (
