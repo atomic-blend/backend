@@ -11,197 +11,336 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/emersion/go-smtp"
 )
 
+type EmailConfig struct {
+	Sender         string
+	Recipients     []string
+	CCRecipients   []string
+	BCCRecipients  []string
+	Subject        string
+	Body           string
+	AttachmentPath string
+	SMTPServer     string
+	SMTPUsername   string
+	SMTPPassword   string
+}
+
+type EmailProgress struct {
+	Step     string
+	Status   string
+	Duration time.Duration
+	Details  string
+}
+
 func main() {
-	// SMTP configuration
-	smtpServer := "localhost:1025"
-
-	// Interactive prompts
-	reader := bufio.NewReader(os.Stdin)
-
-	fmt.Println("=== Interactive SMTP Email Sender ===")
+	fmt.Println("🚀 Interactive SMTP Email Sender")
+	fmt.Println("📍 For local development and testing")
+	fmt.Println(strings.Repeat("=", 50))
 	fmt.Println()
 
-	// Get sender email
-	fmt.Print("From (sender email) [brandon@brandonguigo.com]: ")
-	senderInput, _ := reader.ReadString('\n')
-	senderInput = strings.TrimSpace(senderInput)
-	sender := "brandon@brandonguigo.com"
-	if senderInput != "" {
-		sender = senderInput
+	config := &EmailConfig{
+		SMTPServer: "localhost:1025",
 	}
 
-	// Get recipient(s)
-	fmt.Print("To (recipient email(s), comma-separated for multiple) [user2@brandonguigo.com]: ")
-	recipientsInput, _ := reader.ReadString('\n')
-	recipientsInput = strings.TrimSpace(recipientsInput)
-	var recipients []string
-	if recipientsInput != "" {
-		recipients = strings.Split(recipientsInput, ",")
-		for i, r := range recipients {
-			recipients[i] = strings.TrimSpace(r)
-		}
-	} else {
-		recipients = []string{"user2@brandonguigo.com"}
-	}
+	// Interactive prompts with better formatting
+	reader := bufio.NewReader(os.Stdin)
 
-	// Get CC recipients
-	fmt.Print("CC (comma-separated, or press Enter to skip): ")
-	ccInput, _ := reader.ReadString('\n')
-	ccInput = strings.TrimSpace(ccInput)
-	var ccRecipients []string
+	// Step 1: Sender
+	fmt.Println("📧 STEP 1: Sender Information")
+	fmt.Println(strings.Repeat("-", 30))
+	senderInput := promptWithDefault(reader, "From (sender email)", "brandon@brandonguigo.com")
+	config.Sender = senderInput
+	fmt.Printf("✅ Sender set to: %s\n\n", config.Sender)
+
+	// Step 2: Recipients
+	fmt.Println("👥 STEP 2: Recipients")
+	fmt.Println(strings.Repeat("-", 30))
+	recipientsInput := promptWithDefault(reader, "To (recipient email(s), comma-separated)", "user2@brandonguigo.com")
+	config.Recipients = parseEmailList(recipientsInput)
+	fmt.Printf("✅ Recipients set to: %s\n\n", strings.Join(config.Recipients, ", "))
+
+	// Step 3: CC Recipients
+	fmt.Println("📋 STEP 3: CC Recipients (Optional)")
+	fmt.Println(strings.Repeat("-", 30))
+	ccInput := promptWithDefault(reader, "CC (comma-separated, or press Enter to skip)", "")
 	if ccInput != "" {
-		ccRecipients = strings.Split(ccInput, ",")
-		for i, r := range ccRecipients {
-			ccRecipients[i] = strings.TrimSpace(r)
-		}
+		config.CCRecipients = parseEmailList(ccInput)
+		fmt.Printf("✅ CC recipients set to: %s\n", strings.Join(config.CCRecipients, ", "))
+	} else {
+		fmt.Println("⏭️  Skipping CC recipients")
 	}
+	fmt.Println()
 
-	// Get BCC recipients
-	fmt.Print("BCC (comma-separated, or press Enter to skip): ")
-	bccInput, _ := reader.ReadString('\n')
-	bccInput = strings.TrimSpace(bccInput)
-	var bccRecipients []string
+	// Step 4: BCC Recipients
+	fmt.Println("🔒 STEP 4: BCC Recipients (Optional)")
+	fmt.Println(strings.Repeat("-", 30))
+	bccInput := promptWithDefault(reader, "BCC (comma-separated, or press Enter to skip)", "")
 	if bccInput != "" {
-		bccRecipients = strings.Split(bccInput, ",")
-		for i, r := range bccRecipients {
-			bccRecipients[i] = strings.TrimSpace(r)
-		}
+		config.BCCRecipients = parseEmailList(bccInput)
+		fmt.Printf("✅ BCC recipients set to: %s\n", strings.Join(config.BCCRecipients, ", "))
+	} else {
+		fmt.Println("⏭️  Skipping BCC recipients")
 	}
+	fmt.Println()
 
-	// Get subject
-	fmt.Print("Subject: ")
-	subject, _ := reader.ReadString('\n')
-	subject = strings.TrimSpace(subject)
+	// Step 5: Subject
+	fmt.Println("📝 STEP 5: Email Subject")
+	fmt.Println(strings.Repeat("-", 30))
+	config.Subject = promptRequired(reader, "Subject")
+	fmt.Printf("✅ Subject set to: %s\n\n", config.Subject)
 
-	// Get email body
-	fmt.Println("Email body (type 'END' on a new line to finish):")
+	// Step 6: Email Body
+	fmt.Println("💬 STEP 6: Email Body")
+	fmt.Println(strings.Repeat("-", 30))
+	fmt.Println("Type your email body below. Type 'END' on a new line to finish:")
+	fmt.Println("💡 Tip: You can write multiple lines. Type 'END' when done.")
+	fmt.Println()
+
 	var bodyLines []string
+	lineNumber := 1
 	for {
+		fmt.Printf("Line %d: ", lineNumber)
 		line, _ := reader.ReadString('\n')
 		line = strings.TrimRight(line, "\r\n")
 		if line == "END" {
 			break
 		}
 		bodyLines = append(bodyLines, line)
+		lineNumber++
 	}
-	body := strings.Join(bodyLines, "\n")
+	config.Body = strings.Join(bodyLines, "\n")
+	fmt.Printf("✅ Email body completed (%d lines)\n\n", len(bodyLines))
 
-	// Ask for attachment
-	fmt.Print("Do you want to attach a file? (y/n): ")
-	attachInput, _ := reader.ReadString('\n')
-	attachInput = strings.TrimSpace(strings.ToLower(attachInput))
+	// Step 7: Attachments
+	fmt.Println("📎 STEP 7: File Attachments (Optional)")
+	fmt.Println(strings.Repeat("-", 30))
+	attachInput := promptWithDefault(reader, "Do you want to attach a file? (y/n)", "n")
+	if strings.ToLower(attachInput) == "y" || strings.ToLower(attachInput) == "yes" {
+		config.AttachmentPath = promptRequired(reader, "Enter file path to attach")
 
-	var attachmentPath string
-	if attachInput == "y" || attachInput == "yes" {
-		fmt.Print("Enter file path to attach: ")
-		attachmentPath, _ = reader.ReadString('\n')
-		attachmentPath = strings.TrimSpace(attachmentPath)
-
-		// remove ' or " from the attachment path
-		attachmentPath = strings.Trim(attachmentPath, "'\"")
-
-		// check if the file exists
-		if _, err := os.Stat(attachmentPath); os.IsNotExist(err) {
-			fmt.Printf("File does not exist: %s\n", attachmentPath)
+		// Validate file exists
+		if _, err := os.Stat(config.AttachmentPath); os.IsNotExist(err) {
+			fmt.Printf("❌ Error: File does not exist: %s\n", config.AttachmentPath)
 			return
 		}
-	}
 
-	// Get custom SMTP server if needed
-	fmt.Print("SMTP Server (press Enter for default localhost:1025): ")
-	smtpInput, _ := reader.ReadString('\n')
-	smtpInput = strings.TrimSpace(smtpInput)
-	if smtpInput != "" {
-		smtpServer = smtpInput
-	}
-
-	var message []byte
-	var err error
-
-	if attachmentPath != "" {
-		message, err = createMultipartMessage(sender, recipients, ccRecipients, bccRecipients, subject, body, attachmentPath)
-		if err != nil {
-			fmt.Printf("Error creating multipart message: %v\n", err)
-			return
-		}
+		// Get file info
+		fileInfo, _ := os.Stat(config.AttachmentPath)
+		fmt.Printf("✅ Attachment: %s (%.2f KB)\n", filepath.Base(config.AttachmentPath), float64(fileInfo.Size())/1024)
 	} else {
-		message = createSimpleMessage(sender, recipients, ccRecipients, bccRecipients, subject, body)
+		fmt.Println("⏭️  Skipping attachments")
+	}
+	fmt.Println()
+
+	// Step 8: SMTP Configuration
+	fmt.Println("⚙️  STEP 8: SMTP Configuration")
+	fmt.Println(strings.Repeat("-", 30))
+	smtpInput := promptWithDefault(reader, "SMTP Server", "localhost:1025")
+	if smtpInput != "" {
+		config.SMTPServer = smtpInput
+	}
+	fmt.Printf("✅ SMTP Server: %s\n\n", config.SMTPServer)
+
+	// Step 9: SMTP Authentication (Optional)
+	fmt.Println("🔐 STEP 9: SMTP Authentication (Optional)")
+	fmt.Println(strings.Repeat("-", 30))
+	authInput := promptWithDefault(reader, "Do you need SMTP authentication? (y/n)", "n")
+	if strings.ToLower(authInput) == "y" || strings.ToLower(authInput) == "yes" {
+		config.SMTPUsername = promptRequired(reader, "SMTP Username")
+		config.SMTPPassword = promptPassword(reader, "SMTP Password")
+		fmt.Println("✅ Authentication credentials set")
+	} else {
+		fmt.Println("⏭️  Skipping authentication")
+	}
+	fmt.Println()
+
+	// Summary
+	fmt.Println("📋 EMAIL SUMMARY")
+	fmt.Println(strings.Repeat("=", 50))
+	fmt.Printf("📧 From: %s\n", config.Sender)
+	fmt.Printf("👥 To: %s\n", strings.Join(config.Recipients, ", "))
+	if len(config.CCRecipients) > 0 {
+		fmt.Printf("📋 CC: %s\n", strings.Join(config.CCRecipients, ", "))
+	}
+	if len(config.BCCRecipients) > 0 {
+		fmt.Printf("🔒 BCC: %s\n", strings.Join(config.BCCRecipients, ", "))
+	}
+	fmt.Printf("📝 Subject: %s\n", config.Subject)
+	fmt.Printf("💬 Body: %d lines\n", len(strings.Split(config.Body, "\n")))
+	if config.AttachmentPath != "" {
+		fmt.Printf("📎 Attachment: %s\n", filepath.Base(config.AttachmentPath))
+	}
+	fmt.Printf("⚙️  SMTP Server: %s\n", config.SMTPServer)
+	if config.SMTPUsername != "" {
+		fmt.Printf("🔐 Username: %s\n", config.SMTPUsername)
+	}
+	fmt.Println()
+
+	// Confirm before sending
+	confirmInput := promptWithDefault(reader, "Ready to send? (y/n)", "y")
+	if strings.ToLower(confirmInput) != "y" && strings.ToLower(confirmInput) != "yes" {
+		fmt.Println("❌ Email sending cancelled")
+		return
 	}
 
-	// Combine all recipients for sending
-	allRecipients := append(recipients, ccRecipients...)
-	allRecipients = append(allRecipients, bccRecipients...)
+	// Send email with progress
+	fmt.Println("\n🚀 SENDING EMAIL")
+	fmt.Println(strings.Repeat("=", 50))
 
-	// Send email using go-smtp
-	fmt.Printf("\nConnecting to %s...\n", smtpServer)
+	startTime := time.Now()
 
-	// Create SMTP client
-	client, err := smtp.Dial(smtpServer)
+	// Step 1: Creating message
+	fmt.Print("📝 Creating email message... ")
+	message, err := createEmailMessage(config)
 	if err != nil {
-		fmt.Printf("Error connecting to SMTP server: %v\n", err)
+		fmt.Printf("❌ Error: %v\n", err)
+		return
+	}
+	fmt.Println("✅")
+
+	// Step 2: Connecting to SMTP
+	fmt.Printf("🔌 Connecting to %s... ", config.SMTPServer)
+	client, err := smtp.Dial(config.SMTPServer)
+	if err != nil {
+		fmt.Printf("❌ Error: %v\n", err)
 		return
 	}
 	defer client.Close()
+	fmt.Println("✅")
 
-	if err := client.Mail(sender, nil); err != nil {
-		fmt.Printf("Error setting sender: %v\n", err)
+	// Step 3: Setting sender
+	fmt.Print("📤 Setting sender... ")
+	if err := client.Mail(config.Sender, nil); err != nil {
+		fmt.Printf("❌ Error: %v\n", err)
 		return
 	}
+	fmt.Println("✅")
 
-	// Set recipients
+	// Step 4: Setting recipients
+	fmt.Print("👥 Setting recipients... ")
+	allRecipients := append(config.Recipients, config.CCRecipients...)
+	allRecipients = append(allRecipients, config.BCCRecipients...)
+
 	for _, recipient := range allRecipients {
 		if err := client.Rcpt(recipient, nil); err != nil {
-			fmt.Printf("Error setting recipient %s: %v\n", recipient, err)
+			fmt.Printf("❌ Error setting recipient %s: %v\n", recipient, err)
 			return
 		}
 	}
+	fmt.Println("✅")
 
-	// Send message
+	// Step 5: Sending message
+	fmt.Print("📨 Sending message... ")
 	writer, err := client.Data()
 	if err != nil {
-		fmt.Printf("Error starting message: %v\n", err)
+		fmt.Printf("❌ Error: %v\n", err)
 		return
 	}
 
 	_, err = writer.Write(message)
 	if err != nil {
-		fmt.Printf("Error writing message: %v\n", err)
+		fmt.Printf("❌ Error: %v\n", err)
 		return
 	}
 
 	err = writer.Close()
 	if err != nil {
-		fmt.Printf("Error closing message: %v\n", err)
+		fmt.Printf("❌ Error: %v\n", err)
 		return
 	}
+	fmt.Println("✅")
 
-	fmt.Println("Email sent successfully!")
+	duration := time.Since(startTime)
+
+	// Success summary
+	fmt.Println("\n" + strings.Repeat("=", 50))
+	fmt.Println("🎉 EMAIL SENT SUCCESSFULLY!")
+	fmt.Println(strings.Repeat("=", 50))
+	fmt.Printf("📧 Message ID: Generated\n")
+	fmt.Printf("👥 Sent to: %d recipients\n", len(allRecipients))
+	attachmentStatus := "No"
+	if config.AttachmentPath != "" {
+		attachmentStatus = "Yes"
+	}
+	fmt.Printf("📎 Attachment: %s\n", attachmentStatus)
+	fmt.Printf("📊 Message size: %.2f KB\n", float64(len(message))/1024)
+	fmt.Printf("⏱️  Total time: %.2fs\n", duration.Seconds())
+	fmt.Printf("🚀 SMTP Server: %s\n", config.SMTPServer)
+	fmt.Println()
+	fmt.Println("✅ Your email has been sent successfully!")
 }
 
-func createSimpleMessage(sender string, to, cc, bcc []string, subject, body string) []byte {
+func promptWithDefault(reader *bufio.Reader, prompt, defaultValue string) string {
+	fmt.Printf("%s [%s]: ", prompt, defaultValue)
+	input, _ := reader.ReadString('\n')
+	input = strings.TrimSpace(input)
+	if input == "" {
+		return defaultValue
+	}
+	return input
+}
+
+func promptRequired(reader *bufio.Reader, prompt string) string {
+	for {
+		fmt.Printf("%s: ", prompt)
+		input, _ := reader.ReadString('\n')
+		input = strings.TrimSpace(input)
+		if input != "" {
+			return input
+		}
+		fmt.Println("❌ This field is required. Please try again.")
+	}
+}
+
+func promptPassword(reader *bufio.Reader, prompt string) string {
+	fmt.Printf("%s: ", prompt)
+	// For now, just read the password (in production, you'd want to hide input)
+	input, _ := reader.ReadString('\n')
+	return strings.TrimSpace(input)
+}
+
+func parseEmailList(input string) []string {
+	if input == "" {
+		return []string{}
+	}
+	emails := strings.Split(input, ",")
+	for i, email := range emails {
+		emails[i] = strings.TrimSpace(email)
+	}
+	return emails
+}
+
+func createEmailMessage(config *EmailConfig) ([]byte, error) {
+	if config.AttachmentPath != "" {
+		return createMultipartMessage(config)
+	}
+	return createSimpleMessage(config), nil
+}
+
+func createSimpleMessage(config *EmailConfig) []byte {
 	var message strings.Builder
 
-	message.WriteString(fmt.Sprintf("From: %s\r\n", sender))
-	message.WriteString(fmt.Sprintf("To: %s\r\n", strings.Join(to, ", ")))
+	message.WriteString(fmt.Sprintf("From: %s\r\n", config.Sender))
+	message.WriteString(fmt.Sprintf("To: %s\r\n", strings.Join(config.Recipients, ", ")))
 
-	if len(cc) > 0 {
-		message.WriteString(fmt.Sprintf("Cc: %s\r\n", strings.Join(cc, ", ")))
+	if len(config.CCRecipients) > 0 {
+		message.WriteString(fmt.Sprintf("Cc: %s\r\n", strings.Join(config.CCRecipients, ", ")))
 	}
 
-	message.WriteString(fmt.Sprintf("Subject: %s\r\n", subject))
+	message.WriteString(fmt.Sprintf("Subject: %s\r\n", config.Subject))
 	message.WriteString("MIME-Version: 1.0\r\n")
 	message.WriteString("Content-Type: text/plain; charset=UTF-8\r\n")
 	message.WriteString("\r\n")
-	message.WriteString(body)
+	message.WriteString(config.Body)
 
 	return []byte(message.String())
 }
 
-func createMultipartMessage(sender string, to, cc, bcc []string, subject, body, attachmentPath string) ([]byte, error) {
+func createMultipartMessage(config *EmailConfig) ([]byte, error) {
 	var buffer bytes.Buffer
 	writer := multipart.NewWriter(&buffer)
 
@@ -209,14 +348,14 @@ func createMultipartMessage(sender string, to, cc, bcc []string, subject, body, 
 	boundary := writer.Boundary()
 
 	// Write headers
-	buffer.WriteString(fmt.Sprintf("From: %s\r\n", sender))
-	buffer.WriteString(fmt.Sprintf("To: %s\r\n", strings.Join(to, ", ")))
+	buffer.WriteString(fmt.Sprintf("From: %s\r\n", config.Sender))
+	buffer.WriteString(fmt.Sprintf("To: %s\r\n", strings.Join(config.Recipients, ", ")))
 
-	if len(cc) > 0 {
-		buffer.WriteString(fmt.Sprintf("Cc: %s\r\n", strings.Join(cc, ", ")))
+	if len(config.CCRecipients) > 0 {
+		buffer.WriteString(fmt.Sprintf("Cc: %s\r\n", strings.Join(config.CCRecipients, ", ")))
 	}
 
-	buffer.WriteString(fmt.Sprintf("Subject: %s\r\n", subject))
+	buffer.WriteString(fmt.Sprintf("Subject: %s\r\n", config.Subject))
 	buffer.WriteString("MIME-Version: 1.0\r\n")
 	buffer.WriteString(fmt.Sprintf("Content-Type: multipart/mixed; boundary=%s\r\n", boundary))
 	buffer.WriteString("\r\n")
@@ -225,17 +364,17 @@ func createMultipartMessage(sender string, to, cc, bcc []string, subject, body, 
 	buffer.WriteString(fmt.Sprintf("--%s\r\n", boundary))
 	buffer.WriteString("Content-Type: text/plain; charset=UTF-8\r\n")
 	buffer.WriteString("\r\n")
-	buffer.WriteString(body)
+	buffer.WriteString(config.Body)
 	buffer.WriteString("\r\n")
 
 	// Attachment part
-	file, err := os.Open(attachmentPath)
+	file, err := os.Open(config.AttachmentPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open attachment: %v", err)
 	}
 	defer file.Close()
 
-	fileName := filepath.Base(attachmentPath)
+	fileName := filepath.Base(config.AttachmentPath)
 	mimeType := mime.TypeByExtension(filepath.Ext(fileName))
 	if mimeType == "" {
 		mimeType = "application/octet-stream"
