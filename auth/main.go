@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/atomic-blend/backend/auth/auth"
 	"github.com/atomic-blend/backend/auth/controllers/admin"
+	"github.com/atomic-blend/backend/auth/controllers/auth"
 	"github.com/atomic-blend/backend/auth/controllers/health"
 	"github.com/atomic-blend/backend/auth/controllers/users"
 	"github.com/atomic-blend/backend/auth/controllers/webhooks"

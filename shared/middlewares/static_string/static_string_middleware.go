@@ -1,9 +1,9 @@
-package auth
+package staticstringmiddleware
 
 import "github.com/gin-gonic/gin"
 
-// StaticStringMiddleware is a middleware that checks if the Authorization header matches a static string.
-func StaticStringMiddleware(bearerToken string) gin.HandlerFunc {
+// New is a middleware that checks if the Authorization header matches a static string.
+func New(bearerToken string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Get the Authorization header
 		authHeader := c.GetHeader("Authorization")

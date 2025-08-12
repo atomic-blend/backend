@@ -3,6 +3,8 @@ package auth
 import (
 	"github.com/atomic-blend/backend/auth/models"
 	"github.com/atomic-blend/backend/auth/repositories"
+	"github.com/gin-gonic/gin"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 // RegisterRequest represents the structure for registration request data
@@ -33,5 +35,24 @@ func NewController(userRepo repositories.UserRepositoryInterface, userRoleRepo r
 		userRepo:     userRepo,
 		userRoleRepo: userRoleRepo,
 		resetPasswordRepo: resetPasswordRepo,
+	}
+}
+
+
+// SetupRoutes configures all auth-related routes
+func SetupRoutes(router *gin.Engine, database *mongo.Database) {
+	userRepo := repositories.NewUserRepository(database)
+	userRoleRepo := repositories.NewUserRoleRepository(database)
+	resetPasswordRepo := repositories.NewUserResetPasswordRequestRepository(database)
+	authController := NewController(userRepo, userRoleRepo, resetPasswordRepo)
+
+	authGroup := router.Group("/auth")
+	{
+		authGroup.POST("/register", authController.Register)
+		authGroup.POST("/login", authController.Login)
+		authGroup.POST("/refresh", authController.RefreshToken)
+		authGroup.POST("/reset-password", authController.StartResetPassword)
+		authGroup.POST("/reset-password/backup-key", authController.GetBackupKeyForResetPassword)
+		authGroup.POST("/reset-password/confirm", authController.ConfirmResetPassword)
 	}
 }
