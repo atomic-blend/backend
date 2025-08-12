@@ -1,4 +1,4 @@
-package s3
+package s3service
 
 import (
 	"bytes"
@@ -34,8 +34,9 @@ func (s *Service) BulkDeleteFiles(ctx context.Context, uploadedKeys []string) {
 }
 
 // NewS3Service creates a new S3 service instance
-func NewS3Service(bucket string) (*Service, error) {
+func NewS3Service() (*Service, error) {
 	// Load AWS configuration
+	bucket := os.Getenv("AWS_BUCKET")
 	endpoint := os.Getenv("AWS_ENDPOINT")
 	region := os.Getenv("AWS_REGION")
 	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithBaseEndpoint(endpoint), config.WithRegion(region))

@@ -3,7 +3,6 @@ package mail
 import (
 	"context"
 	"io"
-	"os"
 	"strings"
 
 	"connectrpc.com/connect"
@@ -11,9 +10,9 @@ import (
 	"github.com/atomic-blend/backend/mail/grpc/clients"
 	"github.com/atomic-blend/backend/mail/models"
 	"github.com/atomic-blend/backend/mail/repositories"
+	s3service "github.com/atomic-blend/backend/mail/services/s3"
 	"github.com/atomic-blend/backend/mail/utils/db"
 	"github.com/atomic-blend/backend/mail/utils/rspamd"
-	"github.com/atomic-blend/backend/mail/utils/s3"
 	awss3 "github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/emersion/go-message"
 	"github.com/google/uuid"
@@ -24,7 +23,7 @@ import (
 
 func receiveMail(m *amqp.Delivery, payload ReceivedMailPayload) {
 	mailRepository := repositories.NewMailRepository(db.Database)
-	s3Service, err := s3.NewS3Service(os.Getenv("AWS_BUCKET"))
+	s3Service, err := s3service.NewS3Service()
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to create S3 service")
 		return
