@@ -3,7 +3,7 @@ package main
 import (
 	"net/http"
 
-	globalGRPC "github.com/atomic-blend/backend/productivity/grpc/server/global"
+	globalGRPC "github.com/atomic-blend/backend/productivity/grpc/server"
 	"github.com/atomic-blend/backend/productivity/repositories"
 	"github.com/atomic-blend/backend/shared/utils/db"
 
