@@ -2,7 +2,7 @@
 package ageencryptionservice
 
 import (
-	interfaces "github.com/atomic-blend/backend/mail/services/age_encryption/interfaces"
+	interfaces "github.com/atomic-blend/backend/shared/services/age_encryption/interfaces"
 )
 
 // AgeEncryptionServiceWrapper wraps the existing age encryption functionality

@@ -2,8 +2,8 @@
 package amqpservice
 
 import (
-	amqpinterfaces "github.com/atomic-blend/backend/mail/services/amqp/interfaces"
-	amqputils "github.com/atomic-blend/backend/mail/services/amqp/utils"
+	amqpinterfaces "github.com/atomic-blend/backend/shared/services/amqp/interfaces"
+	amqputils "github.com/atomic-blend/backend/shared/services/amqp/utils"
 	"github.com/streadway/amqp"
 )
 

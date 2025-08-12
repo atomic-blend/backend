@@ -1,7 +1,7 @@
 // Package rspamdinterfaces contains the interfaces for the Rspamd service
 package rspamdinterfaces
 
-import rspamdclient "github.com/atomic-blend/backend/mail/services/rspamd/client"
+import rspamdclient "github.com/atomic-blend/backend/shared/services/rspamd/client"
 
 // RspamdServiceInterface defines the interface for rspamd operations
 type RspamdServiceInterface interface {

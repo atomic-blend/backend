@@ -4,7 +4,7 @@ package models
 import (
 	"fmt"
 
-	ageencryption "github.com/atomic-blend/backend/mail/services/age_encryption"
+	ageencryption "github.com/atomic-blend/backend/shared/services/age_encryption"
 )
 
 // RawMail represents the collected content from an email

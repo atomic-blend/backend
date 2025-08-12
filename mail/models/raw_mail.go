@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"io"
 
-	ageencryptionservice "github.com/atomic-blend/backend/mail/services/age_encryption"
+	ageencryptionservice "github.com/atomic-blend/backend/shared/services/age_encryption"
 	"github.com/emersion/go-message"
 )
 

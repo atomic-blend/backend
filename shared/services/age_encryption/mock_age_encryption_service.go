@@ -1,7 +1,7 @@
 package ageencryptionservice
 
 import (
-	"github.com/atomic-blend/backend/mail/services/age_encryption/interfaces"
+	"github.com/atomic-blend/backend/shared/services/age_encryption/interfaces"
 	"github.com/stretchr/testify/mock"
 )
 

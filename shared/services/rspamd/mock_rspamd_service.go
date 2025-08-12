@@ -2,8 +2,8 @@
 package rspamdservice
 
 import (
-	rspamdclient "github.com/atomic-blend/backend/mail/services/rspamd/client"
-	rspamdinterfaces "github.com/atomic-blend/backend/mail/services/rspamd/interfaces"
+	rspamdclient "github.com/atomic-blend/backend/shared/services/rspamd/client"
+	rspamdinterfaces "github.com/atomic-blend/backend/shared/services/rspamd/interfaces"
 	"github.com/stretchr/testify/mock"
 )
 

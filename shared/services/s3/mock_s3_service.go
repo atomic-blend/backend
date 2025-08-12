@@ -4,7 +4,7 @@ package s3service
 import (
 	"context"
 
-	s3interfaces "github.com/atomic-blend/backend/mail/services/s3/interfaces"
+	s3interfaces "github.com/atomic-blend/backend/shared/services/s3/interfaces"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/stretchr/testify/mock"
 )
