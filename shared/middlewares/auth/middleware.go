@@ -1,11 +1,12 @@
 package auth
 
 import (
-	"github.com/atomic-blend/backend/shared/repositories/user"
-	"github.com/atomic-blend/backend/shared/repositories/user_role"
-	"github.com/atomic-blend/backend/shared/utils/jwt"
 	"net/http"
 	"strings"
+
+	"github.com/atomic-blend/backend/shared/repositories/user"
+	userrole "github.com/atomic-blend/backend/shared/repositories/user_role"
+	"github.com/atomic-blend/backend/shared/utils/jwt"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog/log"
@@ -15,7 +16,9 @@ import (
 // UserAuthInfo contains the authenticated user information
 type UserAuthInfo struct {
 	UserID primitive.ObjectID
+	Claims *jwt.CustomClaims
 }
+
 
 // Middleware verifies JWT tokens and adds user info to the context
 // Can be applied to specific routes that require authentication

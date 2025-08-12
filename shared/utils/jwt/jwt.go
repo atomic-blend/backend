@@ -18,6 +18,15 @@ import (
 // TokenType represents the type of token
 type TokenType string
 
+// CustomClaims represents the custom claims in the JWT
+type CustomClaims struct {
+	UserID       *string `json:"user_id"`
+	IsSubscribed *bool   `json:"is_subscribed"`
+	Type         *string `json:"type"`
+	Roles        *[]string `json:"roles"`
+	jwt.RegisteredClaims
+}
+
 const (
 	// AccessToken is used for authenticating requests
 	AccessToken TokenType = "access"

@@ -3,7 +3,8 @@ package timeentrycontroller
 import (
 	"net/http"
 	"net/http/httptest"
-	"github.com/atomic-blend/backend/productivity/auth"
+	"github.com/atomic-blend/backend/shared/middlewares/auth"
+
 	"github.com/atomic-blend/backend/productivity/models"
 	"github.com/atomic-blend/backend/productivity/tests/mocks"
 	"testing"

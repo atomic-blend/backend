@@ -5,7 +5,7 @@ import (
 
 	globalGRPC "github.com/atomic-blend/backend/productivity/grpc/server/global"
 	"github.com/atomic-blend/backend/productivity/repositories"
-	"github.com/atomic-blend/backend/productivity/utils/db"
+	"github.com/atomic-blend/backend/shared/utils/db"
 
 	"github.com/atomic-blend/backend/grpc/gen/productivity/v1/productivityv1connect"
 	"github.com/rs/zerolog/log"

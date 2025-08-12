@@ -12,7 +12,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 
 	"github.com/atomic-blend/backend/productivity/models"
-	"github.com/atomic-blend/backend/productivity/utils/db"
+	"github.com/atomic-blend/backend/shared/utils/db"
 	regexutils "github.com/atomic-blend/backend/productivity/utils/regex"
 )
 
