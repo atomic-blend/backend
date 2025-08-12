@@ -1,11 +1,12 @@
 go 1.24.5
 
 use (
-	./shared
 	./auth
 	./grpc
 	./mail
 	./mail-server
-	./mail-server/scripts/send-email-via-smtp
 	./productivity
+	./shared
+	./scripts/run-tests-and-lint
+	./scripts/send-email-via-smtp
 )
