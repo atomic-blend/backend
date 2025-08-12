@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
-	"github.com/atomic-blend/backend/productivity/auth"
+	"github.com/atomic-blend/backend/shared/middlewares/auth"
 	"github.com/atomic-blend/backend/productivity/models"
 	patchmodels "github.com/atomic-blend/backend/productivity/models/patch_models"
 	"time"

@@ -3,17 +3,17 @@ package mail
 import (
 	"context"
 	"io"
-	"os"
 	"strings"
 
 	"connectrpc.com/connect"
 	userv1 "github.com/atomic-blend/backend/grpc/gen/user/v1"
-	"github.com/atomic-blend/backend/mail/grpc/clients"
+	userclient "github.com/atomic-blend/backend/shared/grpc/user"
 	"github.com/atomic-blend/backend/mail/models"
 	"github.com/atomic-blend/backend/mail/repositories"
-	"github.com/atomic-blend/backend/mail/utils/db"
-	"github.com/atomic-blend/backend/mail/utils/rspamd"
-	"github.com/atomic-blend/backend/mail/utils/s3"
+	rspamdservice "github.com/atomic-blend/backend/shared/services/rspamd"
+	rspamdclient "github.com/atomic-blend/backend/shared/services/rspamd/client"
+	s3service "github.com/atomic-blend/backend/shared/services/s3"
+	"github.com/atomic-blend/backend/shared/utils/db"
 	awss3 "github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/emersion/go-message"
 	"github.com/google/uuid"
@@ -24,7 +24,7 @@ import (
 
 func receiveMail(m *amqp.Delivery, payload ReceivedMailPayload) {
 	mailRepository := repositories.NewMailRepository(db.Database)
-	s3Service, err := s3.NewS3Service(os.Getenv("AWS_BUCKET"))
+	s3Service, err := s3service.NewS3Service()
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to create S3 service")
 		return
@@ -34,7 +34,7 @@ func receiveMail(m *amqp.Delivery, payload ReceivedMailPayload) {
 	reader := strings.NewReader(payload.Content)
 
 	// Send the email to rspamd via HTTP for spam detection
-	client := rspamd.NewClient(nil) // Use default config
+	rspamdService := rspamdservice.NewRspamdService()
 
 	mailContent := &models.RawMail{
 		Attachments:    make([]models.RawAttachment, 0),
@@ -43,7 +43,7 @@ func receiveMail(m *amqp.Delivery, payload ReceivedMailPayload) {
 		Greylisted:     false,
 	}
 
-	checkRequest := &rspamd.CheckRequest{
+	checkRequest := &rspamdclient.CheckRequest{
 		Message:   []byte(payload.Content),
 		IP:        payload.IP,
 		Helo:      payload.Hostname,
@@ -55,7 +55,7 @@ func receiveMail(m *amqp.Delivery, payload ReceivedMailPayload) {
 		DeliverTo: payload.DeliverTo,
 	}
 
-	checkResponse, err := client.CheckMessage(checkRequest)
+	checkResponse, err := rspamdService.CheckMessage(checkRequest)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to check message with Rspamd")
 		// Continue processing even if Rspamd check fails
@@ -132,7 +132,7 @@ func receiveMail(m *amqp.Delivery, payload ReceivedMailPayload) {
 
 		// get the user public key from the auth service via grpc
 		log.Info().Str("rcpt", rcpt).Msg("Instantiating user client")
-		userClient, err := clients.NewUserClient()
+		userClient, err := userclient.NewUserClient()
 		if err != nil {
 			log.Error().Err(err).Msg("Failed to create user client")
 			haveErrors = true

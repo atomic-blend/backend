@@ -2,7 +2,7 @@ package notes
 
 import (
 	"net/http"
-	"github.com/atomic-blend/backend/productivity/auth"
+	"github.com/atomic-blend/backend/shared/middlewares/auth"
 	"strings"
 
 	"github.com/gin-gonic/gin"

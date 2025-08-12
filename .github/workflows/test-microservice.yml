@@ -32,6 +32,7 @@ jobs:
             productivity/**
             mail/**
             mail-server/**
+            shared/**
           quotepath: false
 
       - name: "Set output in the matrix format"

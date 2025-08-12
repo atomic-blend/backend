@@ -10,10 +10,13 @@ import (
 
 	"connectrpc.com/connect"
 	userv1 "github.com/atomic-blend/backend/grpc/gen/user/v1"
-	"github.com/atomic-blend/backend/mail/auth"
 	"github.com/atomic-blend/backend/mail/models"
 	"github.com/atomic-blend/backend/mail/tests/mocks"
+	"github.com/atomic-blend/backend/shared/middlewares/auth"
+	amqpservice "github.com/atomic-blend/backend/shared/services/amqp"
+	s3service "github.com/atomic-blend/backend/shared/services/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/streadway/amqp"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
@@ -37,8 +40,8 @@ func TestSendMailController_CreateSendMail(t *testing.T) {
 		expectedStatus int
 		setupMock      func(*mocks.MockSendMailRepository, primitive.ObjectID)
 		setupUserMock  func(*mocks.MockUserClient, primitive.ObjectID)
-		setupAMQPMock  func(*mocks.MockAMQPService, primitive.ObjectID)
-		setupS3Mock    func(*mocks.MockS3Service, primitive.ObjectID)
+		setupAMQPMock  func(*amqpservice.MockAMQPService, primitive.ObjectID)
+		setupS3Mock    func(*s3service.MockS3Service, primitive.ObjectID)
 		setupAuth      func(*gin.Context, primitive.ObjectID)
 	}{
 		{
@@ -72,16 +75,16 @@ func TestSendMailController_CreateSendMail(t *testing.T) {
 					},
 				}, nil)
 			},
-			setupAMQPMock: func(mockAMQPService *mocks.MockAMQPService, userID primitive.ObjectID) {
+			setupAMQPMock: func(mockAMQPService *amqpservice.MockAMQPService, userID primitive.ObjectID) {
 				// Mock AMQP publish message
 				mockAMQPService.On("PublishMessage", "mail", "sent", mock.MatchedBy(func(message map[string]interface{}) bool {
 					// Verify that the message contains the expected fields
 					_, hasSendMailID := message["send_mail_id"]
 					_, hasContent := message["content"]
 					return hasSendMailID && hasContent
-				})).Return()
+				}), (*amqp.Table)(nil)).Return()
 			},
-			setupS3Mock: func(mockS3Service *mocks.MockS3Service, userID primitive.ObjectID) {
+			setupS3Mock: func(mockS3Service *s3service.MockS3Service, userID primitive.ObjectID) {
 				// Mock S3 operations for attachments (empty attachments in this test)
 				mockS3Service.On("BulkUploadFiles", mock.Anything, mock.MatchedBy(func(payloads []*s3.PutObjectInput) bool {
 					return len(payloads) == 0 // No attachments expected
@@ -97,8 +100,8 @@ func TestSendMailController_CreateSendMail(t *testing.T) {
 			expectedStatus: http.StatusBadRequest,
 			setupMock:      func(mockRepo *mocks.MockSendMailRepository, userID primitive.ObjectID) {},
 			setupUserMock:  func(mockUserClient *mocks.MockUserClient, userID primitive.ObjectID) {},
-			setupAMQPMock:  func(mockAMQPService *mocks.MockAMQPService, userID primitive.ObjectID) {},
-			setupS3Mock:    func(mockS3Service *mocks.MockS3Service, userID primitive.ObjectID) {},
+			setupAMQPMock:  func(mockAMQPService *amqpservice.MockAMQPService, userID primitive.ObjectID) {},
+			setupS3Mock:    func(mockS3Service *s3service.MockS3Service, userID primitive.ObjectID) {},
 			setupAuth: func(c *gin.Context, userID primitive.ObjectID) {
 				c.Set("authUser", &auth.UserAuthInfo{UserID: userID})
 			},
@@ -109,8 +112,8 @@ func TestSendMailController_CreateSendMail(t *testing.T) {
 			expectedStatus: http.StatusBadRequest,
 			setupMock:      func(mockRepo *mocks.MockSendMailRepository, userID primitive.ObjectID) {},
 			setupUserMock:  func(mockUserClient *mocks.MockUserClient, userID primitive.ObjectID) {},
-			setupAMQPMock:  func(mockAMQPService *mocks.MockAMQPService, userID primitive.ObjectID) {},
-			setupS3Mock:    func(mockS3Service *mocks.MockS3Service, userID primitive.ObjectID) {},
+			setupAMQPMock:  func(mockAMQPService *amqpservice.MockAMQPService, userID primitive.ObjectID) {},
+			setupS3Mock:    func(mockS3Service *s3service.MockS3Service, userID primitive.ObjectID) {},
 			setupAuth: func(c *gin.Context, userID primitive.ObjectID) {
 				c.Set("authUser", &auth.UserAuthInfo{UserID: userID})
 			},
@@ -123,8 +126,8 @@ func TestSendMailController_CreateSendMail(t *testing.T) {
 			expectedStatus: http.StatusUnauthorized,
 			setupMock:      func(mockRepo *mocks.MockSendMailRepository, userID primitive.ObjectID) {},
 			setupUserMock:  func(mockUserClient *mocks.MockUserClient, userID primitive.ObjectID) {},
-			setupAMQPMock:  func(mockAMQPService *mocks.MockAMQPService, userID primitive.ObjectID) {},
-			setupS3Mock:    func(mockS3Service *mocks.MockS3Service, userID primitive.ObjectID) {},
+			setupAMQPMock:  func(mockAMQPService *amqpservice.MockAMQPService, userID primitive.ObjectID) {},
+			setupS3Mock:    func(mockS3Service *s3service.MockS3Service, userID primitive.ObjectID) {},
 			setupAuth:      func(c *gin.Context, userID primitive.ObjectID) {},
 		},
 	}
@@ -133,8 +136,8 @@ func TestSendMailController_CreateSendMail(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			mockRepo := &mocks.MockSendMailRepository{}
 			mockUserClient := &mocks.MockUserClient{}
-			mockAMQPService := &mocks.MockAMQPService{}
-			mockS3Service := &mocks.MockS3Service{}
+			mockAMQPService := &amqpservice.MockAMQPService{}
+			mockS3Service := &s3service.MockS3Service{}
 			userID := primitive.NewObjectID()
 
 			tt.setupMock(mockRepo, userID)

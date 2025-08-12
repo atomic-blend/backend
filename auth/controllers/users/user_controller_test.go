@@ -3,8 +3,9 @@ package users
 import (
 	"testing"
 
-	"github.com/atomic-blend/backend/auth/repositories"
 	"github.com/atomic-blend/backend/auth/tests/mocks"
+	userrepo "github.com/atomic-blend/backend/shared/repositories/user"
+	userrolerepo "github.com/atomic-blend/backend/shared/repositories/user_role"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -27,6 +28,6 @@ func TestNewUserController(t *testing.T) {
 
 func TestUserControllerImplementsInterfaces(t *testing.T) {
 	// This is just a compile-time check to ensure the interfaces match
-	var _ repositories.UserRepositoryInterface = &mocks.MockUserRepository{}
-	var _ repositories.UserRoleRepositoryInterface = &mocks.MockUserRoleRepository{}
+	var _ userrepo.Interface = &mocks.MockUserRepository{}
+	var _ userrolerepo.Interface = &mocks.MockUserRoleRepository{}
 }

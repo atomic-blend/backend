@@ -1,12 +1,12 @@
 package sendmail
 
 import (
-	"github.com/atomic-blend/backend/mail/auth"
-	"github.com/atomic-blend/backend/mail/grpc/clients"
-	"github.com/atomic-blend/backend/mail/grpc/interfaces"
-	mailinterfaces "github.com/atomic-blend/backend/mail/services/interfaces"
 	"github.com/atomic-blend/backend/mail/repositories"
-	"github.com/atomic-blend/backend/mail/services"
+	userclient "github.com/atomic-blend/backend/shared/grpc/user"
+	"github.com/atomic-blend/backend/shared/middlewares/auth"
+	amqpinterfaces "github.com/atomic-blend/backend/shared/services/amqp/interfaces"
+	s3service "github.com/atomic-blend/backend/shared/services/s3"
+	s3interfaces "github.com/atomic-blend/backend/shared/services/s3/interfaces"
 	"github.com/webstradev/gin-pagination/v2/pkg/pagination"
 
 	"github.com/gin-gonic/gin"
@@ -16,13 +16,13 @@ import (
 // Controller handles send mail related operations
 type Controller struct {
 	sendMailRepo repositories.SendMailRepositoryInterface
-	userClient   interfaces.UserClientInterface
-	amqpService  mailinterfaces.AMQPServiceInterface
-	s3Service    mailinterfaces.S3ServiceInterface
+	userClient   userclient.Interface
+	amqpService  amqpinterfaces.AMQPServiceInterface
+	s3Service    s3interfaces.S3ServiceInterface
 }
 
 // NewSendMailController creates a new send mail controller instance
-func NewSendMailController(sendMailRepo repositories.SendMailRepositoryInterface, userClient interfaces.UserClientInterface, amqpService mailinterfaces.AMQPServiceInterface, s3Service mailinterfaces.S3ServiceInterface) *Controller {
+func NewSendMailController(sendMailRepo repositories.SendMailRepositoryInterface, userClient userclient.Interface, amqpService amqpinterfaces.AMQPServiceInterface, s3Service s3interfaces.S3ServiceInterface) *Controller {
 	return &Controller{
 		sendMailRepo: sendMailRepo,
 		userClient:   userClient,
@@ -32,17 +32,16 @@ func NewSendMailController(sendMailRepo repositories.SendMailRepositoryInterface
 }
 
 // SetupRoutes sets up the send mail routes
-func SetupRoutes(router *gin.Engine, database *mongo.Database) {
+func SetupRoutes(router *gin.Engine, database *mongo.Database, amqpService amqpinterfaces.AMQPServiceInterface) {
 	sendMailRepo := repositories.NewSendMailRepository(database)
-	userClient, _ := clients.NewUserClient()
-	amqpService := services.NewAMQPService()
-	s3Service, _ := services.NewS3Service()
+	userClient, _ := userclient.NewUserClient()
+	s3Service, _ := s3service.NewS3Service()
 	sendMailController := NewSendMailController(sendMailRepo, userClient, amqpService, s3Service)
 	setupSendMailRoutes(router, sendMailController)
 }
 
 // SetupRoutesWithMock sets up the send mail routes with mock services for testing
-func SetupRoutesWithMock(router *gin.Engine, sendMailRepo repositories.SendMailRepositoryInterface, userClient interfaces.UserClientInterface, amqpService mailinterfaces.AMQPServiceInterface, s3Service mailinterfaces.S3ServiceInterface) {
+func SetupRoutesWithMock(router *gin.Engine, sendMailRepo repositories.SendMailRepositoryInterface, userClient userclient.Interface, amqpService amqpinterfaces.AMQPServiceInterface, s3Service s3interfaces.S3ServiceInterface) {
 	sendMailController := NewSendMailController(sendMailRepo, userClient, amqpService, s3Service)
 	setupSendMailRoutes(router, sendMailController)
 }

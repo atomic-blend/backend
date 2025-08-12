@@ -5,6 +5,8 @@ use (
 	./grpc
 	./mail
 	./mail-server
-	./mail-server/scripts/send-email-via-smtp
 	./productivity
+	./scripts/run-tests-and-lint
+	./scripts/send-email-via-smtp
+	./shared
 )

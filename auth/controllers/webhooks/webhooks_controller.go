@@ -1,9 +1,10 @@
 package webhooks
 
 import (
-	"github.com/atomic-blend/backend/auth/auth"
-	"github.com/atomic-blend/backend/auth/repositories"
 	"os"
+
+	staticstringmiddleware "github.com/atomic-blend/backend/shared/middlewares/static_string"
+	userrepo "github.com/atomic-blend/backend/shared/repositories/user"
 
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -11,11 +12,11 @@ import (
 
 // Controller handles webhooks from external services like RevenueCat
 type Controller struct {
-	userRepo repositories.UserRepositoryInterface
+	userRepo userrepo.Interface
 }
 
 // NewWebhooksController creates a new instance of WebhooksController
-func NewWebhooksController(userRepo repositories.UserRepositoryInterface) *Controller {
+func NewWebhooksController(userRepo userrepo.Interface) *Controller {
 	return &Controller{
 		userRepo: userRepo,
 	}
@@ -23,7 +24,7 @@ func NewWebhooksController(userRepo repositories.UserRepositoryInterface) *Contr
 
 // SetupRoutes configures all user-related routes
 func SetupRoutes(router *gin.Engine, db *mongo.Database) {
-	userRepo := repositories.NewUserRepository(db)
+	userRepo := userrepo.NewUserRepository(db)
 	webhooksController := NewWebhooksController(userRepo)
 
 	// Public user routes (if any)
@@ -31,7 +32,7 @@ func SetupRoutes(router *gin.Engine, db *mongo.Database) {
 
 	// Protected user routes (require authentication with static token from env)
 	bearerToken := "Bearer " + os.Getenv("REVENUE_CAT_WEBHOOK_TOKEN")
-	protectedUserRoutes := auth.RequireStaticStringMiddleware(revenueCatGroup, bearerToken)
+	protectedUserRoutes := staticstringmiddleware.RequireStaticStringMiddleware(revenueCatGroup, bearerToken)
 	{
 		protectedUserRoutes.POST("", webhooksController.HandleRevenueCatWebhook)
 	}

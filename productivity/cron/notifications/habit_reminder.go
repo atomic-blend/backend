@@ -9,12 +9,12 @@ import (
 	authv1 "github.com/atomic-blend/backend/grpc/gen/auth/v1"
 	userv1 "github.com/atomic-blend/backend/grpc/gen/user/v1"
 	"github.com/atomic-blend/backend/productivity/cron/notifications/payloads"
-	"github.com/atomic-blend/backend/productivity/grpc/clients"
+	userclient "github.com/atomic-blend/backend/shared/grpc/user"
 	"github.com/atomic-blend/backend/productivity/models"
 	"github.com/atomic-blend/backend/productivity/repositories"
-	"github.com/atomic-blend/backend/productivity/utils/db"
-	fcmutils "github.com/atomic-blend/backend/productivity/utils/fcm_utils"
-	"github.com/atomic-blend/backend/productivity/utils/shortcuts"
+	"github.com/atomic-blend/backend/shared/utils/db"
+	fcmutils "github.com/atomic-blend/backend/shared/utils/fcm_utils"
+	"github.com/atomic-blend/backend/shared/utils/shortcuts"
 
 	fcm "github.com/appleboy/go-fcm"
 	"github.com/rs/zerolog/log"
@@ -27,7 +27,7 @@ func HabitReminderNotificationCron() {
 
 	habitRepo := repositories.NewHabitRepository(db.Database)
 
-	userService, err := clients.NewUserClient()
+	userService, err := userclient.NewUserClient()
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to create user client")
 		return

@@ -226,16 +226,3 @@ func TestGenerateQueueID(t *testing.T) {
 	_, err = hex.DecodeString(queueID2)
 	assert.NoError(t, err)
 }
-
-// Helper function to create a test session
-func createTestSession() *Session {
-	return &Session{
-		auth:     false, // Authentication is no longer required
-		user:     "",    // No user needed since auth is not required
-		clientIP: "192.168.1.1",
-		hostname: "test.example.com",
-		queueID:  "test-queue-id",
-		from:     "sender@example.com",
-		rcpts:    []string{"recipient@example.com"},
-	}
-}

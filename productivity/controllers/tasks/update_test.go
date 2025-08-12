@@ -7,7 +7,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
-	"github.com/atomic-blend/backend/productivity/auth"
+	"github.com/atomic-blend/backend/shared/middlewares/auth"
+
 	"github.com/atomic-blend/backend/productivity/models"
 	"testing"
 	"time"

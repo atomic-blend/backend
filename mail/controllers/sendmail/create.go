@@ -1,3 +1,4 @@
+// Package sendmail contains the controller for the send mail endpoint
 package sendmail
 
 import (
@@ -7,7 +8,7 @@ import (
 
 	"connectrpc.com/connect"
 	userv1 "github.com/atomic-blend/backend/grpc/gen/user/v1"
-	"github.com/atomic-blend/backend/mail/auth"
+	"github.com/atomic-blend/backend/shared/middlewares/auth"
 	"github.com/atomic-blend/backend/mail/models"
 	awss3 "github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/google/uuid"
@@ -157,7 +158,7 @@ func (c *Controller) CreateSendMail(ctx *gin.Context) {
 	c.amqpService.PublishMessage("mail", "sent", map[string]interface{}{
 		"send_mail_id": sendMail.ID.Hex(),
 		"content":      rawMail, // Use the raw mail content for processing
-	})
+	}, nil)
 
 	ctx.JSON(http.StatusCreated, createdSendMail)
 }

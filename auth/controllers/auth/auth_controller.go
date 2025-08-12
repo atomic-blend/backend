@@ -1,8 +1,12 @@
 package auth
 
 import (
-	"github.com/atomic-blend/backend/auth/models"
 	"github.com/atomic-blend/backend/auth/repositories"
+	"github.com/atomic-blend/backend/shared/models"
+	userrepo "github.com/atomic-blend/backend/shared/repositories/user"
+	userrolerepo "github.com/atomic-blend/backend/shared/repositories/user_role"
+	"github.com/gin-gonic/gin"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 // RegisterRequest represents the structure for registration request data
@@ -22,16 +26,34 @@ type Response struct {
 
 // Controller handles auth-related operations
 type Controller struct {
-	userRepo          repositories.UserRepositoryInterface
-	userRoleRepo      repositories.UserRoleRepositoryInterface
+	userRepo          userrepo.Interface
+	userRoleRepo      userrolerepo.Interface
 	resetPasswordRepo repositories.UserResetPasswordRequestRepositoryInterface
 }
 
 // NewController creates a new auth controller
-func NewController(userRepo repositories.UserRepositoryInterface, userRoleRepo repositories.UserRoleRepositoryInterface, resetPasswordRepo repositories.UserResetPasswordRequestRepositoryInterface) *Controller {
+func NewController(userRepo userrepo.Interface, userRoleRepo userrolerepo.Interface, resetPasswordRepo repositories.UserResetPasswordRequestRepositoryInterface) *Controller {
 	return &Controller{
-		userRepo:     userRepo,
-		userRoleRepo: userRoleRepo,
+		userRepo:          userRepo,
+		userRoleRepo:      userRoleRepo,
 		resetPasswordRepo: resetPasswordRepo,
+	}
+}
+
+// SetupRoutes configures all auth-related routes
+func SetupRoutes(router *gin.Engine, database *mongo.Database) {
+	userRepo := userrepo.NewUserRepository(database)
+	userRoleRepo := userrolerepo.NewUserRoleRepository(database)
+	resetPasswordRepo := repositories.NewUserResetPasswordRequestRepository(database)
+	authController := NewController(userRepo, userRoleRepo, resetPasswordRepo)
+
+	authGroup := router.Group("/auth")
+	{
+		authGroup.POST("/register", authController.Register)
+		authGroup.POST("/login", authController.Login)
+		authGroup.POST("/refresh", authController.RefreshToken)
+		authGroup.POST("/reset-password", authController.StartResetPassword)
+		authGroup.POST("/reset-password/backup-key", authController.GetBackupKeyForResetPassword)
+		authGroup.POST("/reset-password/confirm", authController.ConfirmResetPassword)
 	}
 }

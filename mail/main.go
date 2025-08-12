@@ -9,8 +9,8 @@ import (
 	"github.com/atomic-blend/backend/mail/controllers"
 	"github.com/atomic-blend/backend/mail/controllers/health"
 	"github.com/atomic-blend/backend/mail/models"
-	"github.com/atomic-blend/backend/mail/utils/amqp"
-	"github.com/atomic-blend/backend/mail/utils/db"
+	amqpservice "github.com/atomic-blend/backend/shared/services/amqp"
+	"github.com/atomic-blend/backend/shared/utils/db"
 
 	"github.com/gin-contrib/cors"
 
@@ -127,11 +127,14 @@ func main() {
 		log.Info().Msg("No CORS configuration found, skipping CORS setup")
 	}
 
+	amqpService := amqpservice.NewAMQPService("MAIL")
+	amqpService.InitProducerAMQP()
+
 	// Register all routes
 	health.SetupRoutes(router, db.Database)
-	controllers.SetupAllControllers(router, db.Database)
+	controllers.SetupAllControllers(router, db.Database, amqpService)
 
-	amqp.InitProducerAmqp()
+	
 
 	// Define port
 	port := os.Getenv("PORT")
@@ -144,8 +147,8 @@ func main() {
 	// Conditionally start components based on runEnv
 	if runEnv == "" || runEnv == "worker" {
 		log.Info().Msg("Starting worker component")
-		amqp.InitConsumerAmqp()
-		go processMessages()
+		amqpService.InitConsumerAMQP()
+		go processMessages(amqpService)
 	}
 
 	if runEnv == "" || runEnv == "api" {

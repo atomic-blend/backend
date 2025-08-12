@@ -1,10 +1,6 @@
 package auth
 
 import (
-	"github.com/atomic-blend/backend/auth/models"
-	"github.com/atomic-blend/backend/auth/repositories"
-	"github.com/atomic-blend/backend/auth/tests/utils/inmemorymongo"
-	"github.com/atomic-blend/backend/auth/utils/password"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -12,6 +8,13 @@ import (
 	"net/http/httptest"
 	"testing"
 	"time"
+
+	"github.com/atomic-blend/backend/auth/repositories"
+	"github.com/atomic-blend/backend/shared/models"
+	userrepo "github.com/atomic-blend/backend/shared/repositories/user"
+	userrolerepo "github.com/atomic-blend/backend/shared/repositories/user_role"
+	"github.com/atomic-blend/backend/shared/test_utils/inmemorymongo"
+	"github.com/atomic-blend/backend/shared/utils/password"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
@@ -43,8 +46,8 @@ func TestGetBackupKeyForResetPassword(t *testing.T) {
 	db := client.Database("test_db")
 
 	// Create repositories
-	userRepo := repositories.NewUserRepository(db)
-	userRoleRepo := repositories.NewUserRoleRepository(db)
+	userRepo := userrepo	.NewUserRepository(db)
+	userRoleRepo := userrolerepo.NewUserRoleRepository(db)
 	resetPasswordRepo := repositories.NewUserResetPasswordRequestRepository(db)
 
 	// Create controller

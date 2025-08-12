@@ -9,6 +9,7 @@ import (
 	"connectrpc.com/connect"
 	userv1 "github.com/atomic-blend/backend/grpc/gen/user/v1"
 	"github.com/atomic-blend/backend/mail/models"
+	s3service "github.com/atomic-blend/backend/shared/services/s3"
 	"github.com/atomic-blend/backend/mail/tests/mocks"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/emersion/go-message"
@@ -129,7 +130,7 @@ This is a test email content.`
 	tests := []struct {
 		name           string
 		payload        ReceivedMailPayload
-		setupMocks     func(*mocks.MockMailRepository, *mocks.MockS3Service, *mocks.MockUserClient)
+		setupMocks     func(*mocks.MockMailRepository, *s3service.MockS3Service, *mocks.MockUserClient)
 		expectedAck    bool
 		expectedErrors bool
 	}{
@@ -146,7 +147,7 @@ This is a test email content.`
 				DeliverTo:  testEmail,
 				ReceivedAt: "2024-01-01T00:00:00Z",
 			},
-			setupMocks: func(mailRepo *mocks.MockMailRepository, s3Service *mocks.MockS3Service, userClient *mocks.MockUserClient) {
+			setupMocks: func(mailRepo *mocks.MockMailRepository, s3Service *s3service.MockS3Service, userClient *mocks.MockUserClient) {
 				// Mock user client response
 				userClient.On("GetUserPublicKey", mock.Anything, mock.Anything).Return(
 					&connect.Response[userv1.GetUserPublicKeyResponse]{
@@ -179,7 +180,7 @@ This is a test email content.`
 				DeliverTo:  "nonexistent@example.com",
 				ReceivedAt: "2024-01-01T00:00:00Z",
 			},
-			setupMocks: func(mailRepo *mocks.MockMailRepository, s3Service *mocks.MockS3Service, userClient *mocks.MockUserClient) {
+			setupMocks: func(mailRepo *mocks.MockMailRepository, s3Service *s3service.MockS3Service, userClient *mocks.MockUserClient) {
 				// Mock user client to return error (user not found)
 				userClient.On("GetUserPublicKey", mock.Anything, mock.Anything).Return(
 					nil, errors.New("user not found"),
@@ -202,7 +203,7 @@ This is a test email content.`
 				DeliverTo:  testEmail,
 				ReceivedAt: "2024-01-01T00:00:00Z",
 			},
-			setupMocks: func(mailRepo *mocks.MockMailRepository, s3Service *mocks.MockS3Service, userClient *mocks.MockUserClient) {
+			setupMocks: func(mailRepo *mocks.MockMailRepository, s3Service *s3service.MockS3Service, userClient *mocks.MockUserClient) {
 				// Mock user client response with invalid public key
 				userClient.On("GetUserPublicKey", mock.Anything, mock.Anything).Return(
 					&connect.Response[userv1.GetUserPublicKeyResponse]{
@@ -229,7 +230,7 @@ This is a test email content.`
 				DeliverTo:  testEmail,
 				ReceivedAt: "2024-01-01T00:00:00Z",
 			},
-			setupMocks: func(mailRepo *mocks.MockMailRepository, s3Service *mocks.MockS3Service, userClient *mocks.MockUserClient) {
+			setupMocks: func(mailRepo *mocks.MockMailRepository, s3Service *s3service.MockS3Service, userClient *mocks.MockUserClient) {
 				// Mock user client response
 				userClient.On("GetUserPublicKey", mock.Anything, mock.Anything).Return(
 					&connect.Response[userv1.GetUserPublicKeyResponse]{
@@ -259,7 +260,7 @@ This is a test email content.`
 				DeliverTo:  testEmail,
 				ReceivedAt: "2024-01-01T00:00:00Z",
 			},
-			setupMocks: func(mailRepo *mocks.MockMailRepository, s3Service *mocks.MockS3Service, userClient *mocks.MockUserClient) {
+			setupMocks: func(mailRepo *mocks.MockMailRepository, s3Service *s3service.MockS3Service, userClient *mocks.MockUserClient) {
 				// Mock user client response
 				userClient.On("GetUserPublicKey", mock.Anything, mock.Anything).Return(
 					&connect.Response[userv1.GetUserPublicKeyResponse]{
@@ -286,7 +287,7 @@ This is a test email content.`
 		t.Run(tt.name, func(t *testing.T) {
 			// Create mocks
 			mockMailRepo := &mocks.MockMailRepository{}
-			mockS3Service := &mocks.MockS3Service{}
+			mockS3Service := &s3service.MockS3Service{}
 			mockUserClient := &mocks.MockUserClient{}
 
 			// Setup mocks

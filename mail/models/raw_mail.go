@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"io"
 
-	ageencryption "github.com/atomic-blend/backend/mail/utils/age_encryption"
+	ageencryptionservice "github.com/atomic-blend/backend/shared/services/age_encryption"
 	"github.com/emersion/go-message"
 )
 
@@ -29,6 +29,8 @@ type RawAttachment struct {
 
 // Encrypt encrypts the content using the age encryption library
 func (m *RawMail) Encrypt(publicKey string) (*RawMail, error) {
+	ageService := ageencryptionservice.NewAgeEncryptionService()
+
 	encryptedMail := &RawMail{
 		Attachments:    make([]RawAttachment, 0),
 		Rejected:       m.Rejected,
@@ -42,7 +44,7 @@ func (m *RawMail) Encrypt(publicKey string) (*RawMail, error) {
 		for key, value := range m.Headers {
 			switch v := value.(type) {
 			case string:
-				encryptedValue, err := ageencryption.EncryptString(publicKey, v)
+				encryptedValue, err := ageService.EncryptString(publicKey, v)
 				if err != nil {
 					return nil, err
 				}
@@ -51,7 +53,7 @@ func (m *RawMail) Encrypt(publicKey string) (*RawMail, error) {
 				// For slice of strings, encrypt each item and store as slice
 				encryptedSlice := make([]string, len(v))
 				for i, item := range v {
-					encryptedItem, err := ageencryption.EncryptString(publicKey, item)
+					encryptedItem, err := ageService.EncryptString(publicKey, item)
 					if err != nil {
 						return nil, err
 					}
@@ -61,7 +63,7 @@ func (m *RawMail) Encrypt(publicKey string) (*RawMail, error) {
 			default:
 				// For other types, convert to string representation and encrypt
 				valueStr := fmt.Sprintf("%v", v)
-				encryptedValue, err := ageencryption.EncryptString(publicKey, valueStr)
+				encryptedValue, err := ageService.EncryptString(publicKey, valueStr)
 				if err != nil {
 					return nil, err
 				}
@@ -71,29 +73,29 @@ func (m *RawMail) Encrypt(publicKey string) (*RawMail, error) {
 		encryptedMail.Headers = encryptedHeaders
 	}
 
-	encryptedTextContent, err := ageencryption.EncryptString(publicKey, m.TextContent)
+	encryptedTextContent, err := ageService.EncryptString(publicKey, m.TextContent)
 	if err != nil {
 		return nil, err
 	}
 	encryptedMail.TextContent = encryptedTextContent
 
-	encryptedHTMLContent, err := ageencryption.EncryptString(publicKey, m.HTMLContent)
+	encryptedHTMLContent, err := ageService.EncryptString(publicKey, m.HTMLContent)
 	if err != nil {
 		return nil, err
 	}
 	encryptedMail.HTMLContent = encryptedHTMLContent
 
 	for _, attachment := range m.Attachments {
-		encryptedAttachment, err := ageencryption.EncryptBytes(publicKey, attachment.Data)
+		encryptedAttachment, err := ageService.EncryptBytes(publicKey, attachment.Data)
 		if err != nil {
 			return nil, err
 		}
-		encryptedFilename, err := ageencryption.EncryptString(publicKey, attachment.Filename)
+		encryptedFilename, err := ageService.EncryptString(publicKey, attachment.Filename)
 		if err != nil {
 			return nil, err
 		}
 
-		encryptedContentType, err := ageencryption.EncryptString(publicKey, attachment.ContentType)
+		encryptedContentType, err := ageService.EncryptString(publicKey, attachment.ContentType)
 		if err != nil {
 			return nil, err
 		}

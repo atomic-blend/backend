@@ -1,10 +1,10 @@
 package users
 
 import (
-	"github.com/atomic-blend/backend/auth/auth"
-	"github.com/atomic-blend/backend/auth/grpc/clients"
-	"github.com/atomic-blend/backend/auth/grpc/interfaces"
-	"github.com/atomic-blend/backend/auth/repositories"
+	productivityclient "github.com/atomic-blend/backend/shared/grpc/productivity"
+	"github.com/atomic-blend/backend/shared/middlewares/auth"
+	userrepo "github.com/atomic-blend/backend/shared/repositories/user"
+	userrolerepo "github.com/atomic-blend/backend/shared/repositories/user_role"
 
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -12,13 +12,13 @@ import (
 
 // UserController handles user profile related operations
 type UserController struct {
-	userRepo           repositories.UserRepositoryInterface
-	userRoleRepo       repositories.UserRoleRepositoryInterface
-	productivityClient interfaces.ProductivityClientInterface
+	userRepo           userrepo.Interface
+	userRoleRepo       userrolerepo.Interface
+	productivityClient productivityclient.Interface
 }
 
 // NewUserController creates a new profile controller instance
-func NewUserController(userRepo repositories.UserRepositoryInterface, userRoleRepo repositories.UserRoleRepositoryInterface, productivityClient interfaces.ProductivityClientInterface) *UserController {
+func NewUserController(userRepo userrepo.Interface, userRoleRepo userrolerepo.Interface, productivityClient productivityclient.Interface) *UserController {
 	return &UserController{
 		userRepo:           userRepo,
 		userRoleRepo:       userRoleRepo,
@@ -28,11 +28,11 @@ func NewUserController(userRepo repositories.UserRepositoryInterface, userRoleRe
 
 // SetupRoutes configures all user-related routes
 func SetupRoutes(router *gin.Engine, database *mongo.Database) {
-	userRepo := repositories.NewUserRepository(database)
-	userRoleRepo := repositories.NewUserRoleRepository(database)
+	userRepo := userrepo.NewUserRepository(database)
+	userRoleRepo := userrolerepo.NewUserRoleRepository(database)
 
-	// Create productivity client
-	productivityClient, err := clients.NewProductivityClient()
+	// // Create productivity client
+	productivityClient, err := productivityclient.NewProductivityClient()
 	if err != nil {
 		panic("Failed to create productivity client: " + err.Error())
 	}

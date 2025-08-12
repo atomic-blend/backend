@@ -3,9 +3,9 @@ package main
 import (
 	"net/http"
 
-	userGrpc "github.com/atomic-blend/backend/auth/grpc/server/user"
-	"github.com/atomic-blend/backend/auth/repositories"
-	"github.com/atomic-blend/backend/auth/utils/db"
+	userGrpc "github.com/atomic-blend/backend/auth/grpc/server"	
+	userrepo "github.com/atomic-blend/backend/shared/repositories/user"
+	"github.com/atomic-blend/backend/shared/utils/db"
 	userconnect "github.com/atomic-blend/backend/grpc/gen/user/v1/userv1connect"
 
 	"github.com/rs/zerolog/log"
@@ -13,7 +13,7 @@ import (
 
 func startGRPCServer() {
 	// Initialize repositories
-	userRepo := repositories.NewUserRepository(db.Database)
+	userRepo := userrepo.NewUserRepository(db.Database)
 
 	UserGrpcServer := userGrpc.NewUserGrpcServer(userRepo)
 
