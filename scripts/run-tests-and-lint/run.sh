@@ -15,13 +15,19 @@ if ! command -v go &> /dev/null; then
     exit 1
 fi
 
+# Check if golint is available for Go linting
+if ! command -v golint &> /dev/null; then
+    echo "⚠️  Warning: golint CLI tool not found. Go linting will be skipped."
+    echo "   Install with: go install golang.org/x/lint/golint@latest"
+fi
+
 # Check if buf is available for gRPC linting
 if ! command -v buf &> /dev/null; then
     echo "⚠️  Warning: buf CLI tool not found. gRPC linting will be skipped."
     echo "   Install with: go install github.com/bufbuild/buf/cmd/buf@latest"
 fi
 
-echo "🚀 Starting Microservice Test and gRPC Lint Runner"
+echo "🚀 Starting Microservice Test, Golint, and gRPC Lint Runner"
 echo "📍 Workspace: $WORKSPACE_ROOT"
 echo ""
 

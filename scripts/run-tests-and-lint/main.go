@@ -13,11 +13,12 @@ import (
 )
 
 type ServiceResult struct {
-	Name       string
-	TestResult *TestResult
-	LintResult *LintResult
-	HasTests   bool
-	HasGRPC    bool
+	Name         string
+	TestResult   *TestResult
+	LintResult   *LintResult
+	GolintResult *GolintResult
+	HasTests     bool
+	HasGRPC      bool
 }
 
 type TestResult struct {
@@ -39,20 +40,31 @@ type LintResult struct {
 }
 
 type Summary struct {
-	TotalServices  int
-	PassedTests    int
-	FailedTests    int
-	PassedLint     int
-	FailedLint     int
-	TotalDuration  time.Duration
-	TotalTestCount int
-	TotalPassCount int
-	TotalFailCount int
-	TotalSkipCount int
+	TotalServices     int
+	PassedTests       int
+	FailedTests       int
+	PassedLint        int
+	FailedLint        int
+	PassedGolint      int
+	FailedGolint      int
+	TotalDuration     time.Duration
+	TotalTestCount    int
+	TotalPassCount    int
+	TotalFailCount    int
+	TotalSkipCount    int
+	TotalGolintIssues int
+}
+
+type GolintResult struct {
+	Passed     bool
+	Output     string
+	Error      string
+	Duration   time.Duration
+	IssueCount int
 }
 
 func main() {
-	fmt.Println("🚀 Running Microservice Tests and gRPC Linting")
+	fmt.Println("🚀 Running Microservice Tests, Golint, and gRPC Linting")
 	fmt.Println("📍 This script should be run from the backend directory")
 	fmt.Println(strings.Repeat("=", 50))
 
@@ -109,15 +121,23 @@ func main() {
 			Name: service,
 		}
 
-		// Check if service has tests
+		// Check if service has tests (and can run golint)
 		if hasTests(servicePath) {
 			result.HasTests = true
+
+			// Run golint first
+			printProgressBar(currentService, totalServices, "🔍 Running Golint")
+			result.GolintResult = runGolint(servicePath, service)
+
+			// Then run tests
+			printProgressBar(currentService, totalServices, "🧪 Running Tests")
 			result.TestResult = runTests(servicePath, service)
 		}
 
 		// Check if service has gRPC
 		if hasGRPC(servicePath) {
 			result.HasGRPC = true
+			printProgressBar(currentService, totalServices, "🔍 Running gRPC Lint")
 			result.LintResult = runGRPCLint(servicePath, service)
 		}
 
@@ -213,8 +233,6 @@ func parseTestOutput(output string) (int, int, int, int) {
 }
 
 func runTests(servicePath, serviceName string) *TestResult {
-	fmt.Printf("  🧪 Running tests for %s...\n", serviceName)
-
 	startTime := time.Now()
 
 	// Create command with context and set the working directory
@@ -284,8 +302,6 @@ func runTests(servicePath, serviceName string) *TestResult {
 }
 
 func runGRPCLint(servicePath, serviceName string) *LintResult {
-	fmt.Printf("  🔍 Running gRPC lint for %s...\n", serviceName)
-
 	startTime := time.Now()
 
 	// Try to find proto files
@@ -330,6 +346,80 @@ func runGRPCLint(servicePath, serviceName string) *LintResult {
 	return result
 }
 
+func runGolint(servicePath, serviceName string) *GolintResult {
+	startTime := time.Now()
+
+	// Check if golint is available
+	if _, err := exec.LookPath("golint"); err != nil {
+		return &GolintResult{
+			Passed:     true,
+			Output:     "golint not available",
+			Error:      "golint command not found",
+			Duration:   time.Since(startTime),
+			IssueCount: 0,
+		}
+	}
+
+	// Try to find go files
+	goFiles, err := filepath.Glob(filepath.Join(servicePath, "**/*.go"))
+	if err != nil || len(goFiles) == 0 {
+		return &GolintResult{
+			Passed:     true,
+			Output:     "No go files found",
+			Duration:   time.Since(startTime),
+			IssueCount: 0,
+		}
+	}
+
+	// Run golint if available
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, "golint", "-set_exit_status", "./...")
+	cmd.Dir = servicePath
+
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	err = cmd.Run()
+	duration := time.Since(startTime)
+
+	result := &GolintResult{
+		Output:   stdout.String(),
+		Error:    stderr.String(),
+		Duration: duration,
+	}
+
+	// Count issues (lines in Vim quickfix format: filename:line:column: message)
+	issueCount := 0
+	output := stdout.String()
+	if output != "" {
+		lines := strings.Split(strings.TrimSpace(output), "\n")
+		for _, line := range lines {
+			line = strings.TrimSpace(line)
+			if line != "" && strings.Contains(line, ":") && strings.Count(line, ":") >= 3 {
+				// Check if it's a valid quickfix format line
+				parts := strings.SplitN(line, ":", 4)
+				if len(parts) >= 4 {
+					issueCount++
+				}
+			}
+		}
+	}
+	result.IssueCount = issueCount
+
+	// Determine if golint passed based on exit code (1 = issues found, 0 = no issues)
+	if err != nil {
+		result.Passed = false
+		fmt.Printf("  ❌ golint failed for %s (%.2fs) - Found %d issues\n", serviceName, duration.Seconds(), issueCount)
+	} else {
+		result.Passed = true
+		fmt.Printf("  ✅ golint passed for %s (%.2fs) - Found %d issues\n", serviceName, duration.Seconds(), issueCount)
+	}
+
+	return result
+}
+
 func displayResults(results []*ServiceResult, startTime time.Time) {
 	fmt.Println("\n" + strings.Repeat("=", 50))
 	fmt.Println("📊 RESULTS SUMMARY")
@@ -344,6 +434,23 @@ func displayResults(results []*ServiceResult, startTime time.Time) {
 		fmt.Printf("   %s\n", strings.Repeat("-", len(result.Name)+2))
 
 		if result.HasTests {
+			// Show golint results first
+			if result.GolintResult != nil {
+				if result.GolintResult.Passed {
+					fmt.Printf("   ✅ Golint: PASSED (%.2fs) - %d issues found\n",
+						result.GolintResult.Duration.Seconds(),
+						result.GolintResult.IssueCount)
+					summary.PassedGolint++
+				} else {
+					fmt.Printf("   ❌ Golint: FAILED (%.2fs) - %d issues found\n",
+						result.GolintResult.Duration.Seconds(),
+						result.GolintResult.IssueCount)
+					summary.FailedGolint++
+				}
+				summary.TotalGolintIssues += result.GolintResult.IssueCount
+			}
+
+			// Then show test results
 			if result.TestResult.Passed {
 				fmt.Printf("   ✅ Tests: PASSED (%.2fs) - %d passed, %d failed, %d skipped\n",
 					result.TestResult.Duration.Seconds(),
@@ -382,6 +489,9 @@ func displayResults(results []*ServiceResult, startTime time.Time) {
 			summary.TotalFailCount += result.TestResult.FailCount
 			summary.TotalSkipCount += result.TestResult.SkipCount
 		}
+		if result.HasTests && result.GolintResult != nil {
+			summary.TotalDuration += result.GolintResult.Duration
+		}
 		if result.HasGRPC && result.LintResult != nil {
 			summary.TotalDuration += result.LintResult.Duration
 		}
@@ -392,11 +502,14 @@ func displayResults(results []*ServiceResult, startTime time.Time) {
 	fmt.Println("📈 SUMMARY")
 	fmt.Println(strings.Repeat("=", 50))
 	fmt.Printf("Total Services: %d\n", summary.TotalServices)
+	fmt.Printf("Golint Passed: %d\n", summary.PassedGolint)
+	fmt.Printf("Golint Failed: %d\n", summary.FailedGolint)
 	fmt.Printf("Tests Passed: %d\n", summary.PassedTests)
 	fmt.Printf("Tests Failed: %d\n", summary.FailedTests)
 	fmt.Printf("gRPC Lint Passed: %d\n", summary.PassedLint)
 	fmt.Printf("gRPC Lint Failed: %d\n", summary.FailedLint)
 	fmt.Printf("Total Duration: %.2fs\n", summary.TotalDuration.Seconds())
+	fmt.Printf("Total Golint Issues: %d\n", summary.TotalGolintIssues)
 	fmt.Printf("\n📊 Test Statistics:\n")
 	fmt.Printf("   Total Tests: %d\n", summary.TotalTestCount)
 	fmt.Printf("   Passed: %d\n", summary.TotalPassCount)
@@ -404,12 +517,20 @@ func displayResults(results []*ServiceResult, startTime time.Time) {
 	fmt.Printf("   Skipped: %d\n", summary.TotalSkipCount)
 
 	// Display detailed failures
-	if summary.FailedTests > 0 || summary.FailedLint > 0 {
+	if summary.FailedTests > 0 || summary.FailedLint > 0 || summary.FailedGolint > 0 {
 		fmt.Println("\n" + strings.Repeat("=", 50))
 		fmt.Println("🚨 DETAILED FAILURES")
 		fmt.Println(strings.Repeat("=", 50))
 
 		for _, result := range results {
+			if result.HasTests && result.GolintResult != nil && !result.GolintResult.Passed {
+				fmt.Printf("\n❌ %s - Golint Failure:\n", result.Name)
+				fmt.Printf("Issues Found: %d\n", result.GolintResult.IssueCount)
+				if result.GolintResult.Output != "" {
+					fmt.Printf("Output: %s\n", result.GolintResult.Output)
+				}
+			}
+
 			if result.HasTests && !result.TestResult.Passed {
 				fmt.Printf("\n❌ %s - Test Failure:\n", result.Name)
 				fmt.Printf("Error: %s\n", result.TestResult.Error)
@@ -429,7 +550,7 @@ func displayResults(results []*ServiceResult, startTime time.Time) {
 	}
 
 	// Exit with appropriate code
-	if summary.FailedTests > 0 || summary.FailedLint > 0 {
+	if summary.FailedTests > 0 || summary.FailedLint > 0 || summary.FailedGolint > 0 {
 		fmt.Printf("\n❌ Some checks failed. Exiting with code 1.\n")
 		os.Exit(1)
 	} else {
