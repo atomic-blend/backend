@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/atomic-blend/backend/auth/models"
-	"github.com/atomic-blend/backend/auth/tests/utils/inmemorymongo"
+	"github.com/atomic-blend/backend/shared/test_utils/inmemorymongo"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
