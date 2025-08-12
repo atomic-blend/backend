@@ -3,7 +3,7 @@ package sendmail
 import (
 	"net/http"
 
-	"github.com/atomic-blend/backend/mail/auth"
+	"github.com/atomic-blend/backend/shared/middlewares/auth"
 	"github.com/atomic-blend/backend/mail/models"
 
 	"github.com/gin-gonic/gin"

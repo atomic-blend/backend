@@ -10,7 +10,7 @@ import (
 
 	"connectrpc.com/connect"
 	userv1 "github.com/atomic-blend/backend/grpc/gen/user/v1"
-	"github.com/atomic-blend/backend/mail/auth"
+	"github.com/atomic-blend/backend/shared/middlewares/auth"
 	"github.com/atomic-blend/backend/mail/models"
 	amqpservice "github.com/atomic-blend/backend/shared/services/amqp"
 	s3service "github.com/atomic-blend/backend/shared/services/s3"

@@ -1,7 +1,7 @@
 package sendmail
 
 import (
-	"github.com/atomic-blend/backend/mail/auth"
+	"github.com/atomic-blend/backend/shared/middlewares/auth"
 	"github.com/atomic-blend/backend/mail/grpc/clients"
 	"github.com/atomic-blend/backend/mail/grpc/interfaces"
 	"github.com/atomic-blend/backend/mail/repositories"
