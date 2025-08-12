@@ -1,4 +1,4 @@
-package ageencryption
+package ageencryptionservice
 
 import (
 	"bytes"

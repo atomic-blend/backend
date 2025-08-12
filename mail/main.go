@@ -9,7 +9,7 @@ import (
 	"github.com/atomic-blend/backend/mail/controllers"
 	"github.com/atomic-blend/backend/mail/controllers/health"
 	"github.com/atomic-blend/backend/mail/models"
-	"github.com/atomic-blend/backend/mail/utils/amqp"
+	amqpservice "github.com/atomic-blend/backend/mail/services/amqp"
 	"github.com/atomic-blend/backend/mail/utils/db"
 
 	"github.com/gin-contrib/cors"
@@ -131,7 +131,9 @@ func main() {
 	health.SetupRoutes(router, db.Database)
 	controllers.SetupAllControllers(router, db.Database)
 
-	amqp.InitProducerAmqp()
+	amqpService := amqpservice.NewAMQPService()
+
+	amqpService.InitProducerAmqp()
 
 	// Define port
 	port := os.Getenv("PORT")
@@ -144,8 +146,8 @@ func main() {
 	// Conditionally start components based on runEnv
 	if runEnv == "" || runEnv == "worker" {
 		log.Info().Msg("Starting worker component")
-		amqp.InitConsumerAmqp()
-		go processMessages()
+		amqpService.InitConsumerAmqp()
+		go processMessages(amqpService)
 	}
 
 	if runEnv == "" || runEnv == "api" {

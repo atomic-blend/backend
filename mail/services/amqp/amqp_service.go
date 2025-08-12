@@ -2,7 +2,8 @@ package amqpservice
 
 import (
 	"github.com/atomic-blend/backend/mail/services/amqp/interfaces"
-	"github.com/atomic-blend/backend/mail/utils/amqp"
+	"github.com/atomic-blend/backend/mail/services/amqp/utils"
+	"github.com/streadway/amqp"
 )
 
 // AMQPServiceWrapper wraps the existing AMQP functionality
@@ -15,5 +16,20 @@ func NewAMQPService() interfaces.AMQPServiceInterface {
 
 // PublishMessage publishes a message to the AMQP broker
 func (a *AMQPServiceWrapper) PublishMessage(exchangeName string, topic string, message map[string]interface{}) {
-	amqp.PublishMessage(exchangeName, topic, message)
+	utils.PublishMessage(exchangeName, topic, message)
+}
+
+// InitProducerAmqp initializes the AMQP producer
+func (a *AMQPServiceWrapper) InitProducerAmqp() {
+	utils.InitProducerAmqp()
+}
+
+// InitConsumerAmqp initializes the AMQP consumer
+func (a *AMQPServiceWrapper) InitConsumerAmqp() {
+	utils.InitConsumerAmqp()
+}
+
+// Messages returns the AMQP messages
+func (a *AMQPServiceWrapper) Messages() <-chan amqp.Delivery {
+	return utils.Messages
 }
