@@ -3,8 +3,8 @@ package webhooks
 import (
 	"os"
 
-	userrepo "github.com/atomic-blend/backend/shared/repositories/user"
 	staticstringmiddleware "github.com/atomic-blend/backend/shared/middlewares/static_string"
+	userrepo "github.com/atomic-blend/backend/shared/repositories/user"
 
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -12,11 +12,11 @@ import (
 
 // Controller handles webhooks from external services like RevenueCat
 type Controller struct {
-	userRepo userrepo.UserRepositoryInterface
+	userRepo userrepo.Interface
 }
 
 // NewWebhooksController creates a new instance of WebhooksController
-func NewWebhooksController(userRepo userrepo.UserRepositoryInterface) *Controller {
+func NewWebhooksController(userRepo userrepo.Interface) *Controller {
 	return &Controller{
 		userRepo: userRepo,
 	}

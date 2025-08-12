@@ -15,7 +15,7 @@ type MailClient struct {
 	client mailv1connect.MailServiceClient
 }
 
-var _ MailClientInterface = (*MailClient)(nil)
+var _ Interface = (*MailClient)(nil)
 
 // NewMailClient creates a new mail client
 func NewMailClient() (*MailClient, error) {

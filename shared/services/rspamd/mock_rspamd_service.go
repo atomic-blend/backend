@@ -31,8 +31,8 @@ func (m *MockRspamdService) Ping() error {
 }
 
 // NewClient creates a new Rspamd client with the given configuration
-func (r *MockRspamdService) NewClient(config *rspamdclient.Config) *rspamdclient.Client {
-	args := r.Called(config)
+func (m *MockRspamdService) NewClient(config *rspamdclient.Config) *rspamdclient.Client {
+	args := m.Called(config)
 	if args.Get(0) == nil {
 		return nil
 	}
@@ -40,8 +40,8 @@ func (r *MockRspamdService) NewClient(config *rspamdclient.Config) *rspamdclient
 }
 
 // DefaultConfig returns default configuration with environment variable support
-func (r *MockRspamdService) DefaultConfig() *rspamdclient.Config {
-	args := r.Called()
+func (m *MockRspamdService) DefaultConfig() *rspamdclient.Config {
+	args := m.Called()
 	if args.Get(0) == nil {
 		return nil
 	}

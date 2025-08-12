@@ -8,11 +8,11 @@ import (
 
 // Controller handles user role related operations
 type Controller struct {
-	userRoleRepo userrolerepo.UserRoleRepositoryInterface
+	userRoleRepo userrolerepo.Interface
 }
 
 // NewUserRoleController creates a new user role controller instance
-func NewUserRoleController(userRoleRepo userrolerepo.UserRoleRepositoryInterface) *Controller {
+func NewUserRoleController(userRoleRepo userrolerepo.Interface) *Controller {
 	return &Controller{
 		userRoleRepo: userRoleRepo,
 	}

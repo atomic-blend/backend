@@ -18,8 +18,8 @@ import (
 
 const userCollection = "users"
 
-// UserRepositoryInterface defines methods that a UserRepository must implement
-type UserRepositoryInterface interface {
+// Interface defines methods that a UserRepository must implement
+type Interface interface {
 	Create(ctx context.Context, user *models.UserEntity) (*models.UserEntity, error)
 	GetByID(ctx context.Context, id string) (*models.UserEntity, error)
 	GetByEmail(ctx context.Context, email string) (*models.UserEntity, error)
@@ -31,8 +31,8 @@ type UserRepositoryInterface interface {
 	AddPurchase(ctx *gin.Context, userID primitive.ObjectID, purchaseEntry *models.PurchaseEntity) error
 }
 
-// UserRepository provides methods to interact with user data in the database
-type UserRepository struct {
+// Repository provides methods to interact with user data in the database
+type Repository struct {
 	collection           *mongo.Collection
 	taskCollection       *mongo.Collection
 	habitCollection      *mongo.Collection
@@ -41,14 +41,14 @@ type UserRepository struct {
 }
 
 // Ensure UserRepository implements UserRepositoryInterface
-var _ UserRepositoryInterface = (*UserRepository)(nil)
+var _ Interface = (*Repository)(nil)
 
 // NewUserRepository creates a new instance of UserRepository
-func NewUserRepository(database *mongo.Database) *UserRepository {
+func NewUserRepository(database *mongo.Database) *Repository {
 	if database == nil {
 		database = db.Database
 	}
-	return &UserRepository{
+	return &Repository{
 		collection: database.Collection(userCollection),
 		//TODO: replace with grpc calls
 		// taskCollection:       database.Collection(taskCollection),
@@ -59,7 +59,7 @@ func NewUserRepository(database *mongo.Database) *UserRepository {
 }
 
 // GetAllIterable retrieves all users from the database
-func (r *UserRepository) GetAllIterable(ctx context.Context) (*mongo.Cursor, error) {
+func (r *Repository) GetAllIterable(ctx context.Context) (*mongo.Cursor, error) {
 	cursor, err := r.collection.Find(ctx, bson.M{})
 	if err != nil {
 		return nil, err
@@ -68,7 +68,7 @@ func (r *UserRepository) GetAllIterable(ctx context.Context) (*mongo.Cursor, err
 }
 
 // Create adds a new user to the database
-func (r *UserRepository) Create(ctx context.Context, user *models.UserEntity) (*models.UserEntity, error) {
+func (r *Repository) Create(ctx context.Context, user *models.UserEntity) (*models.UserEntity, error) {
 	// Generate an ID if not provided
 	if user.ID == nil {
 		id := primitive.NewObjectID()
@@ -93,7 +93,7 @@ func (r *UserRepository) Create(ctx context.Context, user *models.UserEntity) (*
 }
 
 // GetByID retrieves a user by their ID
-func (r *UserRepository) GetByID(ctx context.Context, id string) (*models.UserEntity, error) {
+func (r *Repository) GetByID(ctx context.Context, id string) (*models.UserEntity, error) {
 	var user models.UserEntity
 	objID, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
@@ -112,7 +112,7 @@ func (r *UserRepository) GetByID(ctx context.Context, id string) (*models.UserEn
 }
 
 // GetByEmail retrieves a user by their email address
-func (r *UserRepository) GetByEmail(ctx context.Context, email string) (*models.UserEntity, error) {
+func (r *Repository) GetByEmail(ctx context.Context, email string) (*models.UserEntity, error) {
 	var user models.UserEntity
 	err := r.collection.FindOne(ctx, bson.M{"email": email}).Decode(&user)
 	if err != nil {
@@ -122,7 +122,7 @@ func (r *UserRepository) GetByEmail(ctx context.Context, email string) (*models.
 }
 
 // Update modifies an existing user in the database
-func (r *UserRepository) Update(ctx context.Context, user *models.UserEntity) (*models.UserEntity, error) {
+func (r *Repository) Update(ctx context.Context, user *models.UserEntity) (*models.UserEntity, error) {
 	if user.ID == nil {
 		return nil, errors.New("user ID is required for update")
 	}
@@ -152,7 +152,7 @@ func (r *UserRepository) Update(ctx context.Context, user *models.UserEntity) (*
 }
 
 // Delete removes a user from the database by ID
-func (r *UserRepository) Delete(ctx context.Context, id string) error {
+func (r *Repository) Delete(ctx context.Context, id string) error {
 	objID, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
 		return errors.New("invalid ID format")
@@ -171,7 +171,7 @@ func (r *UserRepository) Delete(ctx context.Context, id string) error {
 }
 
 // FindByEmail finds a user by their email address
-func (r *UserRepository) FindByEmail(ctx context.Context, email string) (*models.UserEntity, error) {
+func (r *Repository) FindByEmail(ctx context.Context, email string) (*models.UserEntity, error) {
 	// Validate email format
 	if !regexutils.IsValidEmail(email) {
 		return nil, errors.New("invalid email format")
@@ -190,7 +190,7 @@ func (r *UserRepository) FindByEmail(ctx context.Context, email string) (*models
 }
 
 // FindByID finds a user by their ObjectID
-func (r *UserRepository) FindByID(ctx *gin.Context, d primitive.ObjectID) (*models.UserEntity, error) {
+func (r *Repository) FindByID(ctx *gin.Context, d primitive.ObjectID) (*models.UserEntity, error) {
 	var user models.UserEntity
 	err := r.collection.FindOne(ctx, bson.M{"_id": d}).Decode(&user)
 	if err != nil {
@@ -204,7 +204,7 @@ func (r *UserRepository) FindByID(ctx *gin.Context, d primitive.ObjectID) (*mode
 }
 
 // ResetAllUserData deletes all personal data associated with a user
-func (r *UserRepository) ResetAllUserData(ctx *gin.Context, userID primitive.ObjectID) error {
+func (r *Repository) ResetAllUserData(ctx *gin.Context, userID primitive.ObjectID) error {
 	// Delete all tasks for the user
 	_, err := r.taskCollection.DeleteMany(ctx, bson.M{"user": userID})
 	if err != nil {
@@ -237,7 +237,7 @@ func (r *UserRepository) ResetAllUserData(ctx *gin.Context, userID primitive.Obj
 }
 
 // AddPurchase adds a purchase entry to the user
-func (r *UserRepository) AddPurchase(ctx *gin.Context, userID primitive.ObjectID, purchaseEntry *models.PurchaseEntity) error {
+func (r *Repository) AddPurchase(ctx *gin.Context, userID primitive.ObjectID, purchaseEntry *models.PurchaseEntity) error {
 	user, error := r.FindByID(ctx, userID)
 	if error != nil {
 		log.Error().Err(error).Msg("Failed to find user")

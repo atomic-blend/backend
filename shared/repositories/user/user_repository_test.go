@@ -14,7 +14,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-func setupTestDB(t *testing.T) (*UserRepository, func()) {
+func setupTestDB(t *testing.T) (*Repository, func()) {
 	// Start in-memory MongoDB server
 	mongoServer, err := inmemorymongo.CreateInMemoryMongoDB()
 	require.NoError(t, err)

@@ -26,20 +26,19 @@ type Response struct {
 
 // Controller handles auth-related operations
 type Controller struct {
-	userRepo          userrepo.UserRepositoryInterface
-	userRoleRepo      userrolerepo.UserRoleRepositoryInterface
+	userRepo          userrepo.Interface
+	userRoleRepo      userrolerepo.Interface
 	resetPasswordRepo repositories.UserResetPasswordRequestRepositoryInterface
 }
 
 // NewController creates a new auth controller
-func NewController(userRepo userrepo.UserRepositoryInterface, userRoleRepo userrolerepo.UserRoleRepositoryInterface, resetPasswordRepo repositories.UserResetPasswordRequestRepositoryInterface) *Controller {
+func NewController(userRepo userrepo.Interface, userRoleRepo userrolerepo.Interface, resetPasswordRepo repositories.UserResetPasswordRequestRepositoryInterface) *Controller {
 	return &Controller{
-		userRepo:     userRepo,
-		userRoleRepo: userRoleRepo,
+		userRepo:          userRepo,
+		userRoleRepo:      userRoleRepo,
 		resetPasswordRepo: resetPasswordRepo,
 	}
 }
-
 
 // SetupRoutes configures all auth-related routes
 func SetupRoutes(router *gin.Engine, database *mongo.Database) {

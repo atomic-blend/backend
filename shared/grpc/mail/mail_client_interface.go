@@ -8,7 +8,7 @@ import (
 	mailv1 "github.com/atomic-blend/backend/grpc/gen/mail/v1"
 )
 
-// MailClientInterface defines the methods for mail-related gRPC operations
-type MailClientInterface interface {
+// Interface defines the methods for mail-related gRPC operations
+type Interface interface {
 	UpdateMailStatus(context.Context, *connect.Request[mailv1.UpdateMailStatusRequest]) (*connect.Response[mailv1.UpdateMailStatusResponse], error)
 }
