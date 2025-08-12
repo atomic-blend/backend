@@ -10,12 +10,6 @@ import (
 	"github.com/streadway/amqp"
 )
 
-var (
-	exchangeNamesRaw = getAMQPExchangeNames(false)
-	queueName        = getAMQPQueueName(false)
-	routingKeysRaw   = getAMQPRoutingKeys(false)
-)
-
 // Consumer-specific connection variables
 var consumerConn *amqp.Connection
 var consumerCh *amqp.Channel
@@ -24,10 +18,15 @@ var consumerCh *amqp.Channel
 var Messages <-chan amqp.Delivery
 
 // InitConsumerAMQP initializes the AMQP consumer
-func InitConsumerAMQP() {
+func InitConsumerAMQP(workerName string) {
 	log.Debug().Msg("Initializing AMQP Consumer")
 	var err error
 	var q amqp.Queue
+
+	// Set values from environment variables
+	exchangeNamesRaw := getAMQPExchangeNames(workerName, false)
+	queueName := getAMQPQueueName(workerName, false)
+	routingKeysRaw := getAMQPRoutingKeys(workerName, false)
 
 	// Skip initialization in test environment
 	if os.Getenv("GO_ENV") == "test" {
@@ -35,12 +34,12 @@ func InitConsumerAMQP() {
 		return
 	}
 
-	shortcuts.CheckRequiredEnvVar("MAIL_CONSUMER_AMQP_URL or MAIL_AMQP_URL or AMQP_URL", getAMQPURL(false), "amqp://user:password@localhost:5672")
-	shortcuts.CheckRequiredEnvVar("MAIL_CONSUMER_AMQP_EXCHANGE_NAMES or MAIL_AMQP_EXCHANGE_NAMES or AMQP_EXCHANGE_NAMES", exchangeNamesRaw, "")
-	shortcuts.CheckRequiredEnvVar("MAIL_CONSUMER_AMQP_QUEUE_NAME or MAIL_AMQP_QUEUE_NAME or AMQP_QUEUE_NAME", queueName, "")
-	shortcuts.CheckRequiredEnvVar("MAIL_CONSUMER_AMQP_ROUTING_KEYS or MAIL_AMQP_ROUTING_KEYS or AMQP_ROUTING_KEYS", routingKeysRaw, "")
+	shortcuts.CheckRequiredEnvVar(workerName+"_CONSUMER_AMQP_URL or "+workerName+"_AMQP_URL or AMQP_URL", getAMQPURL(workerName, false), "amqp://user:password@localhost:5672")
+	shortcuts.CheckRequiredEnvVar(workerName+"_CONSUMER_AMQP_EXCHANGE_NAMES or "+workerName+"_AMQP_EXCHANGE_NAMES or AMQP_EXCHANGE_NAMES", exchangeNamesRaw, "")
+	shortcuts.CheckRequiredEnvVar(workerName+"_CONSUMER_AMQP_QUEUE_NAME or "+workerName+"_AMQP_QUEUE_NAME or AMQP_QUEUE_NAME", queueName, "")
+	shortcuts.CheckRequiredEnvVar(workerName+"_CONSUMER_AMQP_ROUTING_KEYS or "+workerName+"_AMQP_ROUTING_KEYS or AMQP_ROUTING_KEYS", routingKeysRaw, "")
 
-	consumerConn, err = amqp.Dial(getAMQPURL(false))
+	consumerConn, err = amqp.Dial(getAMQPURL(workerName, false))
 	shortcuts.FailOnError(err, "Failed to connect to RabbitMQ")
 
 	exchangeNames := strings.Split(exchangeNamesRaw, ",")
@@ -128,11 +127,11 @@ func InitConsumerAMQP() {
 	go monitorConnectionHealth()
 
 	// setup the retry queue
-	if getAMQPRetryEnabled(true) {
-		retryQueueName := getAMQPRetryQueueName(true)
+	if getAMQPRetryEnabled(workerName, true) {
+		retryQueueName := getAMQPRetryQueueName(workerName, true)
 		retryQueueArgs := amqp.Table{
-			"x-dead-letter-exchange":    getAMQPRetryExchange(true),
-			"x-dead-letter-routing-key": getAMQPRetryRoutingKey(true),
+			"x-dead-letter-exchange":    getAMQPRetryExchange(workerName, true),
+			"x-dead-letter-routing-key": getAMQPRetryRoutingKey(workerName, true),
 		}
 
 		retryQueue, err := consumerCh.QueueDeclare(
@@ -147,11 +146,11 @@ func InitConsumerAMQP() {
 
 		//bind the retry queue to the exchange
 		err = consumerCh.QueueBind(
-			retryQueue.Name,              // name of the queue
-			getAMQPRetryBindingKey(true), // bindingKey - use the retry binding key, not the retry routing key
-			getAMQPRetryExchange(true),   // sourceExchange
-			false,                        // noWait
-			nil,                          // arguments
+			retryQueue.Name,                          // name of the queue
+			getAMQPRetryBindingKey(workerName, true), // bindingKey - use the retry binding key, not the retry routing key
+			getAMQPRetryExchange(workerName, true),   // sourceExchange
+			false,                                    // noWait
+			nil,                                      // arguments
 		)
 		shortcuts.FailOnError(err, "Error binding the Retry Queue")
 	}

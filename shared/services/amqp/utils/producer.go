@@ -12,20 +12,17 @@ import (
 	"github.com/streadway/amqp"
 )
 
-var (
-	// amqpURL is the URL of the AMQP broker
-	amqpURL = getAMQPURL(true)
-	// exchangeNames is the list of exchange names to use
-	exchangeNames = getAMQPExchangeNames(true)
-)
-
 // Producer-specific connection variables
 var producerConn *amqp.Connection
 var producerCh *amqp.Channel
 
 // InitProducerAMQP initializes the AMQP producer
-func InitProducerAMQP() {
+func InitProducerAMQP(workerName string) {
 	var err error
+
+	// Set values from environment variables
+	amqpURL := getAMQPURL(workerName, true)
+	exchangeNames := getAMQPExchangeNames(workerName, true)
 
 	// Skip initialization in test environment
 	if os.Getenv("GO_ENV") == "test" {
@@ -33,23 +30,29 @@ func InitProducerAMQP() {
 		return
 	}
 
-	shortcuts.CheckRequiredEnvVar("MAIL_PRODUCER_AMQP_URL or MAIL_AMQP_URL or AMQP_URL", amqpURL, "amqp://user:password@localhost:5672/")
-	shortcuts.CheckRequiredEnvVar("MAIL_PRODUCER_AMQP_QUEUE_NAME or MAIL_AMQP_QUEUE_NAME or AMQP_QUEUE_NAME", getAMQPQueueName(true), "")
-	shortcuts.CheckRequiredEnvVar("MAIL_PRODUCER_AMQP_EXCHANGE_NAMES or MAIL_AMQP_EXCHANGE_NAMES or AMQP_EXCHANGE_NAMES", exchangeNames, "")
+	shortcuts.CheckRequiredEnvVar(workerName+"_PRODUCER_AMQP_URL or "+workerName+"_AMQP_URL or AMQP_URL", amqpURL, "amqp://user:password@localhost:5672/")
+	shortcuts.CheckRequiredEnvVar(workerName+"_PRODUCER_AMQP_QUEUE_NAME or "+workerName+"_AMQP_QUEUE_NAME or AMQP_QUEUE_NAME", getAMQPQueueName(workerName, true), "")
+	shortcuts.CheckRequiredEnvVar(workerName+"_PRODUCER_AMQP_EXCHANGE_NAMES or "+workerName+"_AMQP_EXCHANGE_NAMES or AMQP_EXCHANGE_NAMES", exchangeNames, "")
 
 	//split exchange names
 	exchangeNamesList := strings.Split(exchangeNames, ",")
 
 	log.Debug().Msg("Producer connecting to AMQP")
 	producerConn, err = amqp.Dial(amqpURL)
-	shortcuts.FailOnError(err, "Failed to connect to RabbitMQ")
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to connect to RabbitMQ")
+		return
+	}
 
 	log.Debug().Msg("Opening a channel")
 	producerCh, err = producerConn.Channel()
-	shortcuts.FailOnError(err, "Failed to open a channel")
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to open a channel")
+		return
+	}
 
 	log.Info().Msg("Declaring queue")
-	queueName := getAMQPQueueName(true)
+	queueName := getAMQPQueueName(workerName, true)
 	_, err = producerCh.QueueDeclare(queueName, true, false, false, false, nil)
 	if err != nil {
 		log.Info().Err(err).Msg("Failed to declare a queue")
@@ -66,7 +69,10 @@ func InitProducerAMQP() {
 			false,        // noWait
 			nil,          // arguments
 		)
-		shortcuts.FailOnError(err, "Failed to declare the Exchange")
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to declare the Exchange")
+			return
+		}
 	}
 	log.Info().Msg("✅\tAMQP connection established")
 }
@@ -83,9 +89,18 @@ func PublishMessage(exchangeName string, topic string, message map[string]interf
 	log.Debug().Msgf("Exchange: %s, Topic: %s, Message: %v", exchangeName, topic, message)
 	log.Debug().Msg("Encoding message")
 	encodedPayload, err := json.Marshal(message)
-	shortcuts.FailOnError(err, "Failed to encode message")
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to encode message")
+		return
+	}
 
 	log.Debug().Msg("Publishing message")
+	// Handle nil headers
+	var amqpHeaders amqp.Table
+	if headers != nil {
+		amqpHeaders = *headers
+	}
+
 	err = producerCh.Publish(
 		exchangeName, // exchange
 		topic,        // routing key
@@ -95,9 +110,12 @@ func PublishMessage(exchangeName string, topic string, message map[string]interf
 			ContentType: "application/json",
 			Body:        encodedPayload,
 			Timestamp:   time.Now(),
-			Headers:     *headers,
+			Headers:     amqpHeaders,
 		})
-	shortcuts.FailOnError(err, "Failed to publish a message")
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to publish a message")
+		return
+	}
 }
 
 // CloseProducerConnection closes the producer AMQP connection

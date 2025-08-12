@@ -4,7 +4,6 @@ import (
 	"github.com/atomic-blend/backend/mail/repositories"
 	userclient "github.com/atomic-blend/backend/shared/grpc/user"
 	"github.com/atomic-blend/backend/shared/middlewares/auth"
-	amqpservice "github.com/atomic-blend/backend/shared/services/amqp"
 	amqpinterfaces "github.com/atomic-blend/backend/shared/services/amqp/interfaces"
 	s3service "github.com/atomic-blend/backend/shared/services/s3"
 	s3interfaces "github.com/atomic-blend/backend/shared/services/s3/interfaces"
@@ -33,10 +32,9 @@ func NewSendMailController(sendMailRepo repositories.SendMailRepositoryInterface
 }
 
 // SetupRoutes sets up the send mail routes
-func SetupRoutes(router *gin.Engine, database *mongo.Database) {
+func SetupRoutes(router *gin.Engine, database *mongo.Database, amqpService amqpinterfaces.AMQPServiceInterface) {
 	sendMailRepo := repositories.NewSendMailRepository(database)
 	userClient, _ := userclient.NewUserClient()
-	amqpService := amqpservice.NewAMQPService()
 	s3Service, _ := s3service.NewS3Service()
 	sendMailController := NewSendMailController(sendMailRepo, userClient, amqpService, s3Service)
 	setupSendMailRoutes(router, sendMailController)
