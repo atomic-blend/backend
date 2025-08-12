@@ -6,8 +6,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # Get the backend workspace root (parent of scripts directory)
 WORKSPACE_ROOT="$(dirname "$(dirname "$SCRIPT_DIR")")"
 
-# Change to the script directory
-cd "$SCRIPT_DIR"
+# Change to the backend workspace root
+cd "$WORKSPACE_ROOT"
 
 # Check if Go is available
 if ! command -v go &> /dev/null; then
@@ -25,14 +25,11 @@ echo "🚀 Starting Microservice Test and gRPC Lint Runner"
 echo "📍 Workspace: $WORKSPACE_ROOT"
 echo ""
 
-# Run the Go script
-go run main.go
+# Run the Go script from the backend directory
+go run "$SCRIPT_DIR/main.go"
 
 # Capture the exit code
 EXIT_CODE=$?
-
-# Return to the original directory
-cd "$WORKSPACE_ROOT"
 
 # Exit with the same code
 exit $EXIT_CODE
