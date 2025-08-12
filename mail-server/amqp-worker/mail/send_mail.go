@@ -15,7 +15,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/atomic-blend/backend/mail-server/grpc/client"
+	mailclient "github.com/atomic-blend/backend/shared/grpc/mail"
 	"github.com/atomic-blend/backend/mail-server/utils/amqp"
 	"github.com/atomic-blend/backend/mail/models"
 	"github.com/emersion/go-message"
@@ -74,7 +74,7 @@ func handleTemporaryFailure(m *amqppackage.Delivery, body []byte, failedReason e
 		return
 	}
 
-	req := client.CreateRetryStatusRequest(sendEmailID, failedReason.Error(), int32(retryCount))
+	req := mailclient.CreateRetryStatusRequest(sendEmailID, failedReason.Error(), int32(retryCount))
 	_, err = mailClient.UpdateMailStatus(context.Background(), req)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to update mail status for retry")
@@ -127,7 +127,7 @@ func handleSuccess(message *amqppackage.Delivery) {
 		return
 	}
 
-	req := client.CreateSuccessStatusRequest(sendEmailID)
+	req := mailclient.CreateSuccessStatusRequest(sendEmailID)
 	_, err = mailClient.UpdateMailStatus(context.Background(), req)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to update mail status for success")
@@ -420,8 +420,8 @@ func processSendMailMessage(message *amqppackage.Delivery, rawMail models.RawMai
 	return nil
 }
 
-func getMailClient() (*client.MailClient, error) {
-	mailClient, err := client.NewMailClient()
+func getMailClient() (*mailclient.MailClient, error) {
+	mailClient, err := mailclient.NewMailClient()
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to create mail client")
 		return nil, err

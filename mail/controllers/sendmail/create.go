@@ -158,7 +158,7 @@ func (c *Controller) CreateSendMail(ctx *gin.Context) {
 	c.amqpService.PublishMessage("mail", "sent", map[string]interface{}{
 		"send_mail_id": sendMail.ID.Hex(),
 		"content":      rawMail, // Use the raw mail content for processing
-	})
+	}, nil)
 
 	ctx.JSON(http.StatusCreated, createdSendMail)
 }

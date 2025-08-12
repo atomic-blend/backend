@@ -16,8 +16,8 @@ func NewAMQPService() amqpinterfaces.AMQPServiceInterface {
 }
 
 // PublishMessage publishes a message to the AMQP broker
-func (a *AMQPServiceWrapper) PublishMessage(exchangeName string, topic string, message map[string]interface{}) {
-	amqputils.PublishMessage(exchangeName, topic, message)
+func (a *AMQPServiceWrapper) PublishMessage(exchangeName string, topic string, message map[string]interface{}, headers *amqp.Table) {
+	amqputils.PublishMessage(exchangeName, topic, message, headers)
 }
 
 // InitProducerAMQP initializes the AMQP producer
