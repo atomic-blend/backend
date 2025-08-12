@@ -8,6 +8,7 @@ import (
 	amqpservice "github.com/atomic-blend/backend/mail/services/amqp"
 	amqpinterfaces "github.com/atomic-blend/backend/mail/services/amqp/interfaces"
 	s3service "github.com/atomic-blend/backend/mail/services/s3"
+	s3interfaces "github.com/atomic-blend/backend/mail/services/s3/interfaces"
 	"github.com/webstradev/gin-pagination/v2/pkg/pagination"
 
 	"github.com/gin-gonic/gin"
@@ -19,11 +20,11 @@ type Controller struct {
 	sendMailRepo repositories.SendMailRepositoryInterface
 	userClient   interfaces.UserClientInterface
 	amqpService  amqpinterfaces.AMQPServiceInterface
-	s3Service    s3service.S3ServiceInterface
+	s3Service    s3interfaces.S3ServiceInterface
 }
 
 // NewSendMailController creates a new send mail controller instance
-func NewSendMailController(sendMailRepo repositories.SendMailRepositoryInterface, userClient interfaces.UserClientInterface, amqpService amqpinterfaces.AMQPServiceInterface, s3Service s3service.S3ServiceInterface) *Controller {
+func NewSendMailController(sendMailRepo repositories.SendMailRepositoryInterface, userClient interfaces.UserClientInterface, amqpService amqpinterfaces.AMQPServiceInterface, s3Service s3interfaces.S3ServiceInterface) *Controller {
 	return &Controller{
 		sendMailRepo: sendMailRepo,
 		userClient:   userClient,
@@ -43,7 +44,7 @@ func SetupRoutes(router *gin.Engine, database *mongo.Database) {
 }
 
 // SetupRoutesWithMock sets up the send mail routes with mock services for testing
-func SetupRoutesWithMock(router *gin.Engine, sendMailRepo repositories.SendMailRepositoryInterface, userClient interfaces.UserClientInterface, amqpService amqpinterfaces.AMQPServiceInterface, s3Service s3service.S3ServiceInterface) {
+func SetupRoutesWithMock(router *gin.Engine, sendMailRepo repositories.SendMailRepositoryInterface, userClient interfaces.UserClientInterface, amqpService amqpinterfaces.AMQPServiceInterface, s3Service s3interfaces.S3ServiceInterface) {
 	sendMailController := NewSendMailController(sendMailRepo, userClient, amqpService, s3Service)
 	setupSendMailRoutes(router, sendMailController)
 }
