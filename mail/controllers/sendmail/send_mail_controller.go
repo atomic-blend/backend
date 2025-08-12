@@ -1,4 +1,4 @@
-package send_mail
+package sendmail
 
 import (
 	"github.com/atomic-blend/backend/mail/auth"

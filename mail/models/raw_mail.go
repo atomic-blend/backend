@@ -20,7 +20,7 @@ type RawMail struct {
 	Greylisted     bool                   `json:"graylisted"`
 }
 
-// Attachment represents a file attachment
+// RawAttachment represents a file attachment
 type RawAttachment struct {
 	Filename    string
 	ContentType string
@@ -108,6 +108,7 @@ func (m *RawMail) Encrypt(publicKey string) (*RawMail, error) {
 	return encryptedMail, nil
 }
 
+// ToMailEntity converts a RawMail to a Mail entity
 func (m *RawMail) ToMailEntity() *Mail {
 	return &Mail{
 		Headers:        m.Headers,

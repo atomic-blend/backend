@@ -25,9 +25,11 @@ import (
 )
 
 const (
-	//TODO: make these configurable by env vars
+	// MaxRetries is the maximum number of retries for a mail
 	MaxRetries      = 5
+	// MaxDelayMillis is the maximum delay for a mail
 	MaxDelayMillis  = 172800000 // 2 days in ms
+	// BaseDelayMillis is the base delay for a mail
 	BaseDelayMillis = 10000     // 10 seconds initial backoff
 )
 

@@ -8,9 +8,13 @@ import (
 type SendStatus string
 
 const (
+	// SendStatusPending represents a mail that is pending to be sent
 	SendStatusPending SendStatus = "pending"
+	// SendStatusSent represents a mail that has been sent
 	SendStatusSent    SendStatus = "sent"
+	// SendStatusFailed represents a mail that has failed to be sent
 	SendStatusFailed  SendStatus = "failed"
+	// SendStatusRetry represents a mail that has failed to be sent and is being retried
 	SendStatusRetry   SendStatus = "retry"
 )
 

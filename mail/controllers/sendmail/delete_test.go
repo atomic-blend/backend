@@ -1,4 +1,4 @@
-package send_mail
+package sendmail
 
 import (
 	"net/http"
@@ -15,7 +15,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-func TestSendMailController_GetSendMailByID(t *testing.T) {
+func TestSendMailController_DeleteSendMail(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	tests := []struct {
@@ -28,19 +28,17 @@ func TestSendMailController_GetSendMailByID(t *testing.T) {
 		{
 			name:           "Success",
 			sendMailID:     primitive.NewObjectID().Hex(),
-			expectedStatus: http.StatusOK,
+			expectedStatus: http.StatusNoContent,
 			setupMock: func(mockRepo *mocks.MockSendMailRepository, userID primitive.ObjectID, sendMailID primitive.ObjectID) {
 				mailID := primitive.NewObjectID()
-				mail := &models.Mail{
-					ID:     &mailID,
-					UserID: userID,
-				}
+				mail := &models.Mail{ID: &mailID, UserID: userID}
 				sendMail := &models.SendMail{
 					ID:         sendMailID,
 					Mail:       mail,
 					SendStatus: models.SendStatusPending,
 				}
 				mockRepo.On("GetByID", mock.Anything, sendMailID).Return(sendMail, nil)
+				mockRepo.On("Delete", mock.Anything, sendMailID).Return(nil)
 			},
 			setupAuth: func(c *gin.Context, userID primitive.ObjectID) {
 				c.Set("authUser", &auth.UserAuthInfo{UserID: userID})
@@ -66,14 +64,6 @@ func TestSendMailController_GetSendMailByID(t *testing.T) {
 			setupAuth: func(c *gin.Context, userID primitive.ObjectID) {
 				c.Set("authUser", &auth.UserAuthInfo{UserID: userID})
 			},
-		},
-		{
-			name:           "Unauthorized",
-			sendMailID:     primitive.NewObjectID().Hex(),
-			expectedStatus: http.StatusUnauthorized,
-			setupMock: func(mockRepo *mocks.MockSendMailRepository, userID primitive.ObjectID, sendMailID primitive.ObjectID) {
-			},
-			setupAuth: func(c *gin.Context, userID primitive.ObjectID) {},
 		},
 	}
 
@@ -102,10 +92,10 @@ func TestSendMailController_GetSendMailByID(t *testing.T) {
 
 			sendMailRoutes := router.Group("/mail/send")
 			{
-				sendMailRoutes.GET("/:id", controller.GetSendMailByID)
+				sendMailRoutes.DELETE("/:id", controller.DeleteSendMail)
 			}
 
-			req, _ := http.NewRequest("GET", "/mail/send/"+tt.sendMailID, nil)
+			req, _ := http.NewRequest("DELETE", "/mail/send/"+tt.sendMailID, nil)
 			w := httptest.NewRecorder()
 
 			router.ServeHTTP(w, req)

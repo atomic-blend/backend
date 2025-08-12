@@ -17,7 +17,7 @@ type RawMail struct {
 	Greylisted     bool
 }
 
-// Attachment represents a file attachment
+// RawAttachment represents a file attachment
 type RawAttachment struct {
 	Filename    string
 	ContentType string
