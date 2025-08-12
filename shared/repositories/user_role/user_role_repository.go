@@ -1,11 +1,11 @@
-package repositories
+package userrole
 
 import (
 	"context"
 	"errors"
 	"time"
 
-	"github.com/atomic-blend/backend/auth/models"
+	"github.com/atomic-blend/backend/shared/models"
 	"github.com/atomic-blend/backend/shared/utils/db"
 
 	"go.mongodb.org/mongo-driver/bson"
