@@ -10,6 +10,10 @@ This Go script automatically runs test suites and gRPC linting for all microserv
 - 📊 **Clear Results**: Displays results with emojis and clear formatting
 - 🚨 **Failure Details**: Shows detailed error information for failed tests/lint
 - 🔄 **Exit Codes**: Returns appropriate exit codes for CI/CD integration
+- 📈 **Progress Bars**: Visual progress indicators for overall completion
+- ⏳ **Spinner Animation**: Animated spinners during test execution
+- 📊 **Test Statistics**: Detailed counts of passed, failed, and skipped tests
+- 🎯 **JSON Test Output**: Uses Go's JSON test format for better data parsing
 
 ## Supported Services
 
