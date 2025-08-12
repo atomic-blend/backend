@@ -1,7 +1,7 @@
 package mail
 
 import (
-	"github.com/atomic-blend/backend/mail/auth"
+	"github.com/atomic-blend/backend/shared/middlewares/auth"
 	"github.com/atomic-blend/backend/mail/repositories"
 	"github.com/webstradev/gin-pagination/v2/pkg/pagination"
 
