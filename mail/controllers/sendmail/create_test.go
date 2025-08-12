@@ -10,12 +10,13 @@ import (
 
 	"connectrpc.com/connect"
 	userv1 "github.com/atomic-blend/backend/grpc/gen/user/v1"
-	"github.com/atomic-blend/backend/shared/middlewares/auth"
 	"github.com/atomic-blend/backend/mail/models"
+	"github.com/atomic-blend/backend/mail/tests/mocks"
+	"github.com/atomic-blend/backend/shared/middlewares/auth"
 	amqpservice "github.com/atomic-blend/backend/shared/services/amqp"
 	s3service "github.com/atomic-blend/backend/shared/services/s3"
-	"github.com/atomic-blend/backend/mail/tests/mocks"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/streadway/amqp"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
@@ -81,7 +82,7 @@ func TestSendMailController_CreateSendMail(t *testing.T) {
 					_, hasSendMailID := message["send_mail_id"]
 					_, hasContent := message["content"]
 					return hasSendMailID && hasContent
-				})).Return()
+				}), (*amqp.Table)(nil)).Return()
 			},
 			setupS3Mock: func(mockS3Service *s3service.MockS3Service, userID primitive.ObjectID) {
 				// Mock S3 operations for attachments (empty attachments in this test)
