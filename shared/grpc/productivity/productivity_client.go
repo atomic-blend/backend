@@ -1,11 +1,11 @@
-package clients
+package productivityclient
 
 import (
 	"context"
 	"net/http"
 
 	"connectrpc.com/connect"
-	grpcclientutils "github.com/atomic-blend/backend/auth/utils/grpc_client_utils"
+	grpcclientutils "github.com/atomic-blend/backend/shared/utils/grpc_client_utils"
 	"github.com/atomic-blend/backend/grpc/gen/productivity/v1"
 	"github.com/atomic-blend/backend/grpc/gen/productivity/v1/productivityv1connect"
 )

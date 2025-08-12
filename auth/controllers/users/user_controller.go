@@ -2,8 +2,7 @@ package users
 
 import (
 	"github.com/atomic-blend/backend/shared/middlewares/auth"
-	"github.com/atomic-blend/backend/auth/grpc/clients"
-	"github.com/atomic-blend/backend/auth/grpc/interfaces"
+	"github.com/atomic-blend/backend/shared/grpc/productivity"
 	"github.com/atomic-blend/backend/auth/repositories"
 
 	"github.com/gin-gonic/gin"
@@ -14,11 +13,11 @@ import (
 type UserController struct {
 	userRepo           repositories.UserRepositoryInterface
 	userRoleRepo       repositories.UserRoleRepositoryInterface
-	productivityClient interfaces.ProductivityClientInterface
+	productivityClient productivityclient.ProductivityClientInterface
 }
 
 // NewUserController creates a new profile controller instance
-func NewUserController(userRepo repositories.UserRepositoryInterface, userRoleRepo repositories.UserRoleRepositoryInterface, productivityClient interfaces.ProductivityClientInterface) *UserController {
+func NewUserController(userRepo repositories.UserRepositoryInterface, userRoleRepo repositories.UserRoleRepositoryInterface, productivityClient productivityclient.ProductivityClientInterface) *UserController {
 	return &UserController{
 		userRepo:           userRepo,
 		userRoleRepo:       userRoleRepo,
@@ -32,7 +31,7 @@ func SetupRoutes(router *gin.Engine, database *mongo.Database) {
 	userRoleRepo := repositories.NewUserRoleRepository(database)
 
 	// Create productivity client
-	productivityClient, err := clients.NewProductivityClient()
+	productivityClient, err := productivityclient.NewProductivityClient()
 	if err != nil {
 		panic("Failed to create productivity client: " + err.Error())
 	}

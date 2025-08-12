@@ -3,7 +3,7 @@ package main
 import (
 	"net/http"
 
-	userGrpc "github.com/atomic-blend/backend/auth/grpc/server/user"
+	userGrpc "github.com/atomic-blend/backend/auth/grpc/server"
 	"github.com/atomic-blend/backend/auth/repositories"
 	"github.com/atomic-blend/backend/auth/utils/db"
 	userconnect "github.com/atomic-blend/backend/grpc/gen/user/v1/userv1connect"

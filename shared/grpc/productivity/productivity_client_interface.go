@@ -1,4 +1,4 @@
-package interfaces
+package productivityclient
 
 import (
 	"context"
