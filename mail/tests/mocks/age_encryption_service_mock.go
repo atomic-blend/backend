@@ -1,7 +1,7 @@
 package mocks
 
 import (
-	ageencryptionservice "github.com/atomic-blend/backend/mail/services/age_encryption"
+	interfaces "github.com/atomic-blend/backend/mail/services/age_encryption/interfaces"
 	"github.com/stretchr/testify/mock"
 )
 
@@ -11,7 +11,7 @@ type MockAgeEncryptionService struct {
 }
 
 // Ensure MockAgeEncryptionService implements the interface
-var _ ageencryptionservice.AgeEncryptionServiceInterface = (*MockAgeEncryptionService)(nil)
+var _ interfaces.AgeEncryptionServiceInterface = (*MockAgeEncryptionService)(nil)
 
 // EncryptString encrypts a string using the age encryption library
 func (m *MockAgeEncryptionService) EncryptString(publicKey string, plaintext string) (string, error) {

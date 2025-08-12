@@ -1,6 +1,7 @@
 package ageencryptionservice
 
 import (
+	interfaces "github.com/atomic-blend/backend/mail/services/age_encryption/interfaces"
 	ageencryption "github.com/atomic-blend/backend/mail/utils/age_encryption"
 )
 
@@ -8,7 +9,7 @@ import (
 type AgeEncryptionServiceWrapper struct{}
 
 // NewAgeEncryptionService creates a new age encryption service wrapper
-func NewAgeEncryptionService() AgeEncryptionServiceInterface {
+func NewAgeEncryptionService() interfaces.AgeEncryptionServiceInterface {
 	return &AgeEncryptionServiceWrapper{}
 }
 
