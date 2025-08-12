@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/atomic-blend/backend/productivity/models"
-	"github.com/atomic-blend/backend/productivity/tests/utils/inmemorymongo"
+	"github.com/atomic-blend/backend/shared/test_utils/inmemorymongo"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

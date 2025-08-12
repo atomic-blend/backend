@@ -7,7 +7,7 @@ import (
 	"connectrpc.com/connect"
 	userv1 "github.com/atomic-blend/backend/grpc/gen/user/v1"
 	"github.com/atomic-blend/backend/grpc/gen/user/v1/userv1connect"
-	grpcclientutils "github.com/atomic-blend/backend/productivity/utils/grpc_client_utils"
+	grpcclientutils "github.com/atomic-blend/backend/shared/utils/grpc_client_utils"
 )
 
 // UserClient is the client for user-related gRPC operations

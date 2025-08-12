@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/atomic-blend/backend/productivity/models"
-	"github.com/atomic-blend/backend/productivity/utils/db"
+	"github.com/atomic-blend/backend/shared/utils/db"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"

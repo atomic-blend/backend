@@ -12,7 +12,7 @@ import (
 	"github.com/atomic-blend/backend/productivity/grpc/clients"
 	"github.com/atomic-blend/backend/productivity/models"
 	"github.com/atomic-blend/backend/productivity/repositories"
-	"github.com/atomic-blend/backend/productivity/utils/db"
+	"github.com/atomic-blend/backend/shared/utils/db"
 	fcmutils "github.com/atomic-blend/backend/productivity/utils/fcm_utils"
 	"github.com/atomic-blend/backend/productivity/utils/shortcuts"
 

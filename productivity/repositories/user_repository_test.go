@@ -2,7 +2,7 @@ package repositories
 
 import (
 	"github.com/atomic-blend/backend/productivity/models"
-	"github.com/atomic-blend/backend/productivity/tests/utils/inmemorymongo"
+	"github.com/atomic-blend/backend/shared/test_utils/inmemorymongo"
 	"context"
 	"testing"
 	"time"
