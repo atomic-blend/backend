@@ -15,17 +15,38 @@ type MailAttachment struct {
 
 // Mail represents a mail message
 type Mail struct {
-	ID             primitive.ObjectID  `bson:"_id" json:"id"`
+	ID             *primitive.ObjectID `bson:"_id,omitempty" json:"id,omitempty"`
 	UserID         primitive.ObjectID  `bson:"user_id" json:"user_id"`
 	Headers        interface{}         `bson:"headers" json:"headers"`
 	TextContent    string              `bson:"text_content" json:"text_content"`
 	HTMLContent    string              `bson:"html_content" json:"html_content"`
-	Attachments    []MailAttachment    `bson:"attachments" json:"attachments"`
-	Archived       bool                `bson:"archived" json:"archived"`
-	Trashed        bool                `bson:"trashed" json:"trashed"`
-	Greylisted     bool                `bson:"graylisted" json:"graylisted"`
-	Rejected       bool                `bson:"rejected" json:"rejected"`
-	RewriteSubject bool                `bson:"rewrite_subject" json:"rewrite_subject"`
-	CreatedAt      *primitive.DateTime `bson:"created_at" json:"created_at"`
-	UpdatedAt      *primitive.DateTime `bson:"updated_at" json:"updated_at"`
+	Attachments    []MailAttachment    `bson:"attachments,omitempty" json:"attachments,omitempty"`
+	Archived       *bool               `bson:"archived,omitempty" json:"archived,omitempty"`
+	Trashed        *bool               `bson:"trashed,omitempty" json:"trashed,omitempty"`
+	Greylisted     *bool               `bson:"graylisted,omitempty" json:"graylisted,omitempty"`
+	Rejected       *bool               `bson:"rejected,omitempty" json:"rejected,omitempty"`
+	RewriteSubject *bool               `bson:"rewrite_subject,omitempty" json:"rewrite_subject,omitempty"`
+	CreatedAt      *primitive.DateTime `bson:"created_at,omitempty" json:"created_at,omitempty"`
+	UpdatedAt      *primitive.DateTime `bson:"updated_at,omitempty" json:"updated_at,omitempty"`
 }
+
+// Encrypt encrypts the mail data
+func (s *Mail) Encrypt(publicKey string) (*Mail, error) {
+	encryptedMail := &Mail{
+		ID:             s.ID,
+		UserID:         s.UserID,
+		Attachments:    s.Attachments,
+		Archived:       s.Archived,
+		Trashed:        s.Trashed,
+		Greylisted:     s.Greylisted,
+		Rejected:       s.Rejected,
+		RewriteSubject: s.RewriteSubject,
+		CreatedAt:      s.CreatedAt,
+		UpdatedAt:      s.UpdatedAt,
+	}
+
+	// Encrypt the mail data here
+
+	return encryptedMail, nil
+}
+

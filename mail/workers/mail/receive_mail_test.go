@@ -21,14 +21,14 @@ import (
 func TestMailContent_Encrypt(t *testing.T) {
 	tests := []struct {
 		name      string
-		mail      *Content
+		mail      *models.RawMail
 		publicKey string
 		wantErr   bool
 	}{
 		{
 			name: "successful encryption",
-			mail: &Content{
-				Headers: map[string]string{
+			mail: &models.RawMail{
+				Headers: map[string]interface{}{
 					"From":       "sender@example.com",
 					"To":         "recipient@example.com",
 					"Subject":    "Test Subject",
@@ -39,7 +39,7 @@ func TestMailContent_Encrypt(t *testing.T) {
 				},
 				TextContent: "Plain text content",
 				HTMLContent: "<html><body>HTML content</body></html>",
-				Attachments: []Attachment{
+				Attachments: []models.RawAttachment{
 					{
 						Filename:    "test.txt",
 						ContentType: "text/plain",
@@ -50,21 +50,21 @@ func TestMailContent_Encrypt(t *testing.T) {
 				RewriteSubject: false,
 				Greylisted:     false,
 			},
-			publicKey: "age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p",
+			publicKey: "age1jl76v4rmz5ukg9danl3v0zmyet9sqejmngs52wj9m497wgd02s9quq4qfl",
 			wantErr:   false,
 		},
 		{
 			name: "empty content",
-			mail: &Content{
-				Headers:        map[string]string{},
+			mail: &models.RawMail{
+				Headers:        map[string]interface{}{},
 				TextContent:    "",
 				HTMLContent:    "",
-				Attachments:    []Attachment{},
+				Attachments:    []models.RawAttachment{},
 				Rejected:       false,
 				RewriteSubject: false,
 				Greylisted:     false,
 			},
-			publicKey: "age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p",
+			publicKey: "age1jl76v4rmz5ukg9danl3v0zmyet9sqejmngs52wj9m497wgd02s9quq4qfl",
 			wantErr:   false,
 		},
 	}
@@ -82,15 +82,11 @@ func TestMailContent_Encrypt(t *testing.T) {
 			assert.NotNil(t, result)
 
 			// Verify that headers are properly handled
-			if originalHeaders, ok := tt.mail.Headers.(map[string]string); ok {
-				if resultHeaders, ok := result.Headers.(map[string]string); ok {
-					// If both original and result have non-empty headers, verify encryption changed them
-					if len(originalHeaders) > 0 {
-						for key, originalValue := range originalHeaders {
-							if resultValue, exists := resultHeaders[key]; exists && originalValue != "" {
-								assert.NotEqual(t, originalValue, resultValue, "Header %s should be encrypted", key)
-							}
-						}
+			// If both original and result have non-empty headers, verify encryption changed them
+			if len(tt.mail.Headers) > 0 {
+				for key, originalValue := range tt.mail.Headers {
+					if resultValue, exists := result.Headers[key]; exists && originalValue != "" {
+						assert.NotEqual(t, originalValue, resultValue, "Header %s should be encrypted", key)
 					}
 				}
 			}
@@ -116,7 +112,7 @@ func TestMailContent_Encrypt(t *testing.T) {
 
 func TestReceiveMail(t *testing.T) {
 	// Test data
-	testPublicKey := "age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p"
+	testPublicKey := "age1jl76v4rmz5ukg9danl3v0zmyet9sqejmngs52wj9m497wgd02s9quq4qfl"
 	testUserID := "user123"
 	testEmail := "test@example.com"
 
@@ -324,8 +320,8 @@ This is a test email content.`
 					userPublicKey := rcptPublicKey.Msg.PublicKey
 
 					// Create mail content
-					mailContent := &Content{
-						Headers: map[string]string{
+					mailContent := &models.RawMail{
+						Headers: map[string]interface{}{
 							"From":       payload.From,
 							"To":         rcpt,
 							"Subject":    "Test Subject",
@@ -334,7 +330,7 @@ This is a test email content.`
 						},
 						TextContent: "Test content",
 						HTMLContent: "<html>Test</html>",
-						Attachments: []Attachment{},
+						Attachments: []models.RawAttachment{},
 					}
 
 					// Encrypt mail content
@@ -409,7 +405,7 @@ func TestProcessMessageBody(t *testing.T) {
 	tests := []struct {
 		name     string
 		mimeData string
-		want     *Content
+		want     *models.RawMail
 	}{
 		{
 			name: "plain text message",
@@ -419,10 +415,10 @@ Subject: Test
 Content-Type: text/plain
 
 This is plain text content.`,
-			want: &Content{
+			want: &models.RawMail{
 				TextContent: "This is plain text content.",
 				HTMLContent: "",
-				Attachments: []Attachment{},
+				Attachments: []models.RawAttachment{},
 			},
 		},
 		{
@@ -433,10 +429,10 @@ Subject: Test
 Content-Type: text/html
 
 <html><body>This is HTML content.</body></html>`,
-			want: &Content{
+			want: &models.RawMail{
 				TextContent: "",
 				HTMLContent: "<html><body>This is HTML content.</body></html>",
-				Attachments: []Attachment{},
+				Attachments: []models.RawAttachment{},
 			},
 		},
 		{
@@ -457,10 +453,10 @@ Content-Disposition: attachment; filename="test.txt"
 
 attachment content
 --boundary--`,
-			want: &Content{
+			want: &models.RawMail{
 				TextContent: "This is plain text.\n",
 				HTMLContent: "",
-				Attachments: []Attachment{
+				Attachments: []models.RawAttachment{
 					{
 						Filename:    "test.txt",
 						ContentType: "application/octet-stream",
@@ -477,21 +473,19 @@ attachment content
 			entity, err := message.Read(strings.NewReader(tt.mimeData))
 			require.NoError(t, err)
 
-			mailContent := &Content{
-				Attachments: make([]Attachment, 0),
+			mailContent := &models.RawMail{
+				Attachments: make([]models.RawAttachment, 0),
 			}
 
 			processMessageBody(entity, mailContent)
 
 			// Verify headers are extracted
 			assert.NotNil(t, mailContent.Headers)
-			if headers, ok := mailContent.Headers.(map[string]string); ok {
-				assert.Contains(t, headers, "From")
-				assert.Contains(t, headers, "To")
-				assert.Contains(t, headers, "Subject")
-				assert.Equal(t, "sender@example.com", headers["From"])
-				assert.Equal(t, "recipient@example.com", headers["To"])
-			}
+			assert.Contains(t, mailContent.Headers, "From")
+			assert.Contains(t, mailContent.Headers, "To")
+			assert.Contains(t, mailContent.Headers, "Subject")
+			assert.Equal(t, "sender@example.com", mailContent.Headers["From"])
+			assert.Equal(t, "recipient@example.com", mailContent.Headers["To"])
 
 			// Verify text content
 			if tt.want.TextContent != "" {
@@ -543,22 +537,20 @@ PDF content here
 	entity, err := message.Read(strings.NewReader(multipartMIME))
 	require.NoError(t, err)
 
-	mailContent := &Content{
-		Attachments: make([]Attachment, 0),
+	mailContent := &models.RawMail{
+		Attachments: make([]models.RawAttachment, 0),
 	}
 
 	processMessageBody(entity, mailContent)
 
 	// Verify headers are extracted
 	assert.NotNil(t, mailContent.Headers)
-	if headers, ok := mailContent.Headers.(map[string]string); ok {
-		assert.Contains(t, headers, "From")
-		assert.Contains(t, headers, "To")
-		assert.Contains(t, headers, "Subject")
-		assert.Equal(t, "sender@example.com", headers["From"])
-		assert.Equal(t, "recipient@example.com", headers["To"])
-		assert.Equal(t, "Test Multipart", headers["Subject"])
-	}
+	assert.Contains(t, mailContent.Headers, "From")
+	assert.Contains(t, mailContent.Headers, "To")
+	assert.Contains(t, mailContent.Headers, "Subject")
+	assert.Equal(t, "sender@example.com", mailContent.Headers["From"])
+	assert.Equal(t, "recipient@example.com", mailContent.Headers["To"])
+	assert.Equal(t, "Test Multipart", mailContent.Headers["Subject"])
 
 	// Verify that all parts were processed
 	assert.Equal(t, "Plain text part.\n", mailContent.TextContent)
@@ -575,13 +567,13 @@ func TestProcessMessagePart(t *testing.T) {
 		disposition string
 		filename    string
 		body        string
-		expected    func(*Content)
+		expected    func(*models.RawMail)
 	}{
 		{
 			name:        "plain text part",
 			contentType: "text/plain",
 			body:        "Plain text content",
-			expected: func(mc *Content) {
+			expected: func(mc *models.RawMail) {
 				assert.Equal(t, "Plain text content", mc.TextContent)
 			},
 		},
@@ -589,7 +581,7 @@ func TestProcessMessagePart(t *testing.T) {
 			name:        "HTML part",
 			contentType: "text/html",
 			body:        "<html><body>HTML content</body></html>",
-			expected: func(mc *Content) {
+			expected: func(mc *models.RawMail) {
 				assert.Equal(t, "<html><body>HTML content</body></html>", mc.HTMLContent)
 			},
 		},
@@ -599,7 +591,7 @@ func TestProcessMessagePart(t *testing.T) {
 			disposition: "attachment",
 			filename:    "document.pdf",
 			body:        "PDF content",
-			expected: func(mc *Content) {
+			expected: func(mc *models.RawMail) {
 				assert.Equal(t, 1, len(mc.Attachments))
 				assert.Equal(t, "document.pdf", mc.Attachments[0].Filename)
 				assert.Equal(t, "application/pdf", mc.Attachments[0].ContentType)
@@ -620,8 +612,8 @@ func TestProcessMessagePart(t *testing.T) {
 			entity, err := message.Read(strings.NewReader(mimeData))
 			require.NoError(t, err)
 
-			mailContent := &Content{
-				Attachments: make([]Attachment, 0),
+			mailContent := &models.RawMail{
+				Attachments: make([]models.RawAttachment, 0),
 			}
 
 			processMessagePart(entity, mailContent)
@@ -687,21 +679,17 @@ Email with custom headers.`,
 			entity, err := message.Read(strings.NewReader(tt.mimeData))
 			require.NoError(t, err)
 
-			mailContent := &Content{
-				Attachments: make([]Attachment, 0),
+			mailContent := &models.RawMail{
+				Attachments: make([]models.RawAttachment, 0),
 			}
 
 			processMessageBody(entity, mailContent)
 
 			// Verify headers are extracted correctly
 			assert.NotNil(t, mailContent.Headers)
-			if headers, ok := mailContent.Headers.(map[string]string); ok {
-				for expectedKey, expectedValue := range tt.expectedHeaders {
-					assert.Contains(t, headers, expectedKey, "Header %s should be present", expectedKey)
-					assert.Equal(t, expectedValue, headers[expectedKey], "Header %s should have correct value", expectedKey)
-				}
-			} else {
-				t.Errorf("Headers should be of type map[string]string, got %T", mailContent.Headers)
+			for expectedKey, expectedValue := range tt.expectedHeaders {
+				assert.Contains(t, mailContent.Headers, expectedKey, "Header %s should be present", expectedKey)
+				assert.Equal(t, expectedValue, mailContent.Headers[expectedKey], "Header %s should have correct value", expectedKey)
 			}
 		})
 	}

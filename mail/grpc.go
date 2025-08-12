@@ -7,10 +7,13 @@ import (
 
 	mailconnect "github.com/atomic-blend/backend/grpc/gen/mail/v1/mailv1connect"
 	mailGrpcServer "github.com/atomic-blend/backend/mail/grpc/server/global"
+	"github.com/atomic-blend/backend/mail/repositories"
+	"github.com/atomic-blend/backend/mail/utils/db"
 )
 
 func startGRPCServer() {
-	mailGrpcServer := mailGrpcServer.NewGrpcServer()
+	sendMailRepository := repositories.NewSendMailRepository(db.Database)
+	mailGrpcServer := mailGrpcServer.NewGrpcServer(sendMailRepository)
 
 	globalPath, globalHandler := mailconnect.NewMailServiceHandler(mailGrpcServer)
 

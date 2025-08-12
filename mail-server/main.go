@@ -29,7 +29,11 @@ func main() {
 		host = "0.0.0.0"
 	}
 
-	amqp.InitProducerAmqp()
+	amqp.InitConsumerAMQP()
+	amqp.InitProducerAMQP()
+
+	// launch the AMQP consumer in a goroutine
+	go processMessages()
 
 	// instanciate the smtp backend
 	be := &smtpserver.Backend{}

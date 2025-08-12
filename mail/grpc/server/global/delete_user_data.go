@@ -1,4 +1,5 @@
-package user
+// Package global contains the logic for the global gRPC operations
+package global
 
 import (
 	"context"

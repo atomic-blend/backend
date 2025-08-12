@@ -2,12 +2,18 @@ package smtpserver
 
 import (
 	"encoding/hex"
+	"os"
 	"strings"
 	"testing"
 
 	"github.com/emersion/go-sasl"
 	"github.com/stretchr/testify/assert"
 )
+
+func init() {
+	// Set test environment for all tests in this package
+	os.Setenv("GO_ENV", "test")
+}
 
 func TestSession_Creation(t *testing.T) {
 	t.Run("session creation returns valid session", func(t *testing.T) {
@@ -176,11 +182,10 @@ func TestSession_Data(t *testing.T) {
 		testData := "Test email content\r\n"
 		reader := strings.NewReader(testData)
 
-		// This will panic due to AMQP not being initialized in test environment
-		// We expect a panic due to nil pointer dereference in AMQP
-		assert.Panics(t, func() {
-			session.Data(reader)
-		})
+		// This should not panic with valid recipients in test environment
+		// The AMQP publishing is skipped in test environment
+		err := session.Data(reader)
+		assert.NoError(t, err)
 	})
 }
 

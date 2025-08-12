@@ -10,6 +10,8 @@ services:
     depends_on:
       - auth
       - productivity
+      - mail
+      - mail-server
     restart: unless-stopped
 
   auth:
@@ -39,6 +41,13 @@ services:
       context: ./mail-server
       dockerfile: Dockerfile.dev  # Use a dev-specific Dockerfile
     container_name: mail-server
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+      rspamd:
+        condition: service_started
     ports:
       - target: 1025
         published: 1025
@@ -52,6 +61,9 @@ services:
       - type: bind
         source: ${HOME}${USERPROFILE}/.netrc
         target: /root/.netrc
+      - type: bind
+        source: ./private.key
+        target: /app/dkim_private_key.pem
   
   mail:
     working_dir: /workspace/mail
@@ -71,6 +83,8 @@ services:
       - default
       - rspamd
     depends_on:
+      rabbitmq:
+        condition: service_healthy
       mongodb:
         condition: service_healthy
     env_file:

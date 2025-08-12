@@ -11,7 +11,6 @@ import (
 	"github.com/atomic-blend/backend/mail/grpc/clients"
 	"github.com/atomic-blend/backend/mail/models"
 	"github.com/atomic-blend/backend/mail/repositories"
-	ageencryption "github.com/atomic-blend/backend/mail/utils/age_encryption"
 	"github.com/atomic-blend/backend/mail/utils/db"
 	"github.com/atomic-blend/backend/mail/utils/rspamd"
 	"github.com/atomic-blend/backend/mail/utils/s3"
@@ -22,88 +21,6 @@ import (
 	"github.com/streadway/amqp"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
-
-// Content represents the collected content from an email
-type Content struct {
-	Headers        interface{}
-	TextContent    string
-	HTMLContent    string
-	Attachments    []Attachment
-	Rejected       bool
-	RewriteSubject bool
-	Greylisted     bool
-}
-
-// Attachment represents a file attachment
-type Attachment struct {
-	Filename    string
-	ContentType string
-	Data        []byte
-}
-
-// Encrypt encrypts the content using the age encryption library
-func (m *Content) Encrypt(publicKey string) (*Content, error) {
-	encryptedMail := &Content{
-		Attachments:    make([]Attachment, 0),
-		Rejected:       m.Rejected,
-		RewriteSubject: m.RewriteSubject,
-		Greylisted:     m.Greylisted,
-	}
-
-	// encrypt all headers
-	if m.Headers != nil {
-		if headersMap, ok := m.Headers.(map[string]string); ok {
-			encryptedHeaders := make(map[string]string)
-			for key, value := range headersMap {
-				encryptedValue, err := ageencryption.EncryptString(publicKey, value)
-				if err != nil {
-					return nil, err
-				}
-				encryptedHeaders[key] = encryptedValue
-			}
-			encryptedMail.Headers = encryptedHeaders
-		} else {
-			// If Headers is not a map[string]string, leave it as is (no encryption)
-			encryptedMail.Headers = m.Headers
-		}
-	}
-
-	encryptedTextContent, err := ageencryption.EncryptString(publicKey, m.TextContent)
-	if err != nil {
-		return nil, err
-	}
-	encryptedMail.TextContent = encryptedTextContent
-
-	encryptedHTMLContent, err := ageencryption.EncryptString(publicKey, m.HTMLContent)
-	if err != nil {
-		return nil, err
-	}
-	encryptedMail.HTMLContent = encryptedHTMLContent
-
-	for _, attachment := range m.Attachments {
-		encryptedAttachment, err := ageencryption.EncryptBytes(publicKey, attachment.Data)
-		if err != nil {
-			return nil, err
-		}
-		encryptedFilename, err := ageencryption.EncryptString(publicKey, attachment.Filename)
-		if err != nil {
-			return nil, err
-		}
-
-		encryptedContentType, err := ageencryption.EncryptString(publicKey, attachment.ContentType)
-		if err != nil {
-			return nil, err
-		}
-
-		encryptedMail.Attachments = append(encryptedMail.Attachments, Attachment{
-			Filename:    encryptedFilename,
-			ContentType: encryptedContentType,
-			Data:        encryptedAttachment,
-		})
-	}
-
-	return encryptedMail, nil
-}
 
 func receiveMail(m *amqp.Delivery, payload ReceivedMailPayload) {
 	mailRepository := repositories.NewMailRepository(db.Database)
@@ -119,8 +36,8 @@ func receiveMail(m *amqp.Delivery, payload ReceivedMailPayload) {
 	// Send the email to rspamd via HTTP for spam detection
 	client := rspamd.NewClient(nil) // Use default config
 
-	mailContent := &Content{
-		Attachments:    make([]Attachment, 0),
+	mailContent := &models.RawMail{
+		Attachments:    make([]models.RawAttachment, 0),
 		Rejected:       false,
 		RewriteSubject: false,
 		Greylisted:     false,
@@ -281,9 +198,9 @@ func receiveMail(m *amqp.Delivery, payload ReceivedMailPayload) {
 
 		mailEntity.TextContent = encryptedMailContent.TextContent
 		mailEntity.HTMLContent = encryptedMailContent.HTMLContent
-		mailEntity.Rejected = mailContent.Rejected
-		mailEntity.RewriteSubject = mailContent.RewriteSubject
-		mailEntity.Greylisted = mailContent.Greylisted
+		mailEntity.Rejected = boolPtr(encryptedMailContent.Rejected)
+		mailEntity.RewriteSubject = boolPtr(encryptedMailContent.RewriteSubject)
+		mailEntity.Greylisted = boolPtr(encryptedMailContent.Greylisted)
 
 		encryptedMails = append(encryptedMails, *mailEntity)
 	}
@@ -304,7 +221,6 @@ func receiveMail(m *amqp.Delivery, payload ReceivedMailPayload) {
 	_, err = mailRepository.CreateMany(context.Background(), encryptedMails)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to save mail documents to MongoDB")
-		//TODO: rollback the uploaded keys
 		s3Service.BulkDeleteFiles(context.Background(), uploadedKeys)
 		return
 	}
@@ -312,9 +228,9 @@ func receiveMail(m *amqp.Delivery, payload ReceivedMailPayload) {
 	m.Ack(false)
 }
 
-func processMessageBody(entity *message.Entity, mailContent *Content) {
+func processMessageBody(entity *message.Entity, mailContent *models.RawMail) {
 	// Extract all headers first
-	headers := make(map[string]string)
+	headers := make(map[string]interface{})
 	for field := entity.Header.Fields(); field.Next(); {
 		key := field.Key()
 		value, _ := field.Text()
@@ -344,7 +260,7 @@ func processMessageBody(entity *message.Entity, mailContent *Content) {
 	}
 }
 
-func processMultipartMessage(entity *message.Entity, mailContent *Content) {
+func processMultipartMessage(entity *message.Entity, mailContent *models.RawMail) {
 	// Create a multipart reader
 	mr := entity.MultipartReader()
 	if mr == nil {
@@ -368,7 +284,7 @@ func processMultipartMessage(entity *message.Entity, mailContent *Content) {
 	}
 }
 
-func processMessagePart(part *message.Entity, mailContent *Content) {
+func processMessagePart(part *message.Entity, mailContent *models.RawMail) {
 	// Read the part content
 	body, err := io.ReadAll(part.Body)
 	if err != nil {
@@ -430,11 +346,18 @@ func processMessagePart(part *message.Entity, mailContent *Content) {
 	default:
 		log.Info().Str("contentType", mediaType).Str("filename", filename).Msg("Other content type")
 		// TODO: Collect attachment data for later upload to S3
-		attachment := Attachment{
+		attachment := models.RawAttachment{
 			Filename:    filename,
 			ContentType: mediaType,
 			Data:        body,
 		}
 		mailContent.Attachments = append(mailContent.Attachments, attachment)
 	}
+}
+
+func boolPtr(b bool) *bool {
+	if b {
+		return &b
+	}
+	return nil
 }

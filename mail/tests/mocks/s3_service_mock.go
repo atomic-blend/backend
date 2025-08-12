@@ -3,6 +3,7 @@ package mocks
 import (
 	"context"
 
+	"github.com/atomic-blend/backend/mail/services/interfaces"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/stretchr/testify/mock"
 )
@@ -11,6 +12,9 @@ import (
 type MockS3Service struct {
 	mock.Mock
 }
+
+// Ensure MockS3Service implements the interface
+var _ interfaces.S3ServiceInterface = (*MockS3Service)(nil)
 
 // BulkDeleteFiles deletes multiple files from S3
 func (m *MockS3Service) BulkDeleteFiles(ctx context.Context, uploadedKeys []string) {

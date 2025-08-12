@@ -10,9 +10,9 @@ import (
 )
 
 var (
-	exchangeNamesRaw = os.Getenv("AMQP_EXCHANGE_NAMES")
-	queueName        = os.Getenv("AMQP_QUEUE_NAME")
-	routingKeysRaw   = os.Getenv("AMQP_ROUTING_KEYS")
+	exchangeNamesRaw = getAMQPExchangeNames(false)
+	queueName        = getAMQPQueueName(false)
+	routingKeysRaw   = getAMQPRoutingKeys(false)
 )
 
 // Messages is the channel for the AMQP messages
@@ -20,15 +20,22 @@ var Messages <-chan amqp.Delivery
 
 // InitConsumerAmqp initializes the AMQP consumer
 func InitConsumerAmqp() {
+	log.Debug().Msg("Initializing AMQP Consumer")
 	var err error
 	var q amqp.Queue
 
-	shortcuts.CheckRequiredEnvVar("AMQP_URL", amqpURL, "amqp://user:password@localhost:5672")
-	shortcuts.CheckRequiredEnvVar("AMQP_EXCHANGE_NAMES", exchangeNamesRaw, "")
-	shortcuts.CheckRequiredEnvVar("AMQP_QUEUE_NAME", queueName, "")
-	shortcuts.CheckRequiredEnvVar("AMQP_ROUTING_KEYS", routingKeysRaw, "")
+	// Skip initialization in test environment
+	if os.Getenv("GO_ENV") == "test" {
+		log.Debug().Msg("Skipping AMQP consumer initialization (test environment)")
+		return
+	}
 
-	conn, err = amqp.Dial(amqpURL)
+	shortcuts.CheckRequiredEnvVar("MAIL_SERVER_CONSUMER_AMQP_URL or MAIL_SERVER_AMQP_URL or AMQP_URL", getAMQPURL(false), "amqp://user:password@localhost:5672")
+	shortcuts.CheckRequiredEnvVar("MAIL_SERVER_CONSUMER_AMQP_EXCHANGE_NAMES or MAIL_SERVER_AMQP_EXCHANGE_NAMES or AMQP_EXCHANGE_NAMES", exchangeNamesRaw, "")
+	shortcuts.CheckRequiredEnvVar("MAIL_SERVER_CONSUMER_AMQP_QUEUE_NAME or MAIL_SERVER_AMQP_QUEUE_NAME or AMQP_QUEUE_NAME", queueName, "")
+	shortcuts.CheckRequiredEnvVar("MAIL_SERVER_CONSUMER_AMQP_ROUTING_KEYS or MAIL_SERVER_AMQP_ROUTING_KEYS or AMQP_ROUTING_KEYS", routingKeysRaw, "")
+
+	conn, err = amqp.Dial(getAMQPURL(false))
 	shortcuts.FailOnError(err, "Failed to connect to RabbitMQ")
 
 	exchangeNames := strings.Split(exchangeNamesRaw, ",")
@@ -73,6 +80,7 @@ func InitConsumerAmqp() {
 		q.Name, q.Messages, q.Consumers, routingKeysRaw)
 
 	routingKeys := strings.Split(routingKeysRaw, ",")
+	log.Debug().Msgf("Binding Queue (%q) to Exchange with routing keys: %v", q.Name, routingKeys)
 
 	for _, routingKey := range routingKeys {
 		log.Info().Str("routingKey", routingKey).Msg("Binding to the Queue")

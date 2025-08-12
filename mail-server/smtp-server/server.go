@@ -105,7 +105,7 @@ func (s *Session) Data(r io.Reader) error {
 		"received_at": time.Now().Format(time.RFC3339),
 	}
 
-	amqp.PublishMessage("mail", "received", messageData)
+	amqp.PublishMessage("mail", "received", messageData, nil)
 
 	return nil
 }

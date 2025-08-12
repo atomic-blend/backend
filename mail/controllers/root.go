@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"github.com/atomic-blend/backend/mail/controllers/mail"
+	"github.com/atomic-blend/backend/mail/controllers/sendmail"
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/mongo"
 )
@@ -10,4 +11,5 @@ import (
 func SetupAllControllers(router *gin.Engine, database *mongo.Database) {
 	// Setup mail controller
 	mail.SetupRoutes(router, database)
+	sendmail.SetupRoutes(router, database)
 }

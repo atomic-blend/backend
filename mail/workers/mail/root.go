@@ -27,7 +27,5 @@ func RouteMessage(message *amqp.Delivery) {
 
 		// Call receiveMail with the complete payload
 		receiveMail(message, payload)
-	case "sent":
-		//routeSentMessage()
 	}
 }
