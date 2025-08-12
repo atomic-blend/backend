@@ -7,6 +7,8 @@ import (
 
 	"github.com/atomic-blend/backend/mail/auth"
 	"github.com/atomic-blend/backend/mail/models"
+	amqpservice "github.com/atomic-blend/backend/mail/services/amqp"
+	s3service "github.com/atomic-blend/backend/mail/services/s3"
 	"github.com/atomic-blend/backend/mail/tests/mocks"
 
 	"github.com/gin-gonic/gin"
@@ -71,8 +73,8 @@ func TestSendMailController_DeleteSendMail(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			mockRepo := &mocks.MockSendMailRepository{}
 			mockUserClient := &mocks.MockUserClient{}
-			mockAMQPService := &mocks.MockAMQPService{}
-			mockS3Service := &mocks.MockS3Service{}
+			mockAMQPService := &amqpservice.MockAMQPService{}
+			mockS3Service := &s3service.MockS3Service{}
 			userID := primitive.NewObjectID()
 
 			var sendMailID primitive.ObjectID

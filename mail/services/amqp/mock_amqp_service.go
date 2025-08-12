@@ -1,4 +1,4 @@
-package mocks
+package amqpservice
 
 import (
 	"github.com/atomic-blend/backend/mail/services/amqp/interfaces"
