@@ -10,9 +10,10 @@ import (
 	"github.com/atomic-blend/backend/mail/grpc/clients"
 	"github.com/atomic-blend/backend/mail/models"
 	"github.com/atomic-blend/backend/mail/repositories"
+	rspamdservice "github.com/atomic-blend/backend/mail/services/rspamd"
+	rspamdclient "github.com/atomic-blend/backend/mail/services/rspamd/client"
 	s3service "github.com/atomic-blend/backend/mail/services/s3"
 	"github.com/atomic-blend/backend/mail/utils/db"
-	"github.com/atomic-blend/backend/mail/utils/rspamd"
 	awss3 "github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/emersion/go-message"
 	"github.com/google/uuid"
@@ -33,7 +34,7 @@ func receiveMail(m *amqp.Delivery, payload ReceivedMailPayload) {
 	reader := strings.NewReader(payload.Content)
 
 	// Send the email to rspamd via HTTP for spam detection
-	client := rspamd.NewClient(nil) // Use default config
+	rspamdService := rspamdservice.NewRspamdService()
 
 	mailContent := &models.RawMail{
 		Attachments:    make([]models.RawAttachment, 0),
@@ -42,7 +43,7 @@ func receiveMail(m *amqp.Delivery, payload ReceivedMailPayload) {
 		Greylisted:     false,
 	}
 
-	checkRequest := &rspamd.CheckRequest{
+	checkRequest := &rspamdclient.CheckRequest{
 		Message:   []byte(payload.Content),
 		IP:        payload.IP,
 		Helo:      payload.Hostname,
@@ -54,7 +55,7 @@ func receiveMail(m *amqp.Delivery, payload ReceivedMailPayload) {
 		DeliverTo: payload.DeliverTo,
 	}
 
-	checkResponse, err := client.CheckMessage(checkRequest)
+	checkResponse, err := rspamdService.CheckMessage(checkRequest)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to check message with Rspamd")
 		// Continue processing even if Rspamd check fails

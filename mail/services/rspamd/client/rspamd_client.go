@@ -1,4 +1,4 @@
-package rspamd
+package rspamdclient
 
 import (
 	"bytes"
