@@ -154,11 +154,21 @@ func TestMailRepository_GetAll(t *testing.T) {
 
 		// Create test mails for the user
 		mail1 := createTestMail(userID)
+		mail2 := createTestMail(userID)
+
+		// Ensure deterministic CreatedAt ordering: mail2 is newer than mail1
+		base := time.Now()
+		createdAt1 := primitive.NewDateTimeFromTime(base.Add(-1 * time.Millisecond))
+		createdAt2 := primitive.NewDateTimeFromTime(base)
+		mail1.CreatedAt = &createdAt1
+		mail1.UpdatedAt = &createdAt1
+		mail2.CreatedAt = &createdAt2
+		mail2.UpdatedAt = &createdAt2
+
 		if headers1, ok := mail1.Headers.(map[string]string); ok {
 			headers1["Subject"] = "Mail 1"
 		}
 
-		mail2 := createTestMail(userID)
 		if headers2, ok := mail2.Headers.(map[string]string); ok {
 			headers2["Subject"] = "Mail 2"
 		}
@@ -200,6 +210,23 @@ func TestMailRepository_GetAll(t *testing.T) {
 		}
 		assert.Contains(t, subjects, "Mail 1")
 		assert.Contains(t, subjects, "Mail 2")
+
+		// Ensure mails are sorted from most recent to oldest
+		if len(mails) >= 2 {
+			headers0, err := convertHeadersToMap(mails[0].Headers)
+			require.NoError(t, err)
+			headers1, err := convertHeadersToMap(mails[1].Headers)
+			require.NoError(t, err)
+			if headers0 != nil && headers1 != nil {
+				if s0, ok := headers0["Subject"].(string); ok {
+					if s1, ok := headers1["Subject"].(string); ok {
+						// mail2 was created after mail1, so it should come first
+						assert.Equal(t, "Mail 2", s0)
+						assert.Equal(t, "Mail 1", s1)
+					}
+				}
+			}
+		}
 	})
 
 	t.Run("get all mails for user with no mails", func(t *testing.T) {
@@ -213,30 +240,72 @@ func TestMailRepository_GetAll(t *testing.T) {
 	// Add a paginated retrieval test
 	t.Run("get mails paginated", func(t *testing.T) {
 		userID := primitive.NewObjectID()
-		// Create 5 mails
+		// Create 5 mails with deterministic CreatedAt timestamps
+		baseTime := time.Now()
 		for i := 0; i < 5; i++ {
 			mail := createTestMail(userID)
+			// Ensure CreatedAt increases with i so Mail 1 is oldest and Mail 5 is newest
+			createdAt := primitive.NewDateTimeFromTime(baseTime.Add(time.Duration(i) * time.Millisecond))
+			mail.CreatedAt = &createdAt
+			mail.UpdatedAt = &createdAt
 			if headers, ok := mail.Headers.(map[string]string); ok {
 				headers["Subject"] = fmt.Sprintf("Mail %d", i+1)
 			}
 			_, err := repo.Create(context.Background(), mail)
 			require.NoError(t, err)
 		}
-		// Get first 2 mails (page 1, limit 2)
+		// Get first 2 mails (page 1, limit 2) -> should be Mail 5, Mail 4
 		mails, total, err := repo.GetAll(context.Background(), userID, 1, 2)
 		require.NoError(t, err)
 		assert.Len(t, mails, 2)
 		assert.Equal(t, int64(5), total)
-		// Get next 2 mails (page 2, limit 2)
+		if len(mails) >= 2 {
+			headers0, err := convertHeadersToMap(mails[0].Headers)
+			require.NoError(t, err)
+			headers1, err := convertHeadersToMap(mails[1].Headers)
+			require.NoError(t, err)
+			if headers0 != nil && headers1 != nil {
+				if s0, ok := headers0["Subject"].(string); ok {
+					if s1, ok := headers1["Subject"].(string); ok {
+						assert.Equal(t, "Mail 5", s0)
+						assert.Equal(t, "Mail 4", s1)
+					}
+				}
+			}
+		}
+		// Get next 2 mails (page 2, limit 2) -> should be Mail 3, Mail 2
 		mails, total, err = repo.GetAll(context.Background(), userID, 2, 2)
 		require.NoError(t, err)
 		assert.Len(t, mails, 2)
 		assert.Equal(t, int64(5), total)
-		// Get last mail (page 3, limit 2)
+		if len(mails) >= 2 {
+			headers0, err := convertHeadersToMap(mails[0].Headers)
+			require.NoError(t, err)
+			headers1, err := convertHeadersToMap(mails[1].Headers)
+			require.NoError(t, err)
+			if headers0 != nil && headers1 != nil {
+				if s0, ok := headers0["Subject"].(string); ok {
+					if s1, ok := headers1["Subject"].(string); ok {
+						assert.Equal(t, "Mail 3", s0)
+						assert.Equal(t, "Mail 2", s1)
+					}
+				}
+			}
+		}
+		// Get last mail (page 3, limit 2) -> should be Mail 1
 		mails, total, err = repo.GetAll(context.Background(), userID, 3, 2)
 		require.NoError(t, err)
 		assert.Len(t, mails, 1)
 		assert.Equal(t, int64(5), total)
+		if len(mails) == 1 {
+			headers0, err := convertHeadersToMap(mails[0].Headers)
+			require.NoError(t, err)
+			if headers0 != nil {
+				if s0, ok := headers0["Subject"].(string); ok {
+					assert.Equal(t, "Mail 1", s0)
+				}
+			}
+		}
 	})
 }
 

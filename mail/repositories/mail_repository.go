@@ -47,21 +47,17 @@ func (r *MailRepository) GetAll(ctx context.Context, userID primitive.ObjectID, 
 		return nil, 0, err
 	}
 
-	var opts []*options.FindOptions
+	// Build find options: always sort by created_at desc to return most recent first
+	findOpts := options.Find()
+	findOpts.SetSort(bson.D{{Key: "created_at", Value: -1}})
+
 	if page > 0 && limit > 0 {
 		skip := (page - 1) * limit
-		opts = append(opts, &options.FindOptions{
-			Skip:  &skip,
-			Limit: &limit,
-		})
+		findOpts.SetSkip(skip)
+		findOpts.SetLimit(limit)
 	}
 
-	var cursor *mongo.Cursor
-	if len(opts) > 0 {
-		cursor, err = r.collection.Find(ctx, filter, opts[0])
-	} else {
-		cursor, err = r.collection.Find(ctx, filter)
-	}
+	cursor, err := r.collection.Find(ctx, filter, findOpts)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -100,7 +96,11 @@ func (r *MailRepository) Create(ctx context.Context, mail *models.Mail) (*models
 		mail.ID = &id
 	}
 
-	mail.CreatedAt = &now
+	// Only set CreatedAt if it hasn't been provided by the caller (tests may set it for deterministic ordering)
+	if mail.CreatedAt == nil {
+		mail.CreatedAt = &now
+	}
+	// Always update UpdatedAt to now
 	mail.UpdatedAt = &now
 
 	_, err := r.collection.InsertOne(ctx, mail)
