@@ -21,6 +21,7 @@ type Mail struct {
 	TextContent    string              `bson:"text_content" json:"textContent"`
 	HTMLContent    string              `bson:"html_content" json:"htmlContent"`
 	Attachments    []MailAttachment    `bson:"attachments,omitempty" json:"attachments,omitempty"`
+	Read           *bool               `bson:"read,omitempty" json:"read,omitempty"`
 	Archived       *bool               `bson:"archived,omitempty" json:"archived,omitempty"`
 	Trashed        *bool               `bson:"trashed,omitempty" json:"trashed,omitempty"`
 	Greylisted     *bool               `bson:"graylisted,omitempty" json:"graylisted,omitempty"`
