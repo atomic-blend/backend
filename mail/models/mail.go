@@ -16,18 +16,18 @@ type MailAttachment struct {
 // Mail represents a mail message
 type Mail struct {
 	ID             *primitive.ObjectID `bson:"_id,omitempty" json:"id,omitempty"`
-	UserID         primitive.ObjectID  `bson:"user_id" json:"user_id"`
+	UserID         primitive.ObjectID  `bson:"user_id" json:"userId"`
 	Headers        interface{}         `bson:"headers" json:"headers"`
-	TextContent    string              `bson:"text_content" json:"text_content"`
-	HTMLContent    string              `bson:"html_content" json:"html_content"`
+	TextContent    string              `bson:"text_content" json:"textContent"`
+	HTMLContent    string              `bson:"html_content" json:"htmlContent"`
 	Attachments    []MailAttachment    `bson:"attachments,omitempty" json:"attachments,omitempty"`
 	Archived       *bool               `bson:"archived,omitempty" json:"archived,omitempty"`
 	Trashed        *bool               `bson:"trashed,omitempty" json:"trashed,omitempty"`
 	Greylisted     *bool               `bson:"graylisted,omitempty" json:"graylisted,omitempty"`
 	Rejected       *bool               `bson:"rejected,omitempty" json:"rejected,omitempty"`
-	RewriteSubject *bool               `bson:"rewrite_subject,omitempty" json:"rewrite_subject,omitempty"`
-	CreatedAt      *primitive.DateTime `bson:"created_at,omitempty" json:"created_at,omitempty"`
-	UpdatedAt      *primitive.DateTime `bson:"updated_at,omitempty" json:"updated_at,omitempty"`
+	RewriteSubject *bool               `bson:"rewrite_subject,omitempty" json:"rewriteSubject,omitempty"`
+	CreatedAt      *primitive.DateTime `bson:"created_at,omitempty" json:"createdAt,omitempty"`
+	UpdatedAt      *primitive.DateTime `bson:"updated_at,omitempty" json:"updatedAt,omitempty"`
 }
 
 // Encrypt encrypts the mail data
@@ -49,4 +49,3 @@ func (s *Mail) Encrypt(publicKey string) (*Mail, error) {
 
 	return encryptedMail, nil
 }
-
