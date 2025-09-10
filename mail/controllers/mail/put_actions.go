@@ -9,11 +9,13 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
+// PutActionsPayload represents the request payload for updating mail actions
 type PutActionsPayload struct {
 	Read   []string `json:"read,omitempty"`
 	Unread []string `json:"unread,omitempty"`
 }
 
+// PutMailActions updates the actions of a mail
 func (c *Controller) PutMailActions(ctx *gin.Context) {
 	// Get authenticated user from context
 	authUser := auth.GetAuthUser(ctx)
