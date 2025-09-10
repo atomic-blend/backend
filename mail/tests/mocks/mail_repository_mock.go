@@ -45,3 +45,9 @@ func (m *MockMailRepository) CreateMany(ctx context.Context, mails []models.Mail
 	args := m.Called(ctx, mails)
 	return args.Bool(0), args.Error(1)
 }
+
+// Update updates a mail object. This method is used by controller tests to mock mail updates.
+func (m *MockMailRepository) Update(ctx context.Context, mail *models.Mail) error {
+	args := m.Called(ctx, mail)
+	return args.Error(0)
+}

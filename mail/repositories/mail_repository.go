@@ -22,6 +22,8 @@ type MailRepositoryInterface interface {
 	GetByID(ctx context.Context, id primitive.ObjectID) (*models.Mail, error)
 	Create(ctx context.Context, mail *models.Mail) (*models.Mail, error)
 	CreateMany(ctx context.Context, mails []models.Mail) (bool, error)
+	// Update updates a mail object
+	Update(ctx context.Context, mail *models.Mail) error
 }
 
 // MailRepository handles database operations related to mails
@@ -141,4 +143,25 @@ func (r *MailRepository) CreateMany(ctx context.Context, mails []models.Mail) (b
 	}
 
 	return true, nil
+}
+
+// Update updates a mail object
+func (r *MailRepository) Update(ctx context.Context, mail *models.Mail) error {
+	if mail == nil || mail.ID == nil {
+		return nil
+	}
+
+	now := primitive.NewDateTimeFromTime(time.Now())
+	mail.UpdatedAt = &now
+
+	filter := bson.M{"_id": *mail.ID}
+	update := bson.M{
+		"$set": bson.M{
+			"read":       mail.Read,
+			"updated_at": mail.UpdatedAt,
+		},
+	}
+
+	_, err := r.collection.UpdateOne(ctx, filter, update)
+	return err
 }
