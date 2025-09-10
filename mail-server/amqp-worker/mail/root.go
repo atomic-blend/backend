@@ -11,7 +11,7 @@ import (
 
 // RouteMessage routes a message to the appropriate worker
 func RouteMessage(message *amqp.Delivery) {
-	
+
 	switch message.RoutingKey {
 	case "sent":
 		log.Info().Msg("📤 Processing sent message")

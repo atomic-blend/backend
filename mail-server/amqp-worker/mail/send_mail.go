@@ -15,9 +15,9 @@ import (
 	"strconv"
 	"strings"
 
-	mailclient "github.com/atomic-blend/backend/shared/grpc/mail"
 	"github.com/atomic-blend/backend/mail-server/utils/amqp"
 	"github.com/atomic-blend/backend/mail/models"
+	mailclient "github.com/atomic-blend/backend/shared/grpc/mail"
 	"github.com/emersion/go-message"
 	"github.com/emersion/go-msgauth/dkim"
 	"github.com/emersion/go-smtp"
@@ -203,7 +203,7 @@ func signEmailWithDKIM(rawMail models.RawMail) (string, error) {
 	}
 
 	// Get the From domain for DKIM signing
-	fromHeader, ok := rawMail.Headers["from"].(string)
+	fromHeader, ok := rawMail.Headers["From"].(string)
 	if !ok {
 		return "", fmt.Errorf("from_header_missing")
 	}
@@ -255,7 +255,7 @@ func sendEmail(mail models.RawMail) ([]string, error) {
 	recipientsToRetry := []string{}
 
 	// TODO: if the email is a retry, use the list of failed recipients from the message headers
-	for _, recipientRaw := range mail.Headers["to"].([]interface{}) {
+	for _, recipientRaw := range mail.Headers["To"].([]interface{}) {
 		recipient, ok := recipientRaw.(string)
 		if !ok {
 			log.Error().Str("recipient", recipientRaw.(string)).Msg("Failed to convert recipient to string")
@@ -295,7 +295,7 @@ func sendEmail(mail models.RawMail) ([]string, error) {
 		for _, mxRecord := range mxRecords {
 			log.Info().Str("recipient", recipient).Str("domain", domain).Str("mx_host", mxRecord.Host).Msg("Attempting to send via MX record")
 
-			from, ok := mail.Headers["from"].(string)
+			from, ok := mail.Headers["From"].(string)
 			if !ok {
 				log.Error().Str("recipient", recipient).Msg("From header not found")
 				recipientsToRetry = append(recipientsToRetry, recipient)
