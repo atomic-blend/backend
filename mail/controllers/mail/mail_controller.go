@@ -1,8 +1,8 @@
 package mail
 
 import (
-	"github.com/atomic-blend/backend/shared/middlewares/auth"
 	"github.com/atomic-blend/backend/mail/repositories"
+	"github.com/atomic-blend/backend/shared/middlewares/auth"
 	"github.com/webstradev/gin-pagination/v2/pkg/pagination"
 
 	"github.com/gin-gonic/gin"
@@ -41,5 +41,6 @@ func setupMailRoutes(router *gin.Engine, mailController *Controller) {
 	{
 		mailRoutes.GET("/", pagination.New(), mailController.GetAllMails)
 		mailRoutes.GET("/:id", mailController.GetMailByID)
+		mailRoutes.PUT("/actions", mailController.PutMailActions)
 	}
 }
