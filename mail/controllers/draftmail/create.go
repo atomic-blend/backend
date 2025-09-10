@@ -108,9 +108,11 @@ func (c *Controller) CreateDraftMail(ctx *gin.Context) {
 
 	log.Debug().Interface("encrypted_mail", encryptedMail).Msg("Encrypted mail ready for draft")
 
+	mailEntity := encryptedMail.ToMailEntity()
+	mailEntity.UserID = authUser.UserID
 	// Create draft mail entity
 	draftMail := &models.SendMail{
-		Mail:       encryptedMail.ToMailEntity(),
+		Mail:       mailEntity,
 		SendStatus: models.SendStatusPending, // Drafts are always pending
 		Trashed:    false,
 	}

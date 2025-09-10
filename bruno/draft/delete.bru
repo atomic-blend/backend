@@ -1,0 +1,15 @@
+meta {
+  name: /delete
+  type: http
+  seq: 5
+}
+
+delete {
+  url: {{API_URL}}/mail/draft/{{DRAFT_ID}}
+  body: none
+  auth: inherit
+}
+
+settings {
+  encodeUrl: true
+}
