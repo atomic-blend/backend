@@ -1,3 +1,4 @@
+// Package repositories is a package that contains the repository for the microservice
 package repositories
 
 import (

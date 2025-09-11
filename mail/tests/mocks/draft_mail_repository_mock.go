@@ -1,3 +1,4 @@
+// Package mocks is a package that contains the mocks for the microservice
 package mocks
 
 import (
