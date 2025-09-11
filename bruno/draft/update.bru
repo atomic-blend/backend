@@ -1,0 +1,29 @@
+meta {
+  name: /update
+  type: http
+  seq: 4
+}
+
+put {
+  url: {{API_URL}}/mail/draft/{{DRAFT_ID}}
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+      "headers": {
+        "From": "user2@brandonguigo.com",
+        "To": ["brandon@brandonguigo.com"],
+        "Cc": ["cc@example.com"],
+        "Bcc": [],
+        "Subject": "Updated Draft Email Subject"
+      },
+      "text_content": "This is the updated draft email content.\n\nUpdated content here.\n\nBest regards,\nThe Team",
+      "html_content": "<html><body><p>This is the <strong>updated</strong> draft email content.</p><p>Updated content here.</p><p>Best regards,<br/>The Team</p></body></html>"
+  }
+}
+
+settings {
+  encodeUrl: true
+}

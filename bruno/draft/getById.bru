@@ -1,0 +1,15 @@
+meta {
+  name: /getById
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{API_URL}}/mail/draft/{{DRAFT_ID}}
+  body: none
+  auth: inherit
+}
+
+settings {
+  encodeUrl: true
+}
