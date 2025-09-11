@@ -60,10 +60,19 @@ func (c *Controller) UpdateDraftMail(ctx *gin.Context) {
 		return
 	}
 
+	log.Debug().Interface("draftMailID", draftMailID).Msg("Draft mail ID")
+	log.Debug().Interface("draftMailIDStr", draftMailIDStr).Msg("Draft mail ID string")
+	log.Debug().Interface("err", err).Msg("Error")
+	log.Debug().Interface("existingDraftMail", existingDraftMail).Msg("Existing draft mail")
+
 	if existingDraftMail == nil {
 		ctx.JSON(http.StatusNotFound, gin.H{"error": "Draft mail not found"})
 		return
 	}
+
+	log.Debug().Interface("existingDraftMail", existingDraftMail.Mail.UserID).Msg("Existing draft mail user ID")
+	log.Debug().Interface("authUser", authUser.UserID).Msg("Auth user user ID")
+	log.Debug().Interface("existingDraftMail.Mail.UserID == authUser.UserID", existingDraftMail.Mail.UserID == authUser.UserID).Msg("Existing draft mail user ID equals auth user user ID")
 
 	// Check if the draft mail belongs to the authenticated user
 	if existingDraftMail.Mail != nil && existingDraftMail.Mail.UserID != authUser.UserID {
@@ -135,9 +144,11 @@ func (c *Controller) UpdateDraftMail(ctx *gin.Context) {
 
 	log.Debug().Interface("encrypted_mail", encryptedMail).Msg("Encrypted mail ready for draft update")
 
+	mailEntity := encryptedMail.ToMailEntity()
+	mailEntity.UserID = authUser.UserID
 	// Prepare update data
 	updateData := bson.M{
-		"mail": encryptedMail.ToMailEntity(),
+		"mail": mailEntity,
 	}
 
 	// Handle attachments if any
