@@ -323,6 +323,42 @@ func TestUpdateDraftMailRetryCounter(t *testing.T) {
 	assert.True(t, updatedDraftMail.UpdatedAt.Time().After(createdDraftMail.UpdatedAt.Time()))
 }
 
+func TestTrashDraftMail(t *testing.T) {
+	repository, cleanup := setupDraftMailTest(t)
+	defer cleanup()
+
+	ctx := context.Background()
+
+	userID := primitive.NewObjectID()
+	mailID := primitive.NewObjectID()
+	mail := &models.Mail{
+		ID:     &mailID,
+		UserID: userID,
+	}
+
+	draftMail := &models.SendMail{
+		Mail:       mail,
+		SendStatus: models.SendStatusPending,
+		Trashed:    false,
+	}
+
+	createdDraftMail, err := repository.Create(ctx, draftMail)
+	assert.NoError(t, err)
+
+	// Wait a moment to ensure different timestamp
+	time.Sleep(time.Millisecond * 10)
+
+	err = repository.Trash(ctx, createdDraftMail.ID)
+	assert.NoError(t, err)
+
+	// Verify the draft mail is marked as trashed but still exists
+	foundDraftMail, err := repository.GetByID(ctx, createdDraftMail.ID)
+	assert.NoError(t, err)
+	assert.NotNil(t, foundDraftMail)
+	assert.True(t, foundDraftMail.Trashed)
+	assert.True(t, foundDraftMail.UpdatedAt.Time().After(createdDraftMail.UpdatedAt.Time()))
+}
+
 func TestDeleteDraftMail(t *testing.T) {
 	repository, cleanup := setupDraftMailTest(t)
 	defer cleanup()
@@ -348,11 +384,10 @@ func TestDeleteDraftMail(t *testing.T) {
 	err = repository.Delete(ctx, createdDraftMail.ID)
 	assert.NoError(t, err)
 
-	// Verify the draft mail is marked as trashed
+	// Verify the draft mail is actually deleted from the database
 	foundDraftMail, err := repository.GetByID(ctx, createdDraftMail.ID)
 	assert.NoError(t, err)
-	assert.NotNil(t, foundDraftMail)
-	assert.True(t, foundDraftMail.Trashed)
+	assert.Nil(t, foundDraftMail)
 }
 
 func TestGetDraftMailByIDNotFound(t *testing.T) {
@@ -382,6 +417,19 @@ func TestUpdateDraftMailNotFound(t *testing.T) {
 
 	assert.NoError(t, err)
 	assert.Nil(t, updatedDraftMail)
+}
+
+func TestTrashDraftMailNotFound(t *testing.T) {
+	repository, cleanup := setupDraftMailTest(t)
+	defer cleanup()
+
+	ctx := context.Background()
+
+	nonExistentID := primitive.NewObjectID()
+	err := repository.Trash(ctx, nonExistentID)
+
+	// Trash should not return error even if document doesn't exist
+	assert.NoError(t, err)
 }
 
 func TestDeleteDraftMailNotFound(t *testing.T) {
