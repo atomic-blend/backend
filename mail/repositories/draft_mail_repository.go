@@ -22,6 +22,7 @@ type DraftMailRepositoryInterface interface {
 	GetByID(ctx context.Context, id primitive.ObjectID) (*models.SendMail, error)
 	Create(ctx context.Context, sendMail *models.SendMail) (*models.SendMail, error)
 	Update(ctx context.Context, id primitive.ObjectID, update bson.M) (*models.SendMail, error)
+	Trash(ctx context.Context, id primitive.ObjectID) error
 	Delete(ctx context.Context, id primitive.ObjectID) error
 }
 
@@ -166,8 +167,8 @@ func (r *DraftMailRepository) Update(ctx context.Context, id primitive.ObjectID,
 	return &sendMail, nil
 }
 
-// Delete soft deletes a draft mail by marking it as trashed
-func (r *DraftMailRepository) Delete(ctx context.Context, id primitive.ObjectID) error {
+// Trash soft deletes a draft mail by marking it as trashed
+func (r *DraftMailRepository) Trash(ctx context.Context, id primitive.ObjectID) error {
 	now := primitive.NewDateTimeFromTime(time.Now())
 
 	filter := bson.M{"_id": id}
@@ -179,5 +180,12 @@ func (r *DraftMailRepository) Delete(ctx context.Context, id primitive.ObjectID)
 	}
 
 	_, err := r.collection.UpdateOne(ctx, filter, update)
+	return err
+}
+
+// Delete deletes a draft mail by its ID
+func (r *DraftMailRepository) Delete(ctx context.Context, id primitive.ObjectID) error {
+	filter := bson.M{"_id": id}
+	_, err := r.collection.DeleteOne(ctx, filter)
 	return err
 }

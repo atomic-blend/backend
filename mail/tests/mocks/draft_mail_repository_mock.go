@@ -55,3 +55,9 @@ func (m *MockDraftMailRepository) Delete(ctx context.Context, id primitive.Objec
 	args := m.Called(ctx, id)
 	return args.Error(0)
 }
+
+// Trash soft deletes a draft mail by marking it as trashed
+func (m *MockDraftMailRepository) Trash(ctx context.Context, id primitive.ObjectID) error {
+	args := m.Called(ctx, id)
+	return args.Error(0)
+}
