@@ -11,8 +11,10 @@ import (
 
 // PutActionsPayload represents the request payload for updating mail actions
 type PutActionsPayload struct {
-	Read   []string `json:"read,omitempty"`
-	Unread []string `json:"unread,omitempty"`
+	Read      []string `json:"read,omitempty"`
+	Unread    []string `json:"unread,omitempty"`
+	Archive   []string `json:"archive,omitempty"`
+	Unarchive []string `json:"unarchive,omitempty"`
 }
 
 // PutMailActions updates the actions of a mail
@@ -31,30 +33,29 @@ func (c *Controller) PutMailActions(ctx *gin.Context) {
 	}
 
 	// Process "read" actions
-	for _, idStr := range payload.Read {
-		mailID, err := primitive.ObjectIDFromHex(idStr)
-		if err != nil {
-			continue // Skip invalid IDs
-		}
-
-		mail, err := c.mailRepo.GetByID(ctx, mailID)
-		if err != nil || mail == nil || mail.UserID != authUser.UserID {
-			continue // Skip if mail not found or doesn't belong to user
-		}
-
-		read := true
-		mail.Read = &read
-		now := primitive.NewDateTimeFromTime(time.Now())
-		mail.UpdatedAt = &now
-
-		if err := c.mailRepo.Update(ctx, mail); err != nil {
-			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update mail status"})
-			return
-		}
-	}
+	_processRead(ctx, payload, c, authUser, true)
 
 	// Process "unread" actions
-	for _, idStr := range payload.Unread {
+	_processRead(ctx, payload, c, authUser, false)
+
+	// Process "archive" actions
+	_processArchive(ctx, payload, c, authUser, true)
+
+	// Process "unarchive" actions
+	_processArchive(ctx, payload, c, authUser, false)
+
+	ctx.JSON(http.StatusOK, gin.H{"message": "Mail actions updated successfully"})
+}
+
+func _processRead(ctx *gin.Context, payload PutActionsPayload, c *Controller, authUser *auth.UserAuthInfo, read bool) {
+	var ids []string
+	if read {
+		ids = payload.Read
+	} else {
+		ids = payload.Unread
+	}
+
+	for _, idStr := range ids {
 		mailID, err := primitive.ObjectIDFromHex(idStr)
 		if err != nil {
 			continue // Skip invalid IDs
@@ -65,7 +66,6 @@ func (c *Controller) PutMailActions(ctx *gin.Context) {
 			continue // Skip if mail not found or doesn't belong to user
 		}
 
-		read := false
 		mail.Read = &read
 		now := primitive.NewDateTimeFromTime(time.Now())
 		mail.UpdatedAt = &now
@@ -75,6 +75,38 @@ func (c *Controller) PutMailActions(ctx *gin.Context) {
 			return
 		}
 	}
+}
 
-	ctx.JSON(http.StatusOK, gin.H{"message": "Mail actions updated successfully"})
+func _processArchive(ctx *gin.Context, payload PutActionsPayload, c *Controller, authUser *auth.UserAuthInfo, archived bool) {
+	var ids []string
+	if archived {
+		ids = payload.Archive
+	} else {
+		ids = payload.Unarchive
+	}
+
+	for _, idStr := range ids {
+		mailID, err := primitive.ObjectIDFromHex(idStr)
+		if err != nil {
+			continue // Skip invalid IDs
+		}
+
+		mail, err := c.mailRepo.GetByID(ctx, mailID)
+		if err != nil || mail == nil || mail.UserID != authUser.UserID {
+			continue // Skip if mail not found or doesn't belong to user
+		}
+
+		mail.Archived = &archived
+		if archived {
+			trashed := false
+			mail.Trashed = &trashed
+		}
+		now := primitive.NewDateTimeFromTime(time.Now())
+		mail.UpdatedAt = &now
+
+		if err := c.mailRepo.Update(ctx, mail); err != nil {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update mail status"})
+			return
+		}
+	}
 }

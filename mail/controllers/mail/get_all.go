@@ -1,3 +1,4 @@
+// Package mail is a package that contains the mail controller
 package mail
 
 import (
