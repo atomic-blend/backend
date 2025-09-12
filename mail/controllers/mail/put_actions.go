@@ -162,6 +162,11 @@ func _processTrashed(ctx *gin.Context, payload PutActionsPayload, c *Controller,
 
 		mail.Trashed = &trashed
 		now := primitive.NewDateTimeFromTime(time.Now())
+		if trashed {
+			mail.TrashedAt = &now
+		} else {
+			mail.TrashedAt = nil
+		}
 		mail.UpdatedAt = &now
 
 		if err := c.mailRepo.Update(ctx, mail); err != nil {
