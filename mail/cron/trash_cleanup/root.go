@@ -14,7 +14,7 @@ func CleanTrashCron() {
 
 	mailRepo := repositories.NewMailRepository(db.Database)
 
-	err := mailRepo.CleanupTrash(context.TODO())
+	err := mailRepo.CleanupTrash(context.TODO(), nil)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to cleanup trash")
 	}
