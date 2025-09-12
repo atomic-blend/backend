@@ -51,3 +51,9 @@ func (m *MockMailRepository) Update(ctx context.Context, mail *models.Mail) erro
 	args := m.Called(ctx, mail)
 	return args.Error(0)
 }
+
+// CleanupTrash cleans up trash mails
+func (m *MockMailRepository) CleanupTrash(ctx context.Context) error {
+	args := m.Called(ctx)
+	return args.Error(0)
+}

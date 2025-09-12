@@ -8,8 +8,10 @@ import (
 
 	"github.com/atomic-blend/backend/mail/controllers"
 	"github.com/atomic-blend/backend/mail/controllers/health"
+	trashcleanup "github.com/atomic-blend/backend/mail/cron/trash_cleanup"
 	amqpservice "github.com/atomic-blend/backend/shared/services/amqp"
 	"github.com/atomic-blend/backend/shared/utils/db"
+	"github.com/jasonlvhit/gocron"
 
 	"github.com/gin-contrib/cors"
 
@@ -131,7 +133,15 @@ func main() {
 	health.SetupRoutes(router, db.Database)
 	controllers.SetupAllControllers(router, db.Database, amqpService)
 
-	
+	// start cron
+	go func() {
+		// cleanup trash every 5 minutes
+		err := gocron.Every(5).Minutes().Do(trashcleanup.CleanTrashCron)
+		if err != nil {
+			log.Error().Err(err).Msg("Error defining cron job")
+		}
+		<-gocron.Start()
+	}()
 
 	// Define port
 	port := os.Getenv("PORT")
