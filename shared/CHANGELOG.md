@@ -2,6 +2,36 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## shared/v0.0.1-rc.6 - 2025-09-12
+#### Miscellaneous Chores
+- **(release)** bump RC versions for auth@auth/v0.11.0-rc.14 grpc@grpc/v0.2.0-rc.14 mail-server@mail-server/v0.1.0-rc.14 mail@mail/v0.1.0-rc.14 productivity@productivity/v0.11.0-rc.14 shared@shared/v0.0.1-rc.5 [skip ci] - (ccad083) - GitHub Actions
+- **(release)** bump RC versions for auth@auth/v0.11.0-rc.13 grpc@grpc/v0.2.0-rc.13 mail-server@mail-server/v0.1.0-rc.13 mail@mail/v0.1.0-rc.13 productivity@productivity/v0.11.0-rc.13 shared@shared/v0.0.1-rc.4 [skip ci] - (0e70765) - GitHub Actions
+- **(release)** bump RC versions for auth@auth/v0.11.0-rc.12 grpc@grpc/v0.2.0-rc.12 mail-server@mail-server/v0.1.0-rc.12 mail@mail/v0.1.0-rc.12 productivity@productivity/v0.11.0-rc.12 shared@shared/v0.0.1-rc.3 [skip ci] - (68e71b6) - GitHub Actions
+- **(release)** bump RC versions for auth@auth/v0.11.0-rc.11 grpc@grpc/v0.2.0-rc.11 mail-server@mail-server/v0.1.0-rc.11 mail@mail/v0.1.0-rc.11 productivity@productivity/v0.11.0-rc.11 shared@shared/v0.0.1-rc.2 [skip ci] - (8c59737) - GitHub Actions
+- **(release)** bump RC versions for auth@auth/v0.11.0-rc.10 grpc@grpc/v0.2.0-rc.10 mail-server@mail-server/v0.1.0-rc.10 mail@mail/v0.1.0-rc.10 productivity@productivity/v0.11.0-rc.10 shared@shared/v0.0.1-rc.1 [skip ci] - (e44c01a) - GitHub Actions
+
+- - -
+
+## shared/v0.0.1-rc.1 - 2025-09-12
+#### Bug Fixes
+- linter issues + tests - (eb2203e) - Brandon Guigo
+- pretty print the linter issues - (aa6a229) - Brandon Guigo
+- mail-server grpc errors - (b98aab3) - Brandon Guigo
+- error when sending a message through amqp - (e396868) - Brandon Guigo
+- refactor mail-server - (fe43346) - Brandon Guigo
+- move fcm_utills in shared - (9de2b24) - Brandon Guigo
+- start refactoring productivity - (adf13e4) - Brandon Guigo
+- remove old models and repositories from auth to shared - (38c1133) - Brandon Guigo
+- fix tests + refactor auth models inside shared for middleware testing - (f199d48) - Brandon Guigo
+- move productivity grpc client to shared - (680ce30) - Brandon Guigo
+- move in memory mongo to shared - (e18b6fa) - Brandon Guigo
+- move grpc client to shared package - (f08c198) - Brandon Guigo
+- move middleware package to shared directory - (51f2e0f) - Brandon Guigo
+- move utils into shared library - (f0f414b) - Brandon Guigo
+- move services into a shared directory - (d430c40) - Brandon Guigo
+
+- - -
+
 ## shared/v0.0.1-rc.5 - 2025-09-12
 #### Miscellaneous Chores
 - **(release)** bump RC versions for auth@auth/v0.11.0-rc.13 grpc@grpc/v0.2.0-rc.13 mail-server@mail-server/v0.1.0-rc.13 mail@mail/v0.1.0-rc.13 productivity@productivity/v0.11.0-rc.13 shared@shared/v0.0.1-rc.4 [skip ci] - (0e70765) - GitHub Actions
