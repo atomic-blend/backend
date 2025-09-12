@@ -98,6 +98,40 @@ func TestMailController_PutMailActions(t *testing.T) {
 			},
 		},
 		{
+			name: "Success trash mail",
+			payload: PutActionsPayload{
+				Trashed: []string{mailID.Hex()},
+			},
+			expectedStatus: http.StatusOK,
+			setupMock: func(mockRepo *mocks.MockMailRepository, userID primitive.ObjectID, mailID primitive.ObjectID) {
+				mail := &models.Mail{ID: &mailID, UserID: userID}
+				mockRepo.On("GetByID", mock.Anything, mailID).Return(mail, nil)
+				mockRepo.On("Update", mock.Anything, mock.MatchedBy(func(m *models.Mail) bool {
+					return m.ID != nil && *m.ID == mailID && m.Trashed != nil && *m.Trashed == true && m.TrashedAt != nil
+				})).Return(nil)
+			},
+			setupAuth: func(c *gin.Context, userID primitive.ObjectID) {
+				c.Set("authUser", &auth.UserAuthInfo{UserID: userID})
+			},
+		},
+		{
+			name: "Success untrash mail",
+			payload: PutActionsPayload{
+				Untrashed: []string{mailID.Hex()},
+			},
+			expectedStatus: http.StatusOK,
+			setupMock: func(mockRepo *mocks.MockMailRepository, userID primitive.ObjectID, mailID primitive.ObjectID) {
+				mail := &models.Mail{ID: &mailID, UserID: userID}
+				mockRepo.On("GetByID", mock.Anything, mailID).Return(mail, nil)
+				mockRepo.On("Update", mock.Anything, mock.MatchedBy(func(m *models.Mail) bool {
+					return m.ID != nil && *m.ID == mailID && m.Trashed != nil && *m.Trashed == false && m.TrashedAt == nil
+				})).Return(nil)
+			},
+			setupAuth: func(c *gin.Context, userID primitive.ObjectID) {
+				c.Set("authUser", &auth.UserAuthInfo{UserID: userID})
+			},
+		},
+		{
 			name: "Success multiple archive operations",
 			payload: PutActionsPayload{
 				Archived:   []string{mailID.Hex()},
@@ -164,18 +198,86 @@ func TestMailController_PutMailActions(t *testing.T) {
 			},
 		},
 		{
+			name: "Success multiple trash operations",
+			payload: PutActionsPayload{
+				Trashed:   []string{mailID.Hex()},
+				Untrashed: []string{mailID.Hex()},
+			},
+			expectedStatus: http.StatusOK,
+			setupMock: func(mockRepo *mocks.MockMailRepository, userID primitive.ObjectID, mailID primitive.ObjectID) {
+				mail := &models.Mail{ID: &mailID, UserID: userID}
+				// Expect two calls - one for trash, one for untrash
+				mockRepo.On("GetByID", mock.Anything, mailID).Return(mail, nil).Twice()
+				mockRepo.On("Update", mock.Anything, mock.MatchedBy(func(m *models.Mail) bool {
+					return m.ID != nil && *m.ID == mailID && m.Trashed != nil && *m.Trashed == true && m.TrashedAt != nil
+				})).Return(nil).Once()
+				mockRepo.On("Update", mock.Anything, mock.MatchedBy(func(m *models.Mail) bool {
+					return m.ID != nil && *m.ID == mailID && m.Trashed != nil && *m.Trashed == false && m.TrashedAt == nil
+				})).Return(nil).Once()
+			},
+			setupAuth: func(c *gin.Context, userID primitive.ObjectID) {
+				c.Set("authUser", &auth.UserAuthInfo{UserID: userID})
+			},
+		},
+		{
+			name: "Success combined read and trash operations",
+			payload: PutActionsPayload{
+				Read:    []string{mailID.Hex()},
+				Trashed: []string{mailID.Hex()},
+			},
+			expectedStatus: http.StatusOK,
+			setupMock: func(mockRepo *mocks.MockMailRepository, userID primitive.ObjectID, mailID primitive.ObjectID) {
+				mail := &models.Mail{ID: &mailID, UserID: userID}
+				// Expect two calls - one for read, one for trash
+				mockRepo.On("GetByID", mock.Anything, mailID).Return(mail, nil).Twice()
+				mockRepo.On("Update", mock.Anything, mock.MatchedBy(func(m *models.Mail) bool {
+					return m.ID != nil && *m.ID == mailID && m.Read != nil && *m.Read == true
+				})).Return(nil).Once()
+				mockRepo.On("Update", mock.Anything, mock.MatchedBy(func(m *models.Mail) bool {
+					return m.ID != nil && *m.ID == mailID && m.Trashed != nil && *m.Trashed == true && m.TrashedAt != nil
+				})).Return(nil).Once()
+			},
+			setupAuth: func(c *gin.Context, userID primitive.ObjectID) {
+				c.Set("authUser", &auth.UserAuthInfo{UserID: userID})
+			},
+		},
+		{
+			name: "Success combined archive and trash operations",
+			payload: PutActionsPayload{
+				Archived: []string{mailID.Hex()},
+				Trashed:  []string{mailID.Hex()},
+			},
+			expectedStatus: http.StatusOK,
+			setupMock: func(mockRepo *mocks.MockMailRepository, userID primitive.ObjectID, mailID primitive.ObjectID) {
+				mail := &models.Mail{ID: &mailID, UserID: userID}
+				// Expect two calls - one for archive, one for trash
+				mockRepo.On("GetByID", mock.Anything, mailID).Return(mail, nil).Twice()
+				mockRepo.On("Update", mock.Anything, mock.MatchedBy(func(m *models.Mail) bool {
+					return m.ID != nil && *m.ID == mailID && m.Archived != nil && *m.Archived == true && m.Trashed != nil && *m.Trashed == false
+				})).Return(nil).Once()
+				mockRepo.On("Update", mock.Anything, mock.MatchedBy(func(m *models.Mail) bool {
+					return m.ID != nil && *m.ID == mailID && m.Trashed != nil && *m.Trashed == true && m.TrashedAt != nil
+				})).Return(nil).Once()
+			},
+			setupAuth: func(c *gin.Context, userID primitive.ObjectID) {
+				c.Set("authUser", &auth.UserAuthInfo{UserID: userID})
+			},
+		},
+		{
 			name: "Success all operations combined",
 			payload: PutActionsPayload{
 				Read:       []string{mailID.Hex()},
 				Unread:     []string{mailID.Hex()},
 				Archived:   []string{mailID.Hex()},
 				Unarchived: []string{mailID.Hex()},
+				Trashed:    []string{mailID.Hex()},
+				Untrashed:  []string{mailID.Hex()},
 			},
 			expectedStatus: http.StatusOK,
 			setupMock: func(mockRepo *mocks.MockMailRepository, userID primitive.ObjectID, mailID primitive.ObjectID) {
 				mail := &models.Mail{ID: &mailID, UserID: userID}
-				// Expect four calls - one for each operation
-				mockRepo.On("GetByID", mock.Anything, mailID).Return(mail, nil).Times(4)
+				// Expect six calls - one for each operation
+				mockRepo.On("GetByID", mock.Anything, mailID).Return(mail, nil).Times(6)
 				mockRepo.On("Update", mock.Anything, mock.MatchedBy(func(m *models.Mail) bool {
 					return m.ID != nil && *m.ID == mailID && m.Read != nil && *m.Read == true
 				})).Return(nil).Once()
@@ -187,6 +289,12 @@ func TestMailController_PutMailActions(t *testing.T) {
 				})).Return(nil).Once()
 				mockRepo.On("Update", mock.Anything, mock.MatchedBy(func(m *models.Mail) bool {
 					return m.ID != nil && *m.ID == mailID && m.Archived != nil && *m.Archived == false
+				})).Return(nil).Once()
+				mockRepo.On("Update", mock.Anything, mock.MatchedBy(func(m *models.Mail) bool {
+					return m.ID != nil && *m.ID == mailID && m.Trashed != nil && *m.Trashed == true && m.TrashedAt != nil
+				})).Return(nil).Once()
+				mockRepo.On("Update", mock.Anything, mock.MatchedBy(func(m *models.Mail) bool {
+					return m.ID != nil && *m.ID == mailID && m.Trashed != nil && *m.Trashed == false && m.TrashedAt == nil
 				})).Return(nil).Once()
 			},
 			setupAuth: func(c *gin.Context, userID primitive.ObjectID) {
@@ -310,12 +418,130 @@ func TestMailController_PutMailActions(t *testing.T) {
 			},
 		},
 		{
+			name: "Trash operation with invalid mail ID",
+			payload: PutActionsPayload{
+				Trashed: []string{"invalid-id"},
+			},
+			expectedStatus: http.StatusOK,
+			setupMock: func(mockRepo *mocks.MockMailRepository, userID primitive.ObjectID, mailID primitive.ObjectID) {
+				// No mock expectations since invalid ID should be skipped
+			},
+			setupAuth: func(c *gin.Context, userID primitive.ObjectID) {
+				c.Set("authUser", &auth.UserAuthInfo{UserID: userID})
+			},
+		},
+		{
+			name: "Trash operation with mail not found",
+			payload: PutActionsPayload{
+				Trashed: []string{mailID.Hex()},
+			},
+			expectedStatus: http.StatusOK,
+			setupMock: func(mockRepo *mocks.MockMailRepository, userID primitive.ObjectID, mailID primitive.ObjectID) {
+				mockRepo.On("GetByID", mock.Anything, mailID).Return(nil, assert.AnError)
+			},
+			setupAuth: func(c *gin.Context, userID primitive.ObjectID) {
+				c.Set("authUser", &auth.UserAuthInfo{UserID: userID})
+			},
+		},
+		{
+			name: "Trash operation with mail belonging to different user",
+			payload: PutActionsPayload{
+				Trashed: []string{mailID.Hex()},
+			},
+			expectedStatus: http.StatusOK,
+			setupMock: func(mockRepo *mocks.MockMailRepository, userID primitive.ObjectID, mailID primitive.ObjectID) {
+				differentUserID := primitive.NewObjectID()
+				mail := &models.Mail{ID: &mailID, UserID: differentUserID}
+				mockRepo.On("GetByID", mock.Anything, mailID).Return(mail, nil)
+			},
+			setupAuth: func(c *gin.Context, userID primitive.ObjectID) {
+				c.Set("authUser", &auth.UserAuthInfo{UserID: userID})
+			},
+		},
+		{
+			name: "Trash operation with repository update error",
+			payload: PutActionsPayload{
+				Trashed: []string{mailID.Hex()},
+			},
+			expectedStatus: http.StatusInternalServerError,
+			setupMock: func(mockRepo *mocks.MockMailRepository, userID primitive.ObjectID, mailID primitive.ObjectID) {
+				mail := &models.Mail{ID: &mailID, UserID: userID}
+				mockRepo.On("GetByID", mock.Anything, mailID).Return(mail, nil)
+				mockRepo.On("Update", mock.Anything, mock.MatchedBy(func(m *models.Mail) bool {
+					return m.ID != nil && *m.ID == mailID && m.Trashed != nil && *m.Trashed == true && m.TrashedAt != nil
+				})).Return(assert.AnError)
+			},
+			setupAuth: func(c *gin.Context, userID primitive.ObjectID) {
+				c.Set("authUser", &auth.UserAuthInfo{UserID: userID})
+			},
+		},
+		{
+			name: "Untrash operation with invalid mail ID",
+			payload: PutActionsPayload{
+				Untrashed: []string{"invalid-id"},
+			},
+			expectedStatus: http.StatusOK,
+			setupMock: func(mockRepo *mocks.MockMailRepository, userID primitive.ObjectID, mailID primitive.ObjectID) {
+				// No mock expectations since invalid ID should be skipped
+			},
+			setupAuth: func(c *gin.Context, userID primitive.ObjectID) {
+				c.Set("authUser", &auth.UserAuthInfo{UserID: userID})
+			},
+		},
+		{
+			name: "Untrash operation with mail not found",
+			payload: PutActionsPayload{
+				Untrashed: []string{mailID.Hex()},
+			},
+			expectedStatus: http.StatusOK,
+			setupMock: func(mockRepo *mocks.MockMailRepository, userID primitive.ObjectID, mailID primitive.ObjectID) {
+				mockRepo.On("GetByID", mock.Anything, mailID).Return(nil, assert.AnError)
+			},
+			setupAuth: func(c *gin.Context, userID primitive.ObjectID) {
+				c.Set("authUser", &auth.UserAuthInfo{UserID: userID})
+			},
+		},
+		{
+			name: "Untrash operation with mail belonging to different user",
+			payload: PutActionsPayload{
+				Untrashed: []string{mailID.Hex()},
+			},
+			expectedStatus: http.StatusOK,
+			setupMock: func(mockRepo *mocks.MockMailRepository, userID primitive.ObjectID, mailID primitive.ObjectID) {
+				differentUserID := primitive.NewObjectID()
+				mail := &models.Mail{ID: &mailID, UserID: differentUserID}
+				mockRepo.On("GetByID", mock.Anything, mailID).Return(mail, nil)
+			},
+			setupAuth: func(c *gin.Context, userID primitive.ObjectID) {
+				c.Set("authUser", &auth.UserAuthInfo{UserID: userID})
+			},
+		},
+		{
+			name: "Untrash operation with repository update error",
+			payload: PutActionsPayload{
+				Untrashed: []string{mailID.Hex()},
+			},
+			expectedStatus: http.StatusInternalServerError,
+			setupMock: func(mockRepo *mocks.MockMailRepository, userID primitive.ObjectID, mailID primitive.ObjectID) {
+				mail := &models.Mail{ID: &mailID, UserID: userID}
+				mockRepo.On("GetByID", mock.Anything, mailID).Return(mail, nil)
+				mockRepo.On("Update", mock.Anything, mock.MatchedBy(func(m *models.Mail) bool {
+					return m.ID != nil && *m.ID == mailID && m.Trashed != nil && *m.Trashed == false && m.TrashedAt == nil
+				})).Return(assert.AnError)
+			},
+			setupAuth: func(c *gin.Context, userID primitive.ObjectID) {
+				c.Set("authUser", &auth.UserAuthInfo{UserID: userID})
+			},
+		},
+		{
 			name: "Empty payload with all fields",
 			payload: PutActionsPayload{
 				Read:       []string{},
 				Unread:     []string{},
 				Archived:   []string{},
 				Unarchived: []string{},
+				Trashed:    []string{},
+				Untrashed:  []string{},
 			},
 			expectedStatus: http.StatusOK,
 			setupMock: func(mockRepo *mocks.MockMailRepository, userID primitive.ObjectID, mailID primitive.ObjectID) {

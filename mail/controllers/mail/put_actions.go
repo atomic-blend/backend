@@ -18,6 +18,8 @@ type PutActionsPayload struct {
 	Unread     []string `json:"unread,omitempty"`
 	Archived   []string `json:"archived,omitempty"`
 	Unarchived []string `json:"unarchived,omitempty"`
+	Trashed    []string `json:"trashed,omitempty"`
+	Untrashed  []string `json:"untrashed,omitempty"`
 }
 
 // PutMailActions updates the actions of a mail
@@ -65,6 +67,12 @@ func (c *Controller) PutMailActions(ctx *gin.Context) {
 
 	// Process "unarchive" actions
 	_processArchive(ctx, payload, c, authUser, false)
+
+	// Process "trash" actions
+	_processTrashed(ctx, payload, c, authUser, true)
+
+	// Process "untrash" actions
+	_processTrashed(ctx, payload, c, authUser, false)
 
 	ctx.JSON(http.StatusOK, gin.H{"message": "Mail actions updated successfully"})
 }
@@ -124,6 +132,41 @@ func _processArchive(ctx *gin.Context, payload PutActionsPayload, c *Controller,
 			mail.Trashed = &trashed
 		}
 		now := primitive.NewDateTimeFromTime(time.Now())
+		mail.UpdatedAt = &now
+
+		if err := c.mailRepo.Update(ctx, mail); err != nil {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update mail status"})
+			return
+		}
+	}
+}
+
+func _processTrashed(ctx *gin.Context, payload PutActionsPayload, c *Controller, authUser *auth.UserAuthInfo, trashed bool) {
+	var ids []string
+	if trashed {
+		ids = payload.Trashed
+	} else {
+		ids = payload.Untrashed
+	}
+
+	for _, idStr := range ids {
+		mailID, err := primitive.ObjectIDFromHex(idStr)
+		if err != nil {
+			continue // Skip invalid IDs
+		}
+
+		mail, err := c.mailRepo.GetByID(ctx, mailID)
+		if err != nil || mail == nil || mail.UserID != authUser.UserID {
+			continue // Skip if mail not found or doesn't belong to user
+		}
+
+		mail.Trashed = &trashed
+		now := primitive.NewDateTimeFromTime(time.Now())
+		if trashed {
+			mail.TrashedAt = &now
+		} else {
+			mail.TrashedAt = nil
+		}
 		mail.UpdatedAt = &now
 
 		if err := c.mailRepo.Update(ctx, mail); err != nil {

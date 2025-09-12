@@ -24,6 +24,7 @@ type Mail struct {
 	Read           *bool               `bson:"read,omitempty" json:"read,omitempty"`
 	Archived       *bool               `bson:"archived,omitempty" json:"archived,omitempty"`
 	Trashed        *bool               `bson:"trashed,omitempty" json:"trashed,omitempty"`
+	TrashedAt      *primitive.DateTime `bson:"trashed_at,omitempty" json:"trashedAt,omitempty"`
 	Greylisted     *bool               `bson:"graylisted,omitempty" json:"graylisted,omitempty"`
 	Rejected       *bool               `bson:"rejected,omitempty" json:"rejected,omitempty"`
 	RewriteSubject *bool               `bson:"rewrite_subject,omitempty" json:"rewriteSubject,omitempty"`
