@@ -158,6 +158,8 @@ func (r *MailRepository) Update(ctx context.Context, mail *models.Mail) error {
 	update := bson.M{
 		"$set": bson.M{
 			"read":       mail.Read,
+			"archived":   mail.Archived,
+			"trashed":    mail.Trashed,
 			"updated_at": mail.UpdatedAt,
 		},
 	}

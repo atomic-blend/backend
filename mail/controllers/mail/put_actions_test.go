@@ -66,7 +66,7 @@ func TestMailController_PutMailActions(t *testing.T) {
 		{
 			name: "Success archive mail",
 			payload: PutActionsPayload{
-				Archive: []string{mailID.Hex()},
+				Archived: []string{mailID.Hex()},
 			},
 			expectedStatus: http.StatusOK,
 			setupMock: func(mockRepo *mocks.MockMailRepository, userID primitive.ObjectID, mailID primitive.ObjectID) {
@@ -83,7 +83,7 @@ func TestMailController_PutMailActions(t *testing.T) {
 		{
 			name: "Success unarchive mail",
 			payload: PutActionsPayload{
-				Unarchive: []string{mailID.Hex()},
+				Unarchived: []string{mailID.Hex()},
 			},
 			expectedStatus: http.StatusOK,
 			setupMock: func(mockRepo *mocks.MockMailRepository, userID primitive.ObjectID, mailID primitive.ObjectID) {
@@ -100,8 +100,8 @@ func TestMailController_PutMailActions(t *testing.T) {
 		{
 			name: "Success multiple archive operations",
 			payload: PutActionsPayload{
-				Archive:   []string{mailID.Hex()},
-				Unarchive: []string{mailID.Hex()},
+				Archived:   []string{mailID.Hex()},
+				Unarchived: []string{mailID.Hex()},
 			},
 			expectedStatus: http.StatusOK,
 			setupMock: func(mockRepo *mocks.MockMailRepository, userID primitive.ObjectID, mailID primitive.ObjectID) {
@@ -122,8 +122,8 @@ func TestMailController_PutMailActions(t *testing.T) {
 		{
 			name: "Success combined read and archive operations",
 			payload: PutActionsPayload{
-				Read:    []string{mailID.Hex()},
-				Archive: []string{mailID.Hex()},
+				Read:     []string{mailID.Hex()},
+				Archived: []string{mailID.Hex()},
 			},
 			expectedStatus: http.StatusOK,
 			setupMock: func(mockRepo *mocks.MockMailRepository, userID primitive.ObjectID, mailID primitive.ObjectID) {
@@ -144,8 +144,8 @@ func TestMailController_PutMailActions(t *testing.T) {
 		{
 			name: "Success combined unread and unarchive operations",
 			payload: PutActionsPayload{
-				Unread:    []string{mailID.Hex()},
-				Unarchive: []string{mailID.Hex()},
+				Unread:     []string{mailID.Hex()},
+				Unarchived: []string{mailID.Hex()},
 			},
 			expectedStatus: http.StatusOK,
 			setupMock: func(mockRepo *mocks.MockMailRepository, userID primitive.ObjectID, mailID primitive.ObjectID) {
@@ -166,10 +166,10 @@ func TestMailController_PutMailActions(t *testing.T) {
 		{
 			name: "Success all operations combined",
 			payload: PutActionsPayload{
-				Read:      []string{mailID.Hex()},
-				Unread:    []string{mailID.Hex()},
-				Archive:   []string{mailID.Hex()},
-				Unarchive: []string{mailID.Hex()},
+				Read:       []string{mailID.Hex()},
+				Unread:     []string{mailID.Hex()},
+				Archived:   []string{mailID.Hex()},
+				Unarchived: []string{mailID.Hex()},
 			},
 			expectedStatus: http.StatusOK,
 			setupMock: func(mockRepo *mocks.MockMailRepository, userID primitive.ObjectID, mailID primitive.ObjectID) {
@@ -196,7 +196,7 @@ func TestMailController_PutMailActions(t *testing.T) {
 		{
 			name: "Archive operation with invalid mail ID",
 			payload: PutActionsPayload{
-				Archive: []string{"invalid-id"},
+				Archived: []string{"invalid-id"},
 			},
 			expectedStatus: http.StatusOK,
 			setupMock: func(mockRepo *mocks.MockMailRepository, userID primitive.ObjectID, mailID primitive.ObjectID) {
@@ -209,7 +209,7 @@ func TestMailController_PutMailActions(t *testing.T) {
 		{
 			name: "Archive operation with mail not found",
 			payload: PutActionsPayload{
-				Archive: []string{mailID.Hex()},
+				Archived: []string{mailID.Hex()},
 			},
 			expectedStatus: http.StatusOK,
 			setupMock: func(mockRepo *mocks.MockMailRepository, userID primitive.ObjectID, mailID primitive.ObjectID) {
@@ -222,7 +222,7 @@ func TestMailController_PutMailActions(t *testing.T) {
 		{
 			name: "Archive operation with mail belonging to different user",
 			payload: PutActionsPayload{
-				Archive: []string{mailID.Hex()},
+				Archived: []string{mailID.Hex()},
 			},
 			expectedStatus: http.StatusOK,
 			setupMock: func(mockRepo *mocks.MockMailRepository, userID primitive.ObjectID, mailID primitive.ObjectID) {
@@ -237,7 +237,7 @@ func TestMailController_PutMailActions(t *testing.T) {
 		{
 			name: "Archive operation with repository update error",
 			payload: PutActionsPayload{
-				Archive: []string{mailID.Hex()},
+				Archived: []string{mailID.Hex()},
 			},
 			expectedStatus: http.StatusInternalServerError,
 			setupMock: func(mockRepo *mocks.MockMailRepository, userID primitive.ObjectID, mailID primitive.ObjectID) {
@@ -254,7 +254,7 @@ func TestMailController_PutMailActions(t *testing.T) {
 		{
 			name: "Unarchive operation with invalid mail ID",
 			payload: PutActionsPayload{
-				Unarchive: []string{"invalid-id"},
+				Unarchived: []string{"invalid-id"},
 			},
 			expectedStatus: http.StatusOK,
 			setupMock: func(mockRepo *mocks.MockMailRepository, userID primitive.ObjectID, mailID primitive.ObjectID) {
@@ -267,7 +267,7 @@ func TestMailController_PutMailActions(t *testing.T) {
 		{
 			name: "Unarchive operation with mail not found",
 			payload: PutActionsPayload{
-				Unarchive: []string{mailID.Hex()},
+				Unarchived: []string{mailID.Hex()},
 			},
 			expectedStatus: http.StatusOK,
 			setupMock: func(mockRepo *mocks.MockMailRepository, userID primitive.ObjectID, mailID primitive.ObjectID) {
@@ -280,7 +280,7 @@ func TestMailController_PutMailActions(t *testing.T) {
 		{
 			name: "Unarchive operation with mail belonging to different user",
 			payload: PutActionsPayload{
-				Unarchive: []string{mailID.Hex()},
+				Unarchived: []string{mailID.Hex()},
 			},
 			expectedStatus: http.StatusOK,
 			setupMock: func(mockRepo *mocks.MockMailRepository, userID primitive.ObjectID, mailID primitive.ObjectID) {
@@ -295,7 +295,7 @@ func TestMailController_PutMailActions(t *testing.T) {
 		{
 			name: "Unarchive operation with repository update error",
 			payload: PutActionsPayload{
-				Unarchive: []string{mailID.Hex()},
+				Unarchived: []string{mailID.Hex()},
 			},
 			expectedStatus: http.StatusInternalServerError,
 			setupMock: func(mockRepo *mocks.MockMailRepository, userID primitive.ObjectID, mailID primitive.ObjectID) {
@@ -312,10 +312,10 @@ func TestMailController_PutMailActions(t *testing.T) {
 		{
 			name: "Empty payload with all fields",
 			payload: PutActionsPayload{
-				Read:      []string{},
-				Unread:    []string{},
-				Archive:   []string{},
-				Unarchive: []string{},
+				Read:       []string{},
+				Unread:     []string{},
+				Archived:   []string{},
+				Unarchived: []string{},
 			},
 			expectedStatus: http.StatusOK,
 			setupMock: func(mockRepo *mocks.MockMailRepository, userID primitive.ObjectID, mailID primitive.ObjectID) {
