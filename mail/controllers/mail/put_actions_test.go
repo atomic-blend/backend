@@ -107,7 +107,7 @@ func TestMailController_PutMailActions(t *testing.T) {
 				mail := &models.Mail{ID: &mailID, UserID: userID}
 				mockRepo.On("GetByID", mock.Anything, mailID).Return(mail, nil)
 				mockRepo.On("Update", mock.Anything, mock.MatchedBy(func(m *models.Mail) bool {
-					return m.ID != nil && *m.ID == mailID && m.Trashed != nil && *m.Trashed == true
+					return m.ID != nil && *m.ID == mailID && m.Trashed != nil && *m.Trashed == true && m.TrashedAt != nil
 				})).Return(nil)
 			},
 			setupAuth: func(c *gin.Context, userID primitive.ObjectID) {
@@ -124,7 +124,7 @@ func TestMailController_PutMailActions(t *testing.T) {
 				mail := &models.Mail{ID: &mailID, UserID: userID}
 				mockRepo.On("GetByID", mock.Anything, mailID).Return(mail, nil)
 				mockRepo.On("Update", mock.Anything, mock.MatchedBy(func(m *models.Mail) bool {
-					return m.ID != nil && *m.ID == mailID && m.Trashed != nil && *m.Trashed == false
+					return m.ID != nil && *m.ID == mailID && m.Trashed != nil && *m.Trashed == false && m.TrashedAt == nil
 				})).Return(nil)
 			},
 			setupAuth: func(c *gin.Context, userID primitive.ObjectID) {
@@ -209,10 +209,10 @@ func TestMailController_PutMailActions(t *testing.T) {
 				// Expect two calls - one for trash, one for untrash
 				mockRepo.On("GetByID", mock.Anything, mailID).Return(mail, nil).Twice()
 				mockRepo.On("Update", mock.Anything, mock.MatchedBy(func(m *models.Mail) bool {
-					return m.ID != nil && *m.ID == mailID && m.Trashed != nil && *m.Trashed == true
+					return m.ID != nil && *m.ID == mailID && m.Trashed != nil && *m.Trashed == true && m.TrashedAt != nil
 				})).Return(nil).Once()
 				mockRepo.On("Update", mock.Anything, mock.MatchedBy(func(m *models.Mail) bool {
-					return m.ID != nil && *m.ID == mailID && m.Trashed != nil && *m.Trashed == false
+					return m.ID != nil && *m.ID == mailID && m.Trashed != nil && *m.Trashed == false && m.TrashedAt == nil
 				})).Return(nil).Once()
 			},
 			setupAuth: func(c *gin.Context, userID primitive.ObjectID) {
@@ -234,7 +234,7 @@ func TestMailController_PutMailActions(t *testing.T) {
 					return m.ID != nil && *m.ID == mailID && m.Read != nil && *m.Read == true
 				})).Return(nil).Once()
 				mockRepo.On("Update", mock.Anything, mock.MatchedBy(func(m *models.Mail) bool {
-					return m.ID != nil && *m.ID == mailID && m.Trashed != nil && *m.Trashed == true
+					return m.ID != nil && *m.ID == mailID && m.Trashed != nil && *m.Trashed == true && m.TrashedAt != nil
 				})).Return(nil).Once()
 			},
 			setupAuth: func(c *gin.Context, userID primitive.ObjectID) {
@@ -256,7 +256,7 @@ func TestMailController_PutMailActions(t *testing.T) {
 					return m.ID != nil && *m.ID == mailID && m.Archived != nil && *m.Archived == true && m.Trashed != nil && *m.Trashed == false
 				})).Return(nil).Once()
 				mockRepo.On("Update", mock.Anything, mock.MatchedBy(func(m *models.Mail) bool {
-					return m.ID != nil && *m.ID == mailID && m.Trashed != nil && *m.Trashed == true
+					return m.ID != nil && *m.ID == mailID && m.Trashed != nil && *m.Trashed == true && m.TrashedAt != nil
 				})).Return(nil).Once()
 			},
 			setupAuth: func(c *gin.Context, userID primitive.ObjectID) {
@@ -291,10 +291,10 @@ func TestMailController_PutMailActions(t *testing.T) {
 					return m.ID != nil && *m.ID == mailID && m.Archived != nil && *m.Archived == false
 				})).Return(nil).Once()
 				mockRepo.On("Update", mock.Anything, mock.MatchedBy(func(m *models.Mail) bool {
-					return m.ID != nil && *m.ID == mailID && m.Trashed != nil && *m.Trashed == true
+					return m.ID != nil && *m.ID == mailID && m.Trashed != nil && *m.Trashed == true && m.TrashedAt != nil
 				})).Return(nil).Once()
 				mockRepo.On("Update", mock.Anything, mock.MatchedBy(func(m *models.Mail) bool {
-					return m.ID != nil && *m.ID == mailID && m.Trashed != nil && *m.Trashed == false
+					return m.ID != nil && *m.ID == mailID && m.Trashed != nil && *m.Trashed == false && m.TrashedAt == nil
 				})).Return(nil).Once()
 			},
 			setupAuth: func(c *gin.Context, userID primitive.ObjectID) {
@@ -468,7 +468,7 @@ func TestMailController_PutMailActions(t *testing.T) {
 				mail := &models.Mail{ID: &mailID, UserID: userID}
 				mockRepo.On("GetByID", mock.Anything, mailID).Return(mail, nil)
 				mockRepo.On("Update", mock.Anything, mock.MatchedBy(func(m *models.Mail) bool {
-					return m.ID != nil && *m.ID == mailID && m.Trashed != nil && *m.Trashed == true
+					return m.ID != nil && *m.ID == mailID && m.Trashed != nil && *m.Trashed == true && m.TrashedAt != nil
 				})).Return(assert.AnError)
 			},
 			setupAuth: func(c *gin.Context, userID primitive.ObjectID) {
@@ -526,7 +526,7 @@ func TestMailController_PutMailActions(t *testing.T) {
 				mail := &models.Mail{ID: &mailID, UserID: userID}
 				mockRepo.On("GetByID", mock.Anything, mailID).Return(mail, nil)
 				mockRepo.On("Update", mock.Anything, mock.MatchedBy(func(m *models.Mail) bool {
-					return m.ID != nil && *m.ID == mailID && m.Trashed != nil && *m.Trashed == false
+					return m.ID != nil && *m.ID == mailID && m.Trashed != nil && *m.Trashed == false && m.TrashedAt == nil
 				})).Return(assert.AnError)
 			},
 			setupAuth: func(c *gin.Context, userID primitive.ObjectID) {
