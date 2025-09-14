@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   find-out-changes:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux]
     outputs:
       changed_directories: ${{ steps.set-output.outputs.changed_directories }} # The `dirs` doesn't exist in the outputs of changed-files@v35 action.
     steps:
@@ -41,7 +41,7 @@ jobs:
 
   build-and-test:
     if: ${{ needs.find-out-changes.outputs.changed_directories != '' }} # Without it, the strategy parser will fail if the changed_directories is empty.
-    runs-on: ubuntu-22.04
+    runs-on: [self-hosted, Linux]
     strategy:
       matrix: ${{fromJson(needs.find-out-changes.outputs.changed_directories)}}
     needs:
