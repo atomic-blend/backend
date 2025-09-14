@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   test-grpc:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux]
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
