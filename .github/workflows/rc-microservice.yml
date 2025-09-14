@@ -16,7 +16,7 @@ permissions:
 
 jobs:
   find-out-changes:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux]
     outputs:
       changed_directories: ${{ steps.set-output.outputs.changed_directories }} # The `dirs` doesn't exist in the outputs of changed-files@v35 action.
     steps:
@@ -59,7 +59,7 @@ jobs:
 
   build-and-test:
     if: ${{ needs.find-out-changes.outputs.changed_directories != '' }} # Without it, the strategy parser will fail if the changed_directories is empty.
-    runs-on: ubuntu-22.04
+    runs-on: [self-hosted, Linux]
     strategy:
       matrix: ${{fromJson(needs.find-out-changes.outputs.changed_directories)}}
     needs:
@@ -103,7 +103,7 @@ jobs:
 
   release-rc:
     if: ${{ needs.build-and-test.result == 'success' }}
-    runs-on: ubuntu-22.04
+    runs-on: [self-hosted, Linux]
     needs:
       - build-and-test
     steps:
@@ -310,7 +310,7 @@ jobs:
 
   build-docker-images:
     if: ${{ needs.release-rc.outputs.docker_matrix != '' && fromJson(needs.release-rc.outputs.docker_matrix).include[0] != null }}
-    runs-on: ubuntu-22.04
+    runs-on: [self-hosted, Linux]
     needs: release-rc
     strategy:
       matrix: ${{ fromJson(needs.release-rc.outputs.docker_matrix) }}
@@ -345,7 +345,7 @@ jobs:
             .
 
   prepare-github-releases:
-    runs-on: ubuntu-22.04
+    runs-on: [self-hosted, Linux]
     needs: 
       - build-docker-images
       - release-rc
@@ -434,7 +434,7 @@ jobs:
 
   create-consolidated-release:
     if: ${{ needs.prepare-github-releases.outputs.release_matrix != '' && fromJson(needs.prepare-github-releases.outputs.release_matrix).include[0] != null }}
-    runs-on: ubuntu-22.04
+    runs-on: [self-hosted, Linux]
     needs: prepare-github-releases
     steps:
       - name: Checkout code
