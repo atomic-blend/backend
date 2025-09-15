@@ -8,6 +8,7 @@ on:
 env:
   COCOGITTO_VERSION: "6.3.0" # Specify the version of Cocogitto to use
   MEMONGO_DOWNLOAD_URL: https://fastdl.mongodb.org/linux/mongodb-linux-x86_64-debian12-8.0.13.tgz
+  OS: "debian12"
 
 permissions:
   contents: write
@@ -148,7 +149,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ~/.cargo/bin/cog
-          key: cocogitto-v${{ env.COCOGITTO_VERSION }}
+          key: cocogitto-${{ env.OS }}-v${{ env.COCOGITTO_VERSION }}
 
       - name: Install Rust
         if: steps.cache-cocogitto.outputs.cache-hit != 'true'

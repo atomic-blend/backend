@@ -6,6 +6,8 @@ on:
 
 env:
   COCOGITTO_VERSION: "6.3.0" # Specify the version of Cocogitto to use
+  MEMONGO_DOWNLOAD_URL: https://fastdl.mongodb.org/linux/mongodb-linux-x86_64-debian12-8.0.13.tgz
+  OS: "debian12"
 
 permissions:
   contents: write
@@ -14,7 +16,7 @@ permissions:
 
 jobs:
   find-out-changes:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux]
     outputs:
       changed_directories: ${{ steps.set-output.outputs.changed_directories }} # The `dirs` doesn't exist in the outputs of changed-files@v35 action.
     steps:
@@ -44,7 +46,7 @@ jobs:
 
   build-and-test:
     if: ${{ needs.find-out-changes.outputs.changed_directories != '' }} # Without it, the strategy parser will fail if the changed_directories is empty.
-    runs-on: ubuntu-22.04
+    runs-on: [self-hosted, Linux]
     strategy:
       matrix: ${{fromJson(needs.find-out-changes.outputs.changed_directories)}}
     needs:
@@ -62,6 +64,7 @@ jobs:
         with:
           go-version: "1.24.5"
           node-version: "23.9"
+          memongo-download-url: ${{ env.MEMONGO_DOWNLOAD_URL }}
           working-directory: "${{ matrix.dir }}"
           maizzle-directory: "./maizzle"
           upload-artifacts: "false"
@@ -89,7 +92,7 @@ jobs:
 
   release:
     if: ${{ needs.build-and-test.result == 'success' }}
-    runs-on: ubuntu-22.04
+    runs-on: [self-hosted, Linux]
     needs:
       - build-and-test
     steps:
@@ -132,7 +135,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ~/.cargo/bin/cog
-          key: cocogitto-v${{ env.COCOGITTO_VERSION }}
+          key: cocogitto-${{ env.OS }}-v${{ env.COCOGITTO_VERSION }}
 
       - name: Install Rust
         if: steps.cache-cocogitto.outputs.cache-hit != 'true'
@@ -275,7 +278,7 @@ jobs:
 
   build-docker-images:
     if: ${{ needs.release.outputs.docker_matrix != '' && fromJson(needs.release.outputs.docker_matrix).include[0] != null }}
-    runs-on: ubuntu-22.04
+    runs-on: [self-hosted, Linux]
     needs: release
     strategy:
       matrix: ${{ fromJson(needs.release.outputs.docker_matrix) }}
@@ -309,7 +312,7 @@ jobs:
             ghcr.io/atomic-blend/${{ matrix.dir }}:${{ matrix.version }}
 
   prepare-github-releases:
-    runs-on: ubuntu-22.04
+    runs-on: [self-hosted, Linux]
     needs: 
       - build-docker-images
       - release
@@ -398,7 +401,7 @@ jobs:
 
   create-consolidated-release:
     if: ${{ needs.prepare-github-releases.outputs.release_matrix != '' && fromJson(needs.prepare-github-releases.outputs.release_matrix).include[0] != null }}
-    runs-on: ubuntu-22.04
+    runs-on: [self-hosted, Linux]
     needs: prepare-github-releases
     steps:
       - name: Checkout code
