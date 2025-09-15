@@ -17,7 +17,7 @@ cd /home/actions/actions-runner/
 ```
 5. Install buildessentials:
 ```
-sudo apt install build-essential
+sudo apt install build-essential jq 
 ```
 6. Install buf with this : 
 ```
