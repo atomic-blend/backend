@@ -5,6 +5,10 @@ on:
     # types: [review_requested, ready_for_review, ]
     branches: [dev]
 
+env:
+  MEMONGO_DOWNLOAD_URL: https://fastdl.mongodb.org/linux/mongodb-linux-x86_64-debian12-8.0.13.tgz
+  OS: "debian12"
+
 permissions:
   contents: read
   actions: write
@@ -59,3 +63,4 @@ jobs:
           node-version: "23.9"
           working-directory: "${{ matrix.dir }}"
           upload-artifacts: "false"
+          memongo-download-url: ${{ env.MEMONGO_DOWNLOAD_URL }}
