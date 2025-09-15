@@ -7,6 +7,9 @@ inputs:
     description: "Go version to use"
     required: false
     default: "1.21"
+  memongo-download-url:
+    description: "Memongo download URL"
+    required: false
   node-version:
     description: "Node.js version to use"
     required: false
@@ -40,6 +43,12 @@ runs:
         go-version: ${{ inputs.go-version }}
         cache: true
         cache-dependency-path: ${{ inputs.working-directory }}/go.sum
+
+    - name: Configure Memongo
+      if: ${{ inputs.memongo-download-url != '' }}
+      shell: bash
+      run: |
+        export MEMONGO_DOWNLOAD_URL=${{ inputs.memongo-download-url }}
 
     - name: Install linting tools
       shell: bash

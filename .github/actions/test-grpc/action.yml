@@ -37,7 +37,7 @@ runs:
         echo "Downloading buf from: $BUF_URL"
         curl -sSL "$BUF_URL" -o buf
         chmod +x buf
-        sudo mv buf /usr/local/bin/
+        mv buf /usr/local/bin/
 
         # Verify installation
         buf --version
