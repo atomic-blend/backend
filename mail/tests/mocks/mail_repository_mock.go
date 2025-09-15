@@ -53,7 +53,7 @@ func (m *MockMailRepository) Update(ctx context.Context, mail *models.Mail) erro
 }
 
 // CleanupTrash cleans up trash mails
-func (m *MockMailRepository) CleanupTrash(ctx context.Context, userID *primitive.ObjectID) error {
-	args := m.Called(ctx, userID)
+func (m *MockMailRepository) CleanupTrash(ctx context.Context, userID *primitive.ObjectID, days *int) error {
+	args := m.Called(ctx, userID, days)
 	return args.Error(0)
 }
