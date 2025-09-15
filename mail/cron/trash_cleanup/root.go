@@ -1,3 +1,4 @@
+// Package trashcleanup provides cron job functionality for cleaning up old trashed mails
 package trashcleanup
 
 import (
@@ -14,7 +15,7 @@ func CleanTrashCron() {
 
 	mailRepo := repositories.NewMailRepository(db.Database)
 
-	err := mailRepo.CleanupTrash(context.TODO(), nil)
+	err := mailRepo.CleanupTrash(context.TODO(), nil, nil)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to cleanup trash")
 	}

@@ -28,7 +28,7 @@ func TestMailController_CleanupTrash(t *testing.T) {
 			name:           "Success cleanup trash",
 			expectedStatus: http.StatusOK,
 			setupMock: func(mockRepo *mocks.MockMailRepository, userID primitive.ObjectID) {
-				mockRepo.On("CleanupTrash", mock.Anything, &userID).Return(nil)
+				mockRepo.On("CleanupTrash", mock.Anything, &userID, mock.AnythingOfType("*int")).Return(nil)
 			},
 			setupAuth: func(c *gin.Context, userID primitive.ObjectID) {
 				c.Set("authUser", &auth.UserAuthInfo{UserID: userID})
@@ -41,7 +41,7 @@ func TestMailController_CleanupTrash(t *testing.T) {
 			name:           "Repository error during cleanup",
 			expectedStatus: http.StatusInternalServerError,
 			setupMock: func(mockRepo *mocks.MockMailRepository, userID primitive.ObjectID) {
-				mockRepo.On("CleanupTrash", mock.Anything, &userID).Return(assert.AnError)
+				mockRepo.On("CleanupTrash", mock.Anything, &userID, mock.AnythingOfType("*int")).Return(assert.AnError)
 			},
 			setupAuth: func(c *gin.Context, userID primitive.ObjectID) {
 				c.Set("authUser", &auth.UserAuthInfo{UserID: userID})

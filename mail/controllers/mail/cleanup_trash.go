@@ -20,7 +20,9 @@ func (c *Controller) CleanupTrash(ctx *gin.Context) {
 	log.Debug().Str("user_id", authUser.UserID.Hex()).Msg("Starting trash cleanup for user")
 
 	// Call the repository method with the authenticated user's ID
-	err := c.mailRepo.CleanupTrash(ctx, &authUser.UserID)
+	// Use -1 to delete all trashed mails immediately (empty trash)
+	days := -1
+	err := c.mailRepo.CleanupTrash(ctx, &authUser.UserID, &days)
 	if err != nil {
 		log.Error().Err(err).Str("user_id", authUser.UserID.Hex()).Msg("Failed to cleanup trash")
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to cleanup trash"})

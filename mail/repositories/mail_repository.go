@@ -25,7 +25,7 @@ type MailRepositoryInterface interface {
 	// Update updates a mail object
 	Update(ctx context.Context, mail *models.Mail) error
 	// CleanupTrash cleans up trash mails
-	CleanupTrash(ctx context.Context, userID *primitive.ObjectID) error
+	CleanupTrash(ctx context.Context, userID *primitive.ObjectID, days *int) error
 }
 
 // MailRepository handles database operations related to mails
@@ -172,11 +172,18 @@ func (r *MailRepository) Update(ctx context.Context, mail *models.Mail) error {
 }
 
 // CleanupTrash cleans up trash mails when trashed_at is 30 days or older and trashed is true
-func (r *MailRepository) CleanupTrash(ctx context.Context, userID *primitive.ObjectID) error {
-	thirtyDaysAgo := time.Now().AddDate(0, 0, -30)
+func (r *MailRepository) CleanupTrash(ctx context.Context, userID *primitive.ObjectID, days *int) error {
+	daysAgo := time.Now().AddDate(0, 0, -30)
+
+	// if days is -1, then delete all trashed mails now
+	if days != nil && *days == -1 {
+		daysAgo = time.Now()
+	} else if days != nil && *days > 0 {
+		daysAgo = time.Now().AddDate(0, 0, -*days)
+	}
 	filter := bson.M{
 		"trashed":    true,
-		"trashed_at": bson.M{"$lte": primitive.NewDateTimeFromTime(thirtyDaysAgo)},
+		"trashed_at": bson.M{"$lte": primitive.NewDateTimeFromTime(daysAgo)},
 	}
 	if userID != nil {
 		filter["user_id"] = userID
