@@ -505,8 +505,8 @@ func TestMailRepository_CleanupTrash(t *testing.T) {
 			assert.NotNil(t, found, "Mail %d (%s) should exist before cleanup", i, tc.name)
 		}
 
-		// Run cleanup
-		err := repo.CleanupTrash(context.Background(), nil)
+		// Run cleanup (default 30 days)
+		err := repo.CleanupTrash(context.Background(), nil, nil)
 		require.NoError(t, err)
 
 		// Verify results
@@ -534,7 +534,7 @@ func TestMailRepository_CleanupTrash(t *testing.T) {
 		require.NoError(t, err)
 
 		// Run cleanup
-		err = repo.CleanupTrash(context.Background(), nil)
+		err = repo.CleanupTrash(context.Background(), nil, nil)
 		require.NoError(t, err)
 
 		// Verify mail still exists
@@ -545,7 +545,7 @@ func TestMailRepository_CleanupTrash(t *testing.T) {
 
 	t.Run("cleanup with no mails at all", func(t *testing.T) {
 		// Run cleanup on empty collection
-		err := repo.CleanupTrash(context.Background(), nil)
+		err := repo.CleanupTrash(context.Background(), nil, nil)
 		require.NoError(t, err)
 	})
 
@@ -564,7 +564,7 @@ func TestMailRepository_CleanupTrash(t *testing.T) {
 		require.NoError(t, err)
 
 		// Run cleanup
-		err = repo.CleanupTrash(context.Background(), nil)
+		err = repo.CleanupTrash(context.Background(), nil, nil)
 		require.NoError(t, err)
 
 		// Verify mail is deleted (30 days is the cutoff)
@@ -588,7 +588,7 @@ func TestMailRepository_CleanupTrash(t *testing.T) {
 		require.NoError(t, err)
 
 		// Run cleanup
-		err = repo.CleanupTrash(context.Background(), nil)
+		err = repo.CleanupTrash(context.Background(), nil, nil)
 		require.NoError(t, err)
 
 		// Verify mail still exists
@@ -621,7 +621,7 @@ func TestMailRepository_CleanupTrash(t *testing.T) {
 		require.NoError(t, err)
 
 		// Run global cleanup (userID = nil)
-		err = repo.CleanupTrash(context.Background(), nil)
+		err = repo.CleanupTrash(context.Background(), nil, nil)
 		require.NoError(t, err)
 
 		// Verify both mails are deleted
@@ -658,7 +658,7 @@ func TestMailRepository_CleanupTrash(t *testing.T) {
 		require.NoError(t, err)
 
 		// Run cleanup only for userID1
-		err = repo.CleanupTrash(context.Background(), &userID1)
+		err = repo.CleanupTrash(context.Background(), &userID1, nil)
 		require.NoError(t, err)
 
 		// Verify only userID1's mail is deleted
@@ -688,7 +688,7 @@ func TestMailRepository_CleanupTrash(t *testing.T) {
 		require.NoError(t, err)
 
 		// Run cleanup only for userID1 (who has no mails)
-		err = repo.CleanupTrash(context.Background(), &userID1)
+		err = repo.CleanupTrash(context.Background(), &userID1, nil)
 		require.NoError(t, err)
 
 		// Verify userID2's mail still exists (should not be affected)
@@ -734,7 +734,7 @@ func TestMailRepository_CleanupTrash(t *testing.T) {
 		require.NoError(t, err)
 
 		// Run cleanup only for userID1
-		err = repo.CleanupTrash(context.Background(), &userID1)
+		err = repo.CleanupTrash(context.Background(), &userID1, nil)
 		require.NoError(t, err)
 
 		// Verify userID1's old trashed mail is deleted
@@ -774,13 +774,139 @@ func TestMailRepository_CleanupTrash(t *testing.T) {
 		require.NoError(t, err)
 
 		// Run cleanup for non-existent user
-		err = repo.CleanupTrash(context.Background(), &nonExistentUserID)
+		err = repo.CleanupTrash(context.Background(), &nonExistentUserID, nil)
 		require.NoError(t, err)
 
 		// Verify userID1's mail still exists (not affected)
 		found1, err := repo.GetByID(context.Background(), *created1.ID)
 		require.NoError(t, err)
 		assert.NotNil(t, found1, "User 1's mail should still exist when cleaning non-existent user")
+	})
+
+	t.Run("cleanup with custom days parameter - 7 days", func(t *testing.T) {
+		userID := primitive.NewObjectID()
+		now := time.Now()
+
+		// Create mails with different trashed_at dates
+		testCases := []struct {
+			name        string
+			trashed     bool
+			trashedAt   *primitive.DateTime
+			shouldExist bool
+		}{
+			{
+				name:        "old trashed mail (10 days ago)",
+				trashed:     true,
+				trashedAt:   func() *primitive.DateTime { dt := primitive.NewDateTimeFromTime(now.AddDate(0, 0, -10)); return &dt }(),
+				shouldExist: false, // Should be deleted (older than 7 days)
+			},
+			{
+				name:        "recent trashed mail (5 days ago)",
+				trashed:     true,
+				trashedAt:   func() *primitive.DateTime { dt := primitive.NewDateTimeFromTime(now.AddDate(0, 0, -5)); return &dt }(),
+				shouldExist: true, // Should remain (newer than 7 days)
+			},
+			{
+				name:        "exactly 7 days old trashed mail",
+				trashed:     true,
+				trashedAt:   func() *primitive.DateTime { dt := primitive.NewDateTimeFromTime(now.AddDate(0, 0, -7)); return &dt }(),
+				shouldExist: false, // Should be deleted (exactly 7 days)
+			},
+		}
+
+		var createdMails []*models.Mail
+		for _, tc := range testCases {
+			mail := createTestMail(userID)
+			if headers, ok := mail.Headers.(map[string]string); ok {
+				headers["Subject"] = tc.name
+			}
+			mail.Trashed = &tc.trashed
+			mail.TrashedAt = tc.trashedAt
+
+			created, err := repo.Create(context.Background(), mail)
+			require.NoError(t, err)
+			createdMails = append(createdMails, created)
+		}
+
+		// Run cleanup with 7 days parameter
+		days := 7
+		err := repo.CleanupTrash(context.Background(), &userID, &days)
+		require.NoError(t, err)
+
+		// Verify results
+		for i, tc := range testCases {
+			found, err := repo.GetByID(context.Background(), *createdMails[i].ID)
+			require.NoError(t, err)
+
+			if tc.shouldExist {
+				assert.NotNil(t, found, "Mail %d (%s) should still exist after cleanup", i, tc.name)
+			} else {
+				assert.Nil(t, found, "Mail %d (%s) should be deleted after cleanup", i, tc.name)
+			}
+		}
+	})
+
+	t.Run("cleanup with days parameter -1 (delete all trashed)", func(t *testing.T) {
+		userID := primitive.NewObjectID()
+		now := time.Now()
+
+		// Create mails with different trashed_at dates
+		testCases := []struct {
+			name        string
+			trashed     bool
+			trashedAt   *primitive.DateTime
+			shouldExist bool
+		}{
+			{
+				name:        "recent trashed mail (1 day ago)",
+				trashed:     true,
+				trashedAt:   func() *primitive.DateTime { dt := primitive.NewDateTimeFromTime(now.AddDate(0, 0, -1)); return &dt }(),
+				shouldExist: false, // Should be deleted (all trashed mails)
+			},
+			{
+				name:        "very recent trashed mail (1 hour ago)",
+				trashed:     true,
+				trashedAt:   func() *primitive.DateTime { dt := primitive.NewDateTimeFromTime(now.Add(-1 * time.Hour)); return &dt }(),
+				shouldExist: false, // Should be deleted (all trashed mails)
+			},
+			{
+				name:        "non-trashed mail",
+				trashed:     false,
+				trashedAt:   func() *primitive.DateTime { dt := primitive.NewDateTimeFromTime(now.AddDate(0, 0, -1)); return &dt }(),
+				shouldExist: true, // Should remain (not trashed)
+			},
+		}
+
+		var createdMails []*models.Mail
+		for _, tc := range testCases {
+			mail := createTestMail(userID)
+			if headers, ok := mail.Headers.(map[string]string); ok {
+				headers["Subject"] = tc.name
+			}
+			mail.Trashed = &tc.trashed
+			mail.TrashedAt = tc.trashedAt
+
+			created, err := repo.Create(context.Background(), mail)
+			require.NoError(t, err)
+			createdMails = append(createdMails, created)
+		}
+
+		// Run cleanup with days = -1 (delete all trashed)
+		days := -1
+		err := repo.CleanupTrash(context.Background(), &userID, &days)
+		require.NoError(t, err)
+
+		// Verify results
+		for i, tc := range testCases {
+			found, err := repo.GetByID(context.Background(), *createdMails[i].ID)
+			require.NoError(t, err)
+
+			if tc.shouldExist {
+				assert.NotNil(t, found, "Mail %d (%s) should still exist after cleanup", i, tc.name)
+			} else {
+				assert.Nil(t, found, "Mail %d (%s) should be deleted after cleanup", i, tc.name)
+			}
+		}
 	})
 }
 
