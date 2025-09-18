@@ -1,12 +1,6 @@
 package auth
 
 import (
-	"github.com/atomic-blend/backend/shared/models"
-	"github.com/atomic-blend/backend/auth/repositories"
-	userrepo "github.com/atomic-blend/backend/shared/repositories/user"
-	userrolerepo "github.com/atomic-blend/backend/shared/repositories/user_role"
-	"github.com/atomic-blend/backend/shared/test_utils/inmemorymongo"
-	"github.com/atomic-blend/backend/shared/utils/db"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -14,6 +8,13 @@ import (
 	"net/http/httptest"
 	"os"
 	"testing"
+
+	"github.com/atomic-blend/backend/auth/repositories"
+	"github.com/atomic-blend/backend/shared/models"
+	userrepo "github.com/atomic-blend/backend/shared/repositories/user"
+	userrolerepo "github.com/atomic-blend/backend/shared/repositories/user_role"
+	"github.com/atomic-blend/backend/shared/test_utils/inmemorymongo"
+	"github.com/atomic-blend/backend/shared/utils/db"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
@@ -26,6 +27,10 @@ func TestRegister(t *testing.T) {
 	// Set environment variable needed for JWT
 	os.Setenv("SSO_SECRET", "test-secret-key")
 	defer os.Unsetenv("SSO_SECRET")
+
+	// Set environment variable for authorized domains
+	os.Setenv("ACCOUNT_DOMAINS", "example.com,test.com,authorized.org")
+	defer os.Unsetenv("ACCOUNT_DOMAINS")
 
 	// Set Gin to test mode
 	gin.SetMode(gin.TestMode)
@@ -176,29 +181,6 @@ func TestRegister(t *testing.T) {
 			},
 		},
 		{
-			name: "Invalid Email Format",
-			requestBody: map[string]interface{}{
-				"email":    "invalidemail",
-				"password": "securePassword123",
-				"keySet": map[string]interface{}{
-					"userKey":      "encryptedUserKey123",
-					"backupKey":    "encryptedBackupKey123",
-					"salt":         "salt123",
-					"mnemonicSalt": "mnemonicSalt123",
-				},
-			},
-			expectedStatus: http.StatusBadRequest,
-			checkResponse: func(t *testing.T, w *httptest.ResponseRecorder, database *mongo.Database) {
-				var response map[string]string
-				err := json.Unmarshal(w.Body.Bytes(), &response)
-				assert.NoError(t, err)
-				assert.Contains(t, response, "error")
-			},
-			setupTest: func(t *testing.T, database *mongo.Database) {
-				// No setup needed for this test case
-			},
-		},
-		{
 			name: "Password Too Short",
 			requestBody: map[string]interface{}{
 				"email":    "valid@example.com",
@@ -282,6 +264,113 @@ func TestRegister(t *testing.T) {
 				// No setup needed for this test case
 			},
 		},
+		{
+			name: "Email Domain Not in Authorized Domains",
+			requestBody: map[string]interface{}{
+				"email":    "unauthorized@notallowed.com",
+				"password": "securePassword123",
+				"keySet": map[string]interface{}{
+					"userKey":      "encryptedUserKey123",
+					"backupKey":    "encryptedBackupKey123",
+					"salt":         "salt123",
+					"mnemonicSalt": "mnemonicSalt123",
+				},
+			},
+			expectedStatus: http.StatusForbidden,
+			checkResponse: func(t *testing.T, w *httptest.ResponseRecorder, database *mongo.Database) {
+				var response map[string]string
+				err := json.Unmarshal(w.Body.Bytes(), &response)
+				assert.NoError(t, err)
+				assert.Contains(t, response, "error")
+				assert.Equal(t, "Email domain is not authorized", response["error"])
+			},
+			setupTest: func(t *testing.T, database *mongo.Database) {
+				// No setup needed for this test case
+			},
+		},
+		{
+			name: "Email in Authorized Domains - Success",
+			requestBody: map[string]interface{}{
+				"email":    "authorized@test.com",
+				"password": "securePassword123",
+				"keySet": map[string]interface{}{
+					"userKey":      "encryptedUserKey123",
+					"backupKey":    "encryptedBackupKey123",
+					"salt":         "salt123",
+					"mnemonicSalt": "mnemonicSalt123",
+				},
+			},
+			expectedStatus: http.StatusCreated,
+			checkResponse: func(t *testing.T, w *httptest.ResponseRecorder, database *mongo.Database) {
+				var response Response
+				err := json.Unmarshal(w.Body.Bytes(), &response)
+				assert.NoError(t, err)
+
+				// Verify tokens and basic user info
+				assert.NotEmpty(t, response.AccessToken)
+				assert.NotEmpty(t, response.RefreshToken)
+				assert.NotZero(t, response.ExpiresAt)
+				assert.NotNil(t, response.User)
+				assert.Equal(t, "authorized@test.com", *response.User.Email)
+
+				// Verify user was created in database
+				var savedUser models.UserEntity
+				err = database.Collection("users").FindOne(context.TODO(), bson.M{"email": "authorized@test.com"}).Decode(&savedUser)
+				assert.NoError(t, err)
+				assert.Equal(t, "authorized@test.com", *savedUser.Email)
+			},
+			setupTest: func(t *testing.T, database *mongo.Database) {
+				// No setup needed for this test case
+			},
+		},
+		{
+			name: "Invalid Email Format - No @ Symbol",
+			requestBody: map[string]interface{}{
+				"email":    "invalidemail",
+				"password": "securePassword123",
+				"keySet": map[string]interface{}{
+					"userKey":      "encryptedUserKey123",
+					"backupKey":    "encryptedBackupKey123",
+					"salt":         "salt123",
+					"mnemonicSalt": "mnemonicSalt123",
+				},
+			},
+			expectedStatus: http.StatusBadRequest,
+			checkResponse: func(t *testing.T, w *httptest.ResponseRecorder, database *mongo.Database) {
+				var response map[string]string
+				err := json.Unmarshal(w.Body.Bytes(), &response)
+				assert.NoError(t, err)
+				assert.Contains(t, response, "error")
+				assert.Contains(t, response["error"], "email")
+			},
+			setupTest: func(t *testing.T, database *mongo.Database) {
+				// No setup needed for this test case
+			},
+		},
+		{
+			name: "Invalid Email Format - Multiple @ Symbols",
+			requestBody: map[string]interface{}{
+				"email":    "invalid@email@format.com",
+				"password": "securePassword123",
+				"keySet": map[string]interface{}{
+					"userKey":      "encryptedUserKey123",
+					"backupKey":    "encryptedBackupKey123",
+					"salt":         "salt123",
+					"mnemonicSalt": "mnemonicSalt123",
+				},
+			},
+			expectedStatus: http.StatusBadRequest,
+			checkResponse: func(t *testing.T, w *httptest.ResponseRecorder, database *mongo.Database) {
+				var response map[string]string
+				err := json.Unmarshal(w.Body.Bytes(), &response)
+				assert.NoError(t, err)
+				assert.Contains(t, response, "error")
+				assert.Contains(t, response["error"], "email")
+			},
+			setupTest: func(t *testing.T, database *mongo.Database) {
+				// No setup needed for this test case
+			},
+		},
 	}
 
 	// Run test cases
@@ -308,4 +397,99 @@ func TestRegister(t *testing.T) {
 			tc.checkResponse(t, w, database)
 		})
 	}
+}
+
+func TestRegister_AccountDomainsNotSet(t *testing.T) {
+	// Set environment variable needed for JWT
+	os.Setenv("SSO_SECRET", "test-secret-key")
+	defer os.Unsetenv("SSO_SECRET")
+
+	// Explicitly unset ACCOUNT_DOMAINS to test the error case
+	os.Unsetenv("ACCOUNT_DOMAINS")
+
+	// Set Gin to test mode
+	gin.SetMode(gin.TestMode)
+
+	// Start in-memory MongoDB server
+	mongoServer, err := inmemorymongo.CreateInMemoryMongoDB()
+	if err != nil {
+		t.Fatalf("Failed to create in-memory MongoDB: %v", err)
+	}
+	defer mongoServer.Stop()
+
+	// Get MongoDB connection URI
+	mongoURI := mongoServer.URI()
+
+	// Connect to the in-memory MongoDB
+	client, err := inmemorymongo.ConnectToInMemoryDB(mongoURI)
+	if err != nil {
+		t.Fatalf("Failed to connect to in-memory MongoDB: %v", err)
+	}
+	defer client.Disconnect(context.TODO())
+
+	// Get database reference
+	database := client.Database("test_db")
+
+	// Set the global database for the subscription function to use
+	db.Database = database
+	defer func() {
+		// Reset global database after test
+		db.Database = nil
+	}()
+
+	// Create user repository
+	userRepo := userrepo.NewUserRepository(database)
+	userRoleRepo := userrolerepo.NewUserRoleRepository(database)
+	resetPasswordRepo := repositories.NewUserResetPasswordRequestRepository(database)
+
+	// Create controller
+	authController := NewController(userRepo, userRoleRepo, resetPasswordRepo)
+
+	// Create a test router
+	router := gin.Default()
+	router.POST("/auth/register", authController.Register)
+
+	// Create default user role before running tests
+	roleID := primitive.NewObjectID()
+	defaultRole := models.UserRoleEntity{
+		ID:   &roleID,
+		Name: "user",
+	}
+	_, err = database.Collection("user_roles").InsertOne(context.TODO(), defaultRole)
+	if err != nil {
+		t.Fatalf("Failed to insert default user role: %v", err)
+	}
+
+	// Test case for when ACCOUNT_DOMAINS is not set
+	requestBody := map[string]interface{}{
+		"email":    "test@example.com",
+		"password": "securePassword123",
+		"keySet": map[string]interface{}{
+			"userKey":      "encryptedUserKey123",
+			"backupKey":    "encryptedBackupKey123",
+			"salt":         "salt123",
+			"mnemonicSalt": "mnemonicSalt123",
+		},
+	}
+
+	// Create request body
+	jsonBody, _ := json.Marshal(requestBody)
+	req, _ := http.NewRequest("POST", "/auth/register", bytes.NewBuffer(jsonBody))
+	req.Header.Set("Content-Type", "application/json")
+
+	// Create response recorder
+	w := httptest.NewRecorder()
+
+	// Perform request
+	router.ServeHTTP(w, req)
+
+	// Check status code
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+
+	// Check response
+	var response map[string]string
+	err = json.Unmarshal(w.Body.Bytes(), &response)
+	assert.NoError(t, err)
+	assert.Contains(t, response, "error")
+	assert.Equal(t, "ACCOUNT_DOMAINS not set", response["error"])
 }
