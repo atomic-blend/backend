@@ -8,8 +8,9 @@ import (
 
 	"github.com/atomic-blend/backend/auth/controllers/admin"
 	"github.com/atomic-blend/backend/auth/controllers/auth"
-	"github.com/atomic-blend/backend/auth/controllers/users"
+	"github.com/atomic-blend/backend/auth/controllers/config"
 	"github.com/atomic-blend/backend/auth/controllers/health"
+	"github.com/atomic-blend/backend/auth/controllers/users"
 	"github.com/atomic-blend/backend/auth/controllers/webhooks"
 	"github.com/atomic-blend/backend/shared/models"
 	"github.com/atomic-blend/backend/shared/utils/db"
@@ -144,6 +145,7 @@ func main() {
 	admin.SetupRoutes(router, db.Database)
 	health.SetupRoutes(router, db.Database)
 	webhooks.SetupRoutes(router, db.Database)
+	config.SetupRoutes(router, db.Database)
 
 	// Define port
 	port := os.Getenv("PORT")

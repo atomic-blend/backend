@@ -1,6 +1,6 @@
 # Self-hosted runner
 
-## Deploy a self-hosted runner
+## Deploy a self-hosted runner (DEBIAN)
 
 1. Create a debian VM
 2. create a actions user with a password
@@ -45,4 +45,19 @@ sudo usermod -aG docker actions
 8. Start the svc
 ```
 ./svc.sh start
+```
+
+## Deploy a Windows runner
+
+1. Install flutter for windows and the required Visual Studio installation and packages.
+Follow the instructions on how to install on the Flutter website.
+Run a `flutter doctor` to ensure that everything is fine.
+
+2. Install rust with rustup.
+
+3. Install Inno Setup
+
+4. Open Powershell as administrator and run
+```
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope LocalMachine
 ```
