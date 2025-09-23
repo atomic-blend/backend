@@ -61,3 +61,30 @@ Run a `flutter doctor` to ensure that everything is fine.
 ```
 Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope LocalMachine
 ```
+
+5. Open the Services app, locate the GitHub Actions Runner Service.
+Make it start as boot, and in the Log On section, entre your current account username and password. 
+Save and restart the service
+
+## Deploy a MacOS runner
+
+1. Install the latest version of XCode
+
+2. Follow the registration process on GitHub
+
+3. Install the svc:
+```
+./svc.sh install
+```
+
+4. Edit the service
+```
+vi ~/Library/LaunchAgents/actions.runner.atomic-blend.macbook-brandon.plist
+```
+
+5. Change `SessionCreate` to `true`
+
+6. Start the service
+```
+./svc.sh start
+```
