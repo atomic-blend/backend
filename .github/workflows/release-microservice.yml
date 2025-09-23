@@ -6,6 +6,8 @@ on:
 
 env:
   COCOGITTO_VERSION: "6.3.0" # Specify the version of Cocogitto to use
+  MEMONGO_DOWNLOAD_URL: https://fastdl.mongodb.org/linux/mongodb-linux-x86_64-debian12-8.0.13.tgz
+  OS: "debian12"
 
 permissions:
   contents: write
@@ -14,7 +16,7 @@ permissions:
 
 jobs:
   find-out-changes:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux]
     outputs:
       changed_directories: ${{ steps.set-output.outputs.changed_directories }} # The `dirs` doesn't exist in the outputs of changed-files@v35 action.
     steps:
@@ -45,6 +47,9 @@ jobs:
             auth/**
             productivity/**
             grpc/**
+            mail/**
+            mail-server/**
+            shared/**
           quotepath: false
           base_sha: ${{ steps.last-tag.outputs.last_tag }}
 
@@ -54,7 +59,7 @@ jobs:
 
   build-and-test:
     if: ${{ needs.find-out-changes.outputs.changed_directories != '' }} # Without it, the strategy parser will fail if the changed_directories is empty.
-    runs-on: ubuntu-22.04
+    runs-on: [self-hosted, Linux]
     strategy:
       matrix: ${{fromJson(needs.find-out-changes.outputs.changed_directories)}}
     needs:
@@ -70,8 +75,9 @@ jobs:
         if: ${{ matrix.dir != 'grpc' }}
         uses: ./.github/actions/build-and-test
         with:
-          go-version: "1.21"
+          go-version: "1.24.5"
           node-version: "23.9"
+          memongo-download-url: ${{ env.MEMONGO_DOWNLOAD_URL }}
           working-directory: "${{ matrix.dir }}"
           maizzle-directory: "./maizzle"
           upload-artifacts: "false"
@@ -99,7 +105,7 @@ jobs:
 
   release:
     if: ${{ needs.build-and-test.result == 'success' }}
-    runs-on: ubuntu-22.04
+    runs-on: [self-hosted, Linux]
     needs:
       - build-and-test
     steps:
@@ -142,7 +148,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ~/.cargo/bin/cog
-          key: cocogitto-v${{ env.COCOGITTO_VERSION }}
+          key: cocogitto-${{ env.OS }}-v${{ env.COCOGITTO_VERSION }}
 
       - name: Install Rust
         if: steps.cache-cocogitto.outputs.cache-hit != 'true'
@@ -258,7 +264,7 @@ jobs:
           IFS=' ' read -ra TAGS_ARRAY <<< "$TAGS_TO_PUSH"
           
           for dir in $SUCCESSFUL_DIRS; do
-            if [ -d "$dir" ] && [ "$dir" != "grpc" ]; then
+            if [ -d "$dir" ] && [ "$dir" != "grpc" ] && [ "$dir" != "shared" ]; then
               # Find the tag for this directory
               TAG=""
               for tag in "${TAGS_ARRAY[@]}"; do
@@ -279,6 +285,8 @@ jobs:
                 
                 MATRIX_JSON="$MATRIX_JSON{\"dir\":\"$dir\",\"version\":\"$VERSION\",\"tag\":\"$TAG\"}"
               fi
+            else
+              echo "Skipping directory $dir (grpc or shared library)"
             fi
           done
           
@@ -289,10 +297,11 @@ jobs:
     outputs:
       docker_matrix: ${{ steps.prepare-matrix.outputs.matrix }}
       all_successful_dirs: ${{ steps.bump-versions.outputs.successful_dirs }}
+      tags_to_push: ${{ steps.bump-versions.outputs.tags_to_push }}
 
   build-docker-images:
     if: ${{ needs.release.outputs.docker_matrix != '' && fromJson(needs.release.outputs.docker_matrix).include[0] != null }}
-    runs-on: ubuntu-22.04
+    runs-on: [self-hosted, Linux]
     needs: release
     strategy:
       matrix: ${{ fromJson(needs.release.outputs.docker_matrix) }}
@@ -318,14 +327,15 @@ jobs:
       - name: Build and push Docker image for ${{ matrix.dir }}
         uses: docker/build-push-action@v6
         with:
-          context: ${{ matrix.dir }}
+          context: .
+          file: docker/Dockerfile.${{ matrix.dir }}
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
             ghcr.io/atomic-blend/${{ matrix.dir }}:${{ matrix.version }}
 
   prepare-github-releases:
-    runs-on: ubuntu-22.04
+    runs-on: [self-hosted, Linux]
     needs: 
       - build-docker-images
       - release
@@ -339,7 +349,10 @@ jobs:
       - name: Prepare release matrix
         id: prepare-release-matrix
         run: |
+          # Use the same tags that were used in Docker builds
+          DOCKER_MATRIX='${{ needs.release.outputs.docker_matrix }}'
           ALL_SUCCESSFUL_DIRS="${{ needs.release.outputs.all_successful_dirs }}"
+          TAGS_TO_PUSH="${{ needs.release.outputs.tags_to_push }}"
           
           if [ -z "$ALL_SUCCESSFUL_DIRS" ]; then
             echo "No successful directories found"
@@ -350,23 +363,54 @@ jobs:
           MATRIX_JSON='{"include":['
           FIRST=true
           
+          # Parse the Docker matrix to get the tags that were actually built
+          DOCKER_INCLUDE=$(echo "$DOCKER_MATRIX" | jq -r '.include[] | "\(.dir):\(.version):\(.tag)"' 2>/dev/null || echo "")
+          
+          # Convert TAGS_TO_PUSH string to array for grpc lookup
+          IFS=' ' read -ra TAGS_ARRAY <<< "$TAGS_TO_PUSH"
+          
           for dir in $ALL_SUCCESSFUL_DIRS; do
             if [ -d "$dir" ]; then
-              TAG_PREFIX="${dir}-v"
-              TAG=$(git tag --list "${TAG_PREFIX}*" | grep -v -- '-rc' | sort -V | tail -n 1)
-              VERSION=$(echo $TAG | sed 's/^[^-]*-v//')
+              # First, try to find the tag from cocogitto bump step
+              COCOGITTO_TAG=""
+              for tag in "${TAGS_ARRAY[@]}"; do
+                if [[ "$tag" == "${dir}/v"* ]]; then
+                  COCOGITTO_TAG="$tag"
+                  break
+                fi
+              done
               
-              if [ "$FIRST" = "true" ]; then
-                FIRST=false
+              if [ -n "$COCOGITTO_TAG" ]; then
+                # Use the tag from cocogitto
+                TAG="$COCOGITTO_TAG"
+                VERSION=$(echo $TAG | sed 's/^[^/]*\/v//')
               else
-                MATRIX_JSON="$MATRIX_JSON,"
+                # Fallback to Docker build matrix for all directories
+                DOCKER_ENTRY=$(echo "$DOCKER_INCLUDE" | grep "^${dir}:" || echo "")
+                if [ -n "$DOCKER_ENTRY" ]; then
+                  VERSION=$(echo "$DOCKER_ENTRY" | cut -d: -f2)
+                  TAG=$(echo "$DOCKER_ENTRY" | cut -d: -f3)
+                else
+                  # Final fallback to git tags
+                  TAG_PREFIX="${dir}/v"
+                  TAG=$(git tag --list "${TAG_PREFIX}*" | sort -V | tail -n 1)
+                  VERSION=$(echo $TAG | sed 's/^[^/]*\/v//')
+                fi
               fi
               
-              # Add type field to distinguish between grpc and docker services
-              if [ "$dir" == "grpc" ]; then
-                MATRIX_JSON="$MATRIX_JSON{\"dir\":\"$dir\",\"version\":\"$VERSION\",\"tag\":\"$TAG\",\"type\":\"grpc\"}"
-              else
-                MATRIX_JSON="$MATRIX_JSON{\"dir\":\"$dir\",\"version\":\"$VERSION\",\"tag\":\"$TAG\",\"type\":\"docker\"}"
+              if [ -n "$TAG" ] && [ -n "$VERSION" ]; then
+                if [ "$FIRST" = "true" ]; then
+                  FIRST=false
+                else
+                  MATRIX_JSON="$MATRIX_JSON,"
+                fi
+                
+                # Add type field to distinguish between grpc and docker services
+                if [ "$dir" == "grpc" ]; then
+                  MATRIX_JSON="$MATRIX_JSON{\"dir\":\"$dir\",\"version\":\"$VERSION\",\"tag\":\"$TAG\",\"type\":\"grpc\"}"
+                else
+                  MATRIX_JSON="$MATRIX_JSON{\"dir\":\"$dir\",\"version\":\"$VERSION\",\"tag\":\"$TAG\",\"type\":\"docker\"}"
+                fi
               fi
             fi
           done
@@ -378,62 +422,86 @@ jobs:
     outputs:
       release_matrix: ${{ steps.prepare-release-matrix.outputs.matrix }}
 
-  prepare-all-releases:
+  create-consolidated-release:
     if: ${{ needs.prepare-github-releases.outputs.release_matrix != '' && fromJson(needs.prepare-github-releases.outputs.release_matrix).include[0] != null }}
-    runs-on: ubuntu-22.04
+    runs-on: [self-hosted, Linux]
     needs: prepare-github-releases
-    strategy:
-      matrix: ${{ fromJson(needs.prepare-github-releases.outputs.release_matrix) }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
 
-      - name: Extract changelog for ${{ matrix.dir }}
-        id: extract-changelog
+      - name: Generate consolidated release notes
+        id: generate-release-notes
         run: |
-          TAG=${{ matrix.tag }}
-          CLEAN_TAG=$(echo "$TAG" | sed 's/^[^-]*-v//')
+          RELEASE_MATRIX='${{ needs.prepare-github-releases.outputs.release_matrix }}'
+          RELEASE_INCLUDE=$(echo "$RELEASE_MATRIX" | jq -r '.include[] | "\(.dir):\(.version):\(.tag):\(.type)"' 2>/dev/null || echo "")
           
-          if [ -f "${{ matrix.dir }}/CHANGELOG.md" ]; then
-            # Try different changelog entry formats
-            CHANGELOG=$(sed -n "/^## $TAG - /,/^## /p" ${{ matrix.dir }}/CHANGELOG.md | sed '1d;$d')
-            
-            if [ -z "$CHANGELOG" ]; then
-              CHANGELOG=$(sed -n "/^## $CLEAN_TAG - /,/^## /p" ${{ matrix.dir }}/CHANGELOG.md | sed '1d;$d')
+          # Generate timestamp for the consolidated release
+          TIMESTAMP=$(date -u +"%Y-%m-%d %H:%M UTC")
+          
+          # Start building the consolidated release notes
+          cat > consolidated_release_notes.md << EOF
+          # Stable Release - $TIMESTAMP
+          
+          This is a consolidated stable release from the main branch.
+          
+          ## 📦 Released Components
+          
+          EOF
+          
+          # Process each component
+          DOCKER_SERVICES=""
+          GRPC_SERVICES=""
+          
+          while IFS= read -r line; do
+            if [ -n "$line" ]; then
+              DIR=$(echo "$line" | cut -d: -f1)
+              VERSION=$(echo "$line" | cut -d: -f2)
+              TAG=$(echo "$line" | cut -d: -f3)
+              TYPE=$(echo "$line" | cut -d: -f4)
+              
+              if [ "$TYPE" == "docker" ]; then
+                DOCKER_SERVICES="$DOCKER_SERVICES\n- **$DIR**: v$VERSION"
+                DOCKER_SERVICES="$DOCKER_SERVICES\n  - 🐳 Docker Image: \`ghcr.io/atomic-blend/$DIR:$VERSION\`"
+                DOCKER_SERVICES="$DOCKER_SERVICES\n  - 🏷️ Tag: \`$TAG\`"
+              elif [ "$TYPE" == "grpc" ]; then
+                GRPC_SERVICES="$GRPC_SERVICES\n- **$DIR**: v$VERSION"
+                GRPC_SERVICES="$GRPC_SERVICES\n  - 🏷️ Tag: \`$TAG\`"
+                GRPC_SERVICES="$GRPC_SERVICES\n  - 📋 gRPC Protocol Definitions"
+              fi
             fi
-            
-            if [ -z "$CHANGELOG" ]; then
-              CHANGELOG=$(sed -n "/^## \[$CLEAN_TAG\] - /,/^## /p" ${{ matrix.dir }}/CHANGELOG.md | sed '1d;$d')
-            fi
-            
-            if [ -z "$CHANGELOG" ]; then
-              CHANGELOG=$(sed -n "/^## v$CLEAN_TAG - /,/^## /p" ${{ matrix.dir }}/CHANGELOG.md | sed '1d;$d')
-            fi
-            
-            echo "$CHANGELOG" > release_notes_${{ matrix.dir }}.md
-          else
-            if [ "${{ matrix.type }}" == "grpc" ]; then
-              echo "Release ${{ matrix.version }} for gRPC definitions" > release_notes_${{ matrix.dir }}.md
-              echo "" >> release_notes_${{ matrix.dir }}.md
-              echo "This is a stable release from the main branch." >> release_notes_${{ matrix.dir }}.md
-              echo "" >> release_notes_${{ matrix.dir }}.md
-              echo "📋 **gRPC Protocol Definitions**: Protocol Buffer definitions and generated code" >> release_notes_${{ matrix.dir }}.md
-            else
-              echo "Release ${{ matrix.version }} for ${{ matrix.dir }} microservice" > release_notes_${{ matrix.dir }}.md
-              echo "" >> release_notes_${{ matrix.dir }}.md
-              echo "This is a stable release from the main branch." >> release_notes_${{ matrix.dir }}.md
-              echo "" >> release_notes_${{ matrix.dir }}.md
-              echo "🐳 **Docker Image**: \`ghcr.io/atomic-blend/${{ matrix.dir }}:${{ matrix.version }}\`" >> release_notes_${{ matrix.dir }}.md
-            fi
+          done <<< "$RELEASE_INCLUDE"
+          
+          # Add Docker services section
+          if [ -n "$DOCKER_SERVICES" ]; then
+            echo -e "\n### 🐳 Microservices" >> consolidated_release_notes.md
+            echo -e "$DOCKER_SERVICES" >> consolidated_release_notes.md
           fi
+          
+          # Add gRPC services section
+          if [ -n "$GRPC_SERVICES" ]; then
+            echo -e "\n### 📋 Shared Libraries" >> consolidated_release_notes.md
+            echo -e "$GRPC_SERVICES" >> consolidated_release_notes.md
+          fi
+          
+          # Add footer
+          cat >> consolidated_release_notes.md << EOF
+          
+          ---
+          
+          *This release was automatically generated by the CI/CD pipeline.*
+          EOF
+          
+          # Create a consolidated tag name
+          echo "consolidated_tag=release-$(date -u +%Y%m%d-%H%M%S)" >> $GITHUB_OUTPUT
 
-      - name: Create GitHub Release for ${{ matrix.dir }}
+      - name: Create Consolidated GitHub Release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: ${{ matrix.tag }}
-          name: "${{ matrix.dir }} v${{ matrix.version }}"
-          body_path: release_notes_${{ matrix.dir }}.md
+          tag_name: ${{ steps.generate-release-notes.outputs.consolidated_tag }}
+          name: "Stable Release - $(date -u +'%Y-%m-%d %H:%M UTC')"
+          body_path: consolidated_release_notes.md
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

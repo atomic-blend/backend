@@ -10,7 +10,7 @@ import (
 	timeentrycontroller "github.com/atomic-blend/backend/productivity/controllers/timeEntry"
 	"github.com/atomic-blend/backend/productivity/cron"
 	"github.com/atomic-blend/backend/productivity/models"
-	"github.com/atomic-blend/backend/productivity/utils/db"
+	"github.com/atomic-blend/backend/shared/utils/db"
 	"context"
 	"os"
 	"strings"

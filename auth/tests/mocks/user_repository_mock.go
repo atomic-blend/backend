@@ -1,7 +1,7 @@
 package mocks
 
 import (
-	"github.com/atomic-blend/backend/auth/models"
+	"github.com/atomic-blend/backend/shared/models"
 	"context"
 
 	"github.com/gin-gonic/gin"
@@ -75,4 +75,13 @@ func (m *MockUserRepository) ResetAllUserData(ctx *gin.Context, userID primitive
 func (m *MockUserRepository) AddPurchase(ctx *gin.Context, userID primitive.ObjectID, purchase *models.PurchaseEntity) error {
 	args := m.Called(ctx, purchase)
 	return args.Error(0)
+}
+
+// GetByEmail gets a user by email
+func (m *MockUserRepository) GetByEmail(ctx context.Context, email string) (*models.UserEntity, error) {
+	args := m.Called(ctx, email)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*models.UserEntity), args.Error(1)
 }

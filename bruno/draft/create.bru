@@ -1,0 +1,37 @@
+meta {
+  name: /create
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{API_URL}}/mail/draft
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+      "headers": {
+        "From": "user2@brandonguigo.com",
+        "To": ["brandon@brandonguigo.com"],
+        "Cc": [],
+        "Bcc": [],
+        "Subject": "Draft Email Subject",
+        "Date": "2025-11-08T10:30:00Z"
+      },
+      "textContent": "This is the draft email content.\n\nBest regards,\nThe Team",
+      "htmlContent": "<html><body><p>This is the <strong>draft</strong> email content.</p><p>Best regards,<br/>The Team</p></body></html>"
+  }
+}
+
+script:post-response {
+  console.log(res.body);
+  if (res.body && res.body.id) {
+    bru.setEnvVar("DRAFT_ID", res.body.id);
+  }
+}
+
+settings {
+  encodeUrl: true
+}

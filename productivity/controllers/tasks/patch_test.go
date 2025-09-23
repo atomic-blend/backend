@@ -5,7 +5,8 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"github.com/atomic-blend/backend/productivity/auth"
+	"github.com/atomic-blend/backend/shared/middlewares/auth"
+
 	patchmodels "github.com/atomic-blend/backend/productivity/models/patch_models"
 	"github.com/atomic-blend/backend/productivity/tests/mocks"
 	"testing"

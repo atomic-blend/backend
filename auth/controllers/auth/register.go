@@ -1,10 +1,14 @@
 package auth
 
 import (
-	"github.com/atomic-blend/backend/auth/models"
-	"github.com/atomic-blend/backend/auth/utils/jwt"
-	"github.com/atomic-blend/backend/auth/utils/password"
 	"net/http"
+	"os"
+	"slices"
+	"strings"
+
+	"github.com/atomic-blend/backend/shared/models"
+	"github.com/atomic-blend/backend/shared/utils/jwt"
+	"github.com/atomic-blend/backend/shared/utils/password"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog/log"
@@ -31,6 +35,23 @@ func (c *Controller) Register(ctx *gin.Context) {
 
 	if req.KeySet.Type != nil && *req.KeySet.Type != "age_v1" {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid key set type"})
+		return
+	}
+
+	// check that the email domain is in the list of authorized domains from env variable
+	authorizedDomains := os.Getenv("ACCOUNT_DOMAINS")
+	if authorizedDomains == "" {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "ACCOUNT_DOMAINS not set"})
+		return
+	}
+	authorizedDomainsList := strings.Split(authorizedDomains, ",")
+
+	// Extract domain from email (email format is already validated by Gin binding)
+	emailParts := strings.Split(req.Email, "@")
+	emailDomain := emailParts[1]
+
+	if !slices.Contains(authorizedDomainsList, emailDomain) {
+		ctx.JSON(http.StatusForbidden, gin.H{"error": "Email domain is not authorized"})
 		return
 	}
 

@@ -2,7 +2,7 @@ package habits
 
 import (
 	"net/http"
-	"github.com/atomic-blend/backend/productivity/auth"
+	"github.com/atomic-blend/backend/shared/middlewares/auth"
 
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson/primitive"

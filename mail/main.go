@@ -1,13 +1,17 @@
 package main
 
 import (
-	"github.com/atomic-blend/backend/mail/controllers/health"
-	"github.com/atomic-blend/backend/mail/models"
-	"github.com/atomic-blend/backend/mail/utils/db"
 	"context"
 	"os"
 	"strings"
 	"time"
+
+	"github.com/atomic-blend/backend/mail/controllers"
+	"github.com/atomic-blend/backend/mail/controllers/health"
+	trashcleanup "github.com/atomic-blend/backend/mail/cron/trash_cleanup"
+	amqpservice "github.com/atomic-blend/backend/shared/services/amqp"
+	"github.com/atomic-blend/backend/shared/utils/db"
+	"github.com/jasonlvhit/gocron"
 
 	"github.com/gin-contrib/cors"
 
@@ -35,11 +39,6 @@ func main() {
 		}
 		log.Fatal().Msg("✅ Disconnected from MongoDB")
 	}()
-
-	models.RegisterValidators()
-
-	// start grpc server
-	go startGRPCServer()
 
 	// Setup router with middleware
 	router := gin.Default()
@@ -127,8 +126,22 @@ func main() {
 		log.Info().Msg("No CORS configuration found, skipping CORS setup")
 	}
 
+	amqpService := amqpservice.NewAMQPService("MAIL")
+	amqpService.InitProducerAMQP()
+
 	// Register all routes
 	health.SetupRoutes(router, db.Database)
+	controllers.SetupAllControllers(router, db.Database, amqpService)
+
+	// start cron
+	go func() {
+		// cleanup trash every 5 minutes
+		err := gocron.Every(5).Minutes().Do(trashcleanup.CleanTrashCron)
+		if err != nil {
+			log.Error().Err(err).Msg("Error defining cron job")
+		}
+		<-gocron.Start()
+	}()
 
 	// Define port
 	port := os.Getenv("PORT")
@@ -136,6 +149,25 @@ func main() {
 		port = "8080"
 	}
 
-	log.Info().Msgf("Server starting on port %s", port)
-	router.Run(":" + port) // listen and serve on 0.0.0.0:8080 (for windows "localhost:8080")
+	runEnv := os.Getenv("RUN")
+
+	// Conditionally start components based on runEnv
+	if runEnv == "" || runEnv == "worker" {
+		log.Info().Msg("Starting worker component")
+		amqpService.InitConsumerAMQP()
+		go processMessages(amqpService)
+	}
+
+	if runEnv == "" || runEnv == "api" {
+		log.Info().Msg("Starting API components (gRPC and routes)")
+		// start grpc server
+		go startGRPCServer()
+
+		log.Info().Msgf("Server starting on port %s", port)
+		router.Run(":" + port) // listen and serve on 0.0.0.0:8080 (for windows "localhost:8080")
+	} else {
+		// If only running worker, keep the process alive
+		log.Info().Msg("Running in worker-only mode, keeping process alive")
+		select {} // This will keep the process running indefinitely
+	}
 }

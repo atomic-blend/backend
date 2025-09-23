@@ -1,3 +1,4 @@
+// Package models is a package that contains the models for the microservice
 package models
 
 import "go.mongodb.org/mongo-driver/bson/primitive"

@@ -28,3 +28,6 @@ authors = []
 auth = { path="auth" }
 productivity = { path="productivity" }
 grpc = { path="grpc" }
+mail = { path="mail" }
+mail-server = { path="mail-server" }
+shared = { path="shared" }

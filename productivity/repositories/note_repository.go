@@ -7,7 +7,7 @@ import (
 
 	"github.com/atomic-blend/backend/productivity/models"
 	patchmodels "github.com/atomic-blend/backend/productivity/models/patch_models"
-	keyconverter "github.com/atomic-blend/backend/productivity/utils/key_converter"
+	keyconverter "github.com/atomic-blend/backend/shared/utils/key_converter"
 
 	bson "go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"

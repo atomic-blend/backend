@@ -1,7 +1,7 @@
 package users
 
 import (
-	"github.com/atomic-blend/backend/auth/auth"
+	"github.com/atomic-blend/backend/shared/middlewares/auth"
 	"net/http"
 
 	"github.com/gin-gonic/gin"

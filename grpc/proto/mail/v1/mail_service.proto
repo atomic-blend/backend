@@ -1,0 +1,29 @@
+syntax = "proto3";
+package mail.v1;
+
+import "auth/v1/user.proto";
+
+message DeleteUserDataRequest {
+  auth.v1.User user = 1;
+}
+
+message DeleteUserDataResponse {
+  bool success = 1;
+}
+
+message UpdateMailStatusRequest {
+  string email_id = 1;
+  string status = 2;
+  optional string failure_reason = 3;
+  optional string failed_at = 4;
+  optional int32 retry_counter = 5;
+}
+
+message UpdateMailStatusResponse {
+  bool success = 1;
+}
+
+service MailService {
+  rpc DeleteUserData(DeleteUserDataRequest) returns (DeleteUserDataResponse);
+  rpc UpdateMailStatus(UpdateMailStatusRequest) returns (UpdateMailStatusResponse);
+}

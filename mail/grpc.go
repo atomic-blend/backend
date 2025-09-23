@@ -4,11 +4,21 @@ import (
 	"net/http"
 
 	"github.com/rs/zerolog/log"
+
+	mailconnect "github.com/atomic-blend/backend/grpc/gen/mail/v1/mailv1connect"
+	mailGrpcServer "github.com/atomic-blend/backend/mail/grpc/server"
+	"github.com/atomic-blend/backend/mail/repositories"
+	"github.com/atomic-blend/backend/shared/utils/db"
 )
 
 func startGRPCServer() {
-	// Créez un serveur HTTP mux
+	sendMailRepository := repositories.NewSendMailRepository(db.Database)
+	mailGrpcServer := mailGrpcServer.NewGrpcServer(sendMailRepository)
+
+	globalPath, globalHandler := mailconnect.NewMailServiceHandler(mailGrpcServer)
+
 	mux := http.NewServeMux()
+	mux.Handle(globalPath, globalHandler)
 
 	// Démarrez le serveur HTTP
 	log.Info().Msg("Starting Connect-RPC server on :50051")

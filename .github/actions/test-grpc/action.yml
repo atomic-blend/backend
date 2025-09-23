@@ -19,6 +19,12 @@ runs:
       run: |
         echo "Installing Buf CLI version ${{ inputs.buf-version }}"
 
+        # check if buf is already installed
+        if [ -f "/usr/local/bin/buf" ]; then
+          echo "Buf is already installed"
+          exit 0
+        fi
+
         # Determine OS and architecture
         OS=$(uname -s | tr '[:upper:]' '[:lower:]')
         ARCH=$(uname -m)
@@ -37,7 +43,7 @@ runs:
         echo "Downloading buf from: $BUF_URL"
         curl -sSL "$BUF_URL" -o buf
         chmod +x buf
-        sudo mv buf /usr/local/bin/
+        mv buf /usr/local/bin/
 
         # Verify installation
         buf --version
