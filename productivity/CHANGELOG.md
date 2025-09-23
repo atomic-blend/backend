@@ -2,6 +2,24 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## productivity/v0.11.0 - 2025-09-23
+#### Bug Fixes
+- error when sending a message through amqp - (d41b2ed) - Brandon Guigo
+- finish refactoring the productivity service - (1e962ee) - Brandon Guigo
+- use the user client from the shared package - (39c493e) - Brandon Guigo
+- move fcm_utills in shared - (5b076b3) - Brandon Guigo
+- start refactoring productivity - (bb1c267) - Brandon Guigo
+- centralize dockerfiles and allow build with grpc in the monorepo - (120804e) - Brandon Guigo
+- grpc linter + mail in test ci/cd + fix error in smtp server test - (6af5aed) - Brandon Guigo
+#### Features
+- add bruno collections and fix errors - (3f3c000) - Brandon Guigo
+- update grpc to use latest version + configure dev docker compose to use go workspaces + add grpc to get public key - (77f90ca) - Brandon Guigo
+#### Miscellaneous Chores
+- **(release)** bump RC versions for auth@auth/v0.11.0-rc.1 grpc@grpc/v0.2.0-rc.1 mail-server@mail-server/v0.1.0-rc.1 mail@mail/v0.1.0-rc.1 productivity@productivity/v0.11.0-rc.1 shared@shared/v0.0.1-rc.1 [skip ci] - (c3e349d) - GitHub Actions
+- **(release)** bump versions for auth@auth/v0.10.0 productivity@productivity/v0.10.0 [skip ci] - (e3ada7b) - GitHub Actions
+
+- - -
+
 ## productivity/v0.11.0-rc.21 - 2025-09-23
 #### Bug Fixes
 - error when sending a message through amqp - (d41b2ed) - Brandon Guigo
