@@ -2,6 +2,46 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## grpc/v0.2.0-rc.21 - 2025-09-23
+#### Bug Fixes
+- regenerate buf - (8f44dc4) - Brandon Guigo
+- error when sending a message through amqp - (d41b2ed) - Brandon Guigo
+- revert: "feat: start of the implementation of the gRPC calls to manage the sending emails" - (8b91950) - Brandon Guigo
+- grpc linter + mail in test ci/cd + fix error in smtp server test - (6af5aed) - Brandon Guigo
+#### Features
+- make grpc call work - (9de7e32) - Brandon Guigo
+- add grpc call to update the mail status - (6221f4f) - Brandon Guigo
+- add grpc to get public key via userid + encrypt the content of the mail - (cbbe52c) - Brandon Guigo
+- start of the implementation of the gRPC calls to manage the sending emails - (1d434a6) - Brandon Guigo
+- add bruno collections and fix errors - (3f3c000) - Brandon Guigo
+- update grpc to use latest version + configure dev docker compose to use go workspaces + add grpc to get public key - (77f90ca) - Brandon Guigo
+#### Miscellaneous Chores
+- **(release)** bump RC versions for auth@auth/v0.11.0-rc.20 grpc@grpc/v0.2.0-rc.20 mail-server@mail-server/v0.1.0-rc.20 mail@mail/v0.1.0-rc.20 productivity@productivity/v0.11.0-rc.20 shared@shared/v0.0.1-rc.11 [skip ci] - (5b4e664) - GitHub Actions
+- **(release)** bump RC versions for auth@auth/v0.11.0-rc.19 grpc@grpc/v0.2.0-rc.19 mail-server@mail-server/v0.1.0-rc.19 mail@mail/v0.1.0-rc.19 productivity@productivity/v0.11.0-rc.19 shared@shared/v0.0.1-rc.10 [skip ci] - (b643ac0) - GitHub Actions
+- **(release)** bump RC versions for auth@auth/v0.11.0-rc.18 grpc@grpc/v0.2.0-rc.18 mail-server@mail-server/v0.1.0-rc.18 mail@mail/v0.1.0-rc.18 productivity@productivity/v0.11.0-rc.18 shared@shared/v0.0.1-rc.9 [skip ci] - (d941278) - GitHub Actions
+- **(release)** bump RC versions for auth@auth/v0.11.0-rc.17 grpc@grpc/v0.2.0-rc.17 mail-server@mail-server/v0.1.0-rc.17 mail@mail/v0.1.0-rc.17 productivity@productivity/v0.11.0-rc.17 shared@shared/v0.0.1-rc.8 [skip ci] - (c2fe363) - GitHub Actions
+- **(release)** bump RC versions for auth@auth/v0.11.0-rc.16 grpc@grpc/v0.2.0-rc.16 mail-server@mail-server/v0.1.0-rc.16 mail@mail/v0.1.0-rc.16 productivity@productivity/v0.11.0-rc.16 shared@shared/v0.0.1-rc.7 [skip ci] - (f32a990) - GitHub Actions
+- **(release)** bump RC versions for auth@auth/v0.11.0-rc.15 grpc@grpc/v0.2.0-rc.15 mail-server@mail-server/v0.1.0-rc.15 mail@mail/v0.1.0-rc.15 productivity@productivity/v0.11.0-rc.15 shared@shared/v0.0.1-rc.6 [skip ci] - (6bd52c5) - GitHub Actions
+- **(release)** bump RC versions for auth@auth/v0.11.0-rc.14 grpc@grpc/v0.2.0-rc.14 mail-server@mail-server/v0.1.0-rc.14 mail@mail/v0.1.0-rc.14 productivity@productivity/v0.11.0-rc.14 shared@shared/v0.0.1-rc.5 [skip ci] - (1a356e4) - GitHub Actions
+- **(release)** bump RC versions for auth@auth/v0.11.0-rc.13 grpc@grpc/v0.2.0-rc.13 mail-server@mail-server/v0.1.0-rc.13 mail@mail/v0.1.0-rc.13 productivity@productivity/v0.11.0-rc.13 shared@shared/v0.0.1-rc.4 [skip ci] - (ebdffca) - GitHub Actions
+- **(release)** bump RC versions for auth@auth/v0.11.0-rc.12 grpc@grpc/v0.2.0-rc.12 mail-server@mail-server/v0.1.0-rc.12 mail@mail/v0.1.0-rc.12 productivity@productivity/v0.11.0-rc.12 shared@shared/v0.0.1-rc.3 [skip ci] - (cc97a37) - GitHub Actions
+- **(release)** bump RC versions for auth@auth/v0.11.0-rc.11 grpc@grpc/v0.2.0-rc.11 mail-server@mail-server/v0.1.0-rc.11 mail@mail/v0.1.0-rc.11 productivity@productivity/v0.11.0-rc.11 shared@shared/v0.0.1-rc.2 [skip ci] - (9392d2d) - GitHub Actions
+- **(release)** bump RC versions for auth@auth/v0.11.0-rc.10 grpc@grpc/v0.2.0-rc.10 mail-server@mail-server/v0.1.0-rc.10 mail@mail/v0.1.0-rc.10 productivity@productivity/v0.11.0-rc.10 shared@shared/v0.0.1-rc.1 [skip ci] - (4afa958) - GitHub Actions
+- **(release)** bump RC versions for auth@auth/v0.11.0-rc.9 grpc@grpc/v0.2.0-rc.9 mail-server@mail-server/v0.1.0-rc.9 mail@mail/v0.1.0-rc.9 productivity@productivity/v0.11.0-rc.9 [skip ci] - (829f6b8) - GitHub Actions
+- **(release)** bump RC versions for auth@auth/v0.11.0-rc.8 grpc@grpc/v0.2.0-rc.8 mail-server@mail-server/v0.1.0-rc.8 mail@mail/v0.1.0-rc.8 productivity@productivity/v0.11.0-rc.8 [skip ci] - (3b1612b) - GitHub Actions
+- **(release)** bump RC versions for auth@auth/v0.11.0-rc.7 grpc@grpc/v0.2.0-rc.7 mail-server@mail-server/v0.1.0-rc.7 mail@mail/v0.1.0-rc.7 productivity@productivity/v0.11.0-rc.7 [skip ci] - (de4b8fc) - GitHub Actions
+- **(release)** bump RC versions for auth@auth/v0.11.0-rc.6 grpc@grpc/v0.2.0-rc.6 mail-server@mail-server/v0.1.0-rc.6 mail@mail/v0.1.0-rc.6 productivity@productivity/v0.11.0-rc.6 [skip ci] - (4e388ee) - GitHub Actions
+- **(release)** bump RC versions for auth@auth/v0.11.0-rc.5 grpc@grpc/v0.2.0-rc.5 mail-server@mail-server/v0.1.0-rc.5 mail@mail/v0.1.0-rc.5 productivity@productivity/v0.11.0-rc.5 [skip ci] - (e3f1da7) - GitHub Actions
+- **(release)** bump RC versions for auth@auth/v0.11.0-rc.4 grpc@grpc/v0.2.0-rc.4 mail-server@mail-server/v0.1.0-rc.4 mail@mail/v0.1.0-rc.4 productivity@productivity/v0.11.0-rc.4 [skip ci] - (58c5f8c) - GitHub Actions
+- **(release)** bump RC versions for auth@auth/v0.11.0-rc.3 grpc@grpc/v0.2.0-rc.3 mail-server@mail-server/v0.1.0-rc.3 mail@mail/v0.1.0-rc.3 productivity@productivity/v0.11.0-rc.3 [skip ci] - (3391a8b) - GitHub Actions
+- **(release)** bump RC versions for auth@auth/v0.11.0-rc.2 grpc@grpc/v0.2.0-rc.2 mail-server@mail-server/v0.1.0-rc.2 mail@mail/v0.1.0-rc.2 productivity@productivity/v0.11.0-rc.2 [skip ci] - (0efc6ff) - GitHub Actions
+- **(release)** bump RC versions for auth@auth/v0.11.0-rc.1 grpc@grpc/v0.2.0-rc.1 mail-server@mail-server/v0.1.0-rc.1 mail@mail/v0.1.0-rc.1 productivity@productivity/v0.11.0-rc.1 [skip ci] - (a3f0371) - GitHub Actions
+- **(release)** bump versions for auth@auth/v0.9.0 grpc@grpc/v0.1.0 productivity@productivity/v0.9.0 [skip ci] - (844f0fb) - GitHub Actions
+- exclude rc tags from the get last tag when getting changed files - (6ab67c1) - Brandon Guigo
+- simplify the test for no conventional commits detection - (b18840c) - Brandon Guigo
+
+- - -
+
 ## grpc/v0.2.0-rc.20 - 2025-09-20
 #### Miscellaneous Chores
 - **(release)** bump RC versions for auth@auth/v0.11.0-rc.19 grpc@grpc/v0.2.0-rc.19 mail-server@mail-server/v0.1.0-rc.19 mail@mail/v0.1.0-rc.19 productivity@productivity/v0.11.0-rc.19 shared@shared/v0.0.1-rc.10 [skip ci] - (d988b4d) - GitHub Actions

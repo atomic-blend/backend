@@ -2,6 +2,28 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## auth/v0.11.0-rc.21 - 2025-09-23
+#### Bug Fixes
+- linter issues + tests - (dc3ca2e) - Brandon Guigo
+- error when sending a message through amqp - (d41b2ed) - Brandon Guigo
+- move fcm_utills in shared - (5b076b3) - Brandon Guigo
+- remove old models and repositories from auth to shared - (49b06d4) - Brandon Guigo
+- fix tests + refactor auth models inside shared for middleware testing - (8ff21fa) - Brandon Guigo
+- move productivity grpc client to shared - (f3b6d0b) - Brandon Guigo
+- use inmemorymongo from shared - (3013227) - Brandon Guigo
+- centralize dockerfiles and allow build with grpc in the monorepo - (120804e) - Brandon Guigo
+- grpc linter + mail in test ci/cd + fix error in smtp server test - (6af5aed) - Brandon Guigo
+#### Features
+- check that email is in the list of authorized domains when registering - (dcf4139) - Brandon Guigo
+- add the config controller - (8bc7d07) - Brandon Guigo
+- add grpc to get public key via userid + encrypt the content of the mail - (cbbe52c) - Brandon Guigo
+- add bruno collections and fix errors - (3f3c000) - Brandon Guigo
+- update grpc to use latest version + configure dev docker compose to use go workspaces + add grpc to get public key - (77f90ca) - Brandon Guigo
+#### Miscellaneous Chores
+- **(release)** bump versions for auth@auth/v0.10.0 productivity@productivity/v0.10.0 [skip ci] - (e3ada7b) - GitHub Actions
+
+- - -
+
 ## auth/v0.10.0 - 2025-07-30
 #### Bug Fixes
 - test release - (598dcaf) - Brandon Guigo
