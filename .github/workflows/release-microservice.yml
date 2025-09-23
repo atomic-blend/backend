@@ -160,7 +160,10 @@ jobs:
       - name: Install Cocogitto
         if: steps.cache-cocogitto.outputs.cache-hit != 'true'
         run: |
-          cargo install cocogitto --version ${{ env.COCOGITTO_VERSION }}
+          # only install cocogitto if it's not already installed
+          if ! command -v cog &> /dev/null; then
+            cargo install cocogitto --version ${{ env.COCOGITTO_VERSION }}
+          fi
         env:
           RUSTFLAGS: --cfg procmacro2_semver_exempt
 
