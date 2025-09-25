@@ -203,43 +203,19 @@ jobs:
           echo "tags_to_push=$TAGS_TO_PUSH" >> $GITHUB_OUTPUT
           echo "successful_dirs=$SUCCESSFUL_DIRS" >> $GITHUB_OUTPUT
 
-      - name: Commit and push changes
+      - name: Push tags only
         run: |
-          if [ -n "$(git status --porcelain)" ]; then
-            # Add all CHANGELOG.md files
-            git add */CHANGELOG.md
-            
-            # Create commit message with all updated microservices
-            COMMIT_MSG="chore(release): bump RC versions for"
-            TAGS_TO_PUSH="${{ steps.bump-versions.outputs.tags_to_push }}"
-            
-            # Convert TAGS_TO_PUSH string to array
-            IFS=' ' read -ra TAGS_ARRAY <<< "$TAGS_TO_PUSH"
-            
-            for dir in ${{ steps.bump-versions.outputs.successful_dirs }}; do
-              if [ -d "$dir" ]; then
-                # Find the tag for this directory
-                for tag in "${TAGS_ARRAY[@]}"; do
-                  if [[ "$tag" == "${dir}/v"* ]]; then
-                    COMMIT_MSG="$COMMIT_MSG $dir@$tag"
-                    break
-                  fi
-                done
-              fi
-            done
-            COMMIT_MSG="$COMMIT_MSG [skip ci]"
-            
-            git commit -m "$COMMIT_MSG"
-            
-            # Push the commit
-            git push https://${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git dev
-            
+          TAGS_TO_PUSH="${{ steps.bump-versions.outputs.tags_to_push }}"
+          
+          if [ -n "$TAGS_TO_PUSH" ]; then
+            echo "Pushing tags: $TAGS_TO_PUSH"
             # Push all tags
-            for tag in ${{ steps.bump-versions.outputs.tags_to_push }}; do
+            for tag in $TAGS_TO_PUSH; do
+              echo "Pushing tag: $tag"
               git push https://${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git tag "$tag"
             done
           else
-            echo "No changes to commit"
+            echo "No tags to push"
           fi
 
       - name: Prepare Docker build matrix
