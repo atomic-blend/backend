@@ -406,6 +406,12 @@ jobs:
                 fi
               fi
               
+              # Skip any tags that contain "rc" (release candidate tags)
+              if [[ "$TAG" == *"rc"* ]]; then
+                echo "Skipping RC tag: $TAG"
+                continue
+              fi
+              
               if [ -n "$TAG" ] && [ -n "$VERSION" ]; then
                 if [ "$FIRST" = "true" ]; then
                   FIRST=false
