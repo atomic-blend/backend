@@ -53,6 +53,8 @@ jobs:
             mail/**
             mail-server/**
             shared/**
+          files_ignore: |
+            **/CHANGELOG.md
           quotepath: false
           base_sha: ${{ steps.last-tag.outputs.last_tag }}
 
