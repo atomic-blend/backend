@@ -434,6 +434,12 @@ jobs:
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
+      - name: Get now date
+        id: get-now-date
+        run: |
+          TIMESTAMP=$(date -u +"%Y-%m-%d %H:%M UTC")
+          echo "timestamp=$TIMESTAMP" >> $GITHUB_OUTPUT
+
 
       - name: Generate consolidated release notes
         id: generate-release-notes
@@ -441,12 +447,9 @@ jobs:
           RELEASE_MATRIX='${{ needs.prepare-github-releases.outputs.release_matrix }}'
           RELEASE_INCLUDE=$(echo "$RELEASE_MATRIX" | jq -r '.include[] | "\(.dir):\(.version):\(.tag):\(.type)"' 2>/dev/null || echo "")
           
-          # Generate timestamp for the consolidated release
-          TIMESTAMP=$(date -u +"%Y-%m-%d %H:%M UTC")
-          
           # Start building the consolidated release notes
           cat > consolidated_release_notes.md << EOF
-          # Stable Release - $TIMESTAMP
+          **Date:** ${{ steps.get-now-date.outputs.timestamp }}
           
           This is a consolidated stable release from the main branch.
           
@@ -504,7 +507,7 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ steps.generate-release-notes.outputs.consolidated_tag }}
-          name: "Stable Release - $(date -u +'%Y-%m-%d %H:%M UTC')"
+          name: "Stable Release"
           body_path: consolidated_release_notes.md
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
