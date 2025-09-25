@@ -29,12 +29,14 @@ jobs:
       - name: Get last tag
         id: last-tag
         run: |
-          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          # Fetch the latest tag from the main branch
+          git fetch origin main --tags
+          LAST_TAG=$(git describe --tags --abbrev=0 origin/main 2>/dev/null || echo "")
           if [ -z "$LAST_TAG" ]; then
-            echo "No tags found, using HEAD~1"
+            echo "No tags found on main branch, using HEAD~1"
             echo "last_tag=HEAD~1" >> $GITHUB_OUTPUT
           else
-            echo "Found last tag: $LAST_TAG"
+            echo "Found last tag on main branch: $LAST_TAG"
             echo "last_tag=$LAST_TAG" >> $GITHUB_OUTPUT
           fi
 
