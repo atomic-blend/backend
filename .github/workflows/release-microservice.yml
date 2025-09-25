@@ -39,7 +39,6 @@ jobs:
             echo "Found last production tag: $LAST_TAG (SHA: $TAG_SHA)"
             echo "last_tag=$TAG_SHA" >> $GITHUB_OUTPUT
           fi
-
       - name: Get changed files
         id: changed-files
         uses: tj-actions/changed-files@v41
