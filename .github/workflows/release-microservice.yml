@@ -34,8 +34,10 @@ jobs:
             echo "No production tags found in svc/v... format, using HEAD~1"
             echo "last_tag=HEAD~1" >> $GITHUB_OUTPUT
           else
-            echo "Found last production tag: $LAST_TAG"
-            echo "last_tag=$LAST_TAG" >> $GITHUB_OUTPUT
+            # Get the commit SHA of the found tag
+            TAG_SHA=$(git rev-parse "$LAST_TAG" 2>/dev/null || echo "")
+            echo "Found last production tag: $LAST_TAG (SHA: $TAG_SHA)"
+            echo "last_tag=$TAG_SHA" >> $GITHUB_OUTPUT
           fi
 
       - name: Get changed files
