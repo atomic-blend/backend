@@ -2,6 +2,14 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## mail-server/v0.2.0 - 2025-09-25
+#### Features
+- upgrade the smtp connection to TLS while sending an email - (447ecf4) - Brandon Guigo
+#### Miscellaneous Chores
+- **(release)** bump versions for mail-server@mail-server/v0.1.1 [skip ci] - (f111062) - GitHub Actions
+
+- - -
+
 ## mail-server/v0.1.1 - 2025-09-25
 #### Bug Fixes
 - get the send mail id from the message body instead of the message header - (29f16cc) - Brandon Guigo
