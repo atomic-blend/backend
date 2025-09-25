@@ -27,12 +27,14 @@ jobs:
       - name: Get last tag
         id: last-tag
         run: |
-          LAST_TAG=$(git tag --list | grep -E '^(auth|productivity|grpc)/v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1 || echo "")
+          git fetch origin main --tags
+          # Get the latest production tag (excluding RC tags) in svc/v... format
+          LAST_TAG=$(git tag --list --sort=-version:refname | grep -E '^[^/]+/v[0-9]+\.[0-9]+\.[0-9]+$' | head -n 1 || echo "")
           if [ -z "$LAST_TAG" ]; then
-            echo "No tags found, using HEAD~1"
+            echo "No production tags found in svc/v... format, using HEAD~1"
             echo "last_tag=HEAD~1" >> $GITHUB_OUTPUT
           else
-            echo "Found last tag: $LAST_TAG"
+            echo "Found last production tag: $LAST_TAG"
             echo "last_tag=$LAST_TAG" >> $GITHUB_OUTPUT
           fi
 
