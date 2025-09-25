@@ -2,6 +2,14 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## mail/v0.2.0-rc-cc47f48 - 2025-09-25
+#### Features
+- upgrade the smtp connection to TLS while sending an email - (320cc5f) - Brandon Guigo
+#### Miscellaneous Chores
+- **(release)** bump versions for auth@auth/v0.11.0 grpc@grpc/v0.2.0 mail-server@mail-server/v0.1.0 mail@mail/v0.1.0 productivity@productivity/v0.11.0 shared@shared/v0.0.1 [skip ci] - (bcf942a) - GitHub Actions
+
+- - -
+
 ## mail/v0.1.0 - 2025-09-23
 #### Bug Fixes
 - parameterize days of cleanupTrash + fix method for endpoint to delete all trashed emails now - (c880897) - Brandon Guigo
