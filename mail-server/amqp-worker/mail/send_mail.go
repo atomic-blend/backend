@@ -68,14 +68,14 @@ func handleTemporaryFailure(m *amqppackage.Delivery, body []byte, failedReason e
 	}
 
 	// publish the message into the retry queue with the delay (Dead letter Queue to the original routing key)
-	message := make(map[string]interface{})
+	var message map[string]interface{}
 	err = json.Unmarshal(body, &message)
 	if err != nil {
 		log.Error().Err(err).Msg("Error unmarshalling message")
 		return
 	}
 
-	sendEmailID, ok := message["send_email_id"].(string)
+	sendEmailID, ok := message["send_mail_id"].(string)
 	if !ok {
 		log.Error().Msg("send_email_id not found in message")
 		return
@@ -290,28 +290,47 @@ func sendEmail(mail models.RawMail) ([]string, error) {
 
 		log.Info().Str("recipient", recipient).Str("domain", domain).Str("mx_host", mxRecords[0].Host).Msg("Resolved MX record")
 
+		from, ok := mail.Headers["From"].(string)
+		if !ok {
+			log.Error().Str("recipient", recipient).Msg("From header not found")
+			recipientsToRetry = append(recipientsToRetry, recipient)
+			continue
+		}
+
 		sendSuccess := false
+		// Try all MX records with TLS first on port 25
 		for _, mxRecord := range mxRecords {
-			log.Info().Str("recipient", recipient).Str("domain", domain).Str("mx_host", mxRecord.Host).Msg("Attempting to send via MX record")
+			log.Info().Str("mx_host", mxRecord.Host).Int("port", 25).Bool("useTLS", true).Str("recipient", recipient).Msg("Attempting to send via SMTP with TLS on port 25")
 
-			from, ok := mail.Headers["From"].(string)
-			if !ok {
-				log.Error().Str("recipient", recipient).Msg("From header not found")
-				recipientsToRetry = append(recipientsToRetry, recipient)
-				break
-			}
-
-			// Send email via SMTP using mxRecord.Host
-			err := sendViaSMTP(mxRecord.Host, from, recipient, signedEmail)
+			err := sendViaSMTP(mxRecord.Host, 25, from, recipient, signedEmail, true)
 			if err != nil {
-				log.Warn().Err(err).Str("mx_host", mxRecord.Host).Str("recipient", recipient).Msg("Failed to send via MX record, trying next one")
+				log.Warn().Err(err).Str("mx_host", mxRecord.Host).Int("port", 25).Bool("useTLS", true).Str("recipient", recipient).Msg("Failed to send via SMTP with TLS on port 25, trying next MX record")
 				continue
 			}
 
 			// Success! Mark as sent and break out of the loop
 			sendSuccess = true
-			log.Info().Str("mx_host", mxRecord.Host).Str("recipient", recipient).Msg("Email sent successfully via SMTP")
+			log.Info().Str("mx_host", mxRecord.Host).Int("port", 25).Bool("useTLS", true).Str("recipient", recipient).Msg("Email sent successfully via SMTP with TLS on port 25")
 			break
+		}
+
+		// If TLS didn't work, try all MX records without TLS on port 25
+		if !sendSuccess {
+			log.Info().Str("recipient", recipient).Msg("TLS failed for all MX records, trying without TLS on port 25")
+			for _, mxRecord := range mxRecords {
+				log.Info().Str("mx_host", mxRecord.Host).Int("port", 25).Bool("useTLS", false).Str("recipient", recipient).Msg("Attempting to send via SMTP without TLS on port 25")
+
+				err := sendViaSMTP(mxRecord.Host, 25, from, recipient, signedEmail, false)
+				if err != nil {
+					log.Warn().Err(err).Str("mx_host", mxRecord.Host).Int("port", 25).Bool("useTLS", false).Str("recipient", recipient).Msg("Failed to send via SMTP without TLS on port 25, trying next MX record")
+					continue
+				}
+
+				// Success! Mark as sent and break out of the loop
+				sendSuccess = true
+				log.Info().Str("mx_host", mxRecord.Host).Int("port", 25).Bool("useTLS", false).Str("recipient", recipient).Msg("Email sent successfully via SMTP without TLS on port 25")
+				break
+			}
 		}
 
 		if !sendSuccess {
@@ -325,12 +344,21 @@ func sendEmail(mail models.RawMail) ([]string, error) {
 	return nil, nil
 }
 
-// sendViaSMTP sends an email via SMTP to the specified host
-func sendViaSMTP(host string, from string, to string, emailContent string) error {
-	// Connect to the remote SMTP server
-	c, err := smtp.Dial(host + ":25")
-	if err != nil {
-		return fmt.Errorf("smtp_connection_failed: %w", err)
+// sendViaSMTP sends an email via SMTP to the specified host and port
+func sendViaSMTP(host string, port int, from string, to string, emailContent string, useTLS bool) error {
+	var c *smtp.Client
+	var err error
+
+	if useTLS {
+		c, err = smtp.DialStartTLS(fmt.Sprintf("%s:%d", host, port), nil)
+		if err != nil {
+			return fmt.Errorf("smtp_connection_failed: %w", err)
+		}
+	} else {
+		c, err = smtp.Dial(fmt.Sprintf("%s:%d", host, port))
+		if err != nil {
+			return fmt.Errorf("smtp_connection_failed: %w", err)
+		}
 	}
 	defer c.Quit()
 
@@ -363,7 +391,7 @@ func sendViaSMTP(host string, from string, to string, emailContent string) error
 		return fmt.Errorf("smtp_data_close_failed: %w", err)
 	}
 
-	log.Info().Str("host", host).Str("from", from).Str("to", to).Msg("Email sent successfully via SMTP")
+	log.Info().Str("host", host).Int("port", port).Str("from", from).Str("to", to).Msg("Email sent successfully via SMTP")
 	return nil
 }
 

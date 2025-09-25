@@ -3,6 +3,7 @@ package global
 import (
 	"context"
 	"errors"
+	"time"
 
 	"connectrpc.com/connect"
 	mailv1 "github.com/atomic-blend/backend/grpc/gen/mail/v1"
@@ -56,7 +57,11 @@ func (s *GrpcServer) UpdateMailStatus(ctx context.Context, req *connect.Request[
 		update["failure_reason"] = failureReason
 	}
 	if failedAt != "" {
-		update["failed_at"] = failedAt
+		parsedTime, err := time.Parse(time.RFC3339, failedAt)
+		if err != nil {
+			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("invalid failed_at format"))
+		}
+		update["failed_at"] = primitive.NewDateTimeFromTime(parsedTime)
 	}
 	if retryCounter > 0 {
 		update["retry_counter"] = retryCounter
