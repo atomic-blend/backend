@@ -61,23 +61,9 @@ func handleTemporaryFailure(m *amqppackage.Delivery, body []byte, failedReason e
 	delay := computeDelay(retryCount)
 	log.Info().Msgf("Retrying in %d milliseconds", delay)
 
-	//TODO: make the gRPC call to store the retry count, delay in the DB and the reason for failure
 	mailClient, err := getMailClient()
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to create mail client")
-		return
-	}
-
-	sendEmailID, ok := m.Headers["send_email_id"].(string)
-	if !ok {
-		log.Error().Msg("send_email_id not found in message headers")
-		return
-	}
-
-	req := mailclient.CreateRetryStatusRequest(sendEmailID, failedReason.Error(), int32(retryCount))
-	_, err = mailClient.UpdateMailStatus(context.Background(), req)
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to update mail status for retry")
 		return
 	}
 
@@ -86,6 +72,19 @@ func handleTemporaryFailure(m *amqppackage.Delivery, body []byte, failedReason e
 	err = json.Unmarshal(body, &message)
 	if err != nil {
 		log.Error().Err(err).Msg("Error unmarshalling message")
+		return
+	}
+
+	sendEmailID, ok := message["send_email_id"].(string)
+	if !ok {
+		log.Error().Msg("send_email_id not found in message")
+		return
+	}
+
+	req := mailclient.CreateRetryStatusRequest(sendEmailID, failedReason.Error(), int32(retryCount))
+	_, err = mailClient.UpdateMailStatus(context.Background(), req)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to update mail status for retry")
 		return
 	}
 
