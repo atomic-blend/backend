@@ -3,17 +3,22 @@ package mail
 import (
 	"context"
 	"io"
+	"os"
 	"strings"
 
 	"connectrpc.com/connect"
+	"github.com/appleboy/go-fcm"
+	authv1 "github.com/atomic-blend/backend/grpc/gen/auth/v1"
 	userv1 "github.com/atomic-blend/backend/grpc/gen/user/v1"
-	userclient "github.com/atomic-blend/backend/shared/grpc/user"
 	"github.com/atomic-blend/backend/mail/models"
+	"github.com/atomic-blend/backend/mail/notifications/payloads"
 	"github.com/atomic-blend/backend/mail/repositories"
+	userclient "github.com/atomic-blend/backend/shared/grpc/user"
 	rspamdservice "github.com/atomic-blend/backend/shared/services/rspamd"
 	rspamdclient "github.com/atomic-blend/backend/shared/services/rspamd/client"
 	s3service "github.com/atomic-blend/backend/shared/services/s3"
 	"github.com/atomic-blend/backend/shared/utils/db"
+	fcmutils "github.com/atomic-blend/backend/shared/utils/fcm_utils"
 	awss3 "github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/emersion/go-message"
 	"github.com/google/uuid"
@@ -35,6 +40,19 @@ func receiveMail(m *amqp.Delivery, payload ReceivedMailPayload) {
 
 	// Send the email to rspamd via HTTP for spam detection
 	rspamdService := rspamdservice.NewRspamdService()
+
+	// Create the FCM client to send notifications to the user
+	firebaseProjectID := os.Getenv("FIREBASE_PROJECT_ID")
+	googleApplicationCredentials := os.Getenv("GOOGLE_APPLICATION_CREDENTIALS")
+	fcmClient, err := fcm.NewClient(
+		context.TODO(),
+		fcm.WithProjectID(firebaseProjectID),
+		fcm.WithCredentialsFile(googleApplicationCredentials),
+	)
+	if err != nil {
+		log.Fatal().Err(err).Msg("Failed to create FCM client")
+		return
+	}
 
 	mailContent := &models.RawMail{
 		Attachments:    make([]models.RawAttachment, 0),
@@ -225,6 +243,59 @@ func receiveMail(m *amqp.Delivery, payload ReceivedMailPayload) {
 		return
 	}
 
+	// send notifications to the user
+	for _, mail := range encryptedMails {
+		userID := mail.UserID
+
+		// Get user devices using gRPC client
+		req := &connect.Request[userv1.GetUserDevicesRequest]{
+			Msg: &userv1.GetUserDevicesRequest{
+				User: &authv1.User{
+					Id: userID.Hex(),
+				},
+			},
+		}
+
+		userService, err := userclient.NewUserClient()
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to create user client")
+			return
+		}
+
+		resp, err := userService.GetUserDevices(context.TODO(), req)
+		if err != nil {
+			log.Error().Err(err).Msgf("Failed to get user devices for user: %s", userID)
+			continue
+		}
+
+		deviceTokens := []string{}
+		for _, device := range resp.Msg.Devices {
+			if device.FcmToken != "" {
+				deviceTokens = append(deviceTokens, device.FcmToken)
+			}
+		}
+
+		if len(deviceTokens) == 0 {
+			log.Debug().Msgf("No device tokens found for user: %s", userID)
+			continue
+		}
+
+		// get the content preview
+		contentPreview := truncateString(mailContent.TextContent, 100)
+		headers := mail.Headers.(map[string]any)
+		log.Debug().Msgf("Headers: %v", headers)
+
+		// create the payload
+		payload := payloads.NewMailReceivedPayload(headers["From"].(string), headers["Subject"].(string), contentPreview)
+		data := payload.GetData()
+
+		log.Debug().Msgf("Payload: %v", payload)
+		log.Debug().Msgf("Data: %v", data)
+
+		// send the notification to the user
+		fcmutils.SendMulticast(context.TODO(), fcmClient, data, deviceTokens)
+	}
+
 	m.Ack(false)
 }
 
@@ -360,4 +431,18 @@ func boolPtr(b bool) *bool {
 		return &b
 	}
 	return nil
+}
+
+// Truncate returns the first n runes of s.
+func truncateString(s string, n int) string {
+	if len(s) <= n {
+		return s
+	}
+	for i := range s {
+		if n == 0 {
+			return s[:i]
+		}
+		n--
+	}
+	return s
 }
