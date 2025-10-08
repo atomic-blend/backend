@@ -74,16 +74,15 @@ get_latest_version() {
     esac
 }
 
-# Array of custom images from docker-compose.yaml
-images=(
-    "ghcr.io/atomic-blend/auth:latest"
-    "ghcr.io/atomic-blend/mail-server:latest"
-    "ghcr.io/atomic-blend/mail:latest"
-    "ghcr.io/atomic-blend/productivity:latest"
-    "ghcr.io/atomic-blend/task-app:latest"
-    "ghcr.io/atomic-blend/notes-app:latest"
-    "ghcr.io/atomic-blend/mail-app:latest"
-)
+# Extract atomic-blend images from docker-compose.yaml
+docker_compose_file="docker-compose.yaml"
+if [ ! -f "$docker_compose_file" ]; then
+    echo -e "${RED}Error: $docker_compose_file not found in current directory${NC}" >&2
+    exit 1
+fi
+
+# Extract atomic-blend images from docker-compose.yaml
+images=($(grep -E "image:\s*ghcr\.io/atomic-blend/" "$docker_compose_file" | sed 's/.*image:\s*//' | sed 's/\${[^}]*:-latest}/latest/g'))
 
 # Check if required tools are installed
 command -v curl >/dev/null 2>&1 || { echo -e "${RED}Error: curl is required but not installed.${NC}" >&2; exit 1; }
