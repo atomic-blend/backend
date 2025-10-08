@@ -1,4 +1,5 @@
 version: "3.8"
+name: atomic-blend
 services:
   reverse-proxy:
     image: nginx:alpine
@@ -15,15 +16,12 @@ services:
     restart: unless-stopped
 
   auth:
-    build:
-      context: ./auth
-      dockerfile: Dockerfile.dev  # Use a dev-specific Dockerfile
+    image: ghcr.io/atomic-blend/auth:${AUTH_SERVICE_VERSION:-latest}
     container_name: auth
     expose:
       - "8080"
-      - "50051"  # gRPC port
+      - "50051" # gRPC port
     volumes:
-      - ./:/workspace
       - type: bind
         source: ${HOME}${USERPROFILE}/.netrc
         target: /root/.netrc
@@ -35,13 +33,10 @@ services:
         condition: service_healthy
     env_file:
       - .env
-    command: air  # Hot-reloading for development
+      - .env.versions
 
   mail-server:
-    working_dir: /workspace/mail-server
-    build:
-      context: ./mail-server
-      dockerfile: Dockerfile.dev  # Use a dev-specific Dockerfile
+    image: ghcr.io/atomic-blend/mail-server:${MAIL_SERVER_SERVICE_VERSION:-latest}
     container_name: mail-server
     depends_on:
       rabbitmq:
@@ -57,27 +52,22 @@ services:
         mode: host
     env_file:
       - .env
-    command: air
+      - .env.versions
     volumes:
-      - ./:/workspace
       - type: bind
         source: ${HOME}${USERPROFILE}/.netrc
         target: /root/.netrc
       - type: bind
         source: ./private.key
         target: /app/dkim_private_key.pem
-  
+
   mail:
-    working_dir: /workspace/mail
-    build:
-      context: ./mail
-      dockerfile: Dockerfile.dev  # Use a dev-specific Dockerfile
+    image: ghcr.io/atomic-blend/mail:${MAIL_SERVICE_VERSION:-latest}
     container_name: mail
     expose:
       - "8080"
-      - "50051"  # gRPC port
+      - "50051" # gRPC port
     volumes:
-      - ./:/workspace
       - type: bind
         source: ${HOME}${USERPROFILE}/.netrc
         target: /root/.netrc
@@ -94,19 +84,15 @@ services:
         condition: service_healthy
     env_file:
       - .env
-    command: air  # Hot-reloading for development
-  
+      - .env.versions
+
   productivity:
-    working_dir: /workspace/productivity
-    build:
-      context: ./productivity
-      dockerfile: Dockerfile.dev  # Use a dev-specific Dockerfile
+    image: ghcr.io/atomic-blend/productivity:${PRODUCTIVITY_SERVICE_VERSION:-latest}
     container_name: productivity
     expose:
       - "8080"
-      - "50051"  # gRPC port
+      - "50051" # gRPC port
     volumes:
-      - ./:/workspace
       - type: bind
         source: ${HOME}${USERPROFILE}/.netrc
         target: /root/.netrc
@@ -117,10 +103,31 @@ services:
         condition: service_healthy
     env_file:
       - .env
-    command: air  # Hot-reloading for development
+      - .env.versions
+
+  task-app:
+    image: ghcr.io/atomic-blend/task-app:${TASK_APP_VERSION:-latest}
+    container_name: task-app
+    env_file:
+      - .env
+      - .env.versions
+
+  notes-app:
+    image: ghcr.io/atomic-blend/notes-app:${NOTES_APP_VERSION:-latest}
+    container_name: notes-app
+    env_file:
+      - .env
+      - .env.versions
+
+  mail-app:
+    image: ghcr.io/atomic-blend/mail-app:${MAIL_APP_VERSION:-latest}
+    container_name: mail-app
+    env_file:
+      - .env
+      - .env.versions
 
   mongodb:
-    image: mongo:8.0.4
+    image: mongo:${MONGODB_VERSION:-8.0.4}
     container_name: mongodb-atomic-blend
     entrypoint: >
       /bin/bash -c '
@@ -150,11 +157,11 @@ services:
       retries: 30
 
   rabbitmq:
-    image: rabbitmq:4.1.2-management
+    image: rabbitmq:${RABBITMQ_VERSION:-4.1.2-management}
     container_name: rabbitmq
     restart: always
     ports:
-      - "5672:5672"   # AMQP port
+      - "5672:5672" # AMQP port
       - "15672:15672" # Management UI port
     environment:
       RABBITMQ_DEFAULT_USER: user
@@ -169,18 +176,16 @@ services:
       retries: 5
 
   rspamd:
-    build:
-      context: "./rspamd-config"
-      dockerfile: "Dockerfile.rspamd"
+    image: rspamd/rspamd:${RSPAMD_VERSION:-latest}
     container_name: rspamd-compose-rspamd
     depends_on:
-      - unbound
-      - redis
+      - rspamd-unbound
+      - rspamd-redis
     environment:
-      - RSPAMD_DNS_SERVERS=round-robin:192.0.2.254:53
+      - RSPAMD_DNS_SERVERS=round-robin:192.0.3.254:53
       - RSPAMD_REDIS_SERVERS=rspamd-compose-redis
       - RSPAMD_USE_BAYES=1
-#      - RSPAMD_USE_GREYLIST=1
+    #      - RSPAMD_USE_GREYLIST=1
     networks:
       - rspamd
     ports:
@@ -188,15 +193,15 @@ services:
       - "11333:11333"
       - "11334:11334"
     pull_policy: build
-# recommended for production
-#    read_only: true
+    # recommended for production
+    #    read_only: true
     volumes:
       - rspamd-compose-rspamd-dbdir:/var/lib/rspamd
 
-  redis:
+  rspamd-redis:
     container_name: rspamd-compose-redis
     command: "redis-server --save 60 1 --loglevel warning"
-    image: "redis:latest"
+    image: "redis:${REDIS_VERSION:-latest}"
     expose:
       - "6379"
     sysctls:
@@ -206,16 +211,14 @@ services:
     volumes:
       - rspamd-compose-redis-data:/data
 
-  unbound:
-    build:
-      context: "./rspamd-config"
-      dockerfile: "Dockerfile.unbound"
+  rspamd-unbound:
+    image: alpinelinux/unbound:${UNBOUND_VERSION:-latest}
     container_name: rspamd-compose-unbound
     networks:
       rspamd:
-        ipv4_address: 192.0.2.254
+        ipv4_address: 192.0.3.254
     pull_policy: build
-  
+
   minio:
     image: minio/minio
     restart: unless-stopped
@@ -242,13 +245,12 @@ services:
       exit 0;
       "
 
-
 networks:
   rspamd:
     ipam:
       config:
-        - subnet: 192.0.2.0/24
-      
+        - subnet: 192.0.3.0/24
+
 volumes:
   rabbitmq_data:
   mongo_data:
