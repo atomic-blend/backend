@@ -2,7 +2,7 @@ name: Release RC for Microservices
 
 on:
   push:
-    branches: 
+    branches:
       - dev
 
 env:
@@ -14,7 +14,6 @@ permissions:
   contents: write
   packages: write
   actions: write
-
 
 jobs:
   find-out-changes:
@@ -31,7 +30,7 @@ jobs:
         run: |
           # Fetch the latest tag from the main branch
           git fetch origin main --tags
-          LAST_TAG=$(git describe --tags --abbrev=0 origin/main 2>/dev/null || echo "")
+          LAST_TAG=$(git describe --tags --abbrev=0 origin/dev 2>/dev/null || echo "")
           if [ -z "$LAST_TAG" ]; then
             echo "No tags found on main branch, using HEAD~1"
             echo "last_tag=HEAD~1" >> $GITHUB_OUTPUT
@@ -136,7 +135,7 @@ jobs:
               fi
             done
           fi
-          
+
           SUCCESSFUL_DIRS=$(echo $SUCCESSFUL_DIRS | tr -s ' ' | sed 's/^ *//' | sed 's/ *$//')
           echo "directories=$SUCCESSFUL_DIRS" >> $GITHUB_OUTPUT
           echo "Found successful directories: $SUCCESSFUL_DIRS"
@@ -171,14 +170,14 @@ jobs:
         id: bump-versions
         run: |
           SUCCESSFUL_DIRS="${{ steps.collect-dirs.outputs.directories }}"
-          
+
           if [ -z "$SUCCESSFUL_DIRS" ]; then
             echo "No successful directories found"
             exit 0
           fi
-          
+
           echo "Bumping versions for: $SUCCESSFUL_DIRS"
-          
+
           # Bump version for each successful microservice and capture new tags
           TAGS_TO_PUSH=""
           for dir in $SUCCESSFUL_DIRS; do
@@ -198,7 +197,7 @@ jobs:
               fi
             fi
           done
-          
+
           echo "DEBUG: Final TAGS_TO_PUSH = '$TAGS_TO_PUSH'"
           echo "tags_to_push=$TAGS_TO_PUSH" >> $GITHUB_OUTPUT
           echo "successful_dirs=$SUCCESSFUL_DIRS" >> $GITHUB_OUTPUT
@@ -206,7 +205,7 @@ jobs:
       - name: Push tags only
         run: |
           TAGS_TO_PUSH="${{ steps.bump-versions.outputs.tags_to_push }}"
-          
+
           if [ -n "$TAGS_TO_PUSH" ]; then
             echo "Pushing tags: $TAGS_TO_PUSH"
             # Push all tags
@@ -223,29 +222,29 @@ jobs:
         run: |
           SUCCESSFUL_DIRS="${{ steps.bump-versions.outputs.successful_dirs }}"
           TAGS_TO_PUSH="${{ steps.bump-versions.outputs.tags_to_push }}"
-          
+
           echo "DEBUG: SUCCESSFUL_DIRS = '$SUCCESSFUL_DIRS'"
           echo "DEBUG: TAGS_TO_PUSH = '$TAGS_TO_PUSH'"
-          
+
           if [ -z "$SUCCESSFUL_DIRS" ]; then
             echo "No successful directories found"
             echo "matrix={\"include\":[]}" >> $GITHUB_OUTPUT
             exit 0
           fi
-          
+
           if [ -z "$TAGS_TO_PUSH" ]; then
             echo "No tags to push found"
             echo "matrix={\"include\":[]}" >> $GITHUB_OUTPUT
             exit 0
           fi
-          
+
           MATRIX_JSON='{"include":['
           FIRST=true
-          
+
           # Convert TAGS_TO_PUSH string to array
           IFS=' ' read -ra TAGS_ARRAY <<< "$TAGS_TO_PUSH"
           echo "DEBUG: TAGS_ARRAY = ${TAGS_ARRAY[*]}"
-          
+
           for dir in $SUCCESSFUL_DIRS; do
             if [ -d "$dir" ] && [ "$dir" != "grpc" ] && [ "$dir" != "shared" ]; then
               echo "DEBUG: Processing directory: $dir"
@@ -279,7 +278,7 @@ jobs:
               echo "DEBUG: Skipping directory $dir (grpc or shared library)"
             fi
           done
-          
+
           MATRIX_JSON="$MATRIX_JSON]}"
           echo "matrix=$MATRIX_JSON" >> $GITHUB_OUTPUT
           echo "Docker build matrix: $MATRIX_JSON"
@@ -310,14 +309,14 @@ jobs:
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
-        
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
       - name: Build and push Docker image for ${{ matrix.dir }}
         run: |
           echo "Building Docker image for ${{ matrix.dir }} with version ${{ matrix.version }}"
-          
+
           docker buildx build \
             --platform linux/amd64,linux/arm64 \
             --push \
@@ -327,7 +326,7 @@ jobs:
 
   prepare-github-releases:
     runs-on: [self-hosted, Linux]
-    needs: 
+    needs:
       - build-docker-images
       - release-rc
     if: always() && (needs.build-docker-images.result == 'success' || needs.build-docker-images.result == 'skipped') && needs.release-rc.result == 'success'
@@ -344,22 +343,22 @@ jobs:
           DOCKER_MATRIX='${{ needs.release-rc.outputs.docker_matrix }}'
           ALL_SUCCESSFUL_DIRS="${{ needs.release-rc.outputs.all_successful_dirs }}"
           TAGS_TO_PUSH="${{ needs.release-rc.outputs.tags_to_push }}"
-          
+
           if [ -z "$ALL_SUCCESSFUL_DIRS" ]; then
             echo "No successful directories found"
             echo "matrix={\"include\":[]}" >> $GITHUB_OUTPUT
             exit 0
           fi
-          
+
           MATRIX_JSON='{"include":['
           FIRST=true
-          
+
           # Parse the Docker matrix to get the tags that were actually built
           DOCKER_INCLUDE=$(echo "$DOCKER_MATRIX" | jq -r '.include[] | "\(.dir):\(.version):\(.tag)"' 2>/dev/null || echo "")
-          
+
           # Convert TAGS_TO_PUSH string to array for grpc lookup
           IFS=' ' read -ra TAGS_ARRAY <<< "$TAGS_TO_PUSH"
-          
+
           for dir in $ALL_SUCCESSFUL_DIRS; do
             if [ -d "$dir" ]; then
               # First, try to find the tag from cocogitto bump step
@@ -405,7 +404,7 @@ jobs:
               fi
             fi
           done
-          
+
           MATRIX_JSON="$MATRIX_JSON]}"
           echo "matrix=$MATRIX_JSON" >> $GITHUB_OUTPUT
           echo "Release matrix: $MATRIX_JSON"
@@ -428,24 +427,24 @@ jobs:
         run: |
           RELEASE_MATRIX='${{ needs.prepare-github-releases.outputs.release_matrix }}'
           RELEASE_INCLUDE=$(echo "$RELEASE_MATRIX" | jq -r '.include[] | "\(.dir):\(.version):\(.tag):\(.type)"' 2>/dev/null || echo "")
-          
+
           # Generate timestamp for the consolidated release
           TIMESTAMP=$(date -u +"%Y-%m-%d %H:%M UTC")
-          
+
           # Start building the consolidated release notes
           cat > consolidated_release_notes.md << EOF
           ## $TIMESTAMP
-          
+
           This is a consolidated release candidate build from the dev branch.
-          
+
           ## 📦 Released Components
-          
+
           EOF
-          
+
           # Process each component
           DOCKER_SERVICES=""
           GRPC_SERVICES=""
-          
+
           while IFS= read -r line; do
             if [ -n "$line" ]; then
               DIR=$(echo "$line" | cut -d: -f1)
@@ -464,27 +463,27 @@ jobs:
               fi
             fi
           done <<< "$RELEASE_INCLUDE"
-          
+
           # Add Docker services section
           if [ -n "$DOCKER_SERVICES" ]; then
             echo -e "\n### 🐳 Microservices" >> consolidated_release_notes.md
             echo -e "$DOCKER_SERVICES" >> consolidated_release_notes.md
           fi
-          
+
           # Add gRPC services section
           if [ -n "$GRPC_SERVICES" ]; then
             echo -e "\n### 📋 Shared Libraries" >> consolidated_release_notes.md
             echo -e "$GRPC_SERVICES" >> consolidated_release_notes.md
           fi
-          
+
           # Add footer
           cat >> consolidated_release_notes.md << EOF
-          
+
           ---
-          
+
           *This release was automatically generated by the CI/CD pipeline.*
           EOF
-          
+
           # Create a consolidated tag name
           echo "consolidated_tag=rc-$(date -u +%Y%m%d-%H%M%S)" >> $GITHUB_OUTPUT
 
