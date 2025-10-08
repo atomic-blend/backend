@@ -14,6 +14,7 @@ import (
 	"github.com/atomic-blend/backend/mail/notifications/payloads"
 	"github.com/atomic-blend/backend/mail/repositories"
 	userclient "github.com/atomic-blend/backend/shared/grpc/user"
+	ageencryptionservice "github.com/atomic-blend/backend/shared/services/age_encryption"
 	rspamdservice "github.com/atomic-blend/backend/shared/services/rspamd"
 	rspamdclient "github.com/atomic-blend/backend/shared/services/rspamd/client"
 	s3service "github.com/atomic-blend/backend/shared/services/s3"
@@ -140,6 +141,7 @@ func receiveMail(m *amqp.Delivery, payload ReceivedMailPayload) {
 	processMessageBody(entity, mailContent)
 
 	encryptedMails := make([]models.Mail, 0)
+	encryptedNotifications := make(map[string]payloads.MailReceivedPayload, 0)
 	encryptedAttachments := make([]*awss3.PutObjectInput, 0)
 	haveErrors := false
 
@@ -221,6 +223,19 @@ func receiveMail(m *amqp.Delivery, payload ReceivedMailPayload) {
 		mailEntity.Greylisted = boolPtr(encryptedMailContent.Greylisted)
 
 		encryptedMails = append(encryptedMails, *mailEntity)
+
+		// encrypt the notification content for mongodb with user's public key
+		log.Info().Str("rcpt", rcpt).Msg("Encrypting notification content")
+		ageService := ageencryptionservice.NewAgeEncryptionService()
+		contentPreview := truncateString(mailContent.TextContent, 100)
+		encryptedContentPreview, err := ageService.EncryptString(userPublicKey, contentPreview)
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to encrypt content preview")
+			haveErrors = true
+			continue
+		}
+		encryptedNotificationContent := payloads.NewMailReceivedPayload(encryptedMailContent.Headers["From"].(string), encryptedMailContent.Headers["Subject"].(string), encryptedContentPreview)
+		encryptedNotifications[userID.Hex()] = *encryptedNotificationContent
 	}
 
 	if haveErrors {
@@ -244,14 +259,13 @@ func receiveMail(m *amqp.Delivery, payload ReceivedMailPayload) {
 	}
 
 	// send notifications to the user
-	for _, mail := range encryptedMails {
-		userID := mail.UserID
+	for userID, notification := range encryptedNotifications {
 
 		// Get user devices using gRPC client
 		req := &connect.Request[userv1.GetUserDevicesRequest]{
 			Msg: &userv1.GetUserDevicesRequest{
 				User: &authv1.User{
-					Id: userID.Hex(),
+					Id: userID,
 				},
 			},
 		}
@@ -279,15 +293,7 @@ func receiveMail(m *amqp.Delivery, payload ReceivedMailPayload) {
 			log.Debug().Msgf("No device tokens found for user: %s", userID)
 			continue
 		}
-
-		// get the content preview
-		contentPreview := truncateString(mailContent.TextContent, 100)
-		headers := mail.Headers.(map[string]any)
-		log.Debug().Msgf("Headers: %v", headers)
-
-		// create the payload
-		payload := payloads.NewMailReceivedPayload(headers["From"].(string), headers["Subject"].(string), contentPreview)
-		data := payload.GetData()
+		data := notification.GetData()
 
 		log.Debug().Msgf("Payload: %v", payload)
 		log.Debug().Msgf("Data: %v", data)
