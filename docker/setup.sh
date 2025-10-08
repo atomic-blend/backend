@@ -169,43 +169,81 @@ get_current_version() {
     fi
 }
 
-# Check if files exist and download if missing
+# Check which files exist and which need to be downloaded
+missing_files=()
+existing_files=()
+
 if [ ! -f "$docker_compose_file" ]; then
-    echo -e "${YELLOW}$docker_compose_file not found in current directory${NC}"
-    
-    # Determine the GitHub path for the compose file
-    if [ "$docker_compose_file" = "docker-compose.yaml" ]; then
-        github_path="docker/docker-compose.yaml"
-    elif [ "$docker_compose_file" = "docker-compose-dev.yaml" ]; then
-        github_path="docker/docker-compose-dev.yaml"
-    else
-        # For custom files, assume they're in the docker directory
-        github_path="docker/$docker_compose_file"
-    fi
-    
-    if ! download_file "$github_path" "$docker_compose_file"; then
-        echo -e "${RED}Error: Failed to download $docker_compose_file${NC}" >&2
-        exit 1
-    fi
+    missing_files+=("docker-compose.yaml → $docker_compose_file")
+else
+    existing_files+=("$docker_compose_file")
 fi
 
 if [ ! -f "$env_file" ]; then
-    echo -e "${YELLOW}$env_file not found in current directory${NC}"
+    missing_files+=(".env.example → $env_file")
+else
+    existing_files+=("$env_file")
+fi
+
+# Show status of files
+if [ ${#existing_files[@]} -gt 0 ]; then
+    echo -e "${GREEN}Found existing files:${NC}"
+    for file in "${existing_files[@]}"; do
+        echo -e "${GREEN}  ✓ $file${NC}"
+    done
+    echo ""
+fi
+
+# Ask for confirmation only if files need to be downloaded
+if [ ${#missing_files[@]} -gt 0 ]; then
+    echo -e "${YELLOW}Missing files that need to be downloaded:${NC}"
+    for file in "${missing_files[@]}"; do
+        echo -e "${YELLOW}  - $file${NC}"
+    done
+    echo ""
+    echo -e "${BLUE}Repository: atomic-blend/backend${NC}"
+    echo -e "${BLUE}Branch: $branch${NC}"
+    echo ""
+    read -p "Enter 'y' or 'yes' to download missing files: " -r
+    echo ""
     
-    # Always download .env.example and rename to .env
-    github_path="docker/.env.example"
-    temp_file=".env.example"
-    
-    echo -e "${BLUE}Downloading .env.example to create .env${NC}"
-    
-    if ! download_file "$github_path" "$temp_file"; then
-        echo -e "${RED}Error: Failed to download $github_path${NC}" >&2
-        exit 1
+    if [[ ! $REPLY =~ ^[Yy]([Ee][Ss])?$ ]]; then
+        echo -e "${YELLOW}Download cancelled. Using existing files only.${NC}"
+        echo ""
+    else
+        echo -e "${BLUE}Downloading missing files...${NC}"
+        echo ""
+        
+        # Download docker-compose.yaml if missing
+        if [ ! -f "$docker_compose_file" ]; then
+            echo -e "${YELLOW}Downloading docker-compose.yaml → $docker_compose_file...${NC}"
+            github_path="docker/docker-compose.yaml"
+            
+            if ! download_file "$github_path" "$docker_compose_file"; then
+                echo -e "${RED}Error: Failed to download $github_path${NC}" >&2
+                exit 1
+            fi
+        fi
+        
+        # Download .env.example if env file is missing
+        if [ ! -f "$env_file" ]; then
+            echo -e "${YELLOW}Downloading .env.example → $env_file...${NC}"
+            github_path="docker/.env.example"
+            temp_file=".env.example"
+            
+            if ! download_file "$github_path" "$temp_file"; then
+                echo -e "${RED}Error: Failed to download $github_path${NC}" >&2
+                exit 1
+            fi
+            
+            # Rename .env.example to the target env file
+            mv "$temp_file" "$env_file"
+            echo -e "${GREEN}Renamed .env.example to $env_file${NC}"
+        fi
     fi
-    
-    # Rename .env.example to .env
-    mv "$temp_file" ".env"
-    echo -e "${GREEN}Renamed .env.example to .env${NC}"
+else
+    echo -e "${GREEN}All required files already exist. No download needed.${NC}"
+    echo ""
 fi
 
 # Extract atomic-blend images and their env vars from docker-compose.yaml
