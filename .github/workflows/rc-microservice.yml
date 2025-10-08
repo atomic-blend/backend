@@ -116,6 +116,10 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Cleanup success markers
+        run: |
+          rm -rf /tmp/success-markers
+
       - name: Download success markers
         uses: actions/download-artifact@v4
         with:
