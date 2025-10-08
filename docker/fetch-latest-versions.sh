@@ -81,8 +81,31 @@ if [ ! -f "$docker_compose_file" ]; then
     exit 1
 fi
 
-# Extract atomic-blend images from docker-compose.yaml
-images=($(grep -E "image:\s*ghcr\.io/atomic-blend/" "$docker_compose_file" | sed 's/.*image:\s*//' | sed 's/\${[^}]*:-latest}/latest/g'))
+# Extract atomic-blend images and their env vars from docker-compose.yaml
+images=()
+env_vars=()
+
+# Parse each image line to extract both the base image and env var name
+while IFS= read -r line; do
+    # Extract the env var name from ${ENV_VAR:-latest} pattern
+    # Account for YAML indentation (spaces before "image:")
+    if [[ $line =~ ^[[:space:]]*image:[[:space:]]*ghcr\.io/atomic-blend/([^:]+):\$\{([^}]+):-latest\} ]]; then
+        service_name="${BASH_REMATCH[1]}"
+        env_var="${BASH_REMATCH[2]}"
+        base_image="ghcr.io/atomic-blend/${service_name}"
+        
+        images+=("$base_image")
+        env_vars+=("$env_var")
+    fi
+done < <(grep -E "image:\s*ghcr\.io/atomic-blend/" "$docker_compose_file")
+
+# Debug: Check if we found any images
+if [ ${#images[@]} -eq 0 ]; then
+    echo -e "${RED}Error: No atomic-blend images found in $docker_compose_file${NC}" >&2
+    echo -e "${YELLOW}Debug: Looking for lines matching 'image: ghcr.io/atomic-blend/'${NC}" >&2
+    grep -E "image:\s*ghcr\.io/atomic-blend/" "$docker_compose_file" >&2 || echo "No matching lines found" >&2
+    exit 1
+fi
 
 # Check if required tools are installed
 command -v curl >/dev/null 2>&1 || { echo -e "${RED}Error: curl is required but not installed.${NC}" >&2; exit 1; }
@@ -115,9 +138,10 @@ printf "%-40s %-15s %-15s %-10s\n" "IMAGE" "CURRENT" "LATEST" "STATUS"
 printf "%-40s %-15s %-15s %-10s\n" "----------------------------------------" "---------------" "---------------" "----------"
 
 # Fetch and display latest versions in table format
-for image in "${images[@]}"; do
-    base_image=$(echo $image | cut -d':' -f1)
-    current_tag=$(echo $image | cut -d':' -f2)
+for i in "${!images[@]}"; do
+    base_image="${images[$i]}"
+    env_var="${env_vars[$i]}"
+    current_tag="latest"  # Since we're using latest as default
     
     latest_version=$(get_latest_version "$base_image")
     
@@ -142,33 +166,12 @@ echo "=========="
 echo -e "${YELLOW}Add these to your .env.versions file:${NC}"
 echo ""
 
-for image in "${images[@]}"; do
-    base_image=$(echo $image | cut -d':' -f1)
+for i in "${!images[@]}"; do
+    base_image="${images[$i]}"
+    env_var="${env_vars[$i]}"
     latest_version=$(get_latest_version "$base_image")
     
-    case $base_image in
-        "ghcr.io/atomic-blend/auth")
-            echo "AUTH_SERVICE_VERSION=$latest_version"
-            ;;
-        "ghcr.io/atomic-blend/mail-server")
-            echo "MAIL_SERVER_SERVICE_VERSION=$latest_version"
-            ;;
-        "ghcr.io/atomic-blend/mail")
-            echo "MAIL_SERVICE_VERSION=$latest_version"
-            ;;
-        "ghcr.io/atomic-blend/productivity")
-            echo "PRODUCTIVITY_SERVICE_VERSION=$latest_version"
-            ;;
-        "ghcr.io/atomic-blend/task-app")
-            echo "TASK_APP_VERSION=$latest_version"
-            ;;
-        "ghcr.io/atomic-blend/notes-app")
-            echo "NOTES_APP_VERSION=$latest_version"
-            ;;
-        "ghcr.io/atomic-blend/mail-app")
-            echo "MAIL_APP_VERSION=$latest_version"
-            ;;
-    esac
+    echo "${env_var}=$latest_version"
 done
 
 echo ""
