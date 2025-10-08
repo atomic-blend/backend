@@ -74,10 +74,29 @@ get_latest_version() {
     esac
 }
 
+# Function to get current version from .env file
+get_current_version() {
+    local env_var=$1
+    local current_version=$(grep "^${env_var}=" "$env_file" 2>/dev/null | cut -d'=' -f2 | tr -d '"' | tr -d "'")
+    
+    if [ -z "$current_version" ]; then
+        echo "latest"
+    else
+        echo "$current_version"
+    fi
+}
+
 # Extract atomic-blend images from docker-compose.yaml
 docker_compose_file="docker-compose.yaml"
+env_file=".env"
+
 if [ ! -f "$docker_compose_file" ]; then
     echo -e "${RED}Error: $docker_compose_file not found in current directory${NC}" >&2
+    exit 1
+fi
+
+if [ ! -f "$env_file" ]; then
+    echo -e "${RED}Error: $env_file not found in current directory${NC}" >&2
     exit 1
 fi
 
@@ -141,19 +160,18 @@ printf "%-40s %-15s %-15s %-10s\n" "----------------------------------------" "-
 for i in "${!images[@]}"; do
     base_image="${images[$i]}"
     env_var="${env_vars[$i]}"
-    current_tag="latest"  # Since we're using latest as default
-    
+    current_version=$(get_current_version "$env_var")
     latest_version=$(get_latest_version "$base_image")
     
     # Extract just the service name for cleaner display
     service_name=$(echo $base_image | sed 's/ghcr\.io\/atomic-blend\///')
     
     # Determine status and print with colors
-    if [ "$latest_version" = "$current_tag" ]; then
-        printf "%-40s %-15s %-15s " "$service_name" "$current_tag" "$latest_version"
+    if [ "$latest_version" = "$current_version" ]; then
+        printf "%-40s %-15s %-15s " "$service_name" "$current_version" "$latest_version"
         echo -e "${GREEN}UP TO DATE${NC}"
     else
-        printf "%-40s %-15s %-15s " "$service_name" "$current_tag" "$latest_version"
+        printf "%-40s %-15s %-15s " "$service_name" "$current_version" "$latest_version"
         echo -e "${YELLOW}OUTDATED${NC}"
     fi
 done
@@ -162,17 +180,84 @@ echo ""
 echo -e "${BLUE}Summary:${NC}"
 echo "=========="
 
-# Generate environment variables for .env.versions
-echo -e "${YELLOW}Add these to your .env.versions file:${NC}"
-echo ""
+# Check if there are any outdated services
+outdated_count=0
+outdated_services=()
 
 for i in "${!images[@]}"; do
     base_image="${images[$i]}"
     env_var="${env_vars[$i]}"
+    current_version=$(get_current_version "$env_var")
     latest_version=$(get_latest_version "$base_image")
     
-    echo "${env_var}=$latest_version"
+    # Count outdated services
+    if [ "$latest_version" != "$current_version" ]; then
+        outdated_count=$((outdated_count + 1))
+        outdated_services+=("${env_var}=$latest_version")
+    fi
 done
+
+# Only show update section if there are outdated services
+if [ $outdated_count -gt 0 ]; then
+    echo -e "${YELLOW}Add these to your .env.versions file:${NC}"
+    echo ""
+    
+    for service in "${outdated_services[@]}"; do
+        echo "$service"
+    done
+    
+    echo ""
+    echo -e "${BLUE}Would you like to automatically update the .env file with these new versions?${NC}"
+    read -p "Enter 'y' or 'yes' to proceed: " -r
+    echo ""
+    
+    if [[ $REPLY =~ ^[Yy]([Ee][Ss])?$ ]]; then
+        echo -e "${YELLOW}Updating .env file...${NC}"
+        
+        # Create backup of .env file
+        cp "$env_file" "${env_file}.backup.$(date +%Y%m%d_%H%M%S)"
+        echo -e "${BLUE}Backup created: ${env_file}.backup.$(date +%Y%m%d_%H%M%S)${NC}"
+        
+        # Update each outdated service in .env file
+        for service in "${outdated_services[@]}"; do
+            env_var=$(echo "$service" | cut -d'=' -f1)
+            new_version=$(echo "$service" | cut -d'=' -f2)
+            
+            # Check if the variable exists in .env file
+            if grep -q "^${env_var}=" "$env_file"; then
+                # Get the original line to check for quotes
+                original_line=$(grep "^${env_var}=" "$env_file")
+                
+                # Check if the original value was quoted (double quotes)
+                if [[ $original_line =~ ^${env_var}=\".*\"$ ]]; then
+                    # Replace with double quotes
+                    sed -i.tmp "s/^${env_var}=.*/${env_var}=\"${new_version}\"/" "$env_file"
+                # Check if the original value was quoted (single quotes)
+                elif [[ $original_line =~ ^${env_var}=\'.*\'$ ]]; then
+                    # Replace with single quotes
+                    sed -i.tmp "s/^${env_var}=.*/${env_var}='${new_version}'/" "$env_file"
+                else
+                    # Replace without quotes
+                    sed -i.tmp "s/^${env_var}=.*/${env_var}=${new_version}/" "$env_file"
+                fi
+                echo -e "${GREEN}Updated ${env_var} to ${new_version}${NC}"
+            else
+                # Add new variable with quotes (default format)
+                echo "${env_var}=\"${new_version}\"" >> "$env_file"
+                echo -e "${GREEN}Added ${env_var}=\"${new_version}\"${NC}"
+            fi
+        done
+        
+        # Remove temporary file created by sed
+        rm -f "${env_file}.tmp"
+        
+        echo -e "${GREEN}Successfully updated .env file!${NC}"
+    else
+        echo -e "${YELLOW}Update cancelled. You can manually update the .env file with the values shown above.${NC}"
+    fi
+else
+    echo -e "${GREEN}All services are up to date!${NC}"
+fi
 
 echo ""
 echo -e "${GREEN}Script completed successfully!${NC}"
