@@ -8,6 +8,7 @@
 # Options:
 #   -c, --compose-file FILE    Specify docker-compose file (default: docker-compose.yaml)
 #   -e, --env-file FILE        Specify .env file (default: .env)
+#   -b, --branch BRANCH        Specify branch to download files from (default: main)
 #   -h, --help                 Show this help message
 
 set -e
@@ -22,6 +23,8 @@ NC='\033[0m' # No Color
 # Default values
 docker_compose_file="docker-compose.yaml"
 env_file=".env"
+branch="main"
+github_repo="https://raw.githubusercontent.com/atomic-blend/backend"
 
 # Help function
 show_help() {
@@ -33,13 +36,15 @@ show_help() {
     echo "Options:"
     echo "  -c, --compose-file FILE    Specify docker-compose file (default: docker-compose.yaml)"
     echo "  -e, --env-file FILE        Specify .env file (default: .env)"
+    echo "  -b, --branch BRANCH        Specify branch to download files from (default: main)"
     echo "  -h, --help                 Show this help message"
     echo ""
     echo "Examples:"
     echo "  $0                                    # Use default files"
     echo "  $0 -c docker-compose-dev.yaml        # Use custom compose file"
     echo "  $0 -e .env.production                # Use custom env file"
-    echo "  $0 -c docker-compose-dev.yaml -e .env.dev  # Use both custom files"
+    echo "  $0 -b develop                         # Download from develop branch"
+    echo "  $0 -c docker-compose-dev.yaml -e .env.dev -b feature/new-setup  # Use custom files and branch"
 }
 
 # Parse command line arguments
@@ -51,6 +56,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         -e|--env-file)
             env_file="$2"
+            shift 2
+            ;;
+        -b|--branch)
+            branch="$2"
             shift 2
             ;;
         -h|--help)
@@ -69,7 +78,26 @@ echo -e "${BLUE}Fetching latest non-RC versions for Docker images...${NC}"
 echo "=================================================="
 echo -e "${BLUE}Using compose file: $docker_compose_file${NC}"
 echo -e "${BLUE}Using env file: $env_file${NC}"
+echo -e "${BLUE}Using branch: $branch${NC}"
 echo ""
+
+# Function to download file from GitHub repository
+download_file() {
+    local file_path=$1
+    local local_file=$2
+    local url="${github_repo}/${branch}/${file_path}"
+    
+    echo -e "${YELLOW}Downloading $local_file from GitHub repository...${NC}"
+    echo -e "${BLUE}URL: $url${NC}"
+    
+    if curl -s -f -o "$local_file" "$url"; then
+        echo -e "${GREEN}Successfully downloaded $local_file${NC}"
+        return 0
+    else
+        echo -e "${RED}Failed to download $local_file from $url${NC}" >&2
+        return 1
+    fi
+}
 
 
 # Function to get latest version from GitHub Container Registry
@@ -141,15 +169,43 @@ get_current_version() {
     fi
 }
 
-# Check if files exist
+# Check if files exist and download if missing
 if [ ! -f "$docker_compose_file" ]; then
-    echo -e "${RED}Error: $docker_compose_file not found in current directory${NC}" >&2
-    exit 1
+    echo -e "${YELLOW}$docker_compose_file not found in current directory${NC}"
+    
+    # Determine the GitHub path for the compose file
+    if [ "$docker_compose_file" = "docker-compose.yaml" ]; then
+        github_path="docker/docker-compose.yaml"
+    elif [ "$docker_compose_file" = "docker-compose-dev.yaml" ]; then
+        github_path="docker/docker-compose-dev.yaml"
+    else
+        # For custom files, assume they're in the docker directory
+        github_path="docker/$docker_compose_file"
+    fi
+    
+    if ! download_file "$github_path" "$docker_compose_file"; then
+        echo -e "${RED}Error: Failed to download $docker_compose_file${NC}" >&2
+        exit 1
+    fi
 fi
 
 if [ ! -f "$env_file" ]; then
-    echo -e "${RED}Error: $env_file not found in current directory${NC}" >&2
-    exit 1
+    echo -e "${YELLOW}$env_file not found in current directory${NC}"
+    
+    # Always download .env.example and rename to .env
+    github_path="docker/.env.example"
+    temp_file=".env.example"
+    
+    echo -e "${BLUE}Downloading .env.example to create .env${NC}"
+    
+    if ! download_file "$github_path" "$temp_file"; then
+        echo -e "${RED}Error: Failed to download $github_path${NC}" >&2
+        exit 1
+    fi
+    
+    # Rename .env.example to .env
+    mv "$temp_file" ".env"
+    echo -e "${GREEN}Renamed .env.example to .env${NC}"
 fi
 
 # Extract atomic-blend images and their env vars from docker-compose.yaml
