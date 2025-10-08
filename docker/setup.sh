@@ -3,6 +3,12 @@
 # Script to fetch latest non-RC versions of custom Docker images from GitHub Container Registry
 # This script will output the latest stable versions for each atomic-blend package
 # The script will error if it cannot find valid versioned tags (like 0.2.0) for any package
+#
+# Usage: ./setup.sh [OPTIONS]
+# Options:
+#   -c, --compose-file FILE    Specify docker-compose file (default: docker-compose.yaml)
+#   -e, --env-file FILE        Specify .env file (default: .env)
+#   -h, --help                 Show this help message
 
 set -e
 
@@ -13,8 +19,57 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
+# Default values
+docker_compose_file="docker-compose.yaml"
+env_file=".env"
+
+# Help function
+show_help() {
+    echo "Usage: $0 [OPTIONS]"
+    echo ""
+    echo "Fetch latest non-RC versions of custom Docker images from GitHub Container Registry"
+    echo "and optionally update the .env file with new versions."
+    echo ""
+    echo "Options:"
+    echo "  -c, --compose-file FILE    Specify docker-compose file (default: docker-compose.yaml)"
+    echo "  -e, --env-file FILE        Specify .env file (default: .env)"
+    echo "  -h, --help                 Show this help message"
+    echo ""
+    echo "Examples:"
+    echo "  $0                                    # Use default files"
+    echo "  $0 -c docker-compose-dev.yaml        # Use custom compose file"
+    echo "  $0 -e .env.production                # Use custom env file"
+    echo "  $0 -c docker-compose-dev.yaml -e .env.dev  # Use both custom files"
+}
+
+# Parse command line arguments
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        -c|--compose-file)
+            docker_compose_file="$2"
+            shift 2
+            ;;
+        -e|--env-file)
+            env_file="$2"
+            shift 2
+            ;;
+        -h|--help)
+            show_help
+            exit 0
+            ;;
+        *)
+            echo -e "${RED}Error: Unknown option $1${NC}" >&2
+            echo "Use -h or --help for usage information." >&2
+            exit 1
+            ;;
+    esac
+done
+
 echo -e "${BLUE}Fetching latest non-RC versions for Docker images...${NC}"
 echo "=================================================="
+echo -e "${BLUE}Using compose file: $docker_compose_file${NC}"
+echo -e "${BLUE}Using env file: $env_file${NC}"
+echo ""
 
 
 # Function to get latest version from GitHub Container Registry
@@ -86,10 +141,7 @@ get_current_version() {
     fi
 }
 
-# Extract atomic-blend images from docker-compose.yaml
-docker_compose_file="docker-compose.yaml"
-env_file=".env"
-
+# Check if files exist
 if [ ! -f "$docker_compose_file" ]; then
     echo -e "${RED}Error: $docker_compose_file not found in current directory${NC}" >&2
     exit 1
