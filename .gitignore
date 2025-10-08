@@ -1,5 +1,6 @@
 **.env*
 !**.env.example
+!**.env.versions.example
 
 tmp
 cover.out
