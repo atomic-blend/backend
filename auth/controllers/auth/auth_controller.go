@@ -13,6 +13,8 @@ import (
 type RegisterRequest struct {
 	Email       string                `json:"email" binding:"required,email"`
 	BackupEmail *string               `json:"backupEmail" binding:"email"` 
+	FirstName   string                `json:"firstName" binding:"required"`
+	LastName    string                `json:"lastName" binding:"required"`
 	KeySet      *models.EncryptionKey `json:"keySet" binding:"required"`
 	Password    string                `json:"password" binding:"required,min=8"` // Minimum 8 characters
 }

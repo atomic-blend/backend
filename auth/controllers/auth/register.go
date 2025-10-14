@@ -86,6 +86,8 @@ func (c *Controller) Register(ctx *gin.Context) {
 	user := &models.UserEntity{
 		Email:       &req.Email,
 		BackupEmail: req.BackupEmail,
+		FirstName:   &req.FirstName,
+		LastName:    &req.LastName,
 		Password:    &hashedPassword,
 		KeySet:      req.KeySet,
 		RoleIds:     []*primitive.ObjectID{defaultRole.ID},
