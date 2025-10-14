@@ -120,7 +120,7 @@ func (c *Controller) StartResetPassword(ctx *gin.Context) {
 	// // send the email using the resend sdk
 	emailClient := resend.NewResendClient(os.Getenv("RESEND_API_KEY"))
 	sent, error := emailClient.Send(
-		[]string{*user.Email},
+		[]string{*user.BackupEmail},
 		"Atomic Blend - Reset Password",
 		htmlContent.String(),
 		textContent.String(),
