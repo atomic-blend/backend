@@ -84,10 +84,11 @@ func (c *Controller) Register(ctx *gin.Context) {
 
 	// Create new user with default role
 	user := &models.UserEntity{
-		Email:    &req.Email,
-		Password: &hashedPassword,
-		KeySet:   req.KeySet,
-		RoleIds:  []*primitive.ObjectID{defaultRole.ID},
+		Email:       &req.Email,
+		BackupEmail: &req.BackupEmail,
+		Password:    &hashedPassword,
+		KeySet:      req.KeySet,
+		RoleIds:     []*primitive.ObjectID{defaultRole.ID},
 	}
 
 	// Save user to database
