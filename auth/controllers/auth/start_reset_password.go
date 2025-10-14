@@ -1,14 +1,15 @@
 package auth
 
 import (
-	"github.com/atomic-blend/backend/shared/models"
-	"github.com/atomic-blend/backend/shared/utils/password"
-	"github.com/atomic-blend/backend/auth/utils/resend"
 	"bytes"
 	"html/template"
 	"net/http"
 	"os"
 	"time"
+
+	"github.com/atomic-blend/backend/auth/utils/resend"
+	"github.com/atomic-blend/backend/shared/models"
+	"github.com/atomic-blend/backend/shared/utils/password"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog/log"
@@ -34,6 +35,12 @@ func (c *Controller) StartResetPassword(ctx *gin.Context) {
 	if err != nil {
 		log.Error().Err(err).Msg("User not found")
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "User not found"})
+		return
+	}
+
+	if user.BackupEmail == nil {
+		log.Error().Msg("User does not have a backup email")
+		ctx.JSON(http.StatusBadRequest, gin.H{"message": "no_backup_email"})
 		return
 	}
 
@@ -91,7 +98,7 @@ func (c *Controller) StartResetPassword(ctx *gin.Context) {
 
 	// check if a reset password request already exists for this user
 	existingRequest, err := c.resetPasswordRepo.FindByUserID(ctx, user.ID.Hex())
-	if err != nil {	
+	if err != nil {
 		log.Error().Err(err).Msg("Failed to find existing reset password request")
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to find existing reset password request"})
 		return
