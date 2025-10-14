@@ -12,7 +12,7 @@ import (
 // RegisterRequest represents the structure for registration request data
 type RegisterRequest struct {
 	Email       string                `json:"email" binding:"required,email"`
-	BackupEmail *string               `json:"backupEmail" binding:"email"`
+	BackupEmail *string               `json:"backupEmail"`
 	FirstName   *string               `json:"firstName"`
 	LastName    *string               `json:"lastName"`
 	KeySet      *models.EncryptionKey `json:"keySet" binding:"required"`

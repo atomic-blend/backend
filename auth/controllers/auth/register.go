@@ -33,8 +33,6 @@ func (c *Controller) Register(ctx *gin.Context) {
 		return
 	}
 
-	log.Debug().Msgf("Register request: %+v", req)
-
 	if req.KeySet.Type != nil && *req.KeySet.Type != "age_v1" {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid key set type"})
 		return

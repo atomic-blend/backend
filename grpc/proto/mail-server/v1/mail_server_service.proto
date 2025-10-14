@@ -1,0 +1,17 @@
+syntax = "proto3";
+package mailserver.v1;
+
+message SendMailNoReplyRequest {
+  string to = 1;
+  string subject = 2;
+  string htmlContent = 3;
+  string textContent = 4;
+}
+
+message SendMailNoReplyResponse {
+  bool success = 1;
+}
+
+service MailServerService {
+  rpc SendMailNoReply(SendMailNoReplyRequest) returns (SendMailNoReplyResponse);
+}
