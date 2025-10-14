@@ -8,8 +8,8 @@ import "go.mongodb.org/mongo-driver/bson/primitive"
 type UserEntity struct {
 	ID                *primitive.ObjectID   `json:"id" bson:"_id"`
 	Email             *string               `json:"email" bson:"email" binding:"required"`
-	FirstName         *string               `json:"firstName" bson:"first_name" binding:"required"`
-	LastName          *string               `json:"lastName" bson:"last_name" binding:"required"`
+	FirstName         *string               `json:"firstName" bson:"first_name,omitempty"`
+	LastName          *string               `json:"lastName" bson:"last_name,omitempty"`
 	BackupEmail       *string               `json:"backupEmail" bson:"backup_email"`
 	Password          *string               `json:"password,omitempty" bson:"password" binding:"required"`
 	KeySet            *EncryptionKey        `json:"keySet,omitempty" bson:"key_set" binding:"required"`

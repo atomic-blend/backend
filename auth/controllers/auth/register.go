@@ -33,6 +33,8 @@ func (c *Controller) Register(ctx *gin.Context) {
 		return
 	}
 
+	log.Debug().Msgf("Register request: %+v", req)
+
 	if req.KeySet.Type != nil && *req.KeySet.Type != "age_v1" {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid key set type"})
 		return
@@ -86,8 +88,8 @@ func (c *Controller) Register(ctx *gin.Context) {
 	user := &models.UserEntity{
 		Email:       &req.Email,
 		BackupEmail: req.BackupEmail,
-		FirstName:   &req.FirstName,
-		LastName:    &req.LastName,
+		FirstName:   req.FirstName,
+		LastName:    req.LastName,
 		Password:    &hashedPassword,
 		KeySet:      req.KeySet,
 		RoleIds:     []*primitive.ObjectID{defaultRole.ID},
@@ -129,12 +131,15 @@ func (c *Controller) Register(ctx *gin.Context) {
 	// For security reasons, remove the password from the response
 	// Create a copy of the user without the password
 	responseSafeUser := &models.UserEntity{
-		ID:        newUser.ID,
-		Email:     newUser.Email,
-		KeySet:    newUser.KeySet,
-		Roles:     newUser.Roles,
-		CreatedAt: newUser.CreatedAt,
-		UpdatedAt: newUser.UpdatedAt,
+		ID:          newUser.ID,
+		Email:       newUser.Email,
+		FirstName:   newUser.FirstName,
+		LastName:    newUser.LastName,
+		BackupEmail: newUser.BackupEmail,
+		KeySet:      newUser.KeySet,
+		Roles:       newUser.Roles,
+		CreatedAt:   newUser.CreatedAt,
+		UpdatedAt:   newUser.UpdatedAt,
 	}
 
 	// Return user and tokens
