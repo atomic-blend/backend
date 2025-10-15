@@ -33,6 +33,10 @@ func TestRegister(t *testing.T) {
 	os.Setenv("ACCOUNT_DOMAINS", "example.com,test.com,authorized.org")
 	defer os.Unsetenv("ACCOUNT_DOMAINS")
 
+	// Set environment variable for restricted emails (empty for most tests)
+	os.Setenv("RESTRICTED_EMAILS", "")
+	defer os.Unsetenv("RESTRICTED_EMAILS")
+
 	// Set Gin to test mode
 	gin.SetMode(gin.TestMode)
 
@@ -373,6 +377,164 @@ func TestRegister(t *testing.T) {
 				// No setup needed for this test case
 			},
 		},
+		{
+			name: "Restricted Username - Should be Forbidden",
+			requestBody: map[string]interface{}{
+				"email":    "admin@example.com",
+				"password": "securePassword123",
+				"keySet": map[string]interface{}{
+					"userKey":      "encryptedUserKey123",
+					"backupKey":    "encryptedBackupKey123",
+					"salt":         "salt123",
+					"mnemonicSalt": "mnemonicSalt123",
+				},
+			},
+			expectedStatus: http.StatusForbidden,
+			checkResponse: func(t *testing.T, w *httptest.ResponseRecorder, database *mongo.Database) {
+				var response map[string]string
+				err := json.Unmarshal(w.Body.Bytes(), &response)
+				assert.NoError(t, err)
+				assert.Contains(t, response, "error")
+				assert.Equal(t, "restricted_email", response["error"])
+			},
+			setupTest: func(t *testing.T, database *mongo.Database) {
+				// Set restricted usernames environment variable
+				os.Setenv("RESTRICTED_EMAILS", "admin,root,test,user")
+			},
+		},
+		{
+			name: "Restricted Username with Tags - Should be Forbidden",
+			requestBody: map[string]interface{}{
+				"email":    "admin+tag@example.com",
+				"password": "securePassword123",
+				"keySet": map[string]interface{}{
+					"userKey":      "encryptedUserKey123",
+					"backupKey":    "encryptedBackupKey123",
+					"salt":         "salt123",
+					"mnemonicSalt": "mnemonicSalt123",
+				},
+			},
+			expectedStatus: http.StatusForbidden,
+			checkResponse: func(t *testing.T, w *httptest.ResponseRecorder, database *mongo.Database) {
+				var response map[string]string
+				err := json.Unmarshal(w.Body.Bytes(), &response)
+				assert.NoError(t, err)
+				assert.Contains(t, response, "error")
+				assert.Equal(t, "restricted_email", response["error"])
+			},
+			setupTest: func(t *testing.T, database *mongo.Database) {
+				// Set restricted usernames environment variable
+				os.Setenv("RESTRICTED_EMAILS", "admin,root,test,user")
+			},
+		},
+		{
+			name: "Allowed Username - Should Succeed",
+			requestBody: map[string]interface{}{
+				"email":    "alloweduser@example.com",
+				"password": "securePassword123",
+				"keySet": map[string]interface{}{
+					"userKey":      "encryptedUserKey123",
+					"backupKey":    "encryptedBackupKey123",
+					"salt":         "salt123",
+					"mnemonicSalt": "mnemonicSalt123",
+				},
+			},
+			expectedStatus: http.StatusCreated,
+			checkResponse: func(t *testing.T, w *httptest.ResponseRecorder, database *mongo.Database) {
+				var response Response
+				err := json.Unmarshal(w.Body.Bytes(), &response)
+				assert.NoError(t, err)
+
+				// Verify tokens and basic user info
+				assert.NotEmpty(t, response.AccessToken)
+				assert.NotEmpty(t, response.RefreshToken)
+				assert.NotZero(t, response.ExpiresAt)
+				assert.NotNil(t, response.User)
+				assert.Equal(t, "alloweduser@example.com", *response.User.Email)
+
+				// Verify user was created in database
+				var savedUser models.UserEntity
+				err = database.Collection("users").FindOne(context.TODO(), bson.M{"email": "alloweduser@example.com"}).Decode(&savedUser)
+				assert.NoError(t, err)
+				assert.Equal(t, "alloweduser@example.com", *savedUser.Email)
+			},
+			setupTest: func(t *testing.T, database *mongo.Database) {
+				// Set restricted usernames environment variable
+				os.Setenv("RESTRICTED_EMAILS", "admin,root,test,user")
+			},
+		},
+		{
+			name: "Empty Restricted List - Should Allow All Usernames",
+			requestBody: map[string]interface{}{
+				"email":    "admin@example.com",
+				"password": "securePassword123",
+				"keySet": map[string]interface{}{
+					"userKey":      "encryptedUserKey123",
+					"backupKey":    "encryptedBackupKey123",
+					"salt":         "salt123",
+					"mnemonicSalt": "mnemonicSalt123",
+				},
+			},
+			expectedStatus: http.StatusCreated,
+			checkResponse: func(t *testing.T, w *httptest.ResponseRecorder, database *mongo.Database) {
+				var response Response
+				err := json.Unmarshal(w.Body.Bytes(), &response)
+				assert.NoError(t, err)
+
+				// Verify tokens and basic user info
+				assert.NotEmpty(t, response.AccessToken)
+				assert.NotEmpty(t, response.RefreshToken)
+				assert.NotZero(t, response.ExpiresAt)
+				assert.NotNil(t, response.User)
+				assert.Equal(t, "admin@example.com", *response.User.Email)
+
+				// Verify user was created in database
+				var savedUser models.UserEntity
+				err = database.Collection("users").FindOne(context.TODO(), bson.M{"email": "admin@example.com"}).Decode(&savedUser)
+				assert.NoError(t, err)
+				assert.Equal(t, "admin@example.com", *savedUser.Email)
+			},
+			setupTest: func(t *testing.T, database *mongo.Database) {
+				// Set empty restricted usernames environment variable
+				os.Setenv("RESTRICTED_EMAILS", "")
+			},
+		},
+		{
+			name: "Restricted Environment Not Set - Should Allow All Usernames",
+			requestBody: map[string]interface{}{
+				"email":    "root@example.com",
+				"password": "securePassword123",
+				"keySet": map[string]interface{}{
+					"userKey":      "encryptedUserKey123",
+					"backupKey":    "encryptedBackupKey123",
+					"salt":         "salt123",
+					"mnemonicSalt": "mnemonicSalt123",
+				},
+			},
+			expectedStatus: http.StatusCreated,
+			checkResponse: func(t *testing.T, w *httptest.ResponseRecorder, database *mongo.Database) {
+				var response Response
+				err := json.Unmarshal(w.Body.Bytes(), &response)
+				assert.NoError(t, err)
+
+				// Verify tokens and basic user info
+				assert.NotEmpty(t, response.AccessToken)
+				assert.NotEmpty(t, response.RefreshToken)
+				assert.NotZero(t, response.ExpiresAt)
+				assert.NotNil(t, response.User)
+				assert.Equal(t, "root@example.com", *response.User.Email)
+
+				// Verify user was created in database
+				var savedUser models.UserEntity
+				err = database.Collection("users").FindOne(context.TODO(), bson.M{"email": "root@example.com"}).Decode(&savedUser)
+				assert.NoError(t, err)
+				assert.Equal(t, "root@example.com", *savedUser.Email)
+			},
+			setupTest: func(t *testing.T, database *mongo.Database) {
+				// Explicitly unset RESTRICTED_EMAILS environment variable
+				os.Unsetenv("RESTRICTED_EMAILS")
+			},
+		},
 	}
 
 	// Run test cases
@@ -408,6 +570,10 @@ func TestRegister_AccountDomainsNotSet(t *testing.T) {
 
 	// Explicitly unset ACCOUNT_DOMAINS to test the error case
 	os.Unsetenv("ACCOUNT_DOMAINS")
+
+	// Set environment variable for restricted emails (empty for this test)
+	os.Setenv("RESTRICTED_EMAILS", "")
+	defer os.Unsetenv("RESTRICTED_EMAILS")
 
 	// Set Gin to test mode
 	gin.SetMode(gin.TestMode)
@@ -445,7 +611,7 @@ func TestRegister_AccountDomainsNotSet(t *testing.T) {
 	resetPasswordRepo := repositories.NewUserResetPasswordRequestRepository(database)
 	mailServerClient, _ := mailserver.NewMailServerClient()
 	// Create controller
-	authController := NewController(userRepo, userRoleRepo, resetPasswordRepo, mailServerClient	)
+	authController := NewController(userRepo, userRoleRepo, resetPasswordRepo, mailServerClient)
 
 	// Create a test router
 	router := gin.Default()

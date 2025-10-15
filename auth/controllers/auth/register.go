@@ -46,10 +46,23 @@ func (c *Controller) Register(ctx *gin.Context) {
 	}
 	authorizedDomainsList := strings.Split(authorizedDomains, ",")
 
-	// Extract domain from email (email format is already validated by Gin binding)
-	emailParts := strings.Split(req.Email, "@")
-	emailDomain := emailParts[1]
+	// check that the email domain is not in the list of restricted domains file
+	restrictedDomains := os.Getenv("RESTRICTED_EMAILS")
+	restrictedUsernames := strings.Split(restrictedDomains, ",")
 
+	// check the username without domain or tags
+	emailParts := strings.Split(req.Email, "@")
+	emailUsername := emailParts[0]
+	// remove tags from the username (everything after +)
+	emailUsernameCleaned := strings.Split(emailUsername, "+")[0]
+
+	if slices.Contains(restrictedUsernames, emailUsernameCleaned) {
+		ctx.JSON(http.StatusForbidden, gin.H{"error": "restricted_email"})
+		return
+	}
+
+	// Extract domain from email (email format is already validated by Gin binding)
+	emailDomain := emailParts[1]
 	if !slices.Contains(authorizedDomainsList, emailDomain) {
 		ctx.JSON(http.StatusForbidden, gin.H{"error": "Email domain is not authorized"})
 		return
