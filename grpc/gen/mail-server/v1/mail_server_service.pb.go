@@ -21,30 +21,31 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-type SendMailNoReplyRequest struct {
+type SendMailInternalRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	To            string                 `protobuf:"bytes,1,opt,name=to,proto3" json:"to,omitempty"`
-	Subject       string                 `protobuf:"bytes,2,opt,name=subject,proto3" json:"subject,omitempty"`
-	HtmlContent   string                 `protobuf:"bytes,3,opt,name=htmlContent,proto3" json:"htmlContent,omitempty"`
-	TextContent   string                 `protobuf:"bytes,4,opt,name=textContent,proto3" json:"textContent,omitempty"`
+	To            []string               `protobuf:"bytes,1,rep,name=to,proto3" json:"to,omitempty"`
+	From          string                 `protobuf:"bytes,2,opt,name=from,proto3" json:"from,omitempty"`
+	Subject       string                 `protobuf:"bytes,3,opt,name=subject,proto3" json:"subject,omitempty"`
+	HtmlContent   string                 `protobuf:"bytes,4,opt,name=htmlContent,proto3" json:"htmlContent,omitempty"`
+	TextContent   string                 `protobuf:"bytes,5,opt,name=textContent,proto3" json:"textContent,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *SendMailNoReplyRequest) Reset() {
-	*x = SendMailNoReplyRequest{}
+func (x *SendMailInternalRequest) Reset() {
+	*x = SendMailInternalRequest{}
 	mi := &file_mail_server_v1_mail_server_service_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *SendMailNoReplyRequest) String() string {
+func (x *SendMailInternalRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*SendMailNoReplyRequest) ProtoMessage() {}
+func (*SendMailInternalRequest) ProtoMessage() {}
 
-func (x *SendMailNoReplyRequest) ProtoReflect() protoreflect.Message {
+func (x *SendMailInternalRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_mail_server_v1_mail_server_service_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -56,60 +57,67 @@ func (x *SendMailNoReplyRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use SendMailNoReplyRequest.ProtoReflect.Descriptor instead.
-func (*SendMailNoReplyRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use SendMailInternalRequest.ProtoReflect.Descriptor instead.
+func (*SendMailInternalRequest) Descriptor() ([]byte, []int) {
 	return file_mail_server_v1_mail_server_service_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *SendMailNoReplyRequest) GetTo() string {
+func (x *SendMailInternalRequest) GetTo() []string {
 	if x != nil {
 		return x.To
+	}
+	return nil
+}
+
+func (x *SendMailInternalRequest) GetFrom() string {
+	if x != nil {
+		return x.From
 	}
 	return ""
 }
 
-func (x *SendMailNoReplyRequest) GetSubject() string {
+func (x *SendMailInternalRequest) GetSubject() string {
 	if x != nil {
 		return x.Subject
 	}
 	return ""
 }
 
-func (x *SendMailNoReplyRequest) GetHtmlContent() string {
+func (x *SendMailInternalRequest) GetHtmlContent() string {
 	if x != nil {
 		return x.HtmlContent
 	}
 	return ""
 }
 
-func (x *SendMailNoReplyRequest) GetTextContent() string {
+func (x *SendMailInternalRequest) GetTextContent() string {
 	if x != nil {
 		return x.TextContent
 	}
 	return ""
 }
 
-type SendMailNoReplyResponse struct {
+type SendMailInternalResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *SendMailNoReplyResponse) Reset() {
-	*x = SendMailNoReplyResponse{}
+func (x *SendMailInternalResponse) Reset() {
+	*x = SendMailInternalResponse{}
 	mi := &file_mail_server_v1_mail_server_service_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *SendMailNoReplyResponse) String() string {
+func (x *SendMailInternalResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*SendMailNoReplyResponse) ProtoMessage() {}
+func (*SendMailInternalResponse) ProtoMessage() {}
 
-func (x *SendMailNoReplyResponse) ProtoReflect() protoreflect.Message {
+func (x *SendMailInternalResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_mail_server_v1_mail_server_service_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -121,12 +129,12 @@ func (x *SendMailNoReplyResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use SendMailNoReplyResponse.ProtoReflect.Descriptor instead.
-func (*SendMailNoReplyResponse) Descriptor() ([]byte, []int) {
+// Deprecated: Use SendMailInternalResponse.ProtoReflect.Descriptor instead.
+func (*SendMailInternalResponse) Descriptor() ([]byte, []int) {
 	return file_mail_server_v1_mail_server_service_proto_rawDescGZIP(), []int{1}
 }
 
-func (x *SendMailNoReplyResponse) GetSuccess() bool {
+func (x *SendMailInternalResponse) GetSuccess() bool {
 	if x != nil {
 		return x.Success
 	}
@@ -137,16 +145,17 @@ var File_mail_server_v1_mail_server_service_proto protoreflect.FileDescriptor
 
 const file_mail_server_v1_mail_server_service_proto_rawDesc = "" +
 	"\n" +
-	"(mail-server/v1/mail_server_service.proto\x12\rmailserver.v1\"\x86\x01\n" +
-	"\x16SendMailNoReplyRequest\x12\x0e\n" +
-	"\x02to\x18\x01 \x01(\tR\x02to\x12\x18\n" +
-	"\asubject\x18\x02 \x01(\tR\asubject\x12 \n" +
-	"\vhtmlContent\x18\x03 \x01(\tR\vhtmlContent\x12 \n" +
-	"\vtextContent\x18\x04 \x01(\tR\vtextContent\"3\n" +
-	"\x17SendMailNoReplyResponse\x12\x18\n" +
-	"\asuccess\x18\x01 \x01(\bR\asuccess2u\n" +
-	"\x11MailServerService\x12`\n" +
-	"\x0fSendMailNoReply\x12%.mailserver.v1.SendMailNoReplyRequest\x1a&.mailserver.v1.SendMailNoReplyResponseB\xc6\x01\n" +
+	"(mail-server/v1/mail_server_service.proto\x12\rmailserver.v1\"\x9b\x01\n" +
+	"\x17SendMailInternalRequest\x12\x0e\n" +
+	"\x02to\x18\x01 \x03(\tR\x02to\x12\x12\n" +
+	"\x04from\x18\x02 \x01(\tR\x04from\x12\x18\n" +
+	"\asubject\x18\x03 \x01(\tR\asubject\x12 \n" +
+	"\vhtmlContent\x18\x04 \x01(\tR\vhtmlContent\x12 \n" +
+	"\vtextContent\x18\x05 \x01(\tR\vtextContent\"4\n" +
+	"\x18SendMailInternalResponse\x12\x18\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess2x\n" +
+	"\x11MailServerService\x12c\n" +
+	"\x10SendMailInternal\x12&.mailserver.v1.SendMailInternalRequest\x1a'.mailserver.v1.SendMailInternalResponseB\xc6\x01\n" +
 	"\x11com.mailserver.v1B\x16MailServerServiceProtoP\x01ZDgithub.com/atomic-blend/backend/grpc/gen/mail-server/v1;mailserverv1\xa2\x02\x03MXX\xaa\x02\rMailserver.V1\xca\x02\rMailserver\\V1\xe2\x02\x19Mailserver\\V1\\GPBMetadata\xea\x02\x0eMailserver::V1b\x06proto3"
 
 var (
@@ -163,12 +172,12 @@ func file_mail_server_v1_mail_server_service_proto_rawDescGZIP() []byte {
 
 var file_mail_server_v1_mail_server_service_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
 var file_mail_server_v1_mail_server_service_proto_goTypes = []any{
-	(*SendMailNoReplyRequest)(nil),  // 0: mailserver.v1.SendMailNoReplyRequest
-	(*SendMailNoReplyResponse)(nil), // 1: mailserver.v1.SendMailNoReplyResponse
+	(*SendMailInternalRequest)(nil),  // 0: mailserver.v1.SendMailInternalRequest
+	(*SendMailInternalResponse)(nil), // 1: mailserver.v1.SendMailInternalResponse
 }
 var file_mail_server_v1_mail_server_service_proto_depIdxs = []int32{
-	0, // 0: mailserver.v1.MailServerService.SendMailNoReply:input_type -> mailserver.v1.SendMailNoReplyRequest
-	1, // 1: mailserver.v1.MailServerService.SendMailNoReply:output_type -> mailserver.v1.SendMailNoReplyResponse
+	0, // 0: mailserver.v1.MailServerService.SendMailInternal:input_type -> mailserver.v1.SendMailInternalRequest
+	1, // 1: mailserver.v1.MailServerService.SendMailInternal:output_type -> mailserver.v1.SendMailInternalResponse
 	1, // [1:2] is the sub-list for method output_type
 	0, // [0:1] is the sub-list for method input_type
 	0, // [0:0] is the sub-list for extension type_name

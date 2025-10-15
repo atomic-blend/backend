@@ -33,14 +33,14 @@ const (
 // reflection-formatted method names, remove the leading slash and convert the remaining slash to a
 // period.
 const (
-	// MailServerServiceSendMailNoReplyProcedure is the fully-qualified name of the MailServerService's
-	// SendMailNoReply RPC.
-	MailServerServiceSendMailNoReplyProcedure = "/mailserver.v1.MailServerService/SendMailNoReply"
+	// MailServerServiceSendMailInternalProcedure is the fully-qualified name of the MailServerService's
+	// SendMailInternal RPC.
+	MailServerServiceSendMailInternalProcedure = "/mailserver.v1.MailServerService/SendMailInternal"
 )
 
 // MailServerServiceClient is a client for the mailserver.v1.MailServerService service.
 type MailServerServiceClient interface {
-	SendMailNoReply(context.Context, *connect.Request[v1.SendMailNoReplyRequest]) (*connect.Response[v1.SendMailNoReplyResponse], error)
+	SendMailInternal(context.Context, *connect.Request[v1.SendMailInternalRequest]) (*connect.Response[v1.SendMailInternalResponse], error)
 }
 
 // NewMailServerServiceClient constructs a client for the mailserver.v1.MailServerService service.
@@ -54,10 +54,10 @@ func NewMailServerServiceClient(httpClient connect.HTTPClient, baseURL string, o
 	baseURL = strings.TrimRight(baseURL, "/")
 	mailServerServiceMethods := v1.File_mail_server_v1_mail_server_service_proto.Services().ByName("MailServerService").Methods()
 	return &mailServerServiceClient{
-		sendMailNoReply: connect.NewClient[v1.SendMailNoReplyRequest, v1.SendMailNoReplyResponse](
+		sendMailInternal: connect.NewClient[v1.SendMailInternalRequest, v1.SendMailInternalResponse](
 			httpClient,
-			baseURL+MailServerServiceSendMailNoReplyProcedure,
-			connect.WithSchema(mailServerServiceMethods.ByName("SendMailNoReply")),
+			baseURL+MailServerServiceSendMailInternalProcedure,
+			connect.WithSchema(mailServerServiceMethods.ByName("SendMailInternal")),
 			connect.WithClientOptions(opts...),
 		),
 	}
@@ -65,17 +65,17 @@ func NewMailServerServiceClient(httpClient connect.HTTPClient, baseURL string, o
 
 // mailServerServiceClient implements MailServerServiceClient.
 type mailServerServiceClient struct {
-	sendMailNoReply *connect.Client[v1.SendMailNoReplyRequest, v1.SendMailNoReplyResponse]
+	sendMailInternal *connect.Client[v1.SendMailInternalRequest, v1.SendMailInternalResponse]
 }
 
-// SendMailNoReply calls mailserver.v1.MailServerService.SendMailNoReply.
-func (c *mailServerServiceClient) SendMailNoReply(ctx context.Context, req *connect.Request[v1.SendMailNoReplyRequest]) (*connect.Response[v1.SendMailNoReplyResponse], error) {
-	return c.sendMailNoReply.CallUnary(ctx, req)
+// SendMailInternal calls mailserver.v1.MailServerService.SendMailInternal.
+func (c *mailServerServiceClient) SendMailInternal(ctx context.Context, req *connect.Request[v1.SendMailInternalRequest]) (*connect.Response[v1.SendMailInternalResponse], error) {
+	return c.sendMailInternal.CallUnary(ctx, req)
 }
 
 // MailServerServiceHandler is an implementation of the mailserver.v1.MailServerService service.
 type MailServerServiceHandler interface {
-	SendMailNoReply(context.Context, *connect.Request[v1.SendMailNoReplyRequest]) (*connect.Response[v1.SendMailNoReplyResponse], error)
+	SendMailInternal(context.Context, *connect.Request[v1.SendMailInternalRequest]) (*connect.Response[v1.SendMailInternalResponse], error)
 }
 
 // NewMailServerServiceHandler builds an HTTP handler from the service implementation. It returns
@@ -85,16 +85,16 @@ type MailServerServiceHandler interface {
 // and JSON codecs. They also support gzip compression.
 func NewMailServerServiceHandler(svc MailServerServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
 	mailServerServiceMethods := v1.File_mail_server_v1_mail_server_service_proto.Services().ByName("MailServerService").Methods()
-	mailServerServiceSendMailNoReplyHandler := connect.NewUnaryHandler(
-		MailServerServiceSendMailNoReplyProcedure,
-		svc.SendMailNoReply,
-		connect.WithSchema(mailServerServiceMethods.ByName("SendMailNoReply")),
+	mailServerServiceSendMailInternalHandler := connect.NewUnaryHandler(
+		MailServerServiceSendMailInternalProcedure,
+		svc.SendMailInternal,
+		connect.WithSchema(mailServerServiceMethods.ByName("SendMailInternal")),
 		connect.WithHandlerOptions(opts...),
 	)
 	return "/mailserver.v1.MailServerService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
-		case MailServerServiceSendMailNoReplyProcedure:
-			mailServerServiceSendMailNoReplyHandler.ServeHTTP(w, r)
+		case MailServerServiceSendMailInternalProcedure:
+			mailServerServiceSendMailInternalHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -104,6 +104,6 @@ func NewMailServerServiceHandler(svc MailServerServiceHandler, opts ...connect.H
 // UnimplementedMailServerServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedMailServerServiceHandler struct{}
 
-func (UnimplementedMailServerServiceHandler) SendMailNoReply(context.Context, *connect.Request[v1.SendMailNoReplyRequest]) (*connect.Response[v1.SendMailNoReplyResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("mailserver.v1.MailServerService.SendMailNoReply is not implemented"))
+func (UnimplementedMailServerServiceHandler) SendMailInternal(context.Context, *connect.Request[v1.SendMailInternalRequest]) (*connect.Response[v1.SendMailInternalResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("mailserver.v1.MailServerService.SendMailInternal is not implemented"))
 }

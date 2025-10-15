@@ -34,7 +34,20 @@ func SendEmail(mail models.RawMail, recipients []any) ([]string, error) {
 	if len(recipients) > 0 {
 		recipientsToSend = recipients
 	} else {
-		recipientsToSend = mail.Headers["To"].([]any)
+		// Handle both []string and []interface{} cases for To header
+		switch toHeader := mail.Headers["To"].(type) {
+		case []string:
+			// Convert []string to []any
+			recipientsToSend = make([]any, len(toHeader))
+			for i, recipient := range toHeader {
+				recipientsToSend[i] = recipient
+			}
+		case []any:
+			recipientsToSend = toHeader
+		default:
+			log.Error().Interface("To", mail.Headers["To"]).Msg("Unexpected type for To header")
+			return []string{}, fmt.Errorf("invalid_to_header_type")
+		}
 	}
 
 	// TODO: if the email is a retry, use the list of failed recipients from the message headers

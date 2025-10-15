@@ -2,6 +2,8 @@ package auth
 
 import (
 	"github.com/atomic-blend/backend/auth/repositories"
+	"github.com/atomic-blend/backend/grpc/gen/mail-server/v1/mailserverv1connect"
+	mailserver "github.com/atomic-blend/backend/shared/grpc/mail-server"
 	"github.com/atomic-blend/backend/shared/models"
 	userrepo "github.com/atomic-blend/backend/shared/repositories/user"
 	userrolerepo "github.com/atomic-blend/backend/shared/repositories/user_role"
@@ -32,14 +34,16 @@ type Controller struct {
 	userRepo          userrepo.Interface
 	userRoleRepo      userrolerepo.Interface
 	resetPasswordRepo repositories.UserResetPasswordRequestRepositoryInterface
+	mailServerClient mailserverv1connect.MailServerServiceClient
 }
 
 // NewController creates a new auth controller
-func NewController(userRepo userrepo.Interface, userRoleRepo userrolerepo.Interface, resetPasswordRepo repositories.UserResetPasswordRequestRepositoryInterface) *Controller {
+func NewController(userRepo userrepo.Interface, userRoleRepo userrolerepo.Interface, resetPasswordRepo repositories.UserResetPasswordRequestRepositoryInterface, mailServerClient mailserverv1connect.MailServerServiceClient) *Controller {
 	return &Controller{
 		userRepo:          userRepo,
 		userRoleRepo:      userRoleRepo,
 		resetPasswordRepo: resetPasswordRepo,
+		mailServerClient:  mailServerClient,
 	}
 }
 
@@ -48,7 +52,8 @@ func SetupRoutes(router *gin.Engine, database *mongo.Database) {
 	userRepo := userrepo.NewUserRepository(database)
 	userRoleRepo := userrolerepo.NewUserRoleRepository(database)
 	resetPasswordRepo := repositories.NewUserResetPasswordRequestRepository(database)
-	authController := NewController(userRepo, userRoleRepo, resetPasswordRepo)
+	mailServerClient, _ := mailserver.NewMailServerClient()
+	authController := NewController(userRepo, userRoleRepo, resetPasswordRepo, mailServerClient)
 
 	authGroup := router.Group("/auth")
 	{

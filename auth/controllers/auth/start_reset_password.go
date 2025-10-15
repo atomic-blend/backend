@@ -4,10 +4,9 @@ import (
 	"bytes"
 	"html/template"
 	"net/http"
-	"os"
 	"time"
 
-	"github.com/atomic-blend/backend/auth/utils/resend"
+	mailserver "github.com/atomic-blend/backend/shared/grpc/mail-server"
 	"github.com/atomic-blend/backend/shared/models"
 	"github.com/atomic-blend/backend/shared/utils/password"
 
@@ -125,19 +124,21 @@ func (c *Controller) StartResetPassword(ctx *gin.Context) {
 	}
 
 	// // send the email using the resend sdk
-	emailClient := resend.NewResendClient(os.Getenv("RESEND_API_KEY"))
-	sent, error := emailClient.Send(
-		[]string{*user.BackupEmail},
-		"Atomic Blend - Reset Password",
-		htmlContent.String(),
-		textContent.String(),
-	)
+	// TODO: replace with grpc call to mail-server
+	req := mailserver.CreateSendMailInternalRequest([]string{*user.BackupEmail}, "noreply@atomic-blend.com", "Atomic Blend - Reset Password", htmlContent.String(), textContent.String())
 
-	if error != nil {
-		log.Error().Err(error).Msg("Failed to send email")
+	resp, err := c.mailServerClient.SendMailInternal(ctx, req)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to send email")
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to send email"})
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{"message": "Reset password email sent successfully", "sent": sent})
+	if !resp.Msg.Success {
+		log.Error().Msg("Failed to send email")
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to send email"})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"message": "Reset password email sent successfully", "sent": resp.Msg.Success})
 }

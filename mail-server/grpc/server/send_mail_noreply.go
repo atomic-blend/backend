@@ -3,7 +3,6 @@ package server
 import (
 	"context"
 	"fmt"
-	"os"
 
 	"connectrpc.com/connect"
 	mailserverv1 "github.com/atomic-blend/backend/grpc/gen/mail-server/v1"
@@ -11,19 +10,15 @@ import (
 	"github.com/atomic-blend/backend/mail/models"
 )
 
-// SendMailNoReply sends an email to the given recipients
+// SendMailInternal sends an email to the given recipients
 // The email is sent as noreply@atomic-blend.com
 // The email is sent to the given recipients
 // The email is sent with the given subject, text content, and html content
-func (s *GrpcServer) SendMailNoReply(ctx context.Context, req *connect.Request[mailserverv1.SendMailNoReplyRequest]) (*connect.Response[mailserverv1.SendMailNoReplyResponse], error) {
-	noReplyEmail := "noreply@atomic-blend.com"
-	if os.Getenv("NO_REPLY_EMAIL") != "" {
-		noReplyEmail = os.Getenv("NO_REPLY_EMAIL")
-	}
+func (s *GrpcServer) SendMailInternal(ctx context.Context, req *connect.Request[mailserverv1.SendMailInternalRequest]) (*connect.Response[mailserverv1.SendMailInternalResponse], error) {
 	mail := models.RawMail{
-		Headers: map[string]interface{}{
-			"To": req.Msg.To,
-			"From": noReplyEmail,
+		Headers: map[string]any{
+			"To":      req.Msg.To,
+			"From":    req.Msg.From,
 			"Subject": req.Msg.Subject,
 		},
 		TextContent: req.Msg.TextContent,
@@ -36,5 +31,7 @@ func (s *GrpcServer) SendMailNoReply(ctx context.Context, req *connect.Request[m
 	if len(recipientsToRetry) > 0 {
 		return nil, fmt.Errorf("failed to send email to all recipients")
 	}
-	return nil, nil
+	return connect.NewResponse(&mailserverv1.SendMailInternalResponse{
+		Success: true,
+	}), nil
 }
