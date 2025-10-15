@@ -3,6 +3,7 @@ package mail
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"math"
 	"os"
 	"strconv"
@@ -45,7 +46,7 @@ func computeDelay(retryCount int) int {
 	return delay
 }
 
-func handleTemporaryFailure(m *amqppackage.Delivery, body []byte, failedReason error, retryCount int, recipientsToRetry []string) {
+func handleTemporaryFailure(m *amqppackage.Delivery, body []byte, failedReason string, retryCount int, recipientsToRetry []string) {
 	log.Info().Msgf("Temporary failure for message: %s, error: %v, retry count: %d", body, failedReason, retryCount)
 
 	// Compute the delay before retrying
@@ -72,7 +73,7 @@ func handleTemporaryFailure(m *amqppackage.Delivery, body []byte, failedReason e
 		return
 	}
 
-	req := mailclient.CreateRetryStatusRequest(sendEmailID, failedReason.Error(), int32(retryCount))
+	req := mailclient.CreateRetryStatusRequest(sendEmailID, failedReason, int32(retryCount))
 	_, err = mailClient.UpdateMailStatus(context.Background(), req)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to update mail status for retry")
@@ -90,10 +91,44 @@ func handleTemporaryFailure(m *amqppackage.Delivery, body []byte, failedReason e
 }
 
 // handlePermanentFailure handles messages that have permanently failed
-func handlePermanentFailure(body []byte, err error) {
-	log.Info().Msgf("Permanent failure for message: %s, error: %v", body, err)
-	//TODO: make the gRPC call to store the failure reason in the DB + status to failed
-	//TODO: send a email to the user with the failure reason
+func handlePermanentFailure(message *amqppackage.Delivery, failedReason string, retryCount int, sendEmailID string, toAddress string, recipientsFailed []string) {
+	log.Info().Msgf("Permanent failure for message: %s, error: %v", message.Body, failedReason)
+	// make the gRPC call to store the failure reason in the DB + status to failed
+	mailClient, err := getMailClient()
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to create mail client")
+		return
+	}
+
+	log.Info().Msgf("Updating mail status for failure: %s", failedReason)
+
+	req := mailclient.CreateFailureStatusRequest(sendEmailID, failedReason, int32(retryCount))
+	log.Debug().Msgf("Request: %v", req)
+	_, err = mailClient.UpdateMailStatus(context.Background(), req)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to update mail status for failure")
+		return
+	}
+
+	// send a email to the user with the failure reason
+	rejectMail := &models.RawMail{
+		Headers: map[string]any{
+			"To":      []string{toAddress},
+			"From":    "mailer-daemon@atomic-blend.com",
+			"Subject": "MAILER DAEMON - MAIL REJECTED",
+		},
+		// mail is rejected because every retry failed
+		TextContent: fmt.Sprintf("Your email from %s was rejected by the recipients: %s. Please contact support if you believe this is an error. The failure reason is: %s", toAddress, strings.Join(recipientsFailed, ", "), failedReason),
+		HTMLContent: fmt.Sprintf("<p>Your email from %s was rejected by the recipients: %s. Please contact support if you believe this is an error. The failure reason is: %s</p>", toAddress, strings.Join(recipientsFailed, ", "), failedReason),
+	}
+
+	_, err = mailsender.SendEmail(*rejectMail, nil)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to send reject mail")
+	}
+
+	message.Ack(false)
+
 }
 
 func handleSuccess(message *amqppackage.Delivery) {
@@ -143,10 +178,24 @@ func processSendMailMessage(message *amqppackage.Delivery, rawMail models.RawMai
 		}
 	}
 
-	if !isRetry && retryCount > MaxRetries {
-		handlePermanentFailure(message.Body, nil) // No error, just a retry limit reached
+	// publish the message into the retry queue with the delay (Dead letter Queue to the original routing key)
+	var parsedMessage map[string]interface{}
+	err := json.Unmarshal(message.Body, &parsedMessage)
+	if err != nil {
+		log.Error().Err(err).Msg("Error unmarshalling message")
 		return nil
 	}
+
+	sendEmailID, ok := parsedMessage["send_mail_id"].(string)
+	if !ok {
+		log.Error().Msg("send_email_id not found in message")
+		return nil
+	}
+
+	// if !isRetry && retryCount > MaxRetries {
+	// 	handlePermanentFailure(message.Body, errors.New("retry_limit_reached"), sendEmailID, retryCount) // No error, just a retry limit reached
+	// 	return nil
+	// }
 
 	recipientsToSend := []any{}
 	if !isRetry && message.Headers["recipients"] != nil {
@@ -160,10 +209,10 @@ func processSendMailMessage(message *amqppackage.Delivery, rawMail models.RawMai
 	recipientsToRetry, err := mailsender.SendEmail(rawMail, recipientsToSend)
 	if err != nil && retryCount < MaxRetries {
 		retryCount++
-		handleTemporaryFailure(message, message.Body, err, retryCount, recipientsToRetry)
+		handleTemporaryFailure(message, message.Body, err.Error(), retryCount, recipientsToRetry)
 		return nil
 	} else if err != nil {
-		handlePermanentFailure(message.Body, err)
+		handlePermanentFailure(message, "retry_limit_reached", retryCount, sendEmailID, rawMail.Headers["From"].(string), recipientsToRetry)
 		return nil
 	}
 
