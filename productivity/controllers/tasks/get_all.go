@@ -14,9 +14,9 @@ import (
 type PaginatedTaskResponse struct {
 	Tasks      []*models.TaskEntity `json:"tasks"`
 	TotalCount int64                `json:"total_count"`
-	Page       int64                `json:"page,omitempty"`
-	Size       int64                `json:"size,omitempty"`
-	TotalPages int64                `json:"total_pages,omitempty"`
+	Page       int64                `json:"page"`
+	Size       int64                `json:"size"`
+	TotalPages int64                `json:"total_pages"`
 }
 
 // GetAllTasks retrieves tasks for the authenticated user with optional pagination
