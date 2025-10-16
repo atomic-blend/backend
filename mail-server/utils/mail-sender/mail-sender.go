@@ -18,6 +18,10 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+// SendEmail sends an email to the given recipients
+// The email is signed with DKIM
+// Optionally, The email is sent to the given recipients instead of the To header
+// The email is sent with the given subject, text content, and html content
 func SendEmail(mail models.RawMail, recipients []any) ([]string, error) {
 	log.Info().Interface("To", mail.Headers["To"]).Interface("From", mail.Headers["From"]).Msg("Sending email")
 

@@ -19,7 +19,7 @@ func TestNewController(t *testing.T) {
 	mockUserRepo := &userrepo.Repository{}
 	mockUserRoleRepo := &userrolerepo.Repository{}
 	mockResetPasswordRepo := &repositories.UserResetPasswordRequestRepository{}
-	mockMailServerClient := &mailserver.MailServerClient{}
+	mockMailServerClient := &mailserver.Client{}
 	// Create a new controller
 	controller := NewController(mockUserRepo, mockUserRoleRepo, mockResetPasswordRepo, mockMailServerClient)
 
