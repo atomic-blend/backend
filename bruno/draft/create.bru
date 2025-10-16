@@ -25,6 +25,10 @@ body:json {
   }
 }
 
+script:pre-request {
+  bru.runRequest("/auth/login")
+}
+
 script:post-response {
   console.log(res.body);
   if (res.body && res.body.id) {
@@ -34,4 +38,5 @@ script:post-response {
 
 settings {
   encodeUrl: true
+  timeout: 0
 }
