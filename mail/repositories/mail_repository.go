@@ -26,6 +26,8 @@ type MailRepositoryInterface interface {
 	Update(ctx context.Context, mail *models.Mail) error
 	// CleanupTrash cleans up trash mails
 	CleanupTrash(ctx context.Context, userID *primitive.ObjectID, days *int) error
+	// GetSince retrieves mails where updated_at is after the specified time. If page and limit are >0, returns paginated results and total count. If page or limit <=0, returns all mails and total count.
+	GetSince(ctx context.Context, since time.Time, page, limit int64) ([]*models.Mail, int64, error)
 }
 
 // MailRepository handles database operations related to mails
@@ -104,8 +106,10 @@ func (r *MailRepository) Create(ctx context.Context, mail *models.Mail) (*models
 	if mail.CreatedAt == nil {
 		mail.CreatedAt = &now
 	}
-	// Always update UpdatedAt to now
-	mail.UpdatedAt = &now
+	// Only set UpdatedAt if it hasn't been provided by the caller (tests may set it for deterministic ordering)
+	if mail.UpdatedAt == nil {
+		mail.UpdatedAt = &now
+	}
 
 	_, err := r.collection.InsertOne(ctx, mail)
 	if err != nil {
@@ -192,3 +196,38 @@ func (r *MailRepository) CleanupTrash(ctx context.Context, userID *primitive.Obj
 	return err
 }
 
+// GetSince retrieves mails where updated_at is after the specified time. If page and limit are >0, returns paginated results and total count. If page or limit <=0, returns all mails and total count.
+func (r *MailRepository) GetSince(ctx context.Context, since time.Time, page, limit int64) ([]*models.Mail, int64, error) {
+	filter := bson.M{
+		"updated_at": bson.M{"$gt": primitive.NewDateTimeFromTime(since)},
+	}
+
+	// Count total documents matching the filter
+	totalCount, err := r.collection.CountDocuments(ctx, filter)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	// Build find options: always sort by updated_at desc to return most recent first
+	findOpts := options.Find()
+	findOpts.SetSort(bson.D{{Key: "updated_at", Value: -1}})
+
+	if page > 0 && limit > 0 {
+		skip := (page - 1) * limit
+		findOpts.SetSkip(skip)
+		findOpts.SetLimit(limit)
+	}
+
+	cursor, err := r.collection.Find(ctx, filter, findOpts)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer cursor.Close(ctx)
+
+	var mails []*models.Mail
+	if err = cursor.All(ctx, &mails); err != nil {
+		return nil, 0, err
+	}
+
+	return mails, totalCount, nil
+}

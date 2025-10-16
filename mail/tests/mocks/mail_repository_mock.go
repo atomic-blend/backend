@@ -2,6 +2,7 @@ package mocks
 
 import (
 	"context"
+	"time"
 
 	"github.com/atomic-blend/backend/mail/models"
 	"github.com/stretchr/testify/mock"
@@ -56,4 +57,13 @@ func (m *MockMailRepository) Update(ctx context.Context, mail *models.Mail) erro
 func (m *MockMailRepository) CleanupTrash(ctx context.Context, userID *primitive.ObjectID, days *int) error {
 	args := m.Called(ctx, userID, days)
 	return args.Error(0)
+}
+
+// GetSince retrieves mails where updated_at is after the specified time. If page and limit are >0, returns paginated results and total count. If page or limit <=0, returns all mails and total count.
+func (m *MockMailRepository) GetSince(ctx context.Context, since time.Time, page, limit int64) ([]*models.Mail, int64, error) {
+	args := m.Called(ctx, since, page, limit)
+	if args.Get(0) == nil {
+		return nil, args.Get(1).(int64), args.Error(2)
+	}
+	return args.Get(0).([]*models.Mail), args.Get(1).(int64), args.Error(2)
 }
