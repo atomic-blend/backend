@@ -318,21 +318,23 @@ func hasGRPC(servicePath string) bool {
 
 // updateTable continuously updates and displays the status table
 func updateTable(totalServices int, stopChan <-chan bool) {
-	ticker := time.NewTicker(500 * time.Millisecond)
+	ticker := time.NewTicker(200 * time.Millisecond) // Faster refresh for animation
 	defer ticker.Stop()
+	frame := 0
 
 	for {
 		select {
 		case <-stopChan:
 			return
 		case <-ticker.C:
-			displayStatusTable(totalServices)
+			displayStatusTable(totalServices, frame)
+			frame++
 		}
 	}
 }
 
 // displayStatusTable displays the current status of all services
-func displayStatusTable(totalServices int) {
+func displayStatusTable(totalServices int, frame int) {
 	statusMux.RLock()
 	defer statusMux.RUnlock()
 
@@ -366,9 +368,9 @@ func displayStatusTable(totalServices int) {
 	// Display each service
 	for _, service := range services {
 		statusIcon := getStatusIcon(service.Status)
-		golintIcon := getCheckIcon(service.GolintStatus)
-		testIcon := getCheckIcon(service.TestStatus)
-		grpcIcon := getCheckIcon(service.GRPCStatus)
+		golintIcon := getAnimatedIcon(service.GolintStatus, frame)
+		testIcon := getAnimatedIcon(service.TestStatus, frame)
+		grpcIcon := getAnimatedIcon(service.GRPCStatus, frame)
 
 		fmt.Printf("%-15s %-8s %-8s %-8s %-8s %-20s\n",
 			service.Name,
@@ -405,7 +407,7 @@ func getCheckIcon(status string) string {
 	case "pending":
 		return "⏳"
 	case "running":
-		return "🔄"
+		return "⏳" // Will be animated with spinner
 	case "passed":
 		return "✅"
 	case "failed":
@@ -413,6 +415,16 @@ func getCheckIcon(status string) string {
 	default:
 		return "❓"
 	}
+}
+
+// getAnimatedIcon returns an animated icon for running status
+func getAnimatedIcon(status string, frame int) string {
+	if status == "running" {
+		// Different hourglass states for animation
+		spinners := []string{"⏳", "⏳", "⏳", "⏳", "⏳", "⏳", "⏳", "⏳"}
+		return spinners[frame%len(spinners)]
+	}
+	return getCheckIcon(status)
 }
 
 // printProgressBar prints a simple progress bar
@@ -577,10 +589,8 @@ func runGRPCLint(servicePath, serviceName string) *LintResult {
 
 	if err != nil {
 		result.Passed = false
-		fmt.Printf("  ❌ gRPC lint failed for %s (%.2fs)\n", serviceName, duration.Seconds())
 	} else {
 		result.Passed = true
-		fmt.Printf("  ✅ gRPC lint passed for %s (%.2fs)\n", serviceName, duration.Seconds())
 	}
 
 	return result
@@ -651,110 +661,181 @@ func runGolint(servicePath, serviceName string) *GolintResult {
 	// Determine if golint passed based on exit code (1 = issues found, 0 = no issues)
 	if err != nil {
 		result.Passed = false
-		fmt.Printf("  ❌ golint failed for %s (%.2fs) - Found %d issues\n", serviceName, duration.Seconds(), issueCount)
 	} else {
 		result.Passed = true
-		fmt.Printf("  ✅ golint passed for %s (%.2fs) - Found %d issues\n", serviceName, duration.Seconds(), issueCount)
 	}
 
 	return result
 }
 
 func displayResults(results []*ServiceResult, startTime time.Time) {
-	fmt.Println("\n" + strings.Repeat("=", 50))
+	fmt.Println("\n" + strings.Repeat("=", 100))
 	fmt.Println("📊 RESULTS SUMMARY")
-	fmt.Println(strings.Repeat("=", 50))
+	fmt.Println(strings.Repeat("=", 100))
 
 	summary := &Summary{
 		TotalServices: len(results),
 	}
 
+	// Calculate summary data
 	for _, result := range results {
-		fmt.Printf("\n🏗️  %s\n", strings.ToUpper(result.Name))
-		fmt.Printf("   %s\n", strings.Repeat("-", len(result.Name)+2))
-
 		if result.HasTests {
-			// Show golint results first
 			if result.GolintResult != nil {
 				if result.GolintResult.Passed {
-					fmt.Printf("   ✅ Golint: PASSED (%.2fs) - %d issues found\n",
-						result.GolintResult.Duration.Seconds(),
-						result.GolintResult.IssueCount)
 					summary.PassedGolint++
 				} else {
-					fmt.Printf("   ❌ Golint: FAILED (%.2fs) - %d issues found\n",
-						result.GolintResult.Duration.Seconds(),
-						result.GolintResult.IssueCount)
 					summary.FailedGolint++
 				}
 				summary.TotalGolintIssues += result.GolintResult.IssueCount
 			}
 
-			// Then show test results
 			if result.TestResult.Passed {
-				fmt.Printf("   ✅ Tests: PASSED (%.2fs) - %d passed, %d failed, %d skipped\n",
-					result.TestResult.Duration.Seconds(),
-					result.TestResult.PassCount,
-					result.TestResult.FailCount,
-					result.TestResult.SkipCount)
 				summary.PassedTests++
 			} else {
-				fmt.Printf("   ❌ Tests: FAILED (%.2fs) - %d passed, %d failed, %d skipped\n",
-					result.TestResult.Duration.Seconds(),
-					result.TestResult.PassCount,
-					result.TestResult.FailCount,
-					result.TestResult.SkipCount)
 				summary.FailedTests++
 			}
-		} else {
-			fmt.Printf("   ⚠️  Tests: No test files found\n")
+
+			if result.TestResult != nil {
+				summary.TotalDuration += result.TestResult.Duration
+				summary.TotalTestCount += result.TestResult.TestCount
+				summary.TotalPassCount += result.TestResult.PassCount
+				summary.TotalFailCount += result.TestResult.FailCount
+				summary.TotalSkipCount += result.TestResult.SkipCount
+			}
+			if result.GolintResult != nil {
+				summary.TotalDuration += result.GolintResult.Duration
+			}
 		}
 
 		if result.HasGRPC {
 			if result.LintResult.Passed {
-				fmt.Printf("   ✅ gRPC Lint: PASSED (%.2fs)\n", result.LintResult.Duration.Seconds())
 				summary.PassedLint++
 			} else {
-				fmt.Printf("   ❌ gRPC Lint: FAILED (%.2fs)\n", result.LintResult.Duration.Seconds())
 				summary.FailedLint++
 			}
-		} else {
-			fmt.Printf("   ⚠️  gRPC Lint: No gRPC files found\n")
-		}
-
-		if result.HasTests && result.TestResult != nil {
-			summary.TotalDuration += result.TestResult.Duration
-			summary.TotalTestCount += result.TestResult.TestCount
-			summary.TotalPassCount += result.TestResult.PassCount
-			summary.TotalFailCount += result.TestResult.FailCount
-			summary.TotalSkipCount += result.TestResult.SkipCount
-		}
-		if result.HasTests && result.GolintResult != nil {
-			summary.TotalDuration += result.GolintResult.Duration
-		}
-		if result.HasGRPC && result.LintResult != nil {
-			summary.TotalDuration += result.LintResult.Duration
+			if result.LintResult != nil {
+				summary.TotalDuration += result.LintResult.Duration
+			}
 		}
 	}
 
-	// Display summary
-	fmt.Println("\n" + strings.Repeat("=", 50))
+	// Display results in table format
+	fmt.Printf("%-15s %-8s %-8s %-8s %-8s %-12s %-8s\n",
+		"SERVICE", "GOLINT", "TESTS", "GRPC", "DURATION", "TEST STATS", "ISSUES")
+	fmt.Println(strings.Repeat("-", 100))
+
+	for _, result := range results {
+		// Get status icons
+		golintStatus := "N/A"
+		if result.HasTests && result.GolintResult != nil {
+			if result.GolintResult.Passed {
+				golintStatus = "✅"
+			} else {
+				golintStatus = "❌"
+			}
+		}
+
+		testStatus := "N/A"
+		testStats := ""
+		if result.HasTests && result.TestResult != nil {
+			if result.TestResult.Passed {
+				testStatus = "✅"
+			} else {
+				testStatus = "❌"
+			}
+			testStats = fmt.Sprintf("%d/%d/%d", result.TestResult.PassCount, result.TestResult.FailCount, result.TestResult.SkipCount)
+		}
+
+		grpcStatus := "N/A"
+		if result.HasGRPC && result.LintResult != nil {
+			if result.LintResult.Passed {
+				grpcStatus = "✅"
+			} else {
+				grpcStatus = "❌"
+			}
+		}
+
+		// Calculate total duration for this service
+		totalDuration := time.Duration(0)
+		if result.TestResult != nil {
+			totalDuration += result.TestResult.Duration
+		}
+		if result.GolintResult != nil {
+			totalDuration += result.GolintResult.Duration
+		}
+		if result.LintResult != nil {
+			totalDuration += result.LintResult.Duration
+		}
+
+		// Get issue count
+		issueCount := 0
+		if result.GolintResult != nil {
+			issueCount = result.GolintResult.IssueCount
+		}
+
+		fmt.Printf("%-15s %-8s %-8s %-8s %-8s %-12s %-8d\n",
+			result.Name,
+			golintStatus,
+			testStatus,
+			grpcStatus,
+			fmt.Sprintf("%.2fs", totalDuration.Seconds()),
+			testStats,
+			issueCount)
+	}
+
+	fmt.Println(strings.Repeat("-", 100))
+
+	// Display summary in table format
+	fmt.Println("\n" + strings.Repeat("=", 80))
 	fmt.Println("📈 SUMMARY")
-	fmt.Println(strings.Repeat("=", 50))
-	fmt.Printf("Total Services: %d\n", summary.TotalServices)
-	fmt.Printf("Golint Passed: %d\n", summary.PassedGolint)
-	fmt.Printf("Golint Failed: %d\n", summary.FailedGolint)
-	fmt.Printf("Tests Passed: %d\n", summary.PassedTests)
-	fmt.Printf("Tests Failed: %d\n", summary.FailedTests)
-	fmt.Printf("gRPC Lint Passed: %d\n", summary.PassedLint)
-	fmt.Printf("gRPC Lint Failed: %d\n", summary.FailedLint)
-	fmt.Printf("Total Duration: %.2fs\n", summary.TotalDuration.Seconds())
-	fmt.Printf("Total Golint Issues: %d\n", summary.TotalGolintIssues)
+	fmt.Println(strings.Repeat("=", 80))
+
+	// Summary table
+	fmt.Printf("%-20s %-15s %-15s %-15s %-15s\n",
+		"CATEGORY", "PASSED", "FAILED", "TOTAL", "ISSUES")
+	fmt.Println(strings.Repeat("-", 80))
+	fmt.Printf("%-20s %-15d %-15d %-15d %-15s\n",
+		"Services", summary.TotalServices, 0, summary.TotalServices, "N/A")
+	fmt.Printf("%-20s %-15d %-15d %-15d %-15d\n",
+		"Golint", summary.PassedGolint, summary.FailedGolint,
+		summary.PassedGolint+summary.FailedGolint, summary.TotalGolintIssues)
+	fmt.Printf("%-20s %-15d %-15d %-15d %-15s\n",
+		"Tests", summary.PassedTests, summary.FailedTests,
+		summary.PassedTests+summary.FailedTests, "N/A")
+	fmt.Printf("%-20s %-15d %-15d %-15d %-15s\n",
+		"gRPC Lint", summary.PassedLint, summary.FailedLint,
+		summary.PassedLint+summary.FailedLint, "N/A")
+	fmt.Println(strings.Repeat("-", 80))
+
+	// Test statistics table
 	fmt.Printf("\n📊 Test Statistics:\n")
-	fmt.Printf("   Total Tests: %d\n", summary.TotalTestCount)
-	fmt.Printf("   Passed: %d\n", summary.TotalPassCount)
-	fmt.Printf("   Failed: %d\n", summary.TotalFailCount)
-	fmt.Printf("   Skipped: %d\n", summary.TotalSkipCount)
+	fmt.Printf("%-20s %-15s %-15s %-15s %-15s\n",
+		"STATISTIC", "COUNT", "PERCENTAGE", "DURATION", "RATE")
+	fmt.Println(strings.Repeat("-", 80))
+
+	totalTests := summary.TotalTestCount
+	if totalTests > 0 {
+		passRate := float64(summary.TotalPassCount) / float64(totalTests) * 100
+		failRate := float64(summary.TotalFailCount) / float64(totalTests) * 100
+		skipRate := float64(summary.TotalSkipCount) / float64(totalTests) * 100
+
+		fmt.Printf("%-20s %-15d %-15.1f%% %-15s %-15s\n",
+			"Total Tests", totalTests, 100.0,
+			fmt.Sprintf("%.2fs", summary.TotalDuration.Seconds()), "N/A")
+		fmt.Printf("%-20s %-15d %-15.1f%% %-15s %-15.1f/s\n",
+			"Passed", summary.TotalPassCount, passRate,
+			fmt.Sprintf("%.2fs", summary.TotalDuration.Seconds()),
+			float64(summary.TotalPassCount)/summary.TotalDuration.Seconds())
+		fmt.Printf("%-20s %-15d %-15.1f%% %-15s %-15s\n",
+			"Failed", summary.TotalFailCount, failRate, "N/A", "N/A")
+		fmt.Printf("%-20s %-15d %-15.1f%% %-15s %-15s\n",
+			"Skipped", summary.TotalSkipCount, skipRate, "N/A", "N/A")
+	} else {
+		fmt.Printf("%-20s %-15s %-15s %-15s %-15s\n",
+			"No tests found", "N/A", "N/A", "N/A", "N/A")
+	}
+
+	fmt.Println(strings.Repeat("-", 80))
 
 	// Display detailed failures
 	if summary.FailedTests > 0 || summary.FailedLint > 0 || summary.FailedGolint > 0 {
