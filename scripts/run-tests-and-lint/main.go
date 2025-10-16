@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -37,14 +38,31 @@ type ServiceStatus struct {
 }
 
 type TestResult struct {
-	Passed    bool
-	Output    string
-	Error     string
-	Duration  time.Duration
-	TestCount int
-	PassCount int
-	FailCount int
-	SkipCount int
+	Passed       bool
+	Output       string
+	Error        string
+	Duration     time.Duration
+	TestCount    int
+	PassCount    int
+	FailCount    int
+	SkipCount    int
+	SkippedTests []SkippedTest
+	FailedTests  []FailedTest
+}
+
+type SkippedTest struct {
+	Test   string
+	File   string
+	Line   int
+	Reason string
+}
+
+type FailedTest struct {
+	Test   string
+	File   string
+	Line   int
+	Error  string
+	Output string
 }
 
 type LintResult struct {
@@ -71,11 +89,20 @@ type Summary struct {
 }
 
 type GolintResult struct {
-	Passed     bool
-	Output     string
-	Error      string
-	Duration   time.Duration
-	IssueCount int
+	Passed        bool
+	Output        string
+	Error         string
+	Duration      time.Duration
+	IssueCount    int
+	LintingIssues []LintingIssue
+}
+
+type LintingIssue struct {
+	File    string
+	Line    int
+	Column  int
+	Message string
+	Rule    string
 }
 
 // Global status tracking for real-time table updates
@@ -454,8 +481,10 @@ func printSpinner(done chan bool, prefix string) {
 }
 
 // parseTestOutput parses Go test JSON output
-func parseTestOutput(output string) (int, int, int, int) {
+func parseTestOutput(output string) (int, int, int, int, []SkippedTest, []FailedTest) {
 	var testCount, passCount, failCount, skipCount int
+	var skippedTests []SkippedTest
+	var failedTests []FailedTest
 
 	lines := strings.Split(output, "\n")
 	for _, line := range lines {
@@ -467,6 +496,7 @@ func parseTestOutput(output string) (int, int, int, int) {
 		var testEvent struct {
 			Action string `json:"Action"`
 			Test   string `json:"Test"`
+			Output string `json:"Output"`
 		}
 
 		if err := json.Unmarshal([]byte(line), &testEvent); err != nil {
@@ -480,12 +510,231 @@ func parseTestOutput(output string) (int, int, int, int) {
 			passCount++
 		case "fail":
 			failCount++
+			// Extract failed test details
+			failedTest := parseFailedTest(testEvent.Test, testEvent.Output)
+			failedTests = append(failedTests, failedTest)
 		case "skip":
 			skipCount++
+			// Extract skipped test details
+			skippedTest := parseSkippedTest(testEvent.Test, testEvent.Output)
+			skippedTests = append(skippedTests, skippedTest)
 		}
 	}
 
-	return testCount, passCount, failCount, skipCount
+	return testCount, passCount, failCount, skipCount, skippedTests, failedTests
+}
+
+// parseSkippedTest extracts details from a skipped test
+func parseSkippedTest(testName, output string) SkippedTest {
+	skippedTest := SkippedTest{
+		Test:   testName,
+		Reason: "No reason provided",
+		File:   "Unknown",
+		Line:   0,
+	}
+
+	// Try to extract file and line information from test name
+	// Test names are typically in format: package.TestName or package/file.TestName
+	// For Go tests, we need to look for patterns like: package/file.TestName
+	parts := strings.Split(testName, "/")
+	if len(parts) > 1 {
+		// Check if the last part contains a dot (indicating TestName)
+		lastPart := parts[len(parts)-1]
+		if strings.Contains(lastPart, ".") {
+			// This is package/file.TestName format
+			filePart := parts[len(parts)-2]
+			skippedTest.File = filePart + ".go"
+		} else {
+			// This might be package/file format
+			filePart := parts[len(parts)-1]
+			skippedTest.File = filePart + ".go"
+		}
+	} else if strings.Contains(testName, ".") {
+		// This might be package.TestName format, try to extract package name
+		dotIndex := strings.LastIndex(testName, ".")
+		if dotIndex > 0 {
+			packageName := testName[:dotIndex]
+			// Try to convert package name to file name
+			skippedTest.File = packageName + ".go"
+		}
+	}
+
+	// Try to extract file path, line, and column from output
+	if output != "" {
+		lines := strings.Split(output, "\n")
+		for _, line := range lines {
+			line = strings.TrimSpace(line)
+
+			// Look for file:line:column patterns in the output
+			if strings.Contains(line, ":") && strings.Count(line, ":") >= 2 {
+				// Try to parse as file:line:column: message
+				parts := strings.SplitN(line, ":", 4)
+				if len(parts) >= 3 {
+					// Check if it looks like a file path with line/column
+					if lineNum, err := strconv.Atoi(parts[1]); err == nil {
+						skippedTest.File = parts[0]
+						skippedTest.Line = lineNum
+						if len(parts) >= 3 {
+							if _, err := strconv.Atoi(parts[2]); err == nil {
+								// This is file:line:column format
+								skippedTest.Line = lineNum
+								if len(parts) >= 4 {
+									skippedTest.Reason = strings.TrimSpace(parts[3])
+								}
+								break
+							}
+						}
+					}
+				}
+			}
+
+			// Look for skip reason patterns
+			if strings.Contains(strings.ToLower(line), "skip") {
+				// Extract the reason after "skip" or similar keywords
+				if idx := strings.Index(strings.ToLower(line), "skip"); idx != -1 {
+					reason := strings.TrimSpace(line[idx+4:])
+					if reason != "" {
+						skippedTest.Reason = reason
+					}
+				}
+			}
+		}
+	}
+
+	return skippedTest
+}
+
+// parseFailedTest extracts details from a failed test
+func parseFailedTest(testName, output string) FailedTest {
+	failedTest := FailedTest{
+		Test:  testName,
+		Error: "No error details provided",
+		File:  "Unknown",
+		Line:  0,
+	}
+
+	// Try to extract file and line information from test name
+	// Test names are typically in format: package.TestName or package/file.TestName
+	// For Go tests, we need to look for patterns like: package/file.TestName
+	parts := strings.Split(testName, "/")
+	if len(parts) > 1 {
+		// Check if the last part contains a dot (indicating TestName)
+		lastPart := parts[len(parts)-1]
+		if strings.Contains(lastPart, ".") {
+			// This is package/file.TestName format
+			filePart := parts[len(parts)-2]
+			failedTest.File = filePart + ".go"
+		} else {
+			// This might be package/file format
+			filePart := parts[len(parts)-1]
+			failedTest.File = filePart + ".go"
+		}
+	} else if strings.Contains(testName, ".") {
+		// This might be package.TestName format, try to extract package name
+		dotIndex := strings.LastIndex(testName, ".")
+		if dotIndex > 0 {
+			packageName := testName[:dotIndex]
+			// Try to convert package name to file name
+			failedTest.File = packageName + ".go"
+		}
+	}
+
+	// Extract error details and file location from output
+	if output != "" {
+		lines := strings.Split(output, "\n")
+		var errorLines []string
+
+		for _, line := range lines {
+			line = strings.TrimSpace(line)
+			if line == "" {
+				continue
+			}
+
+			// Look for file:line:column patterns in the output
+			if strings.Contains(line, ":") && strings.Count(line, ":") >= 2 {
+				// Try to parse as file:line:column: message
+				parts := strings.SplitN(line, ":", 4)
+				if len(parts) >= 3 {
+					// Check if it looks like a file path with line/column
+					if lineNum, err := strconv.Atoi(parts[1]); err == nil {
+						failedTest.File = parts[0]
+						failedTest.Line = lineNum
+						if len(parts) >= 4 {
+							// This is file:line:column: message format
+							failedTest.Error = strings.TrimSpace(parts[3])
+							continue
+						}
+					}
+				}
+			}
+
+			// Collect other error lines
+			errorLines = append(errorLines, line)
+		}
+
+		// If we didn't find a specific file:line:column format, use the collected error lines
+		if failedTest.Error == "No error details provided" && len(errorLines) > 0 {
+			failedTest.Error = strings.Join(errorLines, " ")
+		}
+	}
+
+	return failedTest
+}
+
+// parseLintingIssues extracts linting issues from golint output
+func parseLintingIssues(output string) []LintingIssue {
+	var issues []LintingIssue
+
+	if output == "" {
+		return issues
+	}
+
+	lines := strings.Split(strings.TrimSpace(output), "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+
+		// Parse golint output format: filename:line:column: message
+		parts := strings.SplitN(line, ":", 4)
+		if len(parts) >= 4 {
+			file := parts[0]
+			lineStr := parts[1]
+			columnStr := parts[2]
+			message := strings.TrimSpace(parts[3])
+
+			// Convert line and column to integers
+			lineNum := 0
+			columnNum := 0
+			if l, err := strconv.Atoi(lineStr); err == nil {
+				lineNum = l
+			}
+			if c, err := strconv.Atoi(columnStr); err == nil {
+				columnNum = c
+			}
+
+			// Extract rule from message (if present)
+			rule := "golint"
+			if strings.Contains(message, ":") {
+				ruleParts := strings.SplitN(message, ":", 2)
+				if len(ruleParts) == 2 {
+					rule = strings.TrimSpace(ruleParts[0])
+					message = strings.TrimSpace(ruleParts[1])
+				}
+			}
+
+			issues = append(issues, LintingIssue{
+				File:    file,
+				Line:    lineNum,
+				Column:  columnNum,
+				Message: message,
+				Rule:    rule,
+			})
+		}
+	}
+
+	return issues
 }
 
 func runTests(servicePath, serviceName string) *TestResult {
@@ -532,16 +781,18 @@ func runTests(servicePath, serviceName string) *TestResult {
 	errorOutput := stderr.String()
 
 	// Parse the JSON output to get test counts
-	testCount, passCount, failCount, skipCount := parseTestOutput(output)
+	testCount, passCount, failCount, skipCount, skippedTests, failedTests := parseTestOutput(output)
 
 	result := &TestResult{
-		Output:    output,
-		Error:     errorOutput,
-		Duration:  duration,
-		TestCount: testCount,
-		PassCount: passCount,
-		FailCount: failCount,
-		SkipCount: skipCount,
+		Output:       output,
+		Error:        errorOutput,
+		Duration:     duration,
+		TestCount:    testCount,
+		PassCount:    passCount,
+		FailCount:    failCount,
+		SkipCount:    skipCount,
+		SkippedTests: skippedTests,
+		FailedTests:  failedTests,
 	}
 
 	if err != nil {
@@ -634,29 +885,18 @@ func runGolint(servicePath, serviceName string) *GolintResult {
 	err = cmd.Run()
 	duration := time.Since(startTime)
 
-	result := &GolintResult{
-		Output:   stdout.String(),
-		Error:    stderr.String(),
-		Duration: duration,
-	}
-
-	// Count issues (lines in Vim quickfix format: filename:line:column: message)
-	issueCount := 0
 	output := stdout.String()
-	if output != "" {
-		lines := strings.Split(strings.TrimSpace(output), "\n")
-		for _, line := range lines {
-			line = strings.TrimSpace(line)
-			if line != "" && strings.Contains(line, ":") && strings.Count(line, ":") >= 3 {
-				// Check if it's a valid quickfix format line
-				parts := strings.SplitN(line, ":", 4)
-				if len(parts) >= 4 {
-					issueCount++
-				}
-			}
-		}
+
+	// Parse linting issues
+	lintingIssues := parseLintingIssues(output)
+
+	result := &GolintResult{
+		Output:        output,
+		Error:         stderr.String(),
+		Duration:      duration,
+		IssueCount:    len(lintingIssues),
+		LintingIssues: lintingIssues,
 	}
-	result.IssueCount = issueCount
 
 	// Determine if golint passed based on exit code (1 = issues found, 0 = no issues)
 	if err != nil {
@@ -668,7 +908,44 @@ func runGolint(servicePath, serviceName string) *GolintResult {
 	return result
 }
 
+// displayDetailedIssues displays linting issues
+func displayDetailedIssues(results []*ServiceResult) {
+	hasIssues := false
+
+	// Check if there are any linting issues to display
+	for _, result := range results {
+		if result.GolintResult != nil && len(result.GolintResult.LintingIssues) > 0 {
+			hasIssues = true
+			break
+		}
+	}
+
+	if !hasIssues {
+		return
+	}
+
+	fmt.Println("\n" + strings.Repeat("=", 100))
+	fmt.Println("🔍 DETAILED ISSUES")
+	fmt.Println(strings.Repeat("=", 100))
+
+	// Display linting issues
+	for _, result := range results {
+		if result.GolintResult != nil && len(result.GolintResult.LintingIssues) > 0 {
+			fmt.Printf("\n🔍 LINTING ISSUES - %s\n", strings.ToUpper(result.Name))
+			fmt.Println(strings.Repeat("-", 50))
+
+			for _, issue := range result.GolintResult.LintingIssues {
+				fmt.Printf("%s:%d:%d: %s - %s\n", issue.File, issue.Line, issue.Column, issue.Rule, issue.Message)
+			}
+			fmt.Println()
+		}
+	}
+}
+
 func displayResults(results []*ServiceResult, startTime time.Time) {
+	// Display detailed issues first
+	displayDetailedIssues(results)
+
 	fmt.Println("\n" + strings.Repeat("=", 100))
 	fmt.Println("📊 RESULTS SUMMARY")
 	fmt.Println(strings.Repeat("=", 100))
@@ -784,28 +1061,6 @@ func displayResults(results []*ServiceResult, startTime time.Time) {
 	}
 
 	fmt.Println(strings.Repeat("-", 100))
-
-	// Display summary in table format
-	fmt.Println("\n" + strings.Repeat("=", 80))
-	fmt.Println("📈 SUMMARY")
-	fmt.Println(strings.Repeat("=", 80))
-
-	// Summary table
-	fmt.Printf("%-20s %-15s %-15s %-15s %-15s\n",
-		"CATEGORY", "PASSED", "FAILED", "TOTAL", "ISSUES")
-	fmt.Println(strings.Repeat("-", 80))
-	fmt.Printf("%-20s %-15d %-15d %-15d %-15s\n",
-		"Services", summary.TotalServices, 0, summary.TotalServices, "N/A")
-	fmt.Printf("%-20s %-15d %-15d %-15d %-15d\n",
-		"Golint", summary.PassedGolint, summary.FailedGolint,
-		summary.PassedGolint+summary.FailedGolint, summary.TotalGolintIssues)
-	fmt.Printf("%-20s %-15d %-15d %-15d %-15s\n",
-		"Tests", summary.PassedTests, summary.FailedTests,
-		summary.PassedTests+summary.FailedTests, "N/A")
-	fmt.Printf("%-20s %-15d %-15d %-15d %-15s\n",
-		"gRPC Lint", summary.PassedLint, summary.FailedLint,
-		summary.PassedLint+summary.FailedLint, "N/A")
-	fmt.Println(strings.Repeat("-", 80))
 
 	// Test statistics table
 	fmt.Printf("\n📊 Test Statistics:\n")
