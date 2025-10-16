@@ -495,8 +495,9 @@ func TestMailRepository_CleanupTrash(t *testing.T) {
 			mail.Trashed = &tc.trashed
 			mail.TrashedAt = tc.trashedAt
 
-			_, err := repo.Create(context.Background(), mail)
+			created, err := repo.Create(context.Background(), mail)
 			require.NoError(t, err)
+			createdMails = append(createdMails, created)
 
 			// Verify mail was created
 			found, err := repo.GetByID(context.Background(), *mail.ID)
@@ -822,8 +823,9 @@ func TestMailRepository_CleanupTrash(t *testing.T) {
 			mail.Trashed = &tc.trashed
 			mail.TrashedAt = tc.trashedAt
 
-			_, err := repo.Create(context.Background(), mail)
+			created, err := repo.Create(context.Background(), mail)
 			require.NoError(t, err)
+			createdMails = append(createdMails, created)
 		}
 
 		// Run cleanup with 7 days parameter
@@ -884,8 +886,9 @@ func TestMailRepository_CleanupTrash(t *testing.T) {
 			mail.Trashed = &tc.trashed
 			mail.TrashedAt = tc.trashedAt
 
-			_, err := repo.Create(context.Background(), mail)
+			created, err := repo.Create(context.Background(), mail)
 			require.NoError(t, err)
+			createdMails = append(createdMails, created)
 		}
 
 		// Run cleanup with days = -1 (delete all trashed)
