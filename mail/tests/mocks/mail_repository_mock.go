@@ -59,9 +59,9 @@ func (m *MockMailRepository) CleanupTrash(ctx context.Context, userID *primitive
 	return args.Error(0)
 }
 
-// GetSince retrieves mails where updated_at is after the specified time. If page and limit are >0, returns paginated results and total count. If page or limit <=0, returns all mails and total count.
-func (m *MockMailRepository) GetSince(ctx context.Context, since time.Time, page, limit int64) ([]*models.Mail, int64, error) {
-	args := m.Called(ctx, since, page, limit)
+// GetSince retrieves mails where updated_at is after the specified time for a specific user. If page and limit are >0, returns paginated results and total count. If page or limit <=0, returns all mails and total count.
+func (m *MockMailRepository) GetSince(ctx context.Context, userID primitive.ObjectID, since time.Time, page, limit int64) ([]*models.Mail, int64, error) {
+	args := m.Called(ctx, userID, since, page, limit)
 	if args.Get(0) == nil {
 		return nil, args.Get(1).(int64), args.Error(2)
 	}

@@ -54,25 +54,21 @@ func (c *Controller) GetMailsSince(ctx *gin.Context) {
 	size := ctx.GetInt("size")
 
 	// Get mails updated since the specified time with pagination
-	mails, totalCount, err := c.mailRepo.GetSince(ctx, sinceTime, int64(page), int64(size))
+	mails, totalCount, err := c.mailRepo.GetSince(ctx, authUser.UserID, sinceTime, int64(page), int64(size))
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	// Filter mails to only include those belonging to the authenticated user
-	var userMails []*models.Mail
-	for _, mail := range mails {
-		if mail.UserID == authUser.UserID {
-			userMails = append(userMails, mail)
-		}
-	}
-
 	// Calculate total pages
 	totalPages := (totalCount + int64(size) - 1) / int64(size)
 
+	if mails == nil {
+		mails = make([]*models.Mail, 0)
+	}
+
 	response := PaginatedMailResponse{
-		Mails:      userMails,
+		Mails:      mails,
 		TotalCount: totalCount,
 		Page:       int64(page),
 		Size:       int64(size),

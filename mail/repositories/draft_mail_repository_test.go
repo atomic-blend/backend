@@ -559,7 +559,7 @@ func TestGetSinceDraftMails(t *testing.T) {
 
 	// Test GetSince with timestamp before all draft mails
 	sinceTime := baseTime
-	draftMails, totalCount, err := repository.GetSince(ctx, sinceTime, 0, 0)
+	draftMails, totalCount, err := repository.GetSince(ctx, userID, sinceTime, 0, 0)
 
 	assert.NoError(t, err)
 	assert.Len(t, draftMails, 3)
@@ -601,7 +601,7 @@ func TestGetSinceDraftMailsWithPagination(t *testing.T) {
 
 	// Test pagination
 	sinceTime := time.Now().Add(-time.Hour) // 1 hour ago
-	draftMails, totalCount, err := repository.GetSince(ctx, sinceTime, 1, 3)
+	draftMails, totalCount, err := repository.GetSince(ctx, userID, sinceTime, 1, 3)
 
 	assert.NoError(t, err)
 	assert.Len(t, draftMails, 3)
@@ -638,7 +638,7 @@ func TestGetSinceDraftMailsWithSecondPage(t *testing.T) {
 
 	// Test second page
 	sinceTime := time.Now().Add(-time.Hour) // 1 hour ago
-	draftMails, totalCount, err := repository.GetSince(ctx, sinceTime, 2, 3)
+	draftMails, totalCount, err := repository.GetSince(ctx, userID, sinceTime, 2, 3)
 
 	assert.NoError(t, err)
 	assert.Len(t, draftMails, 2) // Only 2 remaining items on second page
@@ -669,7 +669,7 @@ func TestGetSinceDraftMailsNoResults(t *testing.T) {
 
 	// Test GetSince with timestamp in the future (should return no results)
 	futureTime := time.Now().Add(time.Hour)
-	draftMails, totalCount, err := repository.GetSince(ctx, futureTime, 0, 0)
+	draftMails, totalCount, err := repository.GetSince(ctx, userID, futureTime, 0, 0)
 
 	assert.NoError(t, err)
 	assert.Len(t, draftMails, 0)
@@ -713,7 +713,7 @@ func TestGetSinceDraftMailsWithUpdates(t *testing.T) {
 
 	// Test GetSince with timestamp between creation and update
 	sinceTime := creationTime.Add(time.Millisecond * 5)
-	draftMails, totalCount, err := repository.GetSince(ctx, sinceTime, 0, 0)
+	draftMails, totalCount, err := repository.GetSince(ctx, userID, sinceTime, 0, 0)
 
 	assert.NoError(t, err)
 	assert.Len(t, draftMails, 1)

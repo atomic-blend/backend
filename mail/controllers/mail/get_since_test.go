@@ -40,9 +40,8 @@ func TestMailController_GetMailsSince(t *testing.T) {
 			setupMock: func(mockRepo *mocks.MockMailRepository, userID primitive.ObjectID, sinceTime time.Time, page, limit int64) {
 				mailID1 := primitive.NewObjectID()
 				mailID2 := primitive.NewObjectID()
-				otherUserID := primitive.NewObjectID()
 
-				// Create mails with different users
+				// Create mails for the authenticated user only (repository now filters by userID)
 				mails := []*models.Mail{
 					{
 						ID:     &mailID1,
@@ -58,15 +57,8 @@ func TestMailController_GetMailsSince(t *testing.T) {
 							"Subject": "User Mail 2",
 						},
 					},
-					{
-						ID:     func() *primitive.ObjectID { id := primitive.NewObjectID(); return &id }(),
-						UserID: otherUserID,
-						Headers: map[string]string{
-							"Subject": "Other User Mail",
-						},
-					},
 				}
-				mockRepo.On("GetSince", mock.Anything, sinceTime, page, limit).Return(mails, int64(3), nil)
+				mockRepo.On("GetSince", mock.Anything, userID, sinceTime, page, limit).Return(mails, int64(2), nil)
 			},
 			setupAuth: func(c *gin.Context, userID primitive.ObjectID) {
 				c.Set("authUser", &auth.UserAuthInfo{UserID: userID})
@@ -89,7 +81,7 @@ func TestMailController_GetMailsSince(t *testing.T) {
 						},
 					},
 				}
-				mockRepo.On("GetSince", mock.Anything, sinceTime, page, limit).Return(mails, int64(16), nil)
+				mockRepo.On("GetSince", mock.Anything, userID, sinceTime, page, limit).Return(mails, int64(16), nil)
 			},
 			setupAuth: func(c *gin.Context, userID primitive.ObjectID) {
 				c.Set("authUser", &auth.UserAuthInfo{UserID: userID})
@@ -103,7 +95,7 @@ func TestMailController_GetMailsSince(t *testing.T) {
 			expectedMails:  0,
 			setupMock: func(mockRepo *mocks.MockMailRepository, userID primitive.ObjectID, sinceTime time.Time, page, limit int64) {
 				mails := []*models.Mail{}
-				mockRepo.On("GetSince", mock.Anything, sinceTime, page, limit).Return(mails, int64(0), nil)
+				mockRepo.On("GetSince", mock.Anything, userID, sinceTime, page, limit).Return(mails, int64(0), nil)
 			},
 			setupAuth: func(c *gin.Context, userID primitive.ObjectID) {
 				c.Set("authUser", &auth.UserAuthInfo{UserID: userID})
@@ -116,7 +108,7 @@ func TestMailController_GetMailsSince(t *testing.T) {
 			expectedStatus: http.StatusInternalServerError,
 			expectedMails:  0,
 			setupMock: func(mockRepo *mocks.MockMailRepository, userID primitive.ObjectID, sinceTime time.Time, page, limit int64) {
-				mockRepo.On("GetSince", mock.Anything, sinceTime, page, limit).Return(nil, int64(0), assert.AnError)
+				mockRepo.On("GetSince", mock.Anything, userID, sinceTime, page, limit).Return(nil, int64(0), assert.AnError)
 			},
 			setupAuth: func(c *gin.Context, userID primitive.ObjectID) {
 				c.Set("authUser", &auth.UserAuthInfo{UserID: userID})
@@ -178,7 +170,7 @@ func TestMailController_GetMailsSince(t *testing.T) {
 						},
 					},
 				}
-				mockRepo.On("GetSince", mock.Anything, sinceTime, page, limit).Return(mails, int64(1), nil)
+				mockRepo.On("GetSince", mock.Anything, userID, sinceTime, page, limit).Return(mails, int64(1), nil)
 			},
 			setupAuth: func(c *gin.Context, userID primitive.ObjectID) {
 				c.Set("authUser", &auth.UserAuthInfo{UserID: userID})

@@ -971,7 +971,7 @@ func TestMailRepository_GetSince(t *testing.T) {
 		}
 
 		// Call GetSince with cutoff time
-		mails, totalCount, err := repo.GetSince(context.Background(), cutoffTime, 0, 0)
+		mails, totalCount, err := repo.GetSince(context.Background(), userID, cutoffTime, 0, 0)
 		require.NoError(t, err)
 
 		// Verify we got the expected number of mails
@@ -1034,7 +1034,7 @@ func TestMailRepository_GetSince(t *testing.T) {
 		cutoffTime := now.Add(-30 * time.Minute)
 
 		// Call GetSince
-		mails, totalCount, err := repo.GetSince(context.Background(), cutoffTime, 0, 0)
+		mails, totalCount, err := repo.GetSince(context.Background(), userID, cutoffTime, 0, 0)
 		require.NoError(t, err)
 		assert.Len(t, mails, 0, "Should return no mails when cutoff time is newer than all mails")
 		assert.Equal(t, int64(0), totalCount)
@@ -1065,7 +1065,7 @@ func TestMailRepository_GetSince(t *testing.T) {
 		cutoffTime := now.Add(-5 * time.Minute)
 
 		// Call GetSince
-		mails, totalCount, err := repo.GetSince(context.Background(), cutoffTime, 0, 0)
+		mails, totalCount, err := repo.GetSince(context.Background(), userID, cutoffTime, 0, 0)
 		require.NoError(t, err)
 		assert.Len(t, mails, 3, "Should return all 3 mails when cutoff time is older than all mails")
 		assert.Equal(t, int64(3), totalCount)
@@ -1092,11 +1092,12 @@ func TestMailRepository_GetSince(t *testing.T) {
 		repo, cleanup := setupMailTest(t)
 		defer cleanup()
 
+		userID := primitive.NewObjectID()
 		now := time.Now()
 		cutoffTime := now.Add(-1 * time.Hour)
 
 		// Call GetSince on empty collection
-		mails, totalCount, err := repo.GetSince(context.Background(), cutoffTime, 0, 0)
+		mails, totalCount, err := repo.GetSince(context.Background(), userID, cutoffTime, 0, 0)
 		require.NoError(t, err)
 		assert.Len(t, mails, 0, "Should return empty slice when collection is empty")
 		assert.Equal(t, int64(0), totalCount)
@@ -1135,43 +1136,22 @@ func TestMailRepository_GetSince(t *testing.T) {
 		// Set cutoff time to 45 minutes ago
 		cutoffTime := now.Add(-45 * time.Minute)
 
-		// Call GetSince
-		mails, totalCount, err := repo.GetSince(context.Background(), cutoffTime, 0, 0)
+		// Call GetSince for user1
+		mails1, totalCount1, err := repo.GetSince(context.Background(), userID1, cutoffTime, 0, 0)
 		require.NoError(t, err)
-		assert.Len(t, mails, 2, "Should return mails from both users")
-		assert.Equal(t, int64(2), totalCount)
+		assert.Len(t, mails1, 1, "Should return mail from user1")
+		assert.Equal(t, int64(1), totalCount1)
 
-		// Verify we got mails from both users
-		var returnedSubjects []string
-		for _, mail := range mails {
-			headers, err := convertHeadersToMap(mail.Headers)
-			require.NoError(t, err)
-			if headers != nil {
-				if subject, exists := headers["Subject"]; exists {
-					if subjectStr, ok := subject.(string); ok {
-						returnedSubjects = append(returnedSubjects, subjectStr)
-					}
-				}
-			}
-		}
-		assert.Contains(t, returnedSubjects, "User 1 Mail")
-		assert.Contains(t, returnedSubjects, "User 2 Mail")
+		// Call GetSince for user2
+		mails2, totalCount2, err := repo.GetSince(context.Background(), userID2, cutoffTime, 0, 0)
+		require.NoError(t, err)
+		assert.Len(t, mails2, 1, "Should return mail from user2")
+		assert.Equal(t, int64(1), totalCount2)
 
-		// Verify mails are sorted by updated_at descending
-		if len(mails) >= 2 {
-			assert.True(t, mails[0].UpdatedAt.Time().After(mails[1].UpdatedAt.Time()),
-				"Mails should be sorted by updated_at descending")
-			// User 2's mail should come first (more recent)
-			headers0, err := convertHeadersToMap(mails[0].Headers)
-			require.NoError(t, err)
-			if headers0 != nil {
-				if subject, exists := headers0["Subject"]; exists {
-					if subjectStr, ok := subject.(string); ok {
-						assert.Equal(t, "User 2 Mail", subjectStr)
-					}
-				}
-			}
-		}
+		// Verify we got mails from the correct users
+		assert.Equal(t, userID1, mails1[0].UserID)
+		assert.Equal(t, userID2, mails2[0].UserID)
+
 	})
 
 	t.Run("get mails updated since exact cutoff time", func(t *testing.T) {
@@ -1195,14 +1175,14 @@ func TestMailRepository_GetSince(t *testing.T) {
 		require.NoError(t, err)
 
 		// Call GetSince with the exact cutoff time
-		mails, totalCount, err := repo.GetSince(context.Background(), cutoffTime, 0, 0)
+		mails, totalCount, err := repo.GetSince(context.Background(), userID, cutoffTime, 0, 0)
 		require.NoError(t, err)
 		assert.Len(t, mails, 0, "Should return no mails when updated_at equals cutoff time (not greater than)")
 		assert.Equal(t, int64(0), totalCount)
 
 		// Call GetSince with a time slightly before the cutoff
 		slightlyBefore := cutoffTime.Add(-1 * time.Millisecond)
-		mails, totalCount, err = repo.GetSince(context.Background(), slightlyBefore, 0, 0)
+		mails, totalCount, err = repo.GetSince(context.Background(), userID, slightlyBefore, 0, 0)
 		require.NoError(t, err)
 		assert.Len(t, mails, 1, "Should return the mail when cutoff time is slightly before updated_at")
 		assert.Equal(t, int64(1), totalCount)
@@ -1231,7 +1211,7 @@ func TestMailRepository_GetSince(t *testing.T) {
 		futureTime := now.Add(1 * time.Hour)
 
 		// Call GetSince with future time
-		mails, totalCount, err := repo.GetSince(context.Background(), futureTime, 0, 0)
+		mails, totalCount, err := repo.GetSince(context.Background(), userID, futureTime, 0, 0)
 		require.NoError(t, err)
 		assert.Len(t, mails, 0, "Should return no mails when cutoff time is in the future")
 		assert.Equal(t, int64(0), totalCount)
@@ -1264,7 +1244,7 @@ func TestMailRepository_GetSince(t *testing.T) {
 		cutoffTime := now.Add(-2 * time.Hour)
 
 		// Get first 2 mails (page 1, limit 2) -> should be Mail 5, Mail 4
-		mails, totalCount, err := repo.GetSince(context.Background(), cutoffTime, 1, 2)
+		mails, totalCount, err := repo.GetSince(context.Background(), userID, cutoffTime, 1, 2)
 		require.NoError(t, err)
 		assert.Len(t, mails, 2)
 		assert.Equal(t, int64(5), totalCount)
@@ -1286,7 +1266,7 @@ func TestMailRepository_GetSince(t *testing.T) {
 		}
 
 		// Get next 2 mails (page 2, limit 2) -> should be Mail 3, Mail 2
-		mails, totalCount, err = repo.GetSince(context.Background(), cutoffTime, 2, 2)
+		mails, totalCount, err = repo.GetSince(context.Background(), userID, cutoffTime, 2, 2)
 		require.NoError(t, err)
 		assert.Len(t, mails, 2)
 		assert.Equal(t, int64(5), totalCount)
@@ -1307,7 +1287,7 @@ func TestMailRepository_GetSince(t *testing.T) {
 		}
 
 		// Get last mail (page 3, limit 2) -> should be Mail 1
-		mails, totalCount, err = repo.GetSince(context.Background(), cutoffTime, 3, 2)
+		mails, totalCount, err = repo.GetSince(context.Background(), userID, cutoffTime, 3, 2)
 		require.NoError(t, err)
 		assert.Len(t, mails, 1)
 		assert.Equal(t, int64(5), totalCount)

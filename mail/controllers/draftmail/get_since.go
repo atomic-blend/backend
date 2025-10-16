@@ -54,25 +54,21 @@ func (c *Controller) GetDraftMailsSince(ctx *gin.Context) {
 	size := ctx.GetInt("size")
 
 	// Get draft mails updated since the specified time with pagination
-	draftMails, totalCount, err := c.draftMailRepo.GetSince(ctx, sinceTime, int64(page), int64(size))
+	draftMails, totalCount, err := c.draftMailRepo.GetSince(ctx, authUser.UserID, sinceTime, int64(page), int64(size))
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	// Filter draft mails to only include those belonging to the authenticated user
-	var userDraftMails []*models.SendMail
-	for _, draftMail := range draftMails {
-		if draftMail.Mail != nil && draftMail.Mail.UserID == authUser.UserID {
-			userDraftMails = append(userDraftMails, draftMail)
-		}
-	}
-
 	// Calculate total pages
 	totalPages := (totalCount + int64(size) - 1) / int64(size)
 
+	if draftMails == nil {
+		draftMails = make([]*models.SendMail, 0)
+	}
+
 	response := PaginatedDraftMailResponse{
-		DraftMails: userDraftMails,
+		DraftMails: draftMails,
 		TotalCount: totalCount,
 		Page:       int64(page),
 		Size:       int64(size),

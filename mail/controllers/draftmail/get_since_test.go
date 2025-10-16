@@ -32,17 +32,16 @@ func TestDraftMailController_GetDraftMailsSince(t *testing.T) {
 		expectedDraftMails int
 	}{
 		{
-			name:           "Success with valid ISO8601 date",
-			sinceParam:     "2024-01-01T00:00:00Z",
-			queryParams:    "",
-			expectedStatus: http.StatusOK,
+			name:               "Success with valid ISO8601 date",
+			sinceParam:         "2024-01-01T00:00:00Z",
+			queryParams:        "",
+			expectedStatus:     http.StatusOK,
 			expectedDraftMails: 2,
 			setupMock: func(mockRepo *mocks.MockDraftMailRepository, userID primitive.ObjectID, sinceTime time.Time, page, limit int64) {
 				mailID1 := primitive.NewObjectID()
 				mailID2 := primitive.NewObjectID()
-				otherUserID := primitive.NewObjectID()
 
-				// Create draft mails with different users
+				// Create draft mails for the authenticated user only (repository now filters by userID)
 				draftMails := []*models.SendMail{
 					{
 						Mail: &models.Mail{
@@ -64,28 +63,18 @@ func TestDraftMailController_GetDraftMailsSince(t *testing.T) {
 						},
 						SendStatus: models.SendStatusPending,
 					},
-					{
-						Mail: &models.Mail{
-							ID:     func() *primitive.ObjectID { id := primitive.NewObjectID(); return &id }(),
-							UserID: otherUserID,
-							Headers: map[string]string{
-								"Subject": "Other User Draft Mail",
-							},
-						},
-						SendStatus: models.SendStatusPending,
-					},
 				}
-				mockRepo.On("GetSince", mock.Anything, sinceTime, page, limit).Return(draftMails, int64(3), nil)
+				mockRepo.On("GetSince", mock.Anything, userID, sinceTime, page, limit).Return(draftMails, int64(2), nil)
 			},
 			setupAuth: func(c *gin.Context, userID primitive.ObjectID) {
 				c.Set("authUser", &auth.UserAuthInfo{UserID: userID})
 			},
 		},
 		{
-			name:           "Success with pagination parameters",
-			sinceParam:     "2024-01-01T00:00:00Z",
-			queryParams:    "?page=2&size=15",
-			expectedStatus: http.StatusOK,
+			name:               "Success with pagination parameters",
+			sinceParam:         "2024-01-01T00:00:00Z",
+			queryParams:        "?page=2&size=15",
+			expectedStatus:     http.StatusOK,
 			expectedDraftMails: 1,
 			setupMock: func(mockRepo *mocks.MockDraftMailRepository, userID primitive.ObjectID, sinceTime time.Time, page, limit int64) {
 				mailID := primitive.NewObjectID()
@@ -101,57 +90,44 @@ func TestDraftMailController_GetDraftMailsSince(t *testing.T) {
 						SendStatus: models.SendStatusPending,
 					},
 				}
-				mockRepo.On("GetSince", mock.Anything, sinceTime, page, limit).Return(draftMails, int64(16), nil)
+				mockRepo.On("GetSince", mock.Anything, userID, sinceTime, page, limit).Return(draftMails, int64(16), nil)
 			},
 			setupAuth: func(c *gin.Context, userID primitive.ObjectID) {
 				c.Set("authUser", &auth.UserAuthInfo{UserID: userID})
 			},
 		},
 		{
-			name:           "Success with no draft mails found",
-			sinceParam:     "2024-01-01T00:00:00Z",
-			queryParams:    "",
-			expectedStatus: http.StatusOK,
+			name:               "Success with no draft mails found",
+			sinceParam:         "2024-01-01T00:00:00Z",
+			queryParams:        "",
+			expectedStatus:     http.StatusOK,
 			expectedDraftMails: 0,
 			setupMock: func(mockRepo *mocks.MockDraftMailRepository, userID primitive.ObjectID, sinceTime time.Time, page, limit int64) {
 				draftMails := []*models.SendMail{}
-				mockRepo.On("GetSince", mock.Anything, sinceTime, page, limit).Return(draftMails, int64(0), nil)
+				mockRepo.On("GetSince", mock.Anything, userID, sinceTime, page, limit).Return(draftMails, int64(0), nil)
 			},
 			setupAuth: func(c *gin.Context, userID primitive.ObjectID) {
 				c.Set("authUser", &auth.UserAuthInfo{UserID: userID})
 			},
 		},
 		{
-			name:           "Error when repository fails",
-			sinceParam:     "2024-01-01T00:00:00Z",
-			queryParams:    "",
-			expectedStatus: http.StatusInternalServerError,
+			name:               "Error when repository fails",
+			sinceParam:         "2024-01-01T00:00:00Z",
+			queryParams:        "",
+			expectedStatus:     http.StatusInternalServerError,
 			expectedDraftMails: 0,
 			setupMock: func(mockRepo *mocks.MockDraftMailRepository, userID primitive.ObjectID, sinceTime time.Time, page, limit int64) {
-				mockRepo.On("GetSince", mock.Anything, sinceTime, page, limit).Return(nil, int64(0), assert.AnError)
+				mockRepo.On("GetSince", mock.Anything, userID, sinceTime, page, limit).Return(nil, int64(0), assert.AnError)
 			},
 			setupAuth: func(c *gin.Context, userID primitive.ObjectID) {
 				c.Set("authUser", &auth.UserAuthInfo{UserID: userID})
 			},
 		},
 		{
-			name:           "Error when missing since parameter",
-			sinceParam:     "",
-			queryParams:    "",
-			expectedStatus: http.StatusBadRequest,
-			expectedDraftMails: 0,
-			setupMock: func(mockRepo *mocks.MockDraftMailRepository, userID primitive.ObjectID, sinceTime time.Time, page, limit int64) {
-				// No mock setup needed as the request should fail before reaching the repository
-			},
-			setupAuth: func(c *gin.Context, userID primitive.ObjectID) {
-				c.Set("authUser", &auth.UserAuthInfo{UserID: userID})
-			},
-		},
-		{
-			name:           "Error when invalid date format",
-			sinceParam:     "invalid-date",
-			queryParams:    "",
-			expectedStatus: http.StatusBadRequest,
+			name:               "Error when missing since parameter",
+			sinceParam:         "",
+			queryParams:        "",
+			expectedStatus:     http.StatusBadRequest,
 			expectedDraftMails: 0,
 			setupMock: func(mockRepo *mocks.MockDraftMailRepository, userID primitive.ObjectID, sinceTime time.Time, page, limit int64) {
 				// No mock setup needed as the request should fail before reaching the repository
@@ -161,10 +137,23 @@ func TestDraftMailController_GetDraftMailsSince(t *testing.T) {
 			},
 		},
 		{
-			name:           "Error when unauthorized",
-			sinceParam:     "2024-01-01T00:00:00Z",
-			queryParams:    "",
-			expectedStatus: http.StatusUnauthorized,
+			name:               "Error when invalid date format",
+			sinceParam:         "invalid-date",
+			queryParams:        "",
+			expectedStatus:     http.StatusBadRequest,
+			expectedDraftMails: 0,
+			setupMock: func(mockRepo *mocks.MockDraftMailRepository, userID primitive.ObjectID, sinceTime time.Time, page, limit int64) {
+				// No mock setup needed as the request should fail before reaching the repository
+			},
+			setupAuth: func(c *gin.Context, userID primitive.ObjectID) {
+				c.Set("authUser", &auth.UserAuthInfo{UserID: userID})
+			},
+		},
+		{
+			name:               "Error when unauthorized",
+			sinceParam:         "2024-01-01T00:00:00Z",
+			queryParams:        "",
+			expectedStatus:     http.StatusUnauthorized,
 			expectedDraftMails: 0,
 			setupMock: func(mockRepo *mocks.MockDraftMailRepository, userID primitive.ObjectID, sinceTime time.Time, page, limit int64) {
 				// No mock setup needed as the request should fail before reaching the repository
@@ -174,10 +163,10 @@ func TestDraftMailController_GetDraftMailsSince(t *testing.T) {
 			},
 		},
 		{
-			name:           "Success with different date formats",
-			sinceParam:     "2024-01-01T12:30:45+02:00",
-			queryParams:    "",
-			expectedStatus: http.StatusOK,
+			name:               "Success with different date formats",
+			sinceParam:         "2024-01-01T12:30:45+02:00",
+			queryParams:        "",
+			expectedStatus:     http.StatusOK,
 			expectedDraftMails: 1,
 			setupMock: func(mockRepo *mocks.MockDraftMailRepository, userID primitive.ObjectID, sinceTime time.Time, page, limit int64) {
 				mailID := primitive.NewObjectID()
@@ -193,7 +182,7 @@ func TestDraftMailController_GetDraftMailsSince(t *testing.T) {
 						SendStatus: models.SendStatusPending,
 					},
 				}
-				mockRepo.On("GetSince", mock.Anything, sinceTime, page, limit).Return(draftMails, int64(1), nil)
+				mockRepo.On("GetSince", mock.Anything, userID, sinceTime, page, limit).Return(draftMails, int64(1), nil)
 			},
 			setupAuth: func(c *gin.Context, userID primitive.ObjectID) {
 				c.Set("authUser", &auth.UserAuthInfo{UserID: userID})
