@@ -2,7 +2,7 @@ package mailserver
 
 import (
 	"connectrpc.com/connect"
-	mailserverv1 "github.com/atomic-blend/backend/grpc/gen/mail-server/v1"
+	mailserverv1 "github.com/atomic-blend/backend/grpc/gen/mailserver/v1"
 )
 
 // CreateSendMailInternalRequest creates a new SendMailInternalRequest with the given parameters

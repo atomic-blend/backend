@@ -19,7 +19,7 @@ import (
 	"github.com/atomic-blend/backend/shared/utils/db"
 
 	"connectrpc.com/connect"
-	mailserverv1 "github.com/atomic-blend/backend/grpc/gen/mail-server/v1"
+	mailserverv1 "github.com/atomic-blend/backend/grpc/gen/mailserver/v1"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"

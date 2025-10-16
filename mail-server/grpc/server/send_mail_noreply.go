@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"connectrpc.com/connect"
-	mailserverv1 "github.com/atomic-blend/backend/grpc/gen/mail-server/v1"
+	mailserverv1 "github.com/atomic-blend/backend/grpc/gen/mailserver/v1"
 	mailsender "github.com/atomic-blend/backend/mail-server/utils/mail-sender"
 	"github.com/atomic-blend/backend/mail/models"
 )

@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"connectrpc.com/connect"
-	mailserverv1 "github.com/atomic-blend/backend/grpc/gen/mail-server/v1"
+	mailserverv1 "github.com/atomic-blend/backend/grpc/gen/mailserver/v1"
 )
 
 // Interface defines the methods for mail-server-related gRPC operations

@@ -5,7 +5,7 @@ import (
 
 	"github.com/rs/zerolog/log"
 
-	mailconnect "github.com/atomic-blend/backend/grpc/gen/mail-server/v1/mailserverv1connect"
+	mailconnect "github.com/atomic-blend/backend/grpc/gen/mailserver/v1/mailserverv1connect"
 	mailserverGrpcServer "github.com/atomic-blend/backend/mail-server/grpc/server"
 )
 

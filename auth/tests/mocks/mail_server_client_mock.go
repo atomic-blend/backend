@@ -5,7 +5,7 @@ import (
 	"context"
 
 	"connectrpc.com/connect"
-	mailserverv1 "github.com/atomic-blend/backend/grpc/gen/mail-server/v1"
+	mailserverv1 "github.com/atomic-blend/backend/grpc/gen/mailserver/v1"
 	"github.com/stretchr/testify/mock"
 )
 

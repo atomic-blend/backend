@@ -1,8 +1,9 @@
+// Package auth provides authentication and authorization 
 package auth
 
 import (
 	"github.com/atomic-blend/backend/auth/repositories"
-	"github.com/atomic-blend/backend/grpc/gen/mail-server/v1/mailserverv1connect"
+	"github.com/atomic-blend/backend/grpc/gen/mailserver/v1/mailserverv1connect"
 	mailserver "github.com/atomic-blend/backend/shared/grpc/mail-server"
 	"github.com/atomic-blend/backend/shared/models"
 	userrepo "github.com/atomic-blend/backend/shared/repositories/user"

@@ -1,3 +1,4 @@
+// Package mailserver provides the client for the mail-server service
 package mailserver
 
 import (
@@ -5,8 +6,8 @@ import (
 	"net/http"
 
 	"connectrpc.com/connect"
-	mailserverv1 "github.com/atomic-blend/backend/grpc/gen/mail-server/v1"
-	"github.com/atomic-blend/backend/grpc/gen/mail-server/v1/mailserverv1connect"
+	mailserverv1 "github.com/atomic-blend/backend/grpc/gen/mailserver/v1"
+	"github.com/atomic-blend/backend/grpc/gen/mailserver/v1/mailserverv1connect"
 	grpcclientutils "github.com/atomic-blend/backend/shared/utils/grpc_client_utils"
 )
 
