@@ -24,6 +24,18 @@ type ServiceResult struct {
 	Index        int // For maintaining order
 }
 
+type ServiceStatus struct {
+	Name         string
+	Status       string // "queued", "running", "completed", "failed"
+	WorkerID     int
+	GolintStatus string // "pending", "running", "passed", "failed"
+	TestStatus   string // "pending", "running", "passed", "failed"
+	GRPCStatus   string // "pending", "running", "passed", "failed"
+	Progress     string // Current operation
+	Duration     time.Duration
+	Index        int
+}
+
 type TestResult struct {
 	Passed    bool
 	Output    string
@@ -65,6 +77,12 @@ type GolintResult struct {
 	Duration   time.Duration
 	IssueCount int
 }
+
+// Global status tracking for real-time table updates
+var (
+	statusMap = make(map[string]*ServiceStatus)
+	statusMux sync.RWMutex
+)
 
 func main() {
 	// Parse command line flags
@@ -116,6 +134,25 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Initialize status map
+	for i, service := range validServices {
+		statusMux.Lock()
+		statusMap[service] = &ServiceStatus{
+			Name:         service,
+			Status:       "queued",
+			GolintStatus: "pending",
+			TestStatus:   "pending",
+			GRPCStatus:   "pending",
+			Progress:     "Waiting...",
+			Index:        i,
+		}
+		statusMux.Unlock()
+	}
+
+	// Start table updater
+	stopUpdater := make(chan bool)
+	go updateTable(totalServices, stopUpdater)
+
 	// Create channels for parallel processing
 	serviceChan := make(chan string, len(validServices))
 	resultChan := make(chan *ServiceResult, len(validServices))
@@ -133,9 +170,8 @@ func main() {
 	}
 
 	// Send services to workers
-	for i, service := range validServices {
+	for _, service := range validServices {
 		serviceChan <- service
-		fmt.Printf("🔍 Queued %s for processing... (%d/%d)\n", service, i+1, totalServices)
 	}
 	close(serviceChan)
 
@@ -147,12 +183,13 @@ func main() {
 
 	// Collect results
 	results := make([]*ServiceResult, 0, totalServices)
-	completedCount := 0
 	for result := range resultChan {
 		results = append(results, result)
-		completedCount++
-		fmt.Printf("✅ Completed %s (%d/%d)\n", result.Name, completedCount, totalServices)
 	}
+
+	// Stop table updater
+	stopUpdater <- true
+	fmt.Println() // Clear the table
 
 	// Sort results by index to maintain original order
 	for i := 0; i < len(results); i++ {
@@ -186,29 +223,34 @@ func processService(workspaceRoot, service string, resultChan chan<- *ServiceRes
 		Index: index,
 	}
 
-	fmt.Printf("🧵 Worker %d: Processing %s...\n", workerID, service)
+	// Update status to running
+	updateServiceStatus(service, "running", workerID, "Starting...")
 
 	// Check if service has tests (and can run golint)
 	if hasTests(servicePath) {
 		result.HasTests = true
 
 		// Run golint first
-		fmt.Printf("🧵 Worker %d: Running golint for %s...\n", workerID, service)
+		updateServiceStatus(service, "running", workerID, "Running golint...")
 		result.GolintResult = runGolint(servicePath, service)
+		updateGolintStatus(service, result.GolintResult.Passed)
 
 		// Then run tests
-		fmt.Printf("🧵 Worker %d: Running tests for %s...\n", workerID, service)
+		updateServiceStatus(service, "running", workerID, "Running tests...")
 		result.TestResult = runTests(servicePath, service)
+		updateTestStatus(service, result.TestResult.Passed)
 	}
 
 	// Check if service has gRPC
 	if hasGRPC(servicePath) {
 		result.HasGRPC = true
-		fmt.Printf("🧵 Worker %d: Running gRPC lint for %s...\n", workerID, service)
+		updateServiceStatus(service, "running", workerID, "Running gRPC lint...")
 		result.LintResult = runGRPCLint(servicePath, service)
+		updateGRPCStatus(service, result.LintResult.Passed)
 	}
 
-	fmt.Printf("🧵 Worker %d: Completed %s\n", workerID, service)
+	// Mark as completed
+	updateServiceStatus(service, "completed", workerID, "Completed")
 	resultChan <- result
 }
 
@@ -218,10 +260,159 @@ func hasTests(servicePath string) bool {
 	return err == nil
 }
 
+// updateServiceStatus updates the status of a service
+func updateServiceStatus(service, status string, workerID int, progress string) {
+	statusMux.Lock()
+	defer statusMux.Unlock()
+	if s, exists := statusMap[service]; exists {
+		s.Status = status
+		s.WorkerID = workerID
+		s.Progress = progress
+	}
+}
+
+// updateGolintStatus updates the golint status
+func updateGolintStatus(service string, passed bool) {
+	statusMux.Lock()
+	defer statusMux.Unlock()
+	if s, exists := statusMap[service]; exists {
+		if passed {
+			s.GolintStatus = "passed"
+		} else {
+			s.GolintStatus = "failed"
+		}
+	}
+}
+
+// updateTestStatus updates the test status
+func updateTestStatus(service string, passed bool) {
+	statusMux.Lock()
+	defer statusMux.Unlock()
+	if s, exists := statusMap[service]; exists {
+		if passed {
+			s.TestStatus = "passed"
+		} else {
+			s.TestStatus = "failed"
+		}
+	}
+}
+
+// updateGRPCStatus updates the gRPC lint status
+func updateGRPCStatus(service string, passed bool) {
+	statusMux.Lock()
+	defer statusMux.Unlock()
+	if s, exists := statusMap[service]; exists {
+		if passed {
+			s.GRPCStatus = "passed"
+		} else {
+			s.GRPCStatus = "failed"
+		}
+	}
+}
+
 func hasGRPC(servicePath string) bool {
 	// Only run gRPC lint for the grpc directory
 	serviceName := filepath.Base(servicePath)
 	return serviceName == "grpc"
+}
+
+// updateTable continuously updates and displays the status table
+func updateTable(totalServices int, stopChan <-chan bool) {
+	ticker := time.NewTicker(500 * time.Millisecond)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-stopChan:
+			return
+		case <-ticker.C:
+			displayStatusTable(totalServices)
+		}
+	}
+}
+
+// displayStatusTable displays the current status of all services
+func displayStatusTable(totalServices int) {
+	statusMux.RLock()
+	defer statusMux.RUnlock()
+
+	// Clear screen and move cursor to top
+	fmt.Print("\033[2J\033[H")
+
+	fmt.Println("🚀 Running Microservice Tests, Golint, and gRPC Linting")
+	fmt.Println("📍 Real-time Status Table")
+	fmt.Println(strings.Repeat("=", 80))
+
+	// Table header
+	fmt.Printf("%-15s %-8s %-8s %-8s %-8s %-20s\n",
+		"SERVICE", "STATUS", "GOLINT", "TESTS", "GRPC", "PROGRESS")
+	fmt.Println(strings.Repeat("-", 80))
+
+	// Sort services by index
+	var services []*ServiceStatus
+	for _, status := range statusMap {
+		services = append(services, status)
+	}
+
+	// Simple bubble sort by index
+	for i := 0; i < len(services); i++ {
+		for j := i + 1; j < len(services); j++ {
+			if services[i].Index > services[j].Index {
+				services[i], services[j] = services[j], services[i]
+			}
+		}
+	}
+
+	// Display each service
+	for _, service := range services {
+		statusIcon := getStatusIcon(service.Status)
+		golintIcon := getCheckIcon(service.GolintStatus)
+		testIcon := getCheckIcon(service.TestStatus)
+		grpcIcon := getCheckIcon(service.GRPCStatus)
+
+		fmt.Printf("%-15s %-8s %-8s %-8s %-8s %-20s\n",
+			service.Name,
+			statusIcon,
+			golintIcon,
+			testIcon,
+			grpcIcon,
+			service.Progress)
+	}
+
+	fmt.Println(strings.Repeat("-", 80))
+	fmt.Printf("Total Services: %d | Use Ctrl+C to stop\n", totalServices)
+}
+
+// getStatusIcon returns an icon for the service status
+func getStatusIcon(status string) string {
+	switch status {
+	case "queued":
+		return "⏳"
+	case "running":
+		return "🔄"
+	case "completed":
+		return "✅"
+	case "failed":
+		return "❌"
+	default:
+		return "❓"
+	}
+}
+
+// getCheckIcon returns an icon for check status
+func getCheckIcon(status string) string {
+	switch status {
+	case "pending":
+		return "⏳"
+	case "running":
+		return "🔄"
+	case "passed":
+		return "✅"
+	case "failed":
+		return "❌"
+	default:
+		return "❓"
+	}
 }
 
 // printProgressBar prints a simple progress bar
@@ -343,12 +534,8 @@ func runTests(servicePath, serviceName string) *TestResult {
 
 	if err != nil {
 		result.Passed = false
-		fmt.Printf("  ❌ Tests failed for %s (%.2fs) - %d passed, %d failed, %d skipped\n",
-			serviceName, duration.Seconds(), passCount, failCount, skipCount)
 	} else {
 		result.Passed = true
-		fmt.Printf("  ✅ Tests passed for %s (%.2fs) - %d passed, %d failed, %d skipped\n",
-			serviceName, duration.Seconds(), passCount, failCount, skipCount)
 	}
 
 	return result
