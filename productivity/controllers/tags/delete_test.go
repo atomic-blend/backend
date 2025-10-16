@@ -4,10 +4,12 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+
 	"github.com/atomic-blend/backend/shared/middlewares/auth"
 
-	"github.com/atomic-blend/backend/productivity/models"
 	"testing"
+
+	"github.com/atomic-blend/backend/productivity/models"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
@@ -61,7 +63,7 @@ func TestDeleteTag(t *testing.T) {
 		mockTagRepo.On("GetByID", mock.Anything, tagID).Return(tag, nil).Once()
 		mockTaskRepo.On("GetAll", mock.Anything, mock.MatchedBy(func(u *primitive.ObjectID) bool {
 			return *u == userID
-		})).Return(tasks, nil).Once()
+		}), mock.Anything, mock.Anything).Return(tasks, int64(len(tasks)), nil).Once()
 
 		// Task1 should be updated since it contains the tag
 		mockTaskRepo.On("Update", mock.Anything, task1.ID, mock.MatchedBy(func(t *models.TaskEntity) bool {
@@ -158,7 +160,7 @@ func TestDeleteTag(t *testing.T) {
 		mockTagRepo.On("GetByID", mock.Anything, tagID).Return(tag, nil).Once()
 		mockTaskRepo.On("GetAll", mock.Anything, mock.MatchedBy(func(u *primitive.ObjectID) bool {
 			return *u == userID
-		})).Return(tasks, nil).Once()
+		}), mock.Anything, mock.Anything).Return(tasks, int64(len(tasks)), nil).Once()
 
 		// Only task1 should be updated since it's the only one containing the tag
 		mockTaskRepo.On("Update", mock.Anything, task1.ID, mock.MatchedBy(func(t *models.TaskEntity) bool {
@@ -328,7 +330,7 @@ func TestDeleteTag(t *testing.T) {
 		mockTagRepo.On("GetByID", mock.Anything, tagID).Return(tag, nil).Once()
 		mockTaskRepo.On("GetAll", mock.Anything, mock.MatchedBy(func(u *primitive.ObjectID) bool {
 			return *u == userID
-		})).Return(nil, errors.New("database error")).Once()
+		}), mock.Anything, mock.Anything).Return(nil, int64(0), errors.New("database error")).Once()
 
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("DELETE", "/tags/"+tagID.Hex(), nil)
@@ -384,7 +386,7 @@ func TestDeleteTag(t *testing.T) {
 		mockTagRepo.On("GetByID", mock.Anything, tagID).Return(tag, nil).Once()
 		mockTaskRepo.On("GetAll", mock.Anything, mock.MatchedBy(func(u *primitive.ObjectID) bool {
 			return *u == userID
-		})).Return(tasks, nil).Once()
+		}), mock.Anything, mock.Anything).Return(tasks, int64(len(tasks)), nil).Once()
 
 		mockTaskRepo.On("Update", mock.Anything, task.ID, mock.Anything).Return(nil, errors.New("database error")).Once()
 
@@ -420,7 +422,7 @@ func TestDeleteTag(t *testing.T) {
 		mockTagRepo.On("GetByID", mock.Anything, tagID).Return(tag, nil).Once()
 		mockTaskRepo.On("GetAll", mock.Anything, mock.MatchedBy(func(u *primitive.ObjectID) bool {
 			return *u == userID
-		})).Return(tasks, nil).Once()
+		}), mock.Anything, mock.Anything).Return(tasks, int64(len(tasks)), nil).Once()
 		mockTagRepo.On("Delete", mock.Anything, tagID).Return(errors.New("database error")).Once()
 
 		w := httptest.NewRecorder()

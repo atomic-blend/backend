@@ -12,13 +12,15 @@ import (
 	bson "go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 const taskCollection = "tasks"
 
 // TaskRepositoryInterface defines the interface for task repository operations
 type TaskRepositoryInterface interface {
-	GetAll(ctx context.Context, userID *primitive.ObjectID) ([]*models.TaskEntity, error)
+	// GetAll retrieves tasks for a user. If page and limit are both provided and >0, returns paginated results and total count. If either is nil or <=0, returns all tasks and total count.
+	GetAll(ctx context.Context, userID *primitive.ObjectID, page, limit *int64) ([]*models.TaskEntity, int64, error)
 	GetByID(ctx context.Context, id string) (*models.TaskEntity, error)
 	Create(ctx context.Context, task *models.TaskEntity) (*models.TaskEntity, error)
 	Update(ctx context.Context, id string, task *models.TaskEntity) (*models.TaskEntity, error)
@@ -39,25 +41,41 @@ func NewTaskRepository(db *mongo.Database) TaskRepositoryInterface {
 	}
 }
 
-// GetAll retrieves all tasks with optional user filtering
-func (r *TaskRepository) GetAll(ctx context.Context, userID *primitive.ObjectID) ([]*models.TaskEntity, error) {
+// GetAll retrieves tasks for a user. If page and limit are both provided and >0, returns paginated results and total count. If either is nil or <=0, returns all tasks and total count.
+func (r *TaskRepository) GetAll(ctx context.Context, userID *primitive.ObjectID, page, limit *int64) ([]*models.TaskEntity, int64, error) {
 	filter := bson.M{}
 	if userID != nil {
 		filter["user"] = userID
 	}
 
-	cursor, err := r.collection.Find(ctx, filter)
+	totalCount, err := r.collection.CountDocuments(ctx, filter)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
+	}
+
+	// Build find options: always sort by created_at desc to return most recent first
+	findOpts := options.Find()
+	findOpts.SetSort(bson.D{{Key: "created_at", Value: -1}})
+
+	// Only apply pagination if both page and limit are provided and > 0
+	if page != nil && limit != nil && *page > 0 && *limit > 0 {
+		skip := (*page - 1) * *limit
+		findOpts.SetSkip(skip)
+		findOpts.SetLimit(*limit)
+	}
+
+	cursor, err := r.collection.Find(ctx, filter, findOpts)
+	if err != nil {
+		return nil, 0, err
 	}
 	defer cursor.Close(ctx)
 
 	var tasks []*models.TaskEntity
 	if err := cursor.All(ctx, &tasks); err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
-	return tasks, nil
+	return tasks, totalCount, nil
 }
 
 // GetByID retrieves a task by its ID

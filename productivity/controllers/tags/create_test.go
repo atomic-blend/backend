@@ -6,12 +6,13 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"github.com/atomic-blend/backend/shared/middlewares/auth"
-	"github.com/atomic-blend/backend/productivity/models"
-	"github.com/atomic-blend/backend/shared/utils/db"
-	"github.com/atomic-blend/backend/shared/test_utils/inmemorymongo"
-	"github.com/atomic-blend/backend/shared/utils/jwt"
 	"testing"
+
+	"github.com/atomic-blend/backend/productivity/models"
+	"github.com/atomic-blend/backend/shared/middlewares/auth"
+	"github.com/atomic-blend/backend/shared/test_utils/inmemorymongo"
+	"github.com/atomic-blend/backend/shared/utils/db"
+	"github.com/atomic-blend/backend/shared/utils/jwt"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
