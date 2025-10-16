@@ -40,7 +40,7 @@ func TestStartResetPassword(t *testing.T) {
 	defer os.Chdir(originalDir)
 
 	// Change to auth directory where templates are located
-	err = os.Chdir("/Users/brandonguigo/workspace/atomic-blend/backend/auth")
+	err = os.Chdir("../..")
 	if err != nil {
 		t.Fatalf("Failed to change to auth directory: %v", err)
 	}
