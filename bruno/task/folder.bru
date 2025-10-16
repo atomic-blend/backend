@@ -6,3 +6,7 @@ meta {
 auth {
   mode: inherit
 }
+
+script:pre-request {
+  await bru.runRequest("/auth/login")
+}

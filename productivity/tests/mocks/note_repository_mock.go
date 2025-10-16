@@ -16,12 +16,12 @@ type MockNoteRepository struct {
 }
 
 // GetAll gets all notes
-func (m *MockNoteRepository) GetAll(ctx context.Context, userID *primitive.ObjectID) ([]*models.NoteEntity, error) {
-	args := m.Called(ctx, userID)
+func (m *MockNoteRepository) GetAll(ctx context.Context, userID *primitive.ObjectID, page, limit *int64) ([]*models.NoteEntity, int64, error) {
+	args := m.Called(ctx, userID, page, limit)
 	if args.Get(0) == nil {
-		return nil, args.Error(1)
+		return nil, 0, args.Error(2)
 	}
-	return args.Get(0).([]*models.NoteEntity), args.Error(1)
+	return args.Get(0).([]*models.NoteEntity), args.Get(1).(int64), args.Error(2)
 }
 
 // GetByID gets a note by ID

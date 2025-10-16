@@ -1,8 +1,9 @@
 package notes
 
 import (
-	"github.com/atomic-blend/backend/shared/middlewares/auth"
 	"github.com/atomic-blend/backend/productivity/repositories"
+	"github.com/atomic-blend/backend/shared/middlewares/auth"
+	"github.com/webstradev/gin-pagination/v2/pkg/pagination"
 
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -38,7 +39,7 @@ func setupNoteRoutes(router *gin.Engine, noteController *NoteController) {
 	noteRoutes := router.Group("/notes")
 	auth.RequireAuth(noteRoutes)
 	{
-		noteRoutes.GET("", noteController.GetAllNotes)
+		noteRoutes.GET("", pagination.New(), noteController.GetAllNotes)
 		noteRoutes.GET("/:id", noteController.GetNoteByID)
 		noteRoutes.POST("", noteController.CreateNote)
 		noteRoutes.PUT("/:id", noteController.UpdateNote)

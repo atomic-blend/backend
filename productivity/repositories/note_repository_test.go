@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -105,10 +106,11 @@ func TestNoteRepository(t *testing.T) {
 		_, err = repo.Create(ctx, note2)
 		assert.NoError(t, err)
 
-		// Get all notes for the user
-		notes, err := repo.GetAll(ctx, &userID)
+		// Get all notes for the user (no pagination)
+		notes, totalCount, err := repo.GetAll(ctx, &userID, nil, nil)
 		assert.NoError(t, err)
 		assert.GreaterOrEqual(t, len(notes), 2)
+		assert.Equal(t, int64(len(notes)), totalCount)
 
 		// Check that all notes belong to the user
 		for _, note := range notes {
@@ -213,14 +215,15 @@ func TestNoteRepository_DeleteByUserID(t *testing.T) {
 	require.NotNil(t, createdNote3)
 
 	// Verify all notes exist
-	allNotes, err := repo.GetAll(ctx, nil)
+	allNotes, totalCount, err := repo.GetAll(ctx, nil, nil, nil)
 	require.NoError(t, err)
 	assert.GreaterOrEqual(t, len(allNotes), 3)
+	assert.Equal(t, int64(len(allNotes)), totalCount)
 
 	// Count notes for each user before deletion
-	user1NotesBefore, err := repo.GetAll(ctx, &userID1)
+	user1NotesBefore, _, err := repo.GetAll(ctx, &userID1, nil, nil)
 	require.NoError(t, err)
-	user2NotesBefore, err := repo.GetAll(ctx, &userID2)
+	user2NotesBefore, _, err := repo.GetAll(ctx, &userID2, nil, nil)
 	require.NoError(t, err)
 	assert.Len(t, user1NotesBefore, 2)
 	assert.Len(t, user2NotesBefore, 1)
@@ -230,9 +233,9 @@ func TestNoteRepository_DeleteByUserID(t *testing.T) {
 	require.NoError(t, err)
 
 	// Verify user 1's notes are gone but user 2's remain
-	user1NotesAfter, err := repo.GetAll(ctx, &userID1)
+	user1NotesAfter, _, err := repo.GetAll(ctx, &userID1, nil, nil)
 	require.NoError(t, err)
-	user2NotesAfter, err := repo.GetAll(ctx, &userID2)
+	user2NotesAfter, _, err := repo.GetAll(ctx, &userID2, nil, nil)
 	require.NoError(t, err)
 	assert.Len(t, user1NotesAfter, 0)
 	assert.Len(t, user2NotesAfter, 1)
@@ -244,9 +247,134 @@ func TestNoteRepository_DeleteByUserID(t *testing.T) {
 	require.NoError(t, err)
 
 	// Verify no notes remain for user 2
-	finalUser2Notes, err := repo.GetAll(ctx, &userID2)
+	finalUser2Notes, _, err := repo.GetAll(ctx, &userID2, nil, nil)
 	require.NoError(t, err)
 	assert.Len(t, finalUser2Notes, 0)
+}
+
+func TestNoteRepository_Pagination(t *testing.T) {
+	repo, cleanup := setupNoteTest(t)
+	defer cleanup()
+
+	ctx := context.Background()
+	userID := primitive.NewObjectID()
+
+	// Create 5 notes for testing pagination
+	for i := 1; i <= 5; i++ {
+		note := &models.NoteEntity{
+			Title:   stringPtr(fmt.Sprintf("Note %d", i)),
+			Content: stringPtr(fmt.Sprintf("Content %d", i)),
+			User:    userID,
+		}
+		_, err := repo.Create(ctx, note)
+		require.NoError(t, err)
+		// Add small delay to ensure different timestamps for sorting
+		time.Sleep(1 * time.Millisecond)
+	}
+
+	t.Run("Get all notes without pagination", func(t *testing.T) {
+		notes, totalCount, err := repo.GetAll(ctx, &userID, nil, nil)
+		assert.NoError(t, err)
+		assert.Equal(t, int64(5), totalCount)
+		assert.Len(t, notes, 5)
+
+		// Verify notes are sorted by created_at desc (most recent first)
+		for i := 0; i < len(notes)-1; i++ {
+			assert.True(t, notes[i].CreatedAt.Time().After(notes[i+1].CreatedAt.Time()) ||
+				notes[i].CreatedAt.Time().Equal(notes[i+1].CreatedAt.Time()))
+		}
+	})
+
+	t.Run("Get first page with limit 2", func(t *testing.T) {
+		page := int64(1)
+		limit := int64(2)
+
+		notes, totalCount, err := repo.GetAll(ctx, &userID, &page, &limit)
+		assert.NoError(t, err)
+		assert.Equal(t, int64(5), totalCount)
+		assert.Len(t, notes, 2)
+
+		// Should get the 2 most recent notes
+		assert.Equal(t, "Note 5", *notes[0].Title)
+		assert.Equal(t, "Note 4", *notes[1].Title)
+	})
+
+	t.Run("Get second page with limit 2", func(t *testing.T) {
+		page := int64(2)
+		limit := int64(2)
+
+		notes, totalCount, err := repo.GetAll(ctx, &userID, &page, &limit)
+		assert.NoError(t, err)
+		assert.Equal(t, int64(5), totalCount)
+		assert.Len(t, notes, 2)
+
+		// Should get notes 3 and 2
+		assert.Equal(t, "Note 3", *notes[0].Title)
+		assert.Equal(t, "Note 2", *notes[1].Title)
+	})
+
+	t.Run("Get third page with limit 2", func(t *testing.T) {
+		page := int64(3)
+		limit := int64(2)
+
+		notes, totalCount, err := repo.GetAll(ctx, &userID, &page, &limit)
+		assert.NoError(t, err)
+		assert.Equal(t, int64(5), totalCount)
+		assert.Len(t, notes, 1)
+
+		// Should get only note 1
+		assert.Equal(t, "Note 1", *notes[0].Title)
+	})
+
+	t.Run("Get page beyond available data", func(t *testing.T) {
+		page := int64(10)
+		limit := int64(2)
+
+		notes, totalCount, err := repo.GetAll(ctx, &userID, &page, &limit)
+		assert.NoError(t, err)
+		assert.Equal(t, int64(5), totalCount)
+		assert.Len(t, notes, 0)
+	})
+
+	t.Run("Pagination with limit larger than total", func(t *testing.T) {
+		page := int64(1)
+		limit := int64(10)
+
+		notes, totalCount, err := repo.GetAll(ctx, &userID, &page, &limit)
+		assert.NoError(t, err)
+		assert.Equal(t, int64(5), totalCount)
+		assert.Len(t, notes, 5)
+	})
+
+	t.Run("Pagination with page 0 (should return all)", func(t *testing.T) {
+		page := int64(0)
+		limit := int64(2)
+
+		notes, totalCount, err := repo.GetAll(ctx, &userID, &page, &limit)
+		assert.NoError(t, err)
+		assert.Equal(t, int64(5), totalCount)
+		assert.Len(t, notes, 5) // Should return all notes when page is 0
+	})
+
+	t.Run("Pagination with limit 0 (should return all)", func(t *testing.T) {
+		page := int64(1)
+		limit := int64(0)
+
+		notes, totalCount, err := repo.GetAll(ctx, &userID, &page, &limit)
+		assert.NoError(t, err)
+		assert.Equal(t, int64(5), totalCount)
+		assert.Len(t, notes, 5) // Should return all notes when limit is 0
+	})
+
+	t.Run("Pagination with negative values (should return all)", func(t *testing.T) {
+		page := int64(-1)
+		limit := int64(-1)
+
+		notes, totalCount, err := repo.GetAll(ctx, &userID, &page, &limit)
+		assert.NoError(t, err)
+		assert.Equal(t, int64(5), totalCount)
+		assert.Len(t, notes, 5) // Should return all notes when values are negative
+	})
 }
 
 // Helper function to create string pointers

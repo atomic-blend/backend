@@ -10,10 +10,6 @@ delete {
   auth: inherit
 }
 
-script:pre-request {
-  bru.runRequest("/auth/login")
-}
-
 settings {
   encodeUrl: true
   timeout: 0
