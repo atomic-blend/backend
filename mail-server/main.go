@@ -35,6 +35,9 @@ func main() {
 	// launch the AMQP consumer in a goroutine
 	go processMessages()
 
+	// start the grpc server
+	go startGRPCServer()
+
 	// instanciate the smtp backend
 	be := &smtpserver.Backend{}
 

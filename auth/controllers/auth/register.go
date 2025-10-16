@@ -46,10 +46,23 @@ func (c *Controller) Register(ctx *gin.Context) {
 	}
 	authorizedDomainsList := strings.Split(authorizedDomains, ",")
 
-	// Extract domain from email (email format is already validated by Gin binding)
-	emailParts := strings.Split(req.Email, "@")
-	emailDomain := emailParts[1]
+	// check that the email domain is not in the list of restricted domains file
+	restrictedDomains := os.Getenv("RESTRICTED_EMAILS")
+	restrictedUsernames := strings.Split(restrictedDomains, ",")
 
+	// check the username without domain or tags
+	emailParts := strings.Split(req.Email, "@")
+	emailUsername := emailParts[0]
+	// remove tags from the username (everything after +)
+	emailUsernameCleaned := strings.Split(emailUsername, "+")[0]
+
+	if slices.Contains(restrictedUsernames, emailUsernameCleaned) {
+		ctx.JSON(http.StatusForbidden, gin.H{"error": "restricted_email"})
+		return
+	}
+
+	// Extract domain from email (email format is already validated by Gin binding)
+	emailDomain := emailParts[1]
 	if !slices.Contains(authorizedDomainsList, emailDomain) {
 		ctx.JSON(http.StatusForbidden, gin.H{"error": "Email domain is not authorized"})
 		return
@@ -84,10 +97,13 @@ func (c *Controller) Register(ctx *gin.Context) {
 
 	// Create new user with default role
 	user := &models.UserEntity{
-		Email:    &req.Email,
-		Password: &hashedPassword,
-		KeySet:   req.KeySet,
-		RoleIds:  []*primitive.ObjectID{defaultRole.ID},
+		Email:       &req.Email,
+		BackupEmail: req.BackupEmail,
+		FirstName:   req.FirstName,
+		LastName:    req.LastName,
+		Password:    &hashedPassword,
+		KeySet:      req.KeySet,
+		RoleIds:     []*primitive.ObjectID{defaultRole.ID},
 	}
 
 	// Save user to database
@@ -126,12 +142,15 @@ func (c *Controller) Register(ctx *gin.Context) {
 	// For security reasons, remove the password from the response
 	// Create a copy of the user without the password
 	responseSafeUser := &models.UserEntity{
-		ID:        newUser.ID,
-		Email:     newUser.Email,
-		KeySet:    newUser.KeySet,
-		Roles:     newUser.Roles,
-		CreatedAt: newUser.CreatedAt,
-		UpdatedAt: newUser.UpdatedAt,
+		ID:          newUser.ID,
+		Email:       newUser.Email,
+		FirstName:   newUser.FirstName,
+		LastName:    newUser.LastName,
+		BackupEmail: newUser.BackupEmail,
+		KeySet:      newUser.KeySet,
+		Roles:       newUser.Roles,
+		CreatedAt:   newUser.CreatedAt,
+		UpdatedAt:   newUser.UpdatedAt,
 	}
 
 	// Return user and tokens

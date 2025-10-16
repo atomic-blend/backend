@@ -12,6 +12,7 @@ import (
 type UpdateProfileRequest struct {
 	Email string `json:"email" binding:"omitempty,email"`
 	// Add more fields here as needed, such as name, phone, preferences, etc.
+	BackupEmail *string `json:"backupEmail" binding:"omitempty,email"`
 }
 
 // UpdateProfile allows users to update their profile information
@@ -50,6 +51,10 @@ func (c *UserController) UpdateProfile(ctx *gin.Context) {
 
 		emailVal := updateReq.Email
 		user.Email = &emailVal
+	}
+
+	if updateReq.BackupEmail != nil {
+		user.BackupEmail = updateReq.BackupEmail
 	}
 
 	// Add handling for additional fields here

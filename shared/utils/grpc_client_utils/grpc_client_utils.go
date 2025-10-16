@@ -30,6 +30,13 @@ func GetServiceBaseURL(service string) (string, error) {
 		} else {
 			baseURL = "http://mail:50051" // Default value if not set
 		}
+	case "mail-server":
+		envValue := os.Getenv("MAIL_SERVER_GRPC_HOST")
+		if envValue != "" {
+			baseURL = envValue
+		} else {
+			baseURL = "http://mail-server:50051" // Default value if not set
+		}
 	default:
 		return "", fmt.Errorf("unknown service: %s", service)
 	}

@@ -1,0 +1,18 @@
+syntax = "proto3";
+package mailserver.v1;
+
+message SendMailInternalRequest {
+  repeated string to = 1;
+  string from = 2;
+  string subject = 3;
+  string html_content = 4;
+  string text_content = 5;
+}
+
+message SendMailInternalResponse {
+  bool success = 1;
+}
+
+service MailServerService {
+  rpc SendMailInternal(SendMailInternalRequest) returns (SendMailInternalResponse);
+}
