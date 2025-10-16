@@ -497,3 +497,227 @@ func TestDraftMailUserIsolation(t *testing.T) {
 	// Verify they are different
 	assert.NotEqual(t, draftMails1[0].ID, draftMails2[0].ID)
 }
+
+func TestGetSinceDraftMails(t *testing.T) {
+	repository, cleanup := setupDraftMailTest(t)
+	defer cleanup()
+
+	ctx := context.Background()
+
+	userID := primitive.NewObjectID()
+
+	// Create draft mails with different timestamps
+	baseTime := time.Now().Add(-time.Hour) // 1 hour ago
+
+	// Create first draft mail
+	mailID1 := primitive.NewObjectID()
+	mail1 := &models.Mail{
+		ID:     &mailID1,
+		UserID: userID,
+	}
+	draftMail1 := &models.SendMail{
+		Mail:       mail1,
+		SendStatus: models.SendStatusPending,
+		Trashed:    false,
+	}
+	createdDraftMail1, err := repository.Create(ctx, draftMail1)
+	assert.NoError(t, err)
+
+	// Wait a moment to ensure different timestamp
+	time.Sleep(time.Millisecond * 10)
+
+	// Create second draft mail
+	mailID2 := primitive.NewObjectID()
+	mail2 := &models.Mail{
+		ID:     &mailID2,
+		UserID: userID,
+	}
+	draftMail2 := &models.SendMail{
+		Mail:       mail2,
+		SendStatus: models.SendStatusPending,
+		Trashed:    false,
+	}
+	createdDraftMail2, err := repository.Create(ctx, draftMail2)
+	assert.NoError(t, err)
+
+	// Wait a moment to ensure different timestamp
+	time.Sleep(time.Millisecond * 10)
+
+	// Create third draft mail
+	mailID3 := primitive.NewObjectID()
+	mail3 := &models.Mail{
+		ID:     &mailID3,
+		UserID: userID,
+	}
+	draftMail3 := &models.SendMail{
+		Mail:       mail3,
+		SendStatus: models.SendStatusPending,
+		Trashed:    false,
+	}
+	createdDraftMail3, err := repository.Create(ctx, draftMail3)
+	assert.NoError(t, err)
+
+	// Test GetSince with timestamp before all draft mails
+	sinceTime := baseTime
+	draftMails, totalCount, err := repository.GetSince(ctx, sinceTime, 0, 0)
+
+	assert.NoError(t, err)
+	assert.Len(t, draftMails, 3)
+	assert.Equal(t, int64(3), totalCount)
+
+	// Verify results are sorted by updated_at descending (most recent first)
+	assert.Equal(t, createdDraftMail3.ID, draftMails[0].ID)
+	assert.Equal(t, createdDraftMail2.ID, draftMails[1].ID)
+	assert.Equal(t, createdDraftMail1.ID, draftMails[2].ID)
+}
+
+func TestGetSinceDraftMailsWithPagination(t *testing.T) {
+	repository, cleanup := setupDraftMailTest(t)
+	defer cleanup()
+
+	ctx := context.Background()
+
+	userID := primitive.NewObjectID()
+
+	// Create multiple draft mails
+	for i := 0; i < 5; i++ {
+		mailID := primitive.NewObjectID()
+		mail := &models.Mail{
+			ID:     &mailID,
+			UserID: userID,
+		}
+		draftMail := &models.SendMail{
+			Mail:       mail,
+			SendStatus: models.SendStatusPending,
+			Trashed:    false,
+		}
+
+		_, err := repository.Create(ctx, draftMail)
+		assert.NoError(t, err)
+
+		// Small delay to ensure different timestamps
+		time.Sleep(time.Millisecond * 10)
+	}
+
+	// Test pagination
+	sinceTime := time.Now().Add(-time.Hour) // 1 hour ago
+	draftMails, totalCount, err := repository.GetSince(ctx, sinceTime, 1, 3)
+
+	assert.NoError(t, err)
+	assert.Len(t, draftMails, 3)
+	assert.Equal(t, int64(5), totalCount)
+}
+
+func TestGetSinceDraftMailsWithSecondPage(t *testing.T) {
+	repository, cleanup := setupDraftMailTest(t)
+	defer cleanup()
+
+	ctx := context.Background()
+
+	userID := primitive.NewObjectID()
+
+	// Create multiple draft mails
+	for i := 0; i < 5; i++ {
+		mailID := primitive.NewObjectID()
+		mail := &models.Mail{
+			ID:     &mailID,
+			UserID: userID,
+		}
+		draftMail := &models.SendMail{
+			Mail:       mail,
+			SendStatus: models.SendStatusPending,
+			Trashed:    false,
+		}
+
+		_, err := repository.Create(ctx, draftMail)
+		assert.NoError(t, err)
+
+		// Small delay to ensure different timestamps
+		time.Sleep(time.Millisecond * 10)
+	}
+
+	// Test second page
+	sinceTime := time.Now().Add(-time.Hour) // 1 hour ago
+	draftMails, totalCount, err := repository.GetSince(ctx, sinceTime, 2, 3)
+
+	assert.NoError(t, err)
+	assert.Len(t, draftMails, 2) // Only 2 remaining items on second page
+	assert.Equal(t, int64(5), totalCount)
+}
+
+func TestGetSinceDraftMailsNoResults(t *testing.T) {
+	repository, cleanup := setupDraftMailTest(t)
+	defer cleanup()
+
+	ctx := context.Background()
+
+	userID := primitive.NewObjectID()
+
+	// Create a draft mail
+	mailID := primitive.NewObjectID()
+	mail := &models.Mail{
+		ID:     &mailID,
+		UserID: userID,
+	}
+	draftMail := &models.SendMail{
+		Mail:       mail,
+		SendStatus: models.SendStatusPending,
+		Trashed:    false,
+	}
+	_, err := repository.Create(ctx, draftMail)
+	assert.NoError(t, err)
+
+	// Test GetSince with timestamp in the future (should return no results)
+	futureTime := time.Now().Add(time.Hour)
+	draftMails, totalCount, err := repository.GetSince(ctx, futureTime, 0, 0)
+
+	assert.NoError(t, err)
+	assert.Len(t, draftMails, 0)
+	assert.Equal(t, int64(0), totalCount)
+}
+
+func TestGetSinceDraftMailsWithUpdates(t *testing.T) {
+	repository, cleanup := setupDraftMailTest(t)
+	defer cleanup()
+
+	ctx := context.Background()
+
+	userID := primitive.NewObjectID()
+
+	// Create a draft mail
+	mailID := primitive.NewObjectID()
+	mail := &models.Mail{
+		ID:     &mailID,
+		UserID: userID,
+	}
+	draftMail := &models.SendMail{
+		Mail:       mail,
+		SendStatus: models.SendStatusPending,
+		Trashed:    false,
+	}
+	createdDraftMail, err := repository.Create(ctx, draftMail)
+	assert.NoError(t, err)
+
+	// Record the creation time
+	creationTime := createdDraftMail.UpdatedAt.Time()
+
+	// Wait a moment to ensure different timestamp
+	time.Sleep(time.Millisecond * 10)
+
+	// Update the draft mail
+	update := bson.M{
+		"send_status": models.SendStatusSent,
+	}
+	updatedDraftMail, err := repository.Update(ctx, createdDraftMail.ID, update)
+	assert.NoError(t, err)
+
+	// Test GetSince with timestamp between creation and update
+	sinceTime := creationTime.Add(time.Millisecond * 5)
+	draftMails, totalCount, err := repository.GetSince(ctx, sinceTime, 0, 0)
+
+	assert.NoError(t, err)
+	assert.Len(t, draftMails, 1)
+	assert.Equal(t, int64(1), totalCount)
+	assert.Equal(t, updatedDraftMail.ID, draftMails[0].ID)
+	assert.Equal(t, models.SendStatusSent, draftMails[0].SendStatus)
+}

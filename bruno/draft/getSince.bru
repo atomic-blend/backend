@@ -1,0 +1,22 @@
+meta {
+  name: /getSince
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{API_URL}}/mail/draft/since?since=2025-08-09T00:00:00Z&page=1&size=10
+  body: none
+  auth: inherit
+}
+
+params:query {
+  since: 2025-08-09T00:00:00Z
+  page: 1
+  size: 10
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

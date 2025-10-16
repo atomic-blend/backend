@@ -25,6 +25,8 @@ type DraftMailRepositoryInterface interface {
 	Update(ctx context.Context, id primitive.ObjectID, update bson.M) (*models.SendMail, error)
 	Trash(ctx context.Context, id primitive.ObjectID) error
 	Delete(ctx context.Context, id primitive.ObjectID) error
+	// GetSince retrieves draft mails where updated_at is after the specified time. If page and limit are >0, returns paginated results and total count. If page or limit <=0, returns all draft mails and total count.
+	GetSince(ctx context.Context, since time.Time, page, limit int64) ([]*models.SendMail, int64, error)
 }
 
 // DraftMailRepository handles database operations related to draft mails
@@ -189,4 +191,40 @@ func (r *DraftMailRepository) Delete(ctx context.Context, id primitive.ObjectID)
 	filter := bson.M{"_id": id}
 	_, err := r.collection.DeleteOne(ctx, filter)
 	return err
+}
+
+// GetSince retrieves draft mails where updated_at is after the specified time. If page and limit are >0, returns paginated results and total count. If page or limit <=0, returns all draft mails and total count.
+func (r *DraftMailRepository) GetSince(ctx context.Context, since time.Time, page, limit int64) ([]*models.SendMail, int64, error) {
+	filter := bson.M{
+		"updated_at": bson.M{"$gt": primitive.NewDateTimeFromTime(since)},
+	}
+
+	// Count total documents matching the filter
+	totalCount, err := r.collection.CountDocuments(ctx, filter)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	// Build find options: always sort by updated_at desc to return most recent first
+	findOpts := options.Find()
+	findOpts.SetSort(bson.D{{Key: "updated_at", Value: -1}})
+
+	if page > 0 && limit > 0 {
+		skip := (page - 1) * limit
+		findOpts.SetSkip(skip)
+		findOpts.SetLimit(limit)
+	}
+
+	cursor, err := r.collection.Find(ctx, filter, findOpts)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer cursor.Close(ctx)
+
+	var sendMails []*models.SendMail
+	if err = cursor.All(ctx, &sendMails); err != nil {
+		return nil, 0, err
+	}
+
+	return sendMails, totalCount, nil
 }
