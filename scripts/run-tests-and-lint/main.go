@@ -114,18 +114,58 @@ var (
 func main() {
 	// Parse command line flags
 	var numThreads = flag.Int("threads", 4, "Number of parallel threads to use for running tests and linting")
+	var serviceName = flag.String("service", "", "Run tests for a specific service only (e.g., auth, mail, productivity)")
 	flag.Parse()
 
-	fmt.Println("🚀 Running Microservice Tests, Golint, and gRPC Linting")
-	fmt.Println("📍 This script should be run from the backend directory")
-	fmt.Printf("🧵 Using %d parallel threads\n", *numThreads)
-	fmt.Println(strings.Repeat("=", 50))
+	// Validate service flag
+	if *serviceName != "" {
+		validServices := []string{"auth", "productivity", "grpc", "mail", "mail-server", "shared"}
+		isValid := false
+		for _, validService := range validServices {
+			if *serviceName == validService {
+				isValid = true
+				break
+			}
+		}
+		if !isValid {
+			fmt.Printf("❌ Error: Invalid service '%s'. Valid services are: %s\n",
+				*serviceName, strings.Join(validServices, ", "))
+			os.Exit(1)
+		}
+	}
+
+	if *serviceName != "" {
+		fmt.Printf("🚀 Running Tests for Service: %s\n", *serviceName)
+		fmt.Println("📍 This script should be run from the backend directory")
+		fmt.Println("📋 Full logs will be displayed")
+		fmt.Println(strings.Repeat("=", 50))
+	} else {
+		fmt.Println("🚀 Running Microservice Tests, Golint, and gRPC Linting")
+		fmt.Println("📍 This script should be run from the backend directory")
+		fmt.Printf("🧵 Using %d parallel threads\n", *numThreads)
+		fmt.Println(strings.Repeat("=", 50))
+	}
 
 	// Get the workspace root (assuming script is run from backend directory)
 	workspaceRoot, err := os.Getwd()
 	if err != nil {
 		fmt.Printf("❌ Error getting current directory: %v\n", err)
 		os.Exit(1)
+	}
+
+	startTime := time.Now()
+
+	// Handle single service mode
+	if *serviceName != "" {
+		servicePath := filepath.Join(workspaceRoot, *serviceName)
+		if _, err := os.Stat(servicePath); err != nil {
+			fmt.Printf("❌ Error: Service directory '%s' not found at %s\n", *serviceName, servicePath)
+			os.Exit(1)
+		}
+
+		// Run single service with full logs
+		runSingleService(workspaceRoot, *serviceName, startTime)
+		return
 	}
 
 	// Define microservices to check (from cog.toml)
@@ -137,8 +177,6 @@ func main() {
 		"mail-server",
 		"shared",
 	}
-
-	startTime := time.Now()
 
 	// Count total services that will be processed
 	totalServices := 0
@@ -229,6 +267,96 @@ func main() {
 
 	// Display results
 	displayResults(results, startTime)
+}
+
+// runSingleService runs tests and linting for a single service with full log output
+func runSingleService(workspaceRoot, serviceName string, startTime time.Time) {
+	servicePath := filepath.Join(workspaceRoot, serviceName)
+
+	fmt.Printf("🔍 Processing service: %s\n", serviceName)
+	fmt.Printf("📁 Service path: %s\n", servicePath)
+	fmt.Println(strings.Repeat("-", 50))
+
+	allPassed := true
+
+	// Check if service has tests (and can run golint)
+	if hasTests(servicePath) {
+		fmt.Println("🧪 Running golint...")
+		fmt.Println(strings.Repeat("-", 30))
+
+		golintResult := runGolintWithFullOutput(servicePath, serviceName)
+		if !golintResult.Passed {
+			allPassed = false
+			fmt.Printf("❌ Golint failed for %s\n", serviceName)
+			fmt.Printf("Issues found: %d\n", golintResult.IssueCount)
+			if golintResult.Output != "" {
+				fmt.Println("Golint output:")
+				fmt.Println(golintResult.Output)
+			}
+			if golintResult.Error != "" {
+				fmt.Println("Golint errors:")
+				fmt.Println(golintResult.Error)
+			}
+		} else {
+			fmt.Printf("✅ Golint passed for %s\n", serviceName)
+			if golintResult.Output != "" {
+				fmt.Println("Golint output:")
+				fmt.Println(golintResult.Output)
+			}
+		}
+
+		fmt.Println(strings.Repeat("-", 30))
+		fmt.Println("🧪 Running tests...")
+		fmt.Println(strings.Repeat("-", 30))
+
+		testResult := runTestsWithFullOutput(servicePath, serviceName)
+		if !testResult.Passed {
+			allPassed = false
+			fmt.Printf("❌ Tests failed for %s\n", serviceName)
+		} else {
+			fmt.Printf("✅ Tests passed for %s\n", serviceName)
+		}
+	} else {
+		fmt.Printf("ℹ️  No tests found for %s (no go.mod file)\n", serviceName)
+	}
+
+	// Check if service has gRPC
+	if hasGRPC(servicePath) {
+		fmt.Println(strings.Repeat("-", 30))
+		fmt.Println("🔍 Running gRPC lint...")
+		fmt.Println(strings.Repeat("-", 30))
+
+		lintResult := runGRPCLintWithFullOutput(servicePath, serviceName)
+		if !lintResult.Passed {
+			allPassed = false
+			fmt.Printf("❌ gRPC lint failed for %s\n", serviceName)
+			if lintResult.Output != "" {
+				fmt.Println("gRPC lint output:")
+				fmt.Println(lintResult.Output)
+			}
+			if lintResult.Error != "" {
+				fmt.Println("gRPC lint errors:")
+				fmt.Println(lintResult.Error)
+			}
+		} else {
+			fmt.Printf("✅ gRPC lint passed for %s\n", serviceName)
+			if lintResult.Output != "" {
+				fmt.Println("gRPC lint output:")
+				fmt.Println(lintResult.Output)
+			}
+		}
+	}
+
+	fmt.Println(strings.Repeat("=", 50))
+	duration := time.Since(startTime)
+	fmt.Printf("⏱️  Total duration: %.2fs\n", duration.Seconds())
+
+	if allPassed {
+		fmt.Printf("✅ All checks passed for %s!\n", serviceName)
+	} else {
+		fmt.Printf("❌ Some checks failed for %s\n", serviceName)
+		os.Exit(1)
+	}
 }
 
 // processService processes a single service in a worker goroutine
@@ -908,6 +1036,194 @@ func runGolint(servicePath, serviceName string) *GolintResult {
 	return result
 }
 
+// runTestsWithFullOutput runs tests with streaming output directly to stdout
+func runTestsWithFullOutput(servicePath, serviceName string) *TestResult {
+	startTime := time.Now()
+
+	// Create command with context and set the working directory
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+
+	// Use classic go test (no JSON flag) for direct stdout output
+	cmd := exec.CommandContext(ctx, "go", "test", "./...")
+	cmd.Dir = servicePath
+
+	// Stream output directly to stdout and stderr
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	// Start the command
+	if err := cmd.Start(); err != nil {
+		duration := time.Since(startTime)
+		return &TestResult{
+			Passed:   false,
+			Output:   "",
+			Error:    err.Error(),
+			Duration: duration,
+		}
+	}
+
+	// Wait for completion
+	err := cmd.Wait()
+	duration := time.Since(startTime)
+
+	// Since we're streaming directly, we don't capture output
+	result := &TestResult{
+		Output:       "", // Output is streamed directly to stdout
+		Error:        "", // Errors are streamed directly to stderr
+		Duration:     duration,
+		TestCount:    0, // Can't parse from classic output
+		PassCount:    0, // Can't parse from classic output
+		FailCount:    0, // Can't parse from classic output
+		SkipCount:    0, // Can't parse from classic output
+		SkippedTests: []SkippedTest{},
+		FailedTests:  []FailedTest{},
+	}
+
+	if err != nil {
+		result.Passed = false
+	} else {
+		result.Passed = true
+	}
+
+	return result
+}
+
+// filterTestOutput extracts only the "Output" fields from Go test JSON output
+func filterTestOutput(jsonOutput string) string {
+	var filteredLines []string
+
+	lines := strings.Split(jsonOutput, "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+
+		var testEvent struct {
+			Action string `json:"Action"`
+			Output string `json:"Output"`
+		}
+
+		if err := json.Unmarshal([]byte(line), &testEvent); err != nil {
+			continue
+		}
+
+		// Only include lines that have an "Output" field
+		if testEvent.Output != "" {
+			filteredLines = append(filteredLines, testEvent.Output)
+		}
+	}
+
+	return strings.Join(filteredLines, "\n")
+}
+
+// runGolintWithFullOutput runs golint with full output display
+func runGolintWithFullOutput(servicePath, serviceName string) *GolintResult {
+	startTime := time.Now()
+
+	// Check if golint is available
+	if _, err := exec.LookPath("golint"); err != nil {
+		return &GolintResult{
+			Passed:     true,
+			Output:     "golint not available",
+			Error:      "golint command not found",
+			Duration:   time.Since(startTime),
+			IssueCount: 0,
+		}
+	}
+
+	// Try to find go files
+	goFiles, err := filepath.Glob(filepath.Join(servicePath, "**/*.go"))
+	if err != nil || len(goFiles) == 0 {
+		return &GolintResult{
+			Passed:     true,
+			Output:     "No go files found",
+			Duration:   time.Since(startTime),
+			IssueCount: 0,
+		}
+	}
+
+	// Run golint if available
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, "golint", "-set_exit_status", "./...")
+	cmd.Dir = servicePath
+
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	err = cmd.Run()
+	duration := time.Since(startTime)
+
+	output := stdout.String()
+
+	// Parse linting issues
+	lintingIssues := parseLintingIssues(output)
+
+	result := &GolintResult{
+		Output:        output,
+		Error:         stderr.String(),
+		Duration:      duration,
+		IssueCount:    len(lintingIssues),
+		LintingIssues: lintingIssues,
+	}
+
+	// Determine if golint passed based on exit code (1 = issues found, 0 = no issues)
+	if err != nil {
+		result.Passed = false
+	} else {
+		result.Passed = true
+	}
+
+	return result
+}
+
+// runGRPCLintWithFullOutput runs gRPC lint with full output display
+func runGRPCLintWithFullOutput(servicePath, serviceName string) *LintResult {
+	startTime := time.Now()
+
+	// Try to find proto files
+	protoFiles, err := filepath.Glob(filepath.Join(servicePath, "**/*.proto"))
+	if err != nil || len(protoFiles) == 0 {
+		return &LintResult{
+			Passed:   true,
+			Output:   "No proto files found",
+			Duration: time.Since(startTime),
+		}
+	}
+
+	// Run buf lint if available
+	cmd := exec.Command("buf", "lint")
+	cmd.Dir = servicePath
+
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
+	cmd = exec.CommandContext(ctx, "buf", "lint")
+
+	err = cmd.Run()
+	duration := time.Since(startTime)
+
+	result := &LintResult{
+		Output:   stdout.String(),
+		Error:    stderr.String(),
+		Duration: duration,
+	}
+
+	if err != nil {
+		result.Passed = false
+	} else {
+		result.Passed = true
+	}
+
+	return result
+}
+
 // displayDetailedIssues displays linting issues
 func displayDetailedIssues(results []*ServiceResult) {
 	hasIssues := false
@@ -943,9 +1259,6 @@ func displayDetailedIssues(results []*ServiceResult) {
 }
 
 func displayResults(results []*ServiceResult, startTime time.Time) {
-	// Display detailed issues first
-	displayDetailedIssues(results)
-
 	fmt.Println("\n" + strings.Repeat("=", 100))
 	fmt.Println("📊 RESULTS SUMMARY")
 	fmt.Println(strings.Repeat("=", 100))
@@ -1092,38 +1405,44 @@ func displayResults(results []*ServiceResult, startTime time.Time) {
 
 	fmt.Println(strings.Repeat("-", 80))
 
-	// Display detailed failures
+	// Display brief failure summary
 	if summary.FailedTests > 0 || summary.FailedLint > 0 || summary.FailedGolint > 0 {
 		fmt.Println("\n" + strings.Repeat("=", 50))
-		fmt.Println("🚨 DETAILED FAILURES")
+		fmt.Println("🚨 FAILURE SUMMARY")
 		fmt.Println(strings.Repeat("=", 50))
 
+		var failedServices []string
 		for _, result := range results {
+			hasFailures := false
+			failureTypes := []string{}
+
 			if result.HasTests && result.GolintResult != nil && !result.GolintResult.Passed {
-				fmt.Printf("\n❌ %s - Golint Failure:\n", result.Name)
-				fmt.Printf("Issues Found: %d\n", result.GolintResult.IssueCount)
-				if result.GolintResult.Output != "" {
-					fmt.Printf("Issues:\n")
-					displayGolintIssuesTable(result.GolintResult.Output)
-				}
+				hasFailures = true
+				failureTypes = append(failureTypes, fmt.Sprintf("golint (%d issues)", result.GolintResult.IssueCount))
 			}
 
-			if result.HasTests && !result.TestResult.Passed {
-				fmt.Printf("\n❌ %s - Test Failure:\n", result.Name)
-				fmt.Printf("Error: %s\n", result.TestResult.Error)
-				if result.TestResult.Output != "" {
-					fmt.Printf("Output: %s\n", result.TestResult.Output)
-				}
+			if result.HasTests && result.TestResult != nil && !result.TestResult.Passed {
+				hasFailures = true
+				failureTypes = append(failureTypes, fmt.Sprintf("tests (%d failed)", result.TestResult.FailCount))
 			}
 
-			if result.HasGRPC && !result.LintResult.Passed {
-				fmt.Printf("\n❌ %s - gRPC Lint Failure:\n", result.Name)
-				fmt.Printf("Error: %s\n", result.LintResult.Error)
-				if result.LintResult.Output != "" {
-					fmt.Printf("Output: %s\n", result.LintResult.Output)
-				}
+			if result.HasGRPC && result.LintResult != nil && !result.LintResult.Passed {
+				hasFailures = true
+				failureTypes = append(failureTypes, "gRPC lint")
+			}
+
+			if hasFailures {
+				failedServices = append(failedServices, fmt.Sprintf("  • %s: %s", result.Name, strings.Join(failureTypes, ", ")))
 			}
 		}
+
+		for _, service := range failedServices {
+			fmt.Println(service)
+		}
+
+		fmt.Println("\n💡 To see detailed logs for a specific service, run:")
+		fmt.Println("   go run scripts/run-tests-and-lint/main.go --service <service-name>")
+		fmt.Println("\n   Available services: auth, productivity, grpc, mail, mail-server, shared")
 	}
 
 	// Exit with appropriate code
