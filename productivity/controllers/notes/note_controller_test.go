@@ -1,11 +1,12 @@
 package notes
 
 import (
-	"github.com/atomic-blend/backend/productivity/models"
-	"github.com/atomic-blend/backend/productivity/tests/mocks"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/atomic-blend/backend/productivity/models"
+	"github.com/atomic-blend/backend/productivity/tests/mocks"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
@@ -35,6 +36,7 @@ func TestSetupRoutesWithMock(t *testing.T) {
 		expected int
 	}{
 		{http.MethodGet, "/notes", http.StatusOK},
+		{http.MethodGet, "/notes/since", http.StatusOK},
 		{http.MethodGet, "/notes/123", http.StatusOK},
 		{http.MethodPost, "/notes", http.StatusOK},
 		{http.MethodPut, "/notes/123", http.StatusOK},
@@ -43,6 +45,7 @@ func TestSetupRoutesWithMock(t *testing.T) {
 
 	// Setup mock expectations for each route
 	mockNoteRepo.On("GetAll", mock.Anything, mock.AnythingOfType("*primitive.ObjectID")).Return([]*models.NoteEntity{}, nil)
+	mockNoteRepo.On("GetSince", mock.Anything, mock.AnythingOfType("primitive.ObjectID"), mock.AnythingOfType("time.Time"), mock.AnythingOfType("*int64"), mock.AnythingOfType("*int64")).Return([]*models.NoteEntity{}, int64(0), nil)
 	mockNoteRepo.On("GetByID", mock.Anything, mock.AnythingOfType("string")).Return(createTestNote(), nil)
 	mockNoteRepo.On("Create", mock.Anything, mock.AnythingOfType("*models.NoteEntity")).Return(createTestNote(), nil)
 	mockNoteRepo.On("Update", mock.Anything, mock.AnythingOfType("string"), mock.AnythingOfType("*models.NoteEntity")).Return(createTestNote(), nil)
