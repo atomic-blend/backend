@@ -4,11 +4,13 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -19,6 +21,7 @@ type ServiceResult struct {
 	GolintResult *GolintResult
 	HasTests     bool
 	HasGRPC      bool
+	Index        int // For maintaining order
 }
 
 type TestResult struct {
@@ -64,8 +67,13 @@ type GolintResult struct {
 }
 
 func main() {
+	// Parse command line flags
+	var numThreads = flag.Int("threads", 4, "Number of parallel threads to use for running tests and linting")
+	flag.Parse()
+
 	fmt.Println("🚀 Running Microservice Tests, Golint, and gRPC Linting")
 	fmt.Println("📍 This script should be run from the backend directory")
+	fmt.Printf("🧵 Using %d parallel threads\n", *numThreads)
 	fmt.Println(strings.Repeat("=", 50))
 
 	// Get the workspace root (assuming script is run from backend directory)
@@ -86,77 +94,122 @@ func main() {
 	}
 
 	startTime := time.Now()
-	results := make([]*ServiceResult, 0, len(services))
 
 	// Count total services that will be processed
 	totalServices := 0
+	var validServices []string
 	for _, service := range services {
 		servicePath := filepath.Join(workspaceRoot, service)
 		if _, err := os.Stat(servicePath); err == nil {
 			totalServices++
+			validServices = append(validServices, service)
 		}
 	}
 
 	fmt.Printf("📊 Found %d services to process\n", totalServices)
 	fmt.Println()
 
-	// Run tests and linting for each service
-	foundServices := 0
-	currentService := 0
-	for _, service := range services {
-		servicePath := filepath.Join(workspaceRoot, service)
-
-		// Check if service directory exists
-		if _, err := os.Stat(servicePath); os.IsNotExist(err) {
-			fmt.Printf("⚠️  Service %s not found, skipping...\n", service)
-			continue
-		}
-		foundServices++
-		currentService++
-
-		fmt.Printf("\n🔍 Processing %s... (%d/%d)\n", service, currentService, totalServices)
-		printProgressBar(currentService, totalServices, "📈 Overall Progress")
-
-		result := &ServiceResult{
-			Name: service,
-		}
-
-		// Check if service has tests (and can run golint)
-		if hasTests(servicePath) {
-			result.HasTests = true
-
-			// Run golint first
-			printProgressBar(currentService, totalServices, "🔍 Running Golint")
-			result.GolintResult = runGolint(servicePath, service)
-
-			// Then run tests
-			printProgressBar(currentService, totalServices, "🧪 Running Tests")
-			result.TestResult = runTests(servicePath, service)
-		}
-
-		// Check if service has gRPC
-		if hasGRPC(servicePath) {
-			result.HasGRPC = true
-			printProgressBar(currentService, totalServices, "🔍 Running gRPC Lint")
-			result.LintResult = runGRPCLint(servicePath, service)
-		}
-
-		results = append(results, result)
-	}
-
-	// Complete the progress bar
-	fmt.Println() // New line after progress bar
-
-	// Check if we found any services
-	if foundServices == 0 {
+	if totalServices == 0 {
 		fmt.Printf("\n❌ Error: No services found. Please run this script from the backend directory.\n")
 		fmt.Printf("Current directory: %s\n", workspaceRoot)
 		fmt.Printf("Expected to find services like: auth, mail, productivity, etc.\n")
 		os.Exit(1)
 	}
 
+	// Create channels for parallel processing
+	serviceChan := make(chan string, len(validServices))
+	resultChan := make(chan *ServiceResult, len(validServices))
+	var wg sync.WaitGroup
+
+	// Start worker goroutines
+	for i := 0; i < *numThreads; i++ {
+		wg.Add(1)
+		go func(workerID int) {
+			defer wg.Done()
+			for service := range serviceChan {
+				processService(workspaceRoot, service, resultChan, workerID)
+			}
+		}(i)
+	}
+
+	// Send services to workers
+	for i, service := range validServices {
+		serviceChan <- service
+		fmt.Printf("🔍 Queued %s for processing... (%d/%d)\n", service, i+1, totalServices)
+	}
+	close(serviceChan)
+
+	// Start a goroutine to close result channel when all workers are done
+	go func() {
+		wg.Wait()
+		close(resultChan)
+	}()
+
+	// Collect results
+	results := make([]*ServiceResult, 0, totalServices)
+	completedCount := 0
+	for result := range resultChan {
+		results = append(results, result)
+		completedCount++
+		fmt.Printf("✅ Completed %s (%d/%d)\n", result.Name, completedCount, totalServices)
+	}
+
+	// Sort results by index to maintain original order
+	for i := 0; i < len(results); i++ {
+		for j := i + 1; j < len(results); j++ {
+			if results[i].Index > results[j].Index {
+				results[i], results[j] = results[j], results[i]
+			}
+		}
+	}
+
 	// Display results
 	displayResults(results, startTime)
+}
+
+// processService processes a single service in a worker goroutine
+func processService(workspaceRoot, service string, resultChan chan<- *ServiceResult, workerID int) {
+	servicePath := filepath.Join(workspaceRoot, service)
+
+	// Find the index of this service in the original list for ordering
+	services := []string{"auth", "productivity", "grpc", "mail", "mail-server", "shared"}
+	index := -1
+	for i, s := range services {
+		if s == service {
+			index = i
+			break
+		}
+	}
+
+	result := &ServiceResult{
+		Name:  service,
+		Index: index,
+	}
+
+	fmt.Printf("🧵 Worker %d: Processing %s...\n", workerID, service)
+
+	// Check if service has tests (and can run golint)
+	if hasTests(servicePath) {
+		result.HasTests = true
+
+		// Run golint first
+		fmt.Printf("🧵 Worker %d: Running golint for %s...\n", workerID, service)
+		result.GolintResult = runGolint(servicePath, service)
+
+		// Then run tests
+		fmt.Printf("🧵 Worker %d: Running tests for %s...\n", workerID, service)
+		result.TestResult = runTests(servicePath, service)
+	}
+
+	// Check if service has gRPC
+	if hasGRPC(servicePath) {
+		result.HasGRPC = true
+		fmt.Printf("🧵 Worker %d: Running gRPC lint for %s...\n", workerID, service)
+		result.LintResult = runGRPCLint(servicePath, service)
+	}
+
+	fmt.Printf("🧵 Worker %d: Completed %s\n", workerID, service)
+	resultChan <- result
 }
 
 func hasTests(servicePath string) bool {
