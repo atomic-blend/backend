@@ -4,9 +4,9 @@ package config
 import (
 	"net/http"
 	"os"
-	"strconv"
 	"strings"
 
+	"github.com/atomic-blend/backend/auth/utils"
 	"github.com/gin-gonic/gin"
 )
 
@@ -25,26 +25,19 @@ func (c *Controller) GetConfig(ctx *gin.Context) {
 		domains = strings.Split(domainList, ",")
 	}
 
-	maxUsersString := os.Getenv("AUTH_MAX_NB_USER")
-	maxUsers := int64(1)
-	if maxUsersString != "" {
-		maxUsersInt, err := strconv.ParseInt(maxUsersString, 10, 64)
-		if err != nil {
-			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse AUTH_MAX_NB_USER"})
-			return
-		}
-		maxUsers = maxUsersInt
-	}
-
-	users, err := c.userRepo.Count(ctx.Request.Context())
+	spotsRemaining, err := utils.GetRemainingSpots(ctx, c.userRepo)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get current user count"})
+		// Check if it's a parsing error by checking the error message
+		if err.Error() == "strconv.ParseInt: parsing \"invalid\": invalid syntax" {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse AUTH_MAX_NB_USER"})
+		} else {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get current user count"})
+		}
 		return
 	}
-	currentUserCount := users
 
 	ctx.JSON(http.StatusOK, gin.H{
 		"domains":        domains,
-		"remainingSpots": maxUsers - currentUserCount,
+		"remainingSpots": spotsRemaining,
 	})
 }
