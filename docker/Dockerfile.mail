@@ -18,5 +18,4 @@ FROM alpine:3.21
 RUN apk add --no-cache ca-certificates curl
 
 COPY --from=dev go/bin/app /
-COPY --from=dev /app/mail/restricted_mails.json /restricted_mails.json
 CMD ["/app"] 
