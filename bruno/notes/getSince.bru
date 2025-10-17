@@ -5,15 +5,15 @@ meta {
 }
 
 get {
-  url: {{API_URL}}/mail/draft/since?since=2025-10-16T00:00:00Z&page=1&size=10
+  url: {{API_URL}}/notes/since?since=2024-01-01T00:00:00Z&page=1&limit=10
   body: none
   auth: inherit
 }
 
 params:query {
-  since: 2025-10-16T00:00:00Z
+  since: 2024-01-01T00:00:00Z
   page: 1
-  size: 10
+  limit: 10
 }
 
 settings {

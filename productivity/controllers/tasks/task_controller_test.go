@@ -2,11 +2,12 @@
 package tasks
 
 import (
-	"github.com/atomic-blend/backend/productivity/models"
-	"github.com/atomic-blend/backend/productivity/tests/mocks"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/atomic-blend/backend/productivity/models"
+	"github.com/atomic-blend/backend/productivity/tests/mocks"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
@@ -38,6 +39,7 @@ func TestSetupRoutesWithMock(t *testing.T) {
 		expected int
 	}{
 		{http.MethodGet, "/tasks", http.StatusOK},
+		{http.MethodGet, "/tasks/since", http.StatusOK},
 		{http.MethodGet, "/tasks/123", http.StatusOK},
 		{http.MethodPost, "/tasks", http.StatusOK},
 		{http.MethodPut, "/tasks/123", http.StatusOK},
@@ -46,6 +48,7 @@ func TestSetupRoutesWithMock(t *testing.T) {
 
 	// Setup mock expectations for each route - fixing the GetAll method to include both parameters
 	mockTaskRepo.On("GetAll", mock.Anything, mock.AnythingOfType("*primitive.ObjectID")).Return([]*models.TaskEntity{}, nil)
+	mockTaskRepo.On("GetSince", mock.Anything, mock.AnythingOfType("primitive.ObjectID"), mock.AnythingOfType("time.Time"), mock.AnythingOfType("*int64"), mock.AnythingOfType("*int64")).Return([]*models.TaskEntity{}, int64(0), nil)
 	mockTaskRepo.On("GetByID", mock.Anything, mock.AnythingOfType("string")).Return(createTestTask(), nil)
 	mockTaskRepo.On("Create", mock.Anything, mock.AnythingOfType("*models.TaskEntity")).Return(createTestTask(), nil)
 	mockTaskRepo.On("Update", mock.Anything, mock.AnythingOfType("string"), mock.AnythingOfType("*models.TaskEntity")).Return(createTestTask(), nil)

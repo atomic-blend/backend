@@ -43,6 +43,7 @@ func setupTaskRoutes(router *gin.Engine, taskController *TaskController) {
 	auth.RequireAuth(taskRoutes)
 	{
 		taskRoutes.GET("", pagination.New(), taskController.GetAllTasks)
+		taskRoutes.GET("/since", taskController.GetTasksSince)
 		taskRoutes.GET("/:id", taskController.GetTaskByID)
 		taskRoutes.POST("", taskController.CreateTask)
 		taskRoutes.PUT("/:id", taskController.UpdateTask)

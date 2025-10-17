@@ -40,6 +40,7 @@ func setupNoteRoutes(router *gin.Engine, noteController *NoteController) {
 	auth.RequireAuth(noteRoutes)
 	{
 		noteRoutes.GET("", pagination.New(), noteController.GetAllNotes)
+		noteRoutes.GET("/since", noteController.GetNotesSince)
 		noteRoutes.GET("/:id", noteController.GetNoteByID)
 		noteRoutes.POST("", noteController.CreateNote)
 		noteRoutes.PUT("/:id", noteController.UpdateNote)
