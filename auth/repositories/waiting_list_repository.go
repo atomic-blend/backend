@@ -1,3 +1,4 @@
+// Package repositories provides data access layer implementations for the auth service.
 package repositories
 
 import (
@@ -19,8 +20,12 @@ type WaitingListRepositoryInterface interface {
 	Create(ctx context.Context, waitingList *waitinglist.WaitingList) (*waitinglist.WaitingList, error)
 	GetAll(ctx context.Context) ([]*waitinglist.WaitingList, error)
 	GetByID(ctx context.Context, id string) (*waitinglist.WaitingList, error)
+	GetByEmail(ctx context.Context, email string) (*waitinglist.WaitingList, error)
+	GetByCode(ctx context.Context, code string) (*waitinglist.WaitingList, error)
 	Update(ctx context.Context, id string, waitingList *waitinglist.WaitingList) (*waitinglist.WaitingList, error)
 	Delete(ctx context.Context, id string) error
+	DeleteByEmail(ctx context.Context, email string) error
+	DeleteByCode(ctx context.Context, code string) error
 }
 
 // WaitingListRepository handles database operations related to waiting lists
@@ -86,6 +91,26 @@ func (r *WaitingListRepository) GetByID(ctx context.Context, id string) (*waitin
 	return &waitingList, nil
 }
 
+// GetByEmail retrieves a waiting list by email address
+func (r *WaitingListRepository) GetByEmail(ctx context.Context, email string) (*waitinglist.WaitingList, error) {
+	var waitingList waitinglist.WaitingList
+	err := r.collection.FindOne(ctx, bson.M{"email": email}).Decode(&waitingList)
+	if err != nil {
+		return nil, err
+	}
+	return &waitingList, nil
+}
+
+// GetByCode retrieves a waiting list by code
+func (r *WaitingListRepository) GetByCode(ctx context.Context, code string) (*waitinglist.WaitingList, error) {
+	var waitingList waitinglist.WaitingList
+	err := r.collection.FindOne(ctx, bson.M{"code": code}).Decode(&waitingList)
+	if err != nil {
+		return nil, err
+	}
+	return &waitingList, nil
+}
+
 // Update modifies an existing waiting list in the database
 func (r *WaitingListRepository) Update(ctx context.Context, id string, waitingList *waitinglist.WaitingList) (*waitinglist.WaitingList, error) {
 	objID, err := primitive.ObjectIDFromHex(id)
@@ -112,6 +137,26 @@ func (r *WaitingListRepository) Delete(ctx context.Context, id string) error {
 	}
 
 	_, err = r.collection.DeleteOne(ctx, bson.M{"_id": objID})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// DeleteByEmail removes a waiting list from the database by email address
+func (r *WaitingListRepository) DeleteByEmail(ctx context.Context, email string) error {
+	_, err := r.collection.DeleteOne(ctx, bson.M{"email": email})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// DeleteByCode removes a waiting list from the database by code
+func (r *WaitingListRepository) DeleteByCode(ctx context.Context, code string) error {
+	_, err := r.collection.DeleteOne(ctx, bson.M{"code": code})
 	if err != nil {
 		return err
 	}

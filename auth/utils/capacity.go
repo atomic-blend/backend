@@ -5,6 +5,7 @@ import (
 	"os"
 	"strconv"
 
+	"github.com/atomic-blend/backend/auth/repositories"
 	"github.com/atomic-blend/backend/shared/repositories/user"
 	"github.com/gin-gonic/gin"
 )
@@ -28,4 +29,13 @@ func GetRemainingSpots(ctx *gin.Context, repository user.Interface) (int64, erro
 	currentUserCount := users
 
 	return maxUsers - currentUserCount, nil
+}
+
+// GetUserCode returns the code for a user in the waiting list by email
+func GetUserCode(ctx *gin.Context, waitingListRepo repositories.WaitingListRepositoryInterface, email string) (*string, error) {
+	record, err := waitingListRepo.GetByEmail(ctx.Request.Context(), email)
+	if err != nil {
+		return nil, err
+	}
+	return record.Code, nil
 }

@@ -6,6 +6,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/atomic-blend/backend/auth/utils"
 	"github.com/atomic-blend/backend/shared/models"
 	"github.com/atomic-blend/backend/shared/utils/jwt"
 	"github.com/atomic-blend/backend/shared/utils/password"
@@ -31,6 +32,35 @@ func (c *Controller) Register(ctx *gin.Context) {
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
+	}
+
+	// get the remaining spots
+	remainingSpots, err := utils.GetRemainingSpots(ctx, c.userRepo)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get remaining spots"})
+		return
+	}
+
+	if remainingSpots <= 0 {
+		// check if code is in the register payload
+		if req.WaitingListCode == nil {
+			ctx.JSON(http.StatusForbidden, gin.H{"error": "capacity_reached"})
+			return
+		}
+
+		// get the waiting list record by code
+		waitingListRecord, err := c.waitingListRepo.GetByCode(ctx, *req.WaitingListCode)
+		if err != nil {
+			// If the code doesn't exist, return invalid_code error
+			ctx.JSON(http.StatusForbidden, gin.H{"error": "invalid_code"})
+			return
+		}
+
+		// check if the code exists
+		if waitingListRecord == nil {
+			ctx.JSON(http.StatusForbidden, gin.H{"error": "invalid_code"})
+			return
+		}
 	}
 
 	if req.KeySet.Type != nil && *req.KeySet.Type != "age_v1" {
@@ -137,6 +167,15 @@ func (c *Controller) Register(ctx *gin.Context) {
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate refresh token"})
 		return
+	}
+
+	// if the user is in the waiting list, delete the record by code
+	if req.WaitingListCode != nil {
+		err = c.waitingListRepo.DeleteByCode(ctx, *req.WaitingListCode)
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "error_deleting_waiting_list_record"})
+			return
+		}
 	}
 
 	// For security reasons, remove the password from the response
