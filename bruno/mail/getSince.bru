@@ -1,16 +1,17 @@
 meta {
-  name: /getAll
+  name: /getSince
   type: http
-  seq: 1
+  seq: 3
 }
 
 get {
-  url: {{API_URL}}/mail/draft?page=1&size=10
+  url: {{API_URL}}/mail/since?since=2025-10-09T00:00:00Z&page=1&size=10
   body: none
   auth: inherit
 }
 
 params:query {
+  since: 2025-10-09T00:00:00Z
   page: 1
   size: 10
 }

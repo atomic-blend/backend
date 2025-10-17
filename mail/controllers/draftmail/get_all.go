@@ -15,7 +15,7 @@ type PaginatedDraftMailResponse struct {
 	TotalCount int64              `json:"total_count"`
 	Page       int64              `json:"page,omitempty"`
 	Size       int64              `json:"size,omitempty"`
-	TotalPages int64              `json:"total_pages,omitempty"`
+	TotalPages int64              `json:"total_pages"`
 }
 
 // GetAllDraftMails retrieves all draft mails for the authenticated user with pagination

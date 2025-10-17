@@ -1,13 +1,18 @@
 meta {
-  name: /config
+  name: /getAll
   type: http
-  seq: 1
+  seq: 2
 }
 
 get {
-  url: {{API_URL}}/config
+  url: {{API_URL}}/tasks/?page=1&size=10
   body: none
   auth: inherit
+}
+
+params:query {
+  page: 1
+  size: 10
 }
 
 settings {

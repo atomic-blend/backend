@@ -32,7 +32,7 @@ echo "📍 Workspace: $WORKSPACE_ROOT"
 echo ""
 
 # Run the Go script from the backend directory
-go run "$SCRIPT_DIR/main.go"
+go run "$SCRIPT_DIR/main.go" "$@"
 
 # Capture the exit code
 EXIT_CODE=$?

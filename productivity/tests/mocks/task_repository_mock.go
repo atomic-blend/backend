@@ -16,12 +16,12 @@ type MockTaskRepository struct {
 }
 
 // GetAll gets all tasks
-func (m *MockTaskRepository) GetAll(ctx context.Context, userID *primitive.ObjectID) ([]*models.TaskEntity, error) {
-	args := m.Called(ctx, userID)
+func (m *MockTaskRepository) GetAll(ctx context.Context, userID *primitive.ObjectID, page, limit *int64) ([]*models.TaskEntity, int64, error) {
+	args := m.Called(ctx, userID, page, limit)
 	if args.Get(0) == nil {
-		return nil, args.Error(1)
+		return nil, args.Get(1).(int64), args.Error(2)
 	}
-	return args.Get(0).([]*models.TaskEntity), args.Error(1)
+	return args.Get(0).([]*models.TaskEntity), args.Get(1).(int64), args.Error(2)
 }
 
 // GetByID gets a task by ID
