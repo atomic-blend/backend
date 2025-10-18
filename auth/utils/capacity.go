@@ -28,7 +28,12 @@ func GetRemainingSpots(ctx *gin.Context, repository user.Interface) (int64, erro
 	}
 	currentUserCount := users
 
-	return maxUsers - currentUserCount, nil
+	remainingSpots := maxUsers - currentUserCount
+	if remainingSpots < 0 {
+		remainingSpots = 0
+	}
+
+	return remainingSpots, nil
 }
 
 // GetUserCode returns the code for a user in the waiting list by email
