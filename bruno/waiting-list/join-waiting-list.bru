@@ -1,0 +1,34 @@
+meta {
+  name: /join-waiting-list
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{API_URL}}/waiting-list
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "email": "test@example.com"
+  }
+}
+
+script:post-response {
+  console.log("Response Status:", res.status);
+  console.log("Response Body:", res.body);
+  
+  if (res.status === 200) {
+    console.log("Successfully joined waiting list!");
+    console.log("Entry:", res.body.entry);
+    console.log("Before count:", res.body.before_count);
+  } else {
+    console.log("Error:", res.body.error);
+  }
+}
+
+settings {
+  encodeUrl: true
+}

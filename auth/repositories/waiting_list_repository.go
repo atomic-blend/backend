@@ -17,6 +17,7 @@ const waitingListCollection = "waiting_list"
 
 // WaitingListRepositoryInterface defines the interface for waiting list repository operations
 type WaitingListRepositoryInterface interface {
+	Count(ctx context.Context) (int64, error)
 	Create(ctx context.Context, waitingList *waitinglist.WaitingList) (*waitinglist.WaitingList, error)
 	GetAll(ctx context.Context) ([]*waitinglist.WaitingList, error)
 	GetByID(ctx context.Context, id string) (*waitinglist.WaitingList, error)
@@ -38,6 +39,15 @@ func NewWaitingListRepository(database *mongo.Database) WaitingListRepositoryInt
 	return &WaitingListRepository{
 		collection: database.Collection(waitingListCollection),
 	}
+}
+
+// Count returns the number of waiting list records
+func (r *WaitingListRepository) Count(ctx context.Context) (int64, error) {
+	count, err := r.collection.CountDocuments(ctx, bson.M{})
+	if err != nil {
+		return 0, err
+	}
+	return count, nil
 }
 
 // Create creates a new waiting list
@@ -86,6 +96,9 @@ func (r *WaitingListRepository) GetByID(ctx context.Context, id string) (*waitin
 	var waitingList waitinglist.WaitingList
 	err = r.collection.FindOne(ctx, bson.M{"_id": objID}).Decode(&waitingList)
 	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return nil, nil
+		}
 		return nil, err
 	}
 	return &waitingList, nil
@@ -96,6 +109,9 @@ func (r *WaitingListRepository) GetByEmail(ctx context.Context, email string) (*
 	var waitingList waitinglist.WaitingList
 	err := r.collection.FindOne(ctx, bson.M{"email": email}).Decode(&waitingList)
 	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return nil, nil
+		}
 		return nil, err
 	}
 	return &waitingList, nil
@@ -106,6 +122,9 @@ func (r *WaitingListRepository) GetByCode(ctx context.Context, code string) (*wa
 	var waitingList waitinglist.WaitingList
 	err := r.collection.FindOne(ctx, bson.M{"code": code}).Decode(&waitingList)
 	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return nil, nil
+		}
 		return nil, err
 	}
 	return &waitingList, nil
