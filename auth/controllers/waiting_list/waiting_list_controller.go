@@ -2,27 +2,26 @@ package waitinglist
 
 import (
 	"github.com/atomic-blend/backend/auth/repositories"
-	mailserver "github.com/atomic-blend/backend/shared/grpc/mail-server"
+	amqpinterfaces "github.com/atomic-blend/backend/shared/services/amqp/interfaces"
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
 // Controller handles waiting list-related operations
 type Controller struct {
-	waitingListRepo  repositories.WaitingListRepositoryInterface
-	mailServerClient mailserver.Interface
+	waitingListRepo repositories.WaitingListRepositoryInterface
+	amqpService     amqpinterfaces.AMQPServiceInterface
 }
 
 // NewController creates a new waiting list controller
-func NewController(waitingListRepo repositories.WaitingListRepositoryInterface, mailServerClient mailserver.Interface) *Controller {
-	return &Controller{waitingListRepo: waitingListRepo, mailServerClient: mailServerClient}
+func NewController(waitingListRepo repositories.WaitingListRepositoryInterface, amqpService amqpinterfaces.AMQPServiceInterface) *Controller {
+	return &Controller{waitingListRepo: waitingListRepo, amqpService: amqpService}
 }
 
 // SetupRoutes configures the waiting list routes
-func SetupRoutes(router *gin.Engine, database *mongo.Database) {
+func SetupRoutes(router *gin.Engine, database *mongo.Database, amqpService amqpinterfaces.AMQPServiceInterface) {
 	waitingListRepo := repositories.NewWaitingListRepository(database)
-	mailServerClient, _ := mailserver.NewMailServerClient()
-	waitingListController := NewController(waitingListRepo, mailServerClient)
+	waitingListController := NewController(waitingListRepo, amqpService)
 	waitingListGroup := router.Group("/auth/waiting-list")
 	{
 		waitingListGroup.POST("", waitingListController.JoinWaitingList)

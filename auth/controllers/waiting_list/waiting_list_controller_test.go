@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/atomic-blend/backend/auth/tests/mocks"
+	amqpservice "github.com/atomic-blend/backend/shared/services/amqp"
 	"github.com/atomic-blend/backend/shared/test_utils/inmemorymongo"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
@@ -17,10 +18,10 @@ func TestNewController(t *testing.T) {
 	t.Run("should create new waiting list controller", func(t *testing.T) {
 		// Setup
 		mockRepo := new(mocks.MockWaitingListRepository)
-		mockMailServerClient := new(mocks.MockMailServerClient)
+		mockAMQP := new(amqpservice.MockAMQPService)
 
 		// Act
-		controller := NewController(mockRepo, mockMailServerClient)
+		controller := NewController(mockRepo, mockAMQP)
 
 		// Assert
 		assert.NotNil(t, controller, "Controller should not be nil")
@@ -54,7 +55,8 @@ func TestSetupRoutes(t *testing.T) {
 		router := gin.New()
 
 		// Setup routes
-		SetupRoutes(router, db)
+		mockAMQP := new(amqpservice.MockAMQPService)
+		SetupRoutes(router, db, mockAMQP)
 
 		// Test that the route is properly set up by making a request
 		req, _ := http.NewRequest("POST", "/auth/waiting-list", nil)
@@ -76,9 +78,9 @@ func TestSetupRoutes(t *testing.T) {
 	t.Run("should setup waiting list routes with mock repository", func(t *testing.T) {
 		// Create mock repository
 		mockRepo := new(mocks.MockWaitingListRepository)
-		mockMailServerClient := new(mocks.MockMailServerClient)
+		mockAMQP := new(amqpservice.MockAMQPService)
 		// Create controller
-		controller := NewController(mockRepo, mockMailServerClient)
+		controller := NewController(mockRepo, mockAMQP)
 
 		// Create router
 		router := gin.New()
@@ -110,9 +112,9 @@ func TestSetupRoutesWithMock(t *testing.T) {
 
 	// Create mock repository
 	mockRepo := new(mocks.MockWaitingListRepository)
-	mockMailServerClient := new(mocks.MockMailServerClient)
+	mockAMQP := new(amqpservice.MockAMQPService)
 	// Create controller
-	controller := NewController(mockRepo, mockMailServerClient)
+	controller := NewController(mockRepo, mockAMQP)
 
 	// Create router
 	router := gin.New()
@@ -167,7 +169,8 @@ func TestControllerIntegration(t *testing.T) {
 		router := gin.New()
 
 		// Setup routes
-		SetupRoutes(router, db)
+		mockAMQP := new(amqpservice.MockAMQPService)
+		SetupRoutes(router, db, mockAMQP)
 
 		// Test that the route group is properly configured
 		routes := router.Routes()

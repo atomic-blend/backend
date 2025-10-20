@@ -53,31 +53,31 @@ func handleTemporaryFailure(m *amqppackage.Delivery, body []byte, failedReason s
 	delay := computeDelay(retryCount)
 	log.Info().Msgf("Retrying in %d milliseconds", delay)
 
-	mailClient, err := getMailClient()
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to create mail client")
-		return
-	}
-
 	// publish the message into the retry queue with the delay (Dead letter Queue to the original routing key)
 	var message map[string]interface{}
-	err = json.Unmarshal(body, &message)
+	err := json.Unmarshal(body, &message)
 	if err != nil {
 		log.Error().Err(err).Msg("Error unmarshalling message")
 		return
 	}
 
-	sendEmailID, ok := message["send_mail_id"].(string)
-	if !ok {
-		log.Error().Msg("send_email_id not found in message")
-		return
-	}
+	// Only make gRPC calls if send_mail_id is present
+	sendEmailID, hasSendMailID := message["send_mail_id"].(string)
+	if hasSendMailID {
+		mailClient, err := getMailClient()
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to create mail client")
+			return
+		}
 
-	req := mailclient.CreateRetryStatusRequest(sendEmailID, failedReason, int32(retryCount))
-	_, err = mailClient.UpdateMailStatus(context.Background(), req)
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to update mail status for retry")
-		return
+		req := mailclient.CreateRetryStatusRequest(sendEmailID, failedReason, int32(retryCount))
+		_, err = mailClient.UpdateMailStatus(context.Background(), req)
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to update mail status for retry")
+			return
+		}
+	} else {
+		log.Info().Msg("No send_mail_id found in message, skipping gRPC status update")
 	}
 
 	amqp.PublishMessage("mail", "send_retry", message, &amqppackage.Table{
@@ -93,38 +93,48 @@ func handleTemporaryFailure(m *amqppackage.Delivery, body []byte, failedReason s
 // handlePermanentFailure handles messages that have permanently failed
 func handlePermanentFailure(message *amqppackage.Delivery, failedReason string, retryCount int, sendEmailID string, toAddress string, recipientsFailed []string) {
 	log.Info().Msgf("Permanent failure for message: %s, error: %v", message.Body, failedReason)
-	// make the gRPC call to store the failure reason in the DB + status to failed
-	mailClient, err := getMailClient()
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to create mail client")
-		return
+
+	// Only make gRPC calls if send_mail_id is present
+	if sendEmailID != "" {
+		mailClient, err := getMailClient()
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to create mail client")
+			return
+		}
+
+		log.Info().Msgf("Updating mail status for failure: %s", failedReason)
+
+		req := mailclient.CreateFailureStatusRequest(sendEmailID, failedReason, int32(retryCount))
+		log.Debug().Msgf("Request: %v", req)
+		_, err = mailClient.UpdateMailStatus(context.Background(), req)
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to update mail status for failure")
+			return
+		}
+	} else {
+		log.Info().Msg("No send_mail_id provided, skipping gRPC status update")
 	}
 
-	log.Info().Msgf("Updating mail status for failure: %s", failedReason)
+	// Only send reject mail if we have a valid toAddress
+	if toAddress != "" {
+		// send a email to the user with the failure reason
+		rejectMail := &models.RawMail{
+			Headers: map[string]any{
+				"To":      []string{toAddress},
+				"From":    "mailer-daemon@atomic-blend.com",
+				"Subject": "MAILER DAEMON - MAIL REJECTED",
+			},
+			// mail is rejected because every retry failed
+			TextContent: fmt.Sprintf("Your email from %s was rejected by the recipients: %s. Please contact support if you believe this is an error. The failure reason is: %s", toAddress, strings.Join(recipientsFailed, ", "), failedReason),
+			HTMLContent: fmt.Sprintf("<p>Your email from %s was rejected by the recipients: %s. Please contact support if you believe this is an error. The failure reason is: %s</p>", toAddress, strings.Join(recipientsFailed, ", "), failedReason),
+		}
 
-	req := mailclient.CreateFailureStatusRequest(sendEmailID, failedReason, int32(retryCount))
-	log.Debug().Msgf("Request: %v", req)
-	_, err = mailClient.UpdateMailStatus(context.Background(), req)
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to update mail status for failure")
-		return
-	}
-
-	// send a email to the user with the failure reason
-	rejectMail := &models.RawMail{
-		Headers: map[string]any{
-			"To":      []string{toAddress},
-			"From":    "mailer-daemon@atomic-blend.com",
-			"Subject": "MAILER DAEMON - MAIL REJECTED",
-		},
-		// mail is rejected because every retry failed
-		TextContent: fmt.Sprintf("Your email from %s was rejected by the recipients: %s. Please contact support if you believe this is an error. The failure reason is: %s", toAddress, strings.Join(recipientsFailed, ", "), failedReason),
-		HTMLContent: fmt.Sprintf("<p>Your email from %s was rejected by the recipients: %s. Please contact support if you believe this is an error. The failure reason is: %s</p>", toAddress, strings.Join(recipientsFailed, ", "), failedReason),
-	}
-
-	_, err = mailsender.SendEmail(*rejectMail, nil)
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to send reject mail")
+		_, err := mailsender.SendEmail(*rejectMail, nil)
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to send reject mail")
+		}
+	} else {
+		log.Info().Msg("No toAddress provided, skipping reject mail")
 	}
 
 	message.Ack(false)
@@ -133,31 +143,31 @@ func handlePermanentFailure(message *amqppackage.Delivery, failedReason string, 
 
 func handleSuccess(message *amqppackage.Delivery) {
 	log.Info().Msgf("Message processed successfully: %s", message.Body)
-	//TODO: make the gRPC call to store the success in the DB
-	mailClient, err := getMailClient()
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to create mail client")
-		return
-	}
 
 	var messageWrapper map[string]interface{}
-	err = json.Unmarshal(message.Body, &messageWrapper)
+	err := json.Unmarshal(message.Body, &messageWrapper)
 	if err != nil {
 		log.Error().Err(err).Msg("Error unmarshalling AMQP payload wrapper")
 		return
 	}
 
-	sendEmailID, ok := messageWrapper["send_mail_id"].(string)
-	if !ok {
-		log.Error().Msg("send_email_id not found in message headers")
-		return
-	}
+	// Only make gRPC calls if send_mail_id is present
+	sendEmailID, hasSendMailID := messageWrapper["send_mail_id"].(string)
+	if hasSendMailID {
+		mailClient, err := getMailClient()
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to create mail client")
+			return
+		}
 
-	req := mailclient.CreateSuccessStatusRequest(sendEmailID)
-	_, err = mailClient.UpdateMailStatus(context.Background(), req)
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to update mail status for success")
-		return
+		req := mailclient.CreateSuccessStatusRequest(sendEmailID)
+		_, err = mailClient.UpdateMailStatus(context.Background(), req)
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to update mail status for success")
+			return
+		}
+	} else {
+		log.Info().Msg("No send_mail_id found in message, skipping gRPC status update")
 	}
 
 	message.Ack(false)
@@ -186,10 +196,11 @@ func processSendMailMessage(message *amqppackage.Delivery, rawMail models.RawMai
 		return nil
 	}
 
-	sendEmailID, ok := parsedMessage["send_mail_id"].(string)
-	if !ok {
-		log.Error().Msg("send_email_id not found in message")
-		return nil
+	// Extract send_mail_id if present (optional for external emails)
+	sendEmailID, hasSendMailID := parsedMessage["send_mail_id"].(string)
+	if !hasSendMailID {
+		log.Info().Msg("No send_mail_id found in message - treating as external email")
+		sendEmailID = "" // Set empty string to indicate no tracking
 	}
 
 	// if !isRetry && retryCount > MaxRetries {
@@ -212,7 +223,14 @@ func processSendMailMessage(message *amqppackage.Delivery, rawMail models.RawMai
 		handleTemporaryFailure(message, message.Body, err.Error(), retryCount, recipientsToRetry)
 		return nil
 	} else if err != nil {
-		handlePermanentFailure(message, "retry_limit_reached", retryCount, sendEmailID, rawMail.Headers["From"].(string), recipientsToRetry)
+		// Extract From address safely
+		fromAddress := ""
+		if fromHeader, exists := rawMail.Headers["From"]; exists {
+			if fromStr, ok := fromHeader.(string); ok {
+				fromAddress = fromStr
+			}
+		}
+		handlePermanentFailure(message, "retry_limit_reached", retryCount, sendEmailID, fromAddress, recipientsToRetry)
 		return nil
 	}
 

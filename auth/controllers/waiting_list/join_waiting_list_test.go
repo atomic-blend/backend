@@ -12,11 +12,10 @@ import (
 	"testing"
 	"time"
 
-	"connectrpc.com/connect"
 	waitinglist "github.com/atomic-blend/backend/auth/models/waiting_list"
 	"github.com/atomic-blend/backend/auth/repositories"
 	"github.com/atomic-blend/backend/auth/tests/mocks"
-	mailserverv1 "github.com/atomic-blend/backend/grpc/gen/mailserver/v1"
+	amqpservice "github.com/atomic-blend/backend/shared/services/amqp"
 	"github.com/atomic-blend/backend/shared/test_utils/inmemorymongo"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
@@ -43,7 +42,7 @@ func TestJoinWaitingList(t *testing.T) {
 	testCases := []struct {
 		name           string
 		requestBody    interface{}
-		setupMocks     func(*mocks.MockWaitingListRepository, *mocks.MockMailServerClient)
+		setupMocks     func(*mocks.MockWaitingListRepository, *amqpservice.MockAMQPService)
 		expectedStatus int
 		expectedBody   map[string]interface{}
 	}{
@@ -52,7 +51,7 @@ func TestJoinWaitingList(t *testing.T) {
 			requestBody: JoinWaitingListRequest{
 				Email: "test@example.com",
 			},
-			setupMocks: func(mockRepo *mocks.MockWaitingListRepository, mockMailClient *mocks.MockMailServerClient) {
+			setupMocks: func(mockRepo *mocks.MockWaitingListRepository, mockAMQP *amqpservice.MockAMQPService) {
 				// Mock GetByEmail to return nil (email not found)
 				mockRepo.On("GetByEmail", mock.Anything, "test@example.com").Return(nil, nil)
 
@@ -73,13 +72,8 @@ func TestJoinWaitingList(t *testing.T) {
 				// Mock Count to return total count after creation
 				mockRepo.On("Count", mock.Anything).Return(int64(6), nil)
 
-				// Mock email sending
-				expectedResponse := &connect.Response[mailserverv1.SendMailInternalResponse]{
-					Msg: &mailserverv1.SendMailInternalResponse{
-						Success: true,
-					},
-				}
-				mockMailClient.On("SendMailInternal", mock.Anything, mock.Anything).Return(expectedResponse, nil)
+				// Mock AMQP message publishing
+				mockAMQP.On("PublishMessage", "mail", "sent", mock.AnythingOfType("map[string]interface {}"), mock.AnythingOfType("*amqp.Table")).Return()
 			},
 			expectedStatus: http.StatusOK,
 			expectedBody: map[string]interface{}{
@@ -93,7 +87,7 @@ func TestJoinWaitingList(t *testing.T) {
 			requestBody: JoinWaitingListRequest{
 				Email: "existing@example.com",
 			},
-			setupMocks: func(mockRepo *mocks.MockWaitingListRepository, mockMailClient *mocks.MockMailServerClient) {
+			setupMocks: func(mockRepo *mocks.MockWaitingListRepository, mockAMQP *amqpservice.MockAMQPService) {
 				// Mock GetByEmail to return existing record
 				now := primitive.NewDateTimeFromTime(time.Now())
 				existingRecord := &waitinglist.WaitingList{
@@ -102,7 +96,7 @@ func TestJoinWaitingList(t *testing.T) {
 					UpdatedAt: &now,
 				}
 				mockRepo.On("GetByEmail", mock.Anything, "existing@example.com").Return(existingRecord, nil)
-				// No email sending expected since user already exists
+				// No AMQP message publishing expected since user already exists
 			},
 			expectedStatus: http.StatusBadRequest,
 			expectedBody: map[string]interface{}{
@@ -114,7 +108,7 @@ func TestJoinWaitingList(t *testing.T) {
 			requestBody: JoinWaitingListRequest{
 				Email: "invalid-email",
 			},
-			setupMocks: func(mockRepo *mocks.MockWaitingListRepository, mockMailClient *mocks.MockMailServerClient) {
+			setupMocks: func(mockRepo *mocks.MockWaitingListRepository, mockAMQP *amqpservice.MockAMQPService) {
 				// No mocks needed as validation happens before repository calls
 			},
 			expectedStatus: http.StatusBadRequest,
@@ -127,7 +121,7 @@ func TestJoinWaitingList(t *testing.T) {
 			requestBody: map[string]string{
 				"invalid_field": "test@example.com",
 			},
-			setupMocks: func(mockRepo *mocks.MockWaitingListRepository, mockMailClient *mocks.MockMailServerClient) {
+			setupMocks: func(mockRepo *mocks.MockWaitingListRepository, mockAMQP *amqpservice.MockAMQPService) {
 				// No mocks needed as validation happens before repository calls
 			},
 			expectedStatus: http.StatusBadRequest,
@@ -138,7 +132,7 @@ func TestJoinWaitingList(t *testing.T) {
 		{
 			name:        "empty request body",
 			requestBody: map[string]string{},
-			setupMocks: func(mockRepo *mocks.MockWaitingListRepository, mockMailClient *mocks.MockMailServerClient) {
+			setupMocks: func(mockRepo *mocks.MockWaitingListRepository, mockAMQP *amqpservice.MockAMQPService) {
 				// No mocks needed as validation happens before repository calls
 			},
 			expectedStatus: http.StatusBadRequest,
@@ -151,7 +145,7 @@ func TestJoinWaitingList(t *testing.T) {
 			requestBody: JoinWaitingListRequest{
 				Email: "test@example.com",
 			},
-			setupMocks: func(mockRepo *mocks.MockWaitingListRepository, mockMailClient *mocks.MockMailServerClient) {
+			setupMocks: func(mockRepo *mocks.MockWaitingListRepository, mockAMQP *amqpservice.MockAMQPService) {
 				// Mock GetByEmail to return error
 				mockRepo.On("GetByEmail", mock.Anything, "test@example.com").Return(nil, assert.AnError)
 			},
@@ -165,7 +159,7 @@ func TestJoinWaitingList(t *testing.T) {
 			requestBody: JoinWaitingListRequest{
 				Email: "test@example.com",
 			},
-			setupMocks: func(mockRepo *mocks.MockWaitingListRepository, mockMailClient *mocks.MockMailServerClient) {
+			setupMocks: func(mockRepo *mocks.MockWaitingListRepository, mockAMQP *amqpservice.MockAMQPService) {
 				// Mock GetByEmail to return nil (email not found)
 				mockRepo.On("GetByEmail", mock.Anything, "test@example.com").Return(nil, nil)
 
@@ -186,13 +180,8 @@ func TestJoinWaitingList(t *testing.T) {
 				// Mock Count to return error
 				mockRepo.On("Count", mock.Anything).Return(int64(0), assert.AnError)
 
-				// Mock email sending
-				expectedResponse := &connect.Response[mailserverv1.SendMailInternalResponse]{
-					Msg: &mailserverv1.SendMailInternalResponse{
-						Success: true,
-					},
-				}
-				mockMailClient.On("SendMailInternal", mock.Anything, mock.Anything).Return(expectedResponse, nil)
+				// Mock AMQP message publishing
+				mockAMQP.On("PublishMessage", "mail", "sent", mock.AnythingOfType("map[string]interface {}"), mock.AnythingOfType("*amqp.Table")).Return()
 			},
 			expectedStatus: http.StatusInternalServerError,
 			expectedBody: map[string]interface{}{
@@ -204,7 +193,7 @@ func TestJoinWaitingList(t *testing.T) {
 			requestBody: JoinWaitingListRequest{
 				Email: "test@example.com",
 			},
-			setupMocks: func(mockRepo *mocks.MockWaitingListRepository, mockMailClient *mocks.MockMailServerClient) {
+			setupMocks: func(mockRepo *mocks.MockWaitingListRepository, mockAMQP *amqpservice.MockAMQPService) {
 				// Mock GetByEmail to return nil (email not found)
 				mockRepo.On("GetByEmail", mock.Anything, "test@example.com").Return(nil, nil)
 
@@ -216,79 +205,18 @@ func TestJoinWaitingList(t *testing.T) {
 				"error": "error_creating_waiting_list_record",
 			},
 		},
-		{
-			name: "email sending failure",
-			requestBody: JoinWaitingListRequest{
-				Email: "test@example.com",
-			},
-			setupMocks: func(mockRepo *mocks.MockWaitingListRepository, mockMailClient *mocks.MockMailServerClient) {
-				// Mock GetByEmail to return nil (email not found)
-				mockRepo.On("GetByEmail", mock.Anything, "test@example.com").Return(nil, nil)
-
-				// Mock Create to return a new waiting list record
-				now := primitive.NewDateTimeFromTime(time.Now())
-				securityToken := "a1b2c3d4e5f678901234567890123456"
-				expectedRecord := &waitinglist.WaitingList{
-					Email:         "test@example.com",
-					SecurityToken: &securityToken,
-					CreatedAt:     &now,
-					UpdatedAt:     &now,
-				}
-				mockRepo.On("Create", mock.Anything, mock.AnythingOfType("*waitinglist.WaitingList")).Return(expectedRecord, nil)
-
-				// Mock email sending to return error
-				mockMailClient.On("SendMailInternal", mock.Anything, mock.Anything).Return(nil, assert.AnError)
-			},
-			expectedStatus: http.StatusInternalServerError,
-			expectedBody: map[string]interface{}{
-				"error": "Failed to send email",
-			},
-		},
-		{
-			name: "email sending returns unsuccessful response",
-			requestBody: JoinWaitingListRequest{
-				Email: "test@example.com",
-			},
-			setupMocks: func(mockRepo *mocks.MockWaitingListRepository, mockMailClient *mocks.MockMailServerClient) {
-				// Mock GetByEmail to return nil (email not found)
-				mockRepo.On("GetByEmail", mock.Anything, "test@example.com").Return(nil, nil)
-
-				// Mock Create to return a new waiting list record
-				now := primitive.NewDateTimeFromTime(time.Now())
-				securityToken := "a1b2c3d4e5f678901234567890123456"
-				expectedRecord := &waitinglist.WaitingList{
-					Email:         "test@example.com",
-					SecurityToken: &securityToken,
-					CreatedAt:     &now,
-					UpdatedAt:     &now,
-				}
-				mockRepo.On("Create", mock.Anything, mock.AnythingOfType("*waitinglist.WaitingList")).Return(expectedRecord, nil)
-
-				// Mock email sending to return unsuccessful response
-				expectedResponse := &connect.Response[mailserverv1.SendMailInternalResponse]{
-					Msg: &mailserverv1.SendMailInternalResponse{
-						Success: false,
-					},
-				}
-				mockMailClient.On("SendMailInternal", mock.Anything, mock.Anything).Return(expectedResponse, nil)
-			},
-			expectedStatus: http.StatusInternalServerError,
-			expectedBody: map[string]interface{}{
-				"error": "Failed to send email",
-			},
-		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			// Create mocks
 			mockRepo := new(mocks.MockWaitingListRepository)
-			mockMailServerClient := new(mocks.MockMailServerClient)
+			mockAMQP := new(amqpservice.MockAMQPService)
 			// Setup mocks
-			tc.setupMocks(mockRepo, mockMailServerClient)
+			tc.setupMocks(mockRepo, mockAMQP)
 
 			// Create controller and router
-			controller := NewController(mockRepo, mockMailServerClient)
+			controller := NewController(mockRepo, mockAMQP)
 
 			router := gin.New()
 			router.POST("/auth/waiting-list", controller.JoinWaitingList)
@@ -339,7 +267,7 @@ func TestJoinWaitingList(t *testing.T) {
 
 			// Verify mock expectations
 			mockRepo.AssertExpectations(t)
-			mockMailServerClient.AssertExpectations(t)
+			mockAMQP.AssertExpectations(t)
 		})
 	}
 }
@@ -381,19 +309,14 @@ func TestJoinWaitingListIntegration(t *testing.T) {
 		// Create repositories
 		waitingListRepo := repositories.NewWaitingListRepository(db)
 
-		// Create mock mail server client
-		mockMailServerClient := &mocks.MockMailServerClient{}
+		// Create mock AMQP service
+		mockAMQP := &amqpservice.MockAMQPService{}
 
-		// Mock successful email sending
-		expectedResponse := &connect.Response[mailserverv1.SendMailInternalResponse]{
-			Msg: &mailserverv1.SendMailInternalResponse{
-				Success: true,
-			},
-		}
-		mockMailServerClient.On("SendMailInternal", mock.Anything, mock.Anything).Return(expectedResponse, nil)
+		// Mock AMQP message publishing
+		mockAMQP.On("PublishMessage", "mail", "sent", mock.AnythingOfType("map[string]interface {}"), mock.AnythingOfType("*amqp.Table")).Return()
 
-		// Create controller with mock mail server
-		controller := NewController(waitingListRepo, mockMailServerClient)
+		// Create controller with mock AMQP service
+		controller := NewController(waitingListRepo, mockAMQP)
 
 		// Create router
 		router := gin.New()
@@ -450,7 +373,7 @@ func TestJoinWaitingListIntegration(t *testing.T) {
 		assert.Equal(t, "error_email_already_in_waiting_list", errorResponse["error"])
 
 		// Verify mock expectations
-		mockMailServerClient.AssertExpectations(t)
+		mockAMQP.AssertExpectations(t)
 	})
 }
 
@@ -473,7 +396,7 @@ func TestEmailTemplateRendering(t *testing.T) {
 	t.Run("should render email templates with correct data", func(t *testing.T) {
 		// Create mock repository
 		mockRepo := new(mocks.MockWaitingListRepository)
-		mockMailServerClient := new(mocks.MockMailServerClient)
+		mockAMQP := new(amqpservice.MockAMQPService)
 
 		// Setup mocks
 		mockRepo.On("GetByEmail", mock.Anything, "template@example.com").Return(nil, nil)
@@ -495,18 +418,14 @@ func TestEmailTemplateRendering(t *testing.T) {
 		// Mock Count to return total count after creation
 		mockRepo.On("Count", mock.Anything).Return(int64(1), nil)
 
-		// Mock email sending and capture the request to verify content
-		var capturedRequest *connect.Request[mailserverv1.SendMailInternalRequest]
-		mockMailServerClient.On("SendMailInternal", mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
-			capturedRequest = args.Get(1).(*connect.Request[mailserverv1.SendMailInternalRequest])
-		}).Return(&connect.Response[mailserverv1.SendMailInternalResponse]{
-			Msg: &mailserverv1.SendMailInternalResponse{
-				Success: true,
-			},
-		}, nil)
+		// Mock AMQP message publishing and capture the message to verify content
+		var capturedMessage map[string]interface{}
+		mockAMQP.On("PublishMessage", "mail", "sent", mock.AnythingOfType("map[string]interface {}"), mock.AnythingOfType("*amqp.Table")).Run(func(args mock.Arguments) {
+			capturedMessage = args.Get(2).(map[string]interface{})
+		}).Return()
 
 		// Create controller and router
-		controller := NewController(mockRepo, mockMailServerClient)
+		controller := NewController(mockRepo, mockAMQP)
 
 		router := gin.New()
 		router.POST("/auth/waiting-list", controller.JoinWaitingList)
@@ -529,46 +448,52 @@ func TestEmailTemplateRendering(t *testing.T) {
 		// Should return 200 OK
 		assert.Equal(t, http.StatusOK, w.Code)
 
-		// Verify email was sent with correct content
-		mockMailServerClient.AssertExpectations(t)
-		assert.NotNil(t, capturedRequest, "Email request should have been captured")
+		// Verify AMQP message was published with correct content
+		mockAMQP.AssertExpectations(t)
+		assert.NotNil(t, capturedMessage, "AMQP message should have been captured")
 
-		// Verify email content
-		emailReq := capturedRequest.Msg
-		assert.Equal(t, []string{"template@example.com"}, emailReq.To)
-		assert.Equal(t, "noreply@atomic-blend.com", emailReq.From)
-		assert.Equal(t, "You just joined the waiting list!", emailReq.Subject)
+		// Verify AMQP message structure
+		assert.Equal(t, true, capturedMessage["waiting_list_email"])
+		content := capturedMessage["content"].(map[string]interface{})
+
+		// Verify headers
+		headers := content["headers"].(map[string]interface{})
+		assert.Equal(t, []string{"template@example.com"}, headers["To"])
+		assert.Equal(t, "noreply@atomic-blend.com", headers["From"])
+		assert.Equal(t, "You just joined the waiting list!", headers["Subject"])
 
 		// Extract the actual security token from the HTML content
 		// The token is generated randomly, so we need to extract it from the response
 		var actualSecurityToken string
-		if len(emailReq.HtmlContent) > 0 {
+		htmlContent := content["htmlContent"].(string)
+		if len(htmlContent) > 0 {
 			// Find the security token in the HTML content
 			// Look for the pattern: <p style="...">TOKEN</p>
-			start := strings.Index(emailReq.HtmlContent, "<p style=\"margin: 0; word-break: break-all; font-family: ui-monospace")
+			start := strings.Index(htmlContent, "<p style=\"margin: 0; word-break: break-all; font-family: ui-monospace")
 			if start != -1 {
 				// Find the closing tag
-				end := strings.Index(emailReq.HtmlContent[start:], "</p>")
+				end := strings.Index(htmlContent[start:], "</p>")
 				if end != -1 {
-					tokenStart := strings.Index(emailReq.HtmlContent[start:start+end], ">")
+					tokenStart := strings.Index(htmlContent[start:start+end], ">")
 					if tokenStart != -1 {
 						tokenEnd := start + end
 						tokenStartPos := start + tokenStart + 1
-						actualSecurityToken = strings.TrimSpace(emailReq.HtmlContent[tokenStartPos:tokenEnd])
+						actualSecurityToken = strings.TrimSpace(htmlContent[tokenStartPos:tokenEnd])
 					}
 				}
 			}
 		}
 
 		// Verify HTML content contains email and security token
-		assert.Contains(t, emailReq.HtmlContent, "template@example.com")
-		assert.Contains(t, emailReq.HtmlContent, actualSecurityToken)
-		assert.Contains(t, emailReq.HtmlContent, "Welcome to Atomic Blend!")
+		assert.Contains(t, htmlContent, "template@example.com")
+		assert.Contains(t, htmlContent, actualSecurityToken)
+		assert.Contains(t, htmlContent, "Welcome to Atomic Blend!")
 
 		// Verify text content contains email and security token
-		assert.Contains(t, emailReq.TextContent, "template@example.com")
-		assert.Contains(t, emailReq.TextContent, actualSecurityToken)
-		assert.Contains(t, emailReq.TextContent, "Welcome to Atomic Blend!")
+		textContent := content["textContent"].(string)
+		assert.Contains(t, textContent, "template@example.com")
+		assert.Contains(t, textContent, actualSecurityToken)
+		assert.Contains(t, textContent, "Welcome to Atomic Blend!")
 
 		// Verify the security token is 32 characters long
 		assert.Equal(t, 32, len(actualSecurityToken), "securityToken should be 32 characters long")
@@ -661,7 +586,7 @@ func TestJoinWaitingListRequestValidation(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			// Create mock repository
 			mockRepo := new(mocks.MockWaitingListRepository)
-			mockMailServerClient := new(mocks.MockMailServerClient)
+			mockAMQP := new(amqpservice.MockAMQPService)
 			// Setup mocks for successful cases
 			if tc.expectedStatus == http.StatusOK {
 				mockRepo.On("GetByEmail", mock.Anything, mock.AnythingOfType("string")).Return(nil, nil)
@@ -677,17 +602,12 @@ func TestJoinWaitingListRequestValidation(t *testing.T) {
 				// Mock Count to return total count after creation
 				mockRepo.On("Count", mock.Anything).Return(int64(1), nil)
 
-				// Mock email sending for successful cases
-				expectedResponse := &connect.Response[mailserverv1.SendMailInternalResponse]{
-					Msg: &mailserverv1.SendMailInternalResponse{
-						Success: true,
-					},
-				}
-				mockMailServerClient.On("SendMailInternal", mock.Anything, mock.Anything).Return(expectedResponse, nil)
+				// Mock AMQP message publishing for successful cases
+				mockAMQP.On("PublishMessage", "mail", "sent", mock.AnythingOfType("map[string]interface {}"), mock.AnythingOfType("*amqp.Table")).Return()
 			}
 
 			// Create controller and router
-			controller := NewController(mockRepo, mockMailServerClient)
+			controller := NewController(mockRepo, mockAMQP)
 
 			router := gin.New()
 			router.POST("/auth/waiting-list", controller.JoinWaitingList)
@@ -709,7 +629,7 @@ func TestJoinWaitingListRequestValidation(t *testing.T) {
 
 			// Verify mock expectations
 			mockRepo.AssertExpectations(t)
-			mockMailServerClient.AssertExpectations(t)
+			mockAMQP.AssertExpectations(t)
 		})
 	}
 }
@@ -751,19 +671,14 @@ func TestSecurityTokenGeneration(t *testing.T) {
 		// Create repositories
 		waitingListRepo := repositories.NewWaitingListRepository(db)
 
-		// Create mock mail server client
-		mockMailServerClient := &mocks.MockMailServerClient{}
+		// Create mock AMQP service
+		mockAMQP := &amqpservice.MockAMQPService{}
 
-		// Mock successful email sending for all requests
-		expectedResponse := &connect.Response[mailserverv1.SendMailInternalResponse]{
-			Msg: &mailserverv1.SendMailInternalResponse{
-				Success: true,
-			},
-		}
-		mockMailServerClient.On("SendMailInternal", mock.Anything, mock.Anything).Return(expectedResponse, nil)
+		// Mock AMQP message publishing for all requests
+		mockAMQP.On("PublishMessage", "mail", "sent", mock.AnythingOfType("map[string]interface {}"), mock.AnythingOfType("*amqp.Table")).Return()
 
-		// Create controller with mock mail server
-		controller := NewController(waitingListRepo, mockMailServerClient)
+		// Create controller with mock AMQP service
+		controller := NewController(waitingListRepo, mockAMQP)
 
 		// Create router
 		router := gin.New()
@@ -810,6 +725,6 @@ func TestSecurityTokenGeneration(t *testing.T) {
 		assert.Equal(t, 10, len(tokens), "should generate 10 unique tokens")
 
 		// Verify mock expectations
-		mockMailServerClient.AssertExpectations(t)
+		mockAMQP.AssertExpectations(t)
 	})
 }

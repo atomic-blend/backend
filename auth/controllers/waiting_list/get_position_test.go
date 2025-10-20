@@ -13,6 +13,7 @@ import (
 	waitinglist "github.com/atomic-blend/backend/auth/models/waiting_list"
 	"github.com/atomic-blend/backend/auth/repositories"
 	"github.com/atomic-blend/backend/auth/tests/mocks"
+	amqpservice "github.com/atomic-blend/backend/shared/services/amqp"
 	"github.com/atomic-blend/backend/shared/test_utils/inmemorymongo"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
@@ -39,7 +40,7 @@ func TestGetWaitingListPosition(t *testing.T) {
 	testCases := []struct {
 		name           string
 		requestBody    interface{}
-		setupMocks     func(*mocks.MockWaitingListRepository, *mocks.MockMailServerClient)
+		setupMocks     func(*mocks.MockWaitingListRepository, *amqpservice.MockAMQPService)
 		expectedStatus int
 		expectedBody   map[string]interface{}
 	}{
@@ -49,7 +50,7 @@ func TestGetWaitingListPosition(t *testing.T) {
 				Email:         "test@example.com",
 				SecurityToken: "a1b2c3d4e5f678901234567890123456",
 			},
-			setupMocks: func(mockRepo *mocks.MockWaitingListRepository, mockMailClient *mocks.MockMailServerClient) {
+			setupMocks: func(mockRepo *mocks.MockWaitingListRepository, mockAMQP *amqpservice.MockAMQPService) {
 				// Mock GetByEmail to return existing record
 				now := primitive.NewDateTimeFromTime(time.Now())
 				securityToken := "a1b2c3d4e5f678901234567890123456"
@@ -80,7 +81,7 @@ func TestGetWaitingListPosition(t *testing.T) {
 				Email:         "notfound@example.com",
 				SecurityToken: "a1b2c3d4e5f678901234567890123456",
 			},
-			setupMocks: func(mockRepo *mocks.MockWaitingListRepository, mockMailClient *mocks.MockMailServerClient) {
+			setupMocks: func(mockRepo *mocks.MockWaitingListRepository, mockAMQP *amqpservice.MockAMQPService) {
 				// Mock GetByEmail to return nil (email not found)
 				mockRepo.On("GetByEmail", mock.Anything, "notfound@example.com").Return(nil, nil)
 			},
@@ -95,7 +96,7 @@ func TestGetWaitingListPosition(t *testing.T) {
 				Email:         "test@example.com",
 				SecurityToken: "invalid_token",
 			},
-			setupMocks: func(mockRepo *mocks.MockWaitingListRepository, mockMailClient *mocks.MockMailServerClient) {
+			setupMocks: func(mockRepo *mocks.MockWaitingListRepository, mockAMQP *amqpservice.MockAMQPService) {
 				// Mock GetByEmail to return existing record with different token
 				now := primitive.NewDateTimeFromTime(time.Now())
 				securityToken := "a1b2c3d4e5f678901234567890123456"
@@ -118,7 +119,7 @@ func TestGetWaitingListPosition(t *testing.T) {
 				Email:         "test@example.com",
 				SecurityToken: "a1b2c3d4e5f678901234567890123456",
 			},
-			setupMocks: func(mockRepo *mocks.MockWaitingListRepository, mockMailClient *mocks.MockMailServerClient) {
+			setupMocks: func(mockRepo *mocks.MockWaitingListRepository, mockAMQP *amqpservice.MockAMQPService) {
 				// Mock GetByEmail to return record without security token
 				now := primitive.NewDateTimeFromTime(time.Now())
 				expectedRecord := &waitinglist.WaitingList{
@@ -140,7 +141,7 @@ func TestGetWaitingListPosition(t *testing.T) {
 				Email:         "invalid-email",
 				SecurityToken: "a1b2c3d4e5f678901234567890123456",
 			},
-			setupMocks: func(mockRepo *mocks.MockWaitingListRepository, mockMailClient *mocks.MockMailServerClient) {
+			setupMocks: func(mockRepo *mocks.MockWaitingListRepository, mockAMQP *amqpservice.MockAMQPService) {
 				// No mocks needed as validation happens before repository calls
 			},
 			expectedStatus: http.StatusBadRequest,
@@ -153,7 +154,7 @@ func TestGetWaitingListPosition(t *testing.T) {
 			requestBody: map[string]string{
 				"securityToken": "a1b2c3d4e5f678901234567890123456",
 			},
-			setupMocks: func(mockRepo *mocks.MockWaitingListRepository, mockMailClient *mocks.MockMailServerClient) {
+			setupMocks: func(mockRepo *mocks.MockWaitingListRepository, mockAMQP *amqpservice.MockAMQPService) {
 				// No mocks needed as validation happens before repository calls
 			},
 			expectedStatus: http.StatusBadRequest,
@@ -166,7 +167,7 @@ func TestGetWaitingListPosition(t *testing.T) {
 			requestBody: map[string]string{
 				"email": "test@example.com",
 			},
-			setupMocks: func(mockRepo *mocks.MockWaitingListRepository, mockMailClient *mocks.MockMailServerClient) {
+			setupMocks: func(mockRepo *mocks.MockWaitingListRepository, mockAMQP *amqpservice.MockAMQPService) {
 				// No mocks needed as validation happens before repository calls
 			},
 			expectedStatus: http.StatusBadRequest,
@@ -177,7 +178,7 @@ func TestGetWaitingListPosition(t *testing.T) {
 		{
 			name:        "empty request body",
 			requestBody: map[string]string{},
-			setupMocks: func(mockRepo *mocks.MockWaitingListRepository, mockMailClient *mocks.MockMailServerClient) {
+			setupMocks: func(mockRepo *mocks.MockWaitingListRepository, mockAMQP *amqpservice.MockAMQPService) {
 				// No mocks needed as validation happens before repository calls
 			},
 			expectedStatus: http.StatusBadRequest,
@@ -191,7 +192,7 @@ func TestGetWaitingListPosition(t *testing.T) {
 				Email:         "test@example.com",
 				SecurityToken: "a1b2c3d4e5f678901234567890123456",
 			},
-			setupMocks: func(mockRepo *mocks.MockWaitingListRepository, mockMailClient *mocks.MockMailServerClient) {
+			setupMocks: func(mockRepo *mocks.MockWaitingListRepository, mockAMQP *amqpservice.MockAMQPService) {
 				// Mock GetByEmail to return error
 				mockRepo.On("GetByEmail", mock.Anything, "test@example.com").Return(nil, assert.AnError)
 			},
@@ -206,7 +207,7 @@ func TestGetWaitingListPosition(t *testing.T) {
 				Email:         "test@example.com",
 				SecurityToken: "a1b2c3d4e5f678901234567890123456",
 			},
-			setupMocks: func(mockRepo *mocks.MockWaitingListRepository, mockMailClient *mocks.MockMailServerClient) {
+			setupMocks: func(mockRepo *mocks.MockWaitingListRepository, mockAMQP *amqpservice.MockAMQPService) {
 				// Mock GetByEmail to return existing record
 				now := primitive.NewDateTimeFromTime(time.Now())
 				securityToken := "a1b2c3d4e5f678901234567890123456"
@@ -232,7 +233,7 @@ func TestGetWaitingListPosition(t *testing.T) {
 				Email:         "test@example.com",
 				SecurityToken: "a1b2c3d4e5f678901234567890123456",
 			},
-			setupMocks: func(mockRepo *mocks.MockWaitingListRepository, mockMailClient *mocks.MockMailServerClient) {
+			setupMocks: func(mockRepo *mocks.MockWaitingListRepository, mockAMQP *amqpservice.MockAMQPService) {
 				// Mock GetByEmail to return existing record
 				now := primitive.NewDateTimeFromTime(time.Now())
 				securityToken := "a1b2c3d4e5f678901234567890123456"
@@ -261,12 +262,12 @@ func TestGetWaitingListPosition(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			// Create mocks
 			mockRepo := new(mocks.MockWaitingListRepository)
-			mockMailServerClient := new(mocks.MockMailServerClient)
+			mockAMQP := new(amqpservice.MockAMQPService)
 			// Setup mocks
-			tc.setupMocks(mockRepo, mockMailServerClient)
+			tc.setupMocks(mockRepo, mockAMQP)
 
 			// Create controller and router
-			controller := NewController(mockRepo, mockMailServerClient)
+			controller := NewController(mockRepo, mockAMQP)
 
 			router := gin.New()
 			router.POST("/auth/waiting-list/position", controller.GetWaitingListPosition)
@@ -312,7 +313,7 @@ func TestGetWaitingListPosition(t *testing.T) {
 
 			// Verify mock expectations
 			mockRepo.AssertExpectations(t)
-			mockMailServerClient.AssertExpectations(t)
+			mockAMQP.AssertExpectations(t)
 		})
 	}
 }
@@ -354,11 +355,11 @@ func TestGetWaitingListPositionIntegration(t *testing.T) {
 		// Create repositories
 		waitingListRepo := repositories.NewWaitingListRepository(db)
 
-		// Create mock mail server client
-		mockMailServerClient := &mocks.MockMailServerClient{}
+		// Create mock AMQP service
+		mockAMQP := &amqpservice.MockAMQPService{}
 
-		// Create controller with mock mail server
-		controller := NewController(waitingListRepo, mockMailServerClient)
+		// Create controller with mock AMQP service
+		controller := NewController(waitingListRepo, mockAMQP)
 
 		// Create router
 		router := gin.New()
@@ -457,6 +458,6 @@ func TestGetWaitingListPositionIntegration(t *testing.T) {
 		assert.Equal(t, "error_invalid_security_token", errorResponse["error"])
 
 		// Verify mock expectations
-		mockMailServerClient.AssertExpectations(t)
+		mockAMQP.AssertExpectations(t)
 	})
 }

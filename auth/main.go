@@ -14,6 +14,7 @@ import (
 	waitinglist "github.com/atomic-blend/backend/auth/controllers/waiting_list"
 	"github.com/atomic-blend/backend/auth/controllers/webhooks"
 	"github.com/atomic-blend/backend/shared/models"
+	amqpservice "github.com/atomic-blend/backend/shared/services/amqp"
 	"github.com/atomic-blend/backend/shared/utils/db"
 
 	"github.com/gin-contrib/cors"
@@ -140,6 +141,10 @@ func main() {
 		log.Info().Msg("No CORS configuration found, skipping CORS setup")
 	}
 
+	// Initialize AMQP service
+	amqpService := amqpservice.NewAMQPService("AUTH")
+	amqpService.InitProducerAMQP()
+
 	// Register all routes
 	auth.SetupRoutes(router, db.Database)
 	users.SetupRoutes(router, db.Database)
@@ -147,7 +152,7 @@ func main() {
 	health.SetupRoutes(router, db.Database)
 	webhooks.SetupRoutes(router, db.Database)
 	config.SetupRoutes(router, db.Database)
-	waitinglist.SetupRoutes(router, db.Database)
+	waitinglist.SetupRoutes(router, db.Database, amqpService)
 
 	// Define port
 	port := os.Getenv("PORT")

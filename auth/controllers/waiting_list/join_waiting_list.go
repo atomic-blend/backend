@@ -2,7 +2,6 @@ package waitinglist
 
 import (
 	"bytes"
-	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"net/http"
@@ -11,7 +10,6 @@ import (
 	"time"
 
 	waitinglist "github.com/atomic-blend/backend/auth/models/waiting_list"
-	mailserver "github.com/atomic-blend/backend/shared/grpc/mail-server"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog/log"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -122,20 +120,27 @@ func (c *Controller) JoinWaitingList(ctx *gin.Context) {
 		return
 	}
 
-	mailreq := mailserver.CreateSendMailInternalRequest([]string{req.Email}, "noreply@atomic-blend.com", "You just joined the waiting list!", htmlContent.String(), textContent.String())
-
-	resp, err := c.mailServerClient.SendMailInternal(context.Background(), mailreq)
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to send email")
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to send email"})
-		return
+	// Create RawMail structure for AMQP
+	rawMail := map[string]interface{}{
+		"headers": map[string]interface{}{
+			"To":      []string{req.Email},
+			"From":    "noreply@atomic-blend.com",
+			"Subject": "You just joined the waiting list!",
+		},
+		"htmlContent":    htmlContent.String(),
+		"textContent":    textContent.String(),
+		"rejected":       false,
+		"rewriteSubject": false,
+		"graylisted":     false,
 	}
 
-	if !resp.Msg.Success {
-		log.Error().Msg("Failed to send email")
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to send email"})
-		return
-	}
+	// Publish message to AMQP queue
+	c.amqpService.PublishMessage("mail", "sent", map[string]interface{}{
+		"waiting_list_email": true,
+		"content":            rawMail,
+	}, nil)
+
+	log.Info().Msg("Waiting list email queued for sending")
 
 	// get the position of this record (0-based index)
 	position, err := c.waitingListRepo.GetPositionByEmail(ctx, req.Email)
