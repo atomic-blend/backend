@@ -47,6 +47,12 @@ preheader: Welcome to Atomic Blend waiting list
                                     tuned for updates!
                                 </p>
 
+                                <x-button
+                                    href="https://{{ .domain }}/#/auth/register?email={{ .email }}&security-key={{ .securityToken }}"
+                                    align="center">
+                                    Check Status
+                                </x-button>
+
                                 <x-spacer height="24px" />
 
                                 <p class="m-0 text-base/6 text-slate-600">

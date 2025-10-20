@@ -17,6 +17,8 @@ Please keep this security token safe - you'll need it to manage your waiting lis
 
 We'll notify you as soon as Atomic Blend becomes available. In the meantime, stay tuned for updates!
 
+Check Status : https://{{ .domain }}/#/auth/register?email={{ .email }}&security-key={{ .securityToken }}
+
 Best regards,
 The Atomic Blend Team
 

@@ -2,9 +2,11 @@ package waitinglist
 
 import (
 	"bytes"
+	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"net/http"
+	"os"
 	"text/template"
 	"time"
 
@@ -77,6 +79,15 @@ func (c *Controller) JoinWaitingList(ctx *gin.Context) {
 		return
 	}
 
+	// get the domain from the environment variables
+	domain := os.Getenv("PUBLIC_ADDRESS")
+	if domain == "" {
+		domain = "mail.atomic-blend.com"
+		return
+	} else {
+		domain = "mail." + domain
+	}
+
 	// template the html with gotemplate
 	htmlTemplate, err := template.ParseFiles("./email_templates/join_waiting_list/join_waiting_list.html")
 	if err != nil {
@@ -96,6 +107,7 @@ func (c *Controller) JoinWaitingList(ctx *gin.Context) {
 	var htmlContent bytes.Buffer
 	err = htmlTemplate.Execute(&htmlContent, map[string]string{
 		"email":         req.Email,
+		"domain":        domain,
 		"securityToken": securityToken,
 	})
 
@@ -108,6 +120,7 @@ func (c *Controller) JoinWaitingList(ctx *gin.Context) {
 	var textContent bytes.Buffer
 	err = textTemplate.Execute(&textContent, map[string]string{
 		"email":         req.Email,
+		"domain":        domain,
 		"securityToken": securityToken,
 	})
 	if err != nil {
@@ -118,7 +131,7 @@ func (c *Controller) JoinWaitingList(ctx *gin.Context) {
 
 	mailreq := mailserver.CreateSendMailInternalRequest([]string{req.Email}, "noreply@atomic-blend.com", "You just joined the waiting list!", htmlContent.String(), textContent.String())
 
-	resp, err := c.mailServerClient.SendMailInternal(ctx, mailreq)
+	resp, err := c.mailServerClient.SendMailInternal(context.Background(), mailreq)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to send email")
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to send email"})
