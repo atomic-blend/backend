@@ -4,13 +4,19 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"strings"
 	"testing"
 	"time"
 
+	"connectrpc.com/connect"
 	waitinglist "github.com/atomic-blend/backend/auth/models/waiting_list"
+	"github.com/atomic-blend/backend/auth/repositories"
 	"github.com/atomic-blend/backend/auth/tests/mocks"
+	mailserverv1 "github.com/atomic-blend/backend/grpc/gen/mailserver/v1"
 	"github.com/atomic-blend/backend/shared/test_utils/inmemorymongo"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
@@ -21,10 +27,23 @@ import (
 func TestJoinWaitingList(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
+	// Change to the auth directory to find email templates
+	originalDir, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("Failed to get current directory: %v", err)
+	}
+	defer os.Chdir(originalDir)
+
+	// Change to auth directory where templates are located
+	err = os.Chdir("../..")
+	if err != nil {
+		t.Fatalf("Failed to change to auth directory: %v", err)
+	}
+
 	testCases := []struct {
 		name           string
 		requestBody    interface{}
-		setupMocks     func(*mocks.MockWaitingListRepository)
+		setupMocks     func(*mocks.MockWaitingListRepository, *mocks.MockMailServerClient)
 		expectedStatus int
 		expectedBody   map[string]interface{}
 	}{
@@ -33,7 +52,7 @@ func TestJoinWaitingList(t *testing.T) {
 			requestBody: JoinWaitingListRequest{
 				Email: "test@example.com",
 			},
-			setupMocks: func(mockRepo *mocks.MockWaitingListRepository) {
+			setupMocks: func(mockRepo *mocks.MockWaitingListRepository, mockMailClient *mocks.MockMailServerClient) {
 				// Mock GetByEmail to return nil (email not found)
 				mockRepo.On("GetByEmail", mock.Anything, "test@example.com").Return(nil, nil)
 
@@ -42,12 +61,22 @@ func TestJoinWaitingList(t *testing.T) {
 
 				// Mock Create to return a new waiting list record
 				now := primitive.NewDateTimeFromTime(time.Now())
+				securityToken := "a1b2c3d4e5f678901234567890123456"
 				expectedRecord := &waitinglist.WaitingList{
-					Email:     "test@example.com",
-					CreatedAt: &now,
-					UpdatedAt: &now,
+					Email:         "test@example.com",
+					SecurityToken: &securityToken,
+					CreatedAt:     &now,
+					UpdatedAt:     &now,
 				}
 				mockRepo.On("Create", mock.Anything, mock.AnythingOfType("*waitinglist.WaitingList")).Return(expectedRecord, nil)
+
+				// Mock email sending
+				expectedResponse := &connect.Response[mailserverv1.SendMailInternalResponse]{
+					Msg: &mailserverv1.SendMailInternalResponse{
+						Success: true,
+					},
+				}
+				mockMailClient.On("SendMailInternal", mock.Anything, mock.Anything).Return(expectedResponse, nil)
 			},
 			expectedStatus: http.StatusOK,
 			expectedBody: map[string]interface{}{
@@ -60,7 +89,7 @@ func TestJoinWaitingList(t *testing.T) {
 			requestBody: JoinWaitingListRequest{
 				Email: "existing@example.com",
 			},
-			setupMocks: func(mockRepo *mocks.MockWaitingListRepository) {
+			setupMocks: func(mockRepo *mocks.MockWaitingListRepository, mockMailClient *mocks.MockMailServerClient) {
 				// Mock GetByEmail to return existing record
 				now := primitive.NewDateTimeFromTime(time.Now())
 				existingRecord := &waitinglist.WaitingList{
@@ -69,6 +98,7 @@ func TestJoinWaitingList(t *testing.T) {
 					UpdatedAt: &now,
 				}
 				mockRepo.On("GetByEmail", mock.Anything, "existing@example.com").Return(existingRecord, nil)
+				// No email sending expected since user already exists
 			},
 			expectedStatus: http.StatusBadRequest,
 			expectedBody: map[string]interface{}{
@@ -80,7 +110,7 @@ func TestJoinWaitingList(t *testing.T) {
 			requestBody: JoinWaitingListRequest{
 				Email: "invalid-email",
 			},
-			setupMocks: func(mockRepo *mocks.MockWaitingListRepository) {
+			setupMocks: func(mockRepo *mocks.MockWaitingListRepository, mockMailClient *mocks.MockMailServerClient) {
 				// No mocks needed as validation happens before repository calls
 			},
 			expectedStatus: http.StatusBadRequest,
@@ -93,7 +123,7 @@ func TestJoinWaitingList(t *testing.T) {
 			requestBody: map[string]string{
 				"invalid_field": "test@example.com",
 			},
-			setupMocks: func(mockRepo *mocks.MockWaitingListRepository) {
+			setupMocks: func(mockRepo *mocks.MockWaitingListRepository, mockMailClient *mocks.MockMailServerClient) {
 				// No mocks needed as validation happens before repository calls
 			},
 			expectedStatus: http.StatusBadRequest,
@@ -104,7 +134,7 @@ func TestJoinWaitingList(t *testing.T) {
 		{
 			name:        "empty request body",
 			requestBody: map[string]string{},
-			setupMocks: func(mockRepo *mocks.MockWaitingListRepository) {
+			setupMocks: func(mockRepo *mocks.MockWaitingListRepository, mockMailClient *mocks.MockMailServerClient) {
 				// No mocks needed as validation happens before repository calls
 			},
 			expectedStatus: http.StatusBadRequest,
@@ -117,7 +147,7 @@ func TestJoinWaitingList(t *testing.T) {
 			requestBody: JoinWaitingListRequest{
 				Email: "test@example.com",
 			},
-			setupMocks: func(mockRepo *mocks.MockWaitingListRepository) {
+			setupMocks: func(mockRepo *mocks.MockWaitingListRepository, mockMailClient *mocks.MockMailServerClient) {
 				// Mock GetByEmail to return error
 				mockRepo.On("GetByEmail", mock.Anything, "test@example.com").Return(nil, assert.AnError)
 			},
@@ -131,7 +161,7 @@ func TestJoinWaitingList(t *testing.T) {
 			requestBody: JoinWaitingListRequest{
 				Email: "test@example.com",
 			},
-			setupMocks: func(mockRepo *mocks.MockWaitingListRepository) {
+			setupMocks: func(mockRepo *mocks.MockWaitingListRepository, mockMailClient *mocks.MockMailServerClient) {
 				// Mock GetByEmail to return nil (email not found)
 				mockRepo.On("GetByEmail", mock.Anything, "test@example.com").Return(nil, nil)
 
@@ -148,7 +178,7 @@ func TestJoinWaitingList(t *testing.T) {
 			requestBody: JoinWaitingListRequest{
 				Email: "test@example.com",
 			},
-			setupMocks: func(mockRepo *mocks.MockWaitingListRepository) {
+			setupMocks: func(mockRepo *mocks.MockWaitingListRepository, mockMailClient *mocks.MockMailServerClient) {
 				// Mock GetByEmail to return nil (email not found)
 				mockRepo.On("GetByEmail", mock.Anything, "test@example.com").Return(nil, nil)
 
@@ -163,18 +193,85 @@ func TestJoinWaitingList(t *testing.T) {
 				"error": "error_creating_waiting_list_record",
 			},
 		},
+		{
+			name: "email sending failure",
+			requestBody: JoinWaitingListRequest{
+				Email: "test@example.com",
+			},
+			setupMocks: func(mockRepo *mocks.MockWaitingListRepository, mockMailClient *mocks.MockMailServerClient) {
+				// Mock GetByEmail to return nil (email not found)
+				mockRepo.On("GetByEmail", mock.Anything, "test@example.com").Return(nil, nil)
+
+				// Mock Count to return 0
+				mockRepo.On("Count", mock.Anything).Return(int64(0), nil)
+
+				// Mock Create to return a new waiting list record
+				now := primitive.NewDateTimeFromTime(time.Now())
+				securityToken := "a1b2c3d4e5f678901234567890123456"
+				expectedRecord := &waitinglist.WaitingList{
+					Email:         "test@example.com",
+					SecurityToken: &securityToken,
+					CreatedAt:     &now,
+					UpdatedAt:     &now,
+				}
+				mockRepo.On("Create", mock.Anything, mock.AnythingOfType("*waitinglist.WaitingList")).Return(expectedRecord, nil)
+
+				// Mock email sending to return error
+				mockMailClient.On("SendMailInternal", mock.Anything, mock.Anything).Return(nil, assert.AnError)
+			},
+			expectedStatus: http.StatusInternalServerError,
+			expectedBody: map[string]interface{}{
+				"error": "Failed to send email",
+			},
+		},
+		{
+			name: "email sending returns unsuccessful response",
+			requestBody: JoinWaitingListRequest{
+				Email: "test@example.com",
+			},
+			setupMocks: func(mockRepo *mocks.MockWaitingListRepository, mockMailClient *mocks.MockMailServerClient) {
+				// Mock GetByEmail to return nil (email not found)
+				mockRepo.On("GetByEmail", mock.Anything, "test@example.com").Return(nil, nil)
+
+				// Mock Count to return 0
+				mockRepo.On("Count", mock.Anything).Return(int64(0), nil)
+
+				// Mock Create to return a new waiting list record
+				now := primitive.NewDateTimeFromTime(time.Now())
+				securityToken := "a1b2c3d4e5f678901234567890123456"
+				expectedRecord := &waitinglist.WaitingList{
+					Email:         "test@example.com",
+					SecurityToken: &securityToken,
+					CreatedAt:     &now,
+					UpdatedAt:     &now,
+				}
+				mockRepo.On("Create", mock.Anything, mock.AnythingOfType("*waitinglist.WaitingList")).Return(expectedRecord, nil)
+
+				// Mock email sending to return unsuccessful response
+				expectedResponse := &connect.Response[mailserverv1.SendMailInternalResponse]{
+					Msg: &mailserverv1.SendMailInternalResponse{
+						Success: false,
+					},
+				}
+				mockMailClient.On("SendMailInternal", mock.Anything, mock.Anything).Return(expectedResponse, nil)
+			},
+			expectedStatus: http.StatusInternalServerError,
+			expectedBody: map[string]interface{}{
+				"error": "Failed to send email",
+			},
+		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			// Create mocks
 			mockRepo := new(mocks.MockWaitingListRepository)
-
+			mockMailServerClient := new(mocks.MockMailServerClient)
 			// Setup mocks
-			tc.setupMocks(mockRepo)
+			tc.setupMocks(mockRepo, mockMailServerClient)
 
 			// Create controller and router
-			controller := NewController(mockRepo)
+			controller := NewController(mockRepo, mockMailServerClient)
 
 			router := gin.New()
 			router.POST("/auth/waiting-list", controller.JoinWaitingList)
@@ -204,6 +301,17 @@ func TestJoinWaitingList(t *testing.T) {
 				assert.Equal(t, tc.expectedBody["status"], response["status"])
 				assert.Equal(t, tc.expectedBody["before_count"], response["before_count"])
 				assert.Contains(t, response, "entry")
+
+				// Check that entry contains security token
+				entry, ok := response["entry"].(map[string]interface{})
+				assert.True(t, ok, "entry should be a map")
+				assert.Contains(t, entry, "securityToken")
+				assert.NotNil(t, entry["securityToken"])
+
+				// Verify security token is 32 characters long
+				securityToken, ok := entry["securityToken"].(string)
+				assert.True(t, ok, "securityToken should be a string")
+				assert.Equal(t, 32, len(securityToken), "securityToken should be 32 characters long")
 			} else {
 				assert.Contains(t, response, "error")
 				if tc.expectedBody["error"] != mock.AnythingOfType("string") {
@@ -213,6 +321,7 @@ func TestJoinWaitingList(t *testing.T) {
 
 			// Verify mock expectations
 			mockRepo.AssertExpectations(t)
+			mockMailServerClient.AssertExpectations(t)
 		})
 	}
 }
@@ -220,7 +329,20 @@ func TestJoinWaitingList(t *testing.T) {
 func TestJoinWaitingListIntegration(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	t.Run("should work with real database", func(t *testing.T) {
+	// Change to the auth directory to find email templates
+	originalDir, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("Failed to get current directory: %v", err)
+	}
+	defer os.Chdir(originalDir)
+
+	// Change to auth directory where templates are located
+	err = os.Chdir("../..")
+	if err != nil {
+		t.Fatalf("Failed to change to auth directory: %v", err)
+	}
+
+	t.Run("should work with real database and email templates", func(t *testing.T) {
 		// Start in-memory MongoDB server
 		mongoServer, err := inmemorymongo.CreateInMemoryMongoDB()
 		if err != nil {
@@ -238,12 +360,26 @@ func TestJoinWaitingListIntegration(t *testing.T) {
 		// Get database reference
 		db := client.Database("test_db")
 
-		// Create controller with real repository
-		// Note: controller will be created by SetupRoutes with real repository
+		// Create repositories
+		waitingListRepo := repositories.NewWaitingListRepository(db)
+
+		// Create mock mail server client
+		mockMailServerClient := &mocks.MockMailServerClient{}
+
+		// Mock successful email sending
+		expectedResponse := &connect.Response[mailserverv1.SendMailInternalResponse]{
+			Msg: &mailserverv1.SendMailInternalResponse{
+				Success: true,
+			},
+		}
+		mockMailServerClient.On("SendMailInternal", mock.Anything, mock.Anything).Return(expectedResponse, nil)
+
+		// Create controller with mock mail server
+		controller := NewController(waitingListRepo, mockMailServerClient)
 
 		// Create router
 		router := gin.New()
-		SetupRoutes(router, db)
+		router.POST("/auth/waiting-list", controller.JoinWaitingList)
 
 		// Test successful join
 		requestBody := JoinWaitingListRequest{
@@ -269,6 +405,15 @@ func TestJoinWaitingListIntegration(t *testing.T) {
 		assert.Contains(t, response, "entry")
 		assert.Contains(t, response, "before_count")
 
+		// Verify security token in entry
+		entry, ok := response["entry"].(map[string]interface{})
+		assert.True(t, ok, "entry should be a map")
+		assert.Contains(t, entry, "securityToken")
+
+		securityToken, ok := entry["securityToken"].(string)
+		assert.True(t, ok, "securityToken should be a string")
+		assert.Equal(t, 32, len(securityToken), "securityToken should be 32 characters long")
+
 		// Test duplicate email
 		w2 := httptest.NewRecorder()
 		req2, _ := http.NewRequest(http.MethodPost, "/auth/waiting-list", bytes.NewBuffer(requestBodyBytes))
@@ -284,11 +429,145 @@ func TestJoinWaitingListIntegration(t *testing.T) {
 		err = json.Unmarshal(w2.Body.Bytes(), &errorResponse)
 		assert.NoError(t, err)
 		assert.Equal(t, "error_email_already_in_waiting_list", errorResponse["error"])
+
+		// Verify mock expectations
+		mockMailServerClient.AssertExpectations(t)
+	})
+}
+
+func TestEmailTemplateRendering(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	// Change to the auth directory to find email templates
+	originalDir, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("Failed to get current directory: %v", err)
+	}
+	defer os.Chdir(originalDir)
+
+	// Change to auth directory where templates are located
+	err = os.Chdir("../..")
+	if err != nil {
+		t.Fatalf("Failed to change to auth directory: %v", err)
+	}
+
+	t.Run("should render email templates with correct data", func(t *testing.T) {
+		// Create mock repository
+		mockRepo := new(mocks.MockWaitingListRepository)
+		mockMailServerClient := new(mocks.MockMailServerClient)
+
+		// Setup mocks
+		mockRepo.On("GetByEmail", mock.Anything, "template@example.com").Return(nil, nil)
+		mockRepo.On("Count", mock.Anything).Return(int64(0), nil)
+
+		now := primitive.NewDateTimeFromTime(time.Now())
+		securityToken := "test123456789012345678901234567890"
+		expectedRecord := &waitinglist.WaitingList{
+			Email:         "template@example.com",
+			SecurityToken: &securityToken,
+			CreatedAt:     &now,
+			UpdatedAt:     &now,
+		}
+		mockRepo.On("Create", mock.Anything, mock.AnythingOfType("*waitinglist.WaitingList")).Return(expectedRecord, nil)
+
+		// Mock email sending and capture the request to verify content
+		var capturedRequest *connect.Request[mailserverv1.SendMailInternalRequest]
+		mockMailServerClient.On("SendMailInternal", mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
+			capturedRequest = args.Get(1).(*connect.Request[mailserverv1.SendMailInternalRequest])
+		}).Return(&connect.Response[mailserverv1.SendMailInternalResponse]{
+			Msg: &mailserverv1.SendMailInternalResponse{
+				Success: true,
+			},
+		}, nil)
+
+		// Create controller and router
+		controller := NewController(mockRepo, mockMailServerClient)
+
+		router := gin.New()
+		router.POST("/auth/waiting-list", controller.JoinWaitingList)
+
+		// Create request body
+		requestBody := JoinWaitingListRequest{
+			Email: "template@example.com",
+		}
+		requestBodyBytes, err := json.Marshal(requestBody)
+		assert.NoError(t, err)
+
+		// Create request
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest(http.MethodPost, "/auth/waiting-list", bytes.NewBuffer(requestBodyBytes))
+		req.Header.Set("Content-Type", "application/json")
+
+		// Perform request
+		router.ServeHTTP(w, req)
+
+		// Should return 200 OK
+		assert.Equal(t, http.StatusOK, w.Code)
+
+		// Verify email was sent with correct content
+		mockMailServerClient.AssertExpectations(t)
+		assert.NotNil(t, capturedRequest, "Email request should have been captured")
+
+		// Verify email content
+		emailReq := capturedRequest.Msg
+		assert.Equal(t, []string{"template@example.com"}, emailReq.To)
+		assert.Equal(t, "noreply@atomic-blend.com", emailReq.From)
+		assert.Equal(t, "You just joined the waiting list!", emailReq.Subject)
+
+		// Extract the actual security token from the HTML content
+		// The token is generated randomly, so we need to extract it from the response
+		var actualSecurityToken string
+		if len(emailReq.HtmlContent) > 0 {
+			// Find the security token in the HTML content
+			// Look for the pattern: <p style="...">TOKEN</p>
+			start := strings.Index(emailReq.HtmlContent, "<p style=\"margin: 0; word-break: break-all; font-family: ui-monospace")
+			if start != -1 {
+				// Find the closing tag
+				end := strings.Index(emailReq.HtmlContent[start:], "</p>")
+				if end != -1 {
+					tokenStart := strings.Index(emailReq.HtmlContent[start:start+end], ">")
+					if tokenStart != -1 {
+						tokenEnd := start + end
+						tokenStartPos := start + tokenStart + 1
+						actualSecurityToken = strings.TrimSpace(emailReq.HtmlContent[tokenStartPos:tokenEnd])
+					}
+				}
+			}
+		}
+
+		// Verify HTML content contains email and security token
+		assert.Contains(t, emailReq.HtmlContent, "template@example.com")
+		assert.Contains(t, emailReq.HtmlContent, actualSecurityToken)
+		assert.Contains(t, emailReq.HtmlContent, "Welcome to Atomic Blend!")
+
+		// Verify text content contains email and security token
+		assert.Contains(t, emailReq.TextContent, "template@example.com")
+		assert.Contains(t, emailReq.TextContent, actualSecurityToken)
+		assert.Contains(t, emailReq.TextContent, "Welcome to Atomic Blend!")
+
+		// Verify the security token is 32 characters long
+		assert.Equal(t, 32, len(actualSecurityToken), "securityToken should be 32 characters long")
+
+		// Verify mock expectations
+		mockRepo.AssertExpectations(t)
 	})
 }
 
 func TestJoinWaitingListRequestValidation(t *testing.T) {
 	gin.SetMode(gin.TestMode)
+
+	// Change to the auth directory to find email templates
+	originalDir, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("Failed to get current directory: %v", err)
+	}
+	defer os.Chdir(originalDir)
+
+	// Change to auth directory where templates are located
+	err = os.Chdir("../..")
+	if err != nil {
+		t.Fatalf("Failed to change to auth directory: %v", err)
+	}
 
 	validationTestCases := []struct {
 		name           string
@@ -357,16 +636,27 @@ func TestJoinWaitingListRequestValidation(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			// Create mock repository
 			mockRepo := new(mocks.MockWaitingListRepository)
-
+			mockMailServerClient := new(mocks.MockMailServerClient)
 			// Setup mocks for successful cases
 			if tc.expectedStatus == http.StatusOK {
 				mockRepo.On("GetByEmail", mock.Anything, mock.AnythingOfType("string")).Return(nil, nil)
 				mockRepo.On("Count", mock.Anything).Return(int64(0), nil)
-				mockRepo.On("Create", mock.Anything, mock.AnythingOfType("*waitinglist.WaitingList")).Return(&waitinglist.WaitingList{}, nil)
+				securityToken := "a1b2c3d4e5f678901234567890123456"
+				mockRepo.On("Create", mock.Anything, mock.AnythingOfType("*waitinglist.WaitingList")).Return(&waitinglist.WaitingList{
+					SecurityToken: &securityToken,
+				}, nil)
+
+				// Mock email sending for successful cases
+				expectedResponse := &connect.Response[mailserverv1.SendMailInternalResponse]{
+					Msg: &mailserverv1.SendMailInternalResponse{
+						Success: true,
+					},
+				}
+				mockMailServerClient.On("SendMailInternal", mock.Anything, mock.Anything).Return(expectedResponse, nil)
 			}
 
 			// Create controller and router
-			controller := NewController(mockRepo)
+			controller := NewController(mockRepo, mockMailServerClient)
 
 			router := gin.New()
 			router.POST("/auth/waiting-list", controller.JoinWaitingList)
@@ -388,6 +678,107 @@ func TestJoinWaitingListRequestValidation(t *testing.T) {
 
 			// Verify mock expectations
 			mockRepo.AssertExpectations(t)
+			mockMailServerClient.AssertExpectations(t)
 		})
 	}
+}
+
+func TestSecurityTokenGeneration(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	// Change to the auth directory to find email templates
+	originalDir, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("Failed to get current directory: %v", err)
+	}
+	defer os.Chdir(originalDir)
+
+	// Change to auth directory where templates are located
+	err = os.Chdir("../..")
+	if err != nil {
+		t.Fatalf("Failed to change to auth directory: %v", err)
+	}
+
+	t.Run("should generate unique 32-character security tokens", func(t *testing.T) {
+		// Start in-memory MongoDB server
+		mongoServer, err := inmemorymongo.CreateInMemoryMongoDB()
+		if err != nil {
+			t.Fatalf("Failed to create in-memory MongoDB: %v", err)
+		}
+		defer mongoServer.Stop()
+
+		// Connect to the in-memory MongoDB
+		client, err := inmemorymongo.ConnectToInMemoryDB(mongoServer.URI())
+		if err != nil {
+			t.Fatalf("Failed to connect to in-memory MongoDB: %v", err)
+		}
+		defer client.Disconnect(context.Background())
+
+		// Get database reference
+		db := client.Database("test_db")
+
+		// Create repositories
+		waitingListRepo := repositories.NewWaitingListRepository(db)
+
+		// Create mock mail server client
+		mockMailServerClient := &mocks.MockMailServerClient{}
+
+		// Mock successful email sending for all requests
+		expectedResponse := &connect.Response[mailserverv1.SendMailInternalResponse]{
+			Msg: &mailserverv1.SendMailInternalResponse{
+				Success: true,
+			},
+		}
+		mockMailServerClient.On("SendMailInternal", mock.Anything, mock.Anything).Return(expectedResponse, nil)
+
+		// Create controller with mock mail server
+		controller := NewController(waitingListRepo, mockMailServerClient)
+
+		// Create router
+		router := gin.New()
+		router.POST("/auth/waiting-list", controller.JoinWaitingList)
+
+		// Generate multiple requests to test token uniqueness
+		tokens := make(map[string]bool)
+
+		for i := 0; i < 10; i++ {
+			requestBody := JoinWaitingListRequest{
+				Email: fmt.Sprintf("test%d@example.com", i),
+			}
+			requestBodyBytes, err := json.Marshal(requestBody)
+			assert.NoError(t, err)
+
+			w := httptest.NewRecorder()
+			req, _ := http.NewRequest(http.MethodPost, "/auth/waiting-list", bytes.NewBuffer(requestBodyBytes))
+			req.Header.Set("Content-Type", "application/json")
+
+			router.ServeHTTP(w, req)
+
+			// Should return 200 OK
+			assert.Equal(t, http.StatusOK, w.Code)
+
+			// Parse response
+			var response map[string]interface{}
+			err = json.Unmarshal(w.Body.Bytes(), &response)
+			assert.NoError(t, err)
+
+			// Extract security token
+			entry, ok := response["entry"].(map[string]interface{})
+			assert.True(t, ok, "entry should be a map")
+
+			securityToken, ok := entry["securityToken"].(string)
+			assert.True(t, ok, "securityToken should be a string")
+			assert.Equal(t, 32, len(securityToken), "securityToken should be 32 characters long")
+
+			// Check for uniqueness
+			assert.False(t, tokens[securityToken], "security tokens should be unique")
+			tokens[securityToken] = true
+		}
+
+		// Verify we got 10 unique tokens
+		assert.Equal(t, 10, len(tokens), "should generate 10 unique tokens")
+
+		// Verify mock expectations
+		mockMailServerClient.AssertExpectations(t)
+	})
 }

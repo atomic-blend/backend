@@ -1,17 +1,32 @@
 package waitinglist
 
 import (
+	"bytes"
+	"crypto/rand"
+	"encoding/hex"
 	"net/http"
+	"text/template"
 	"time"
 
 	waitinglist "github.com/atomic-blend/backend/auth/models/waiting_list"
+	mailserver "github.com/atomic-blend/backend/shared/grpc/mail-server"
 	"github.com/gin-gonic/gin"
+	"github.com/rs/zerolog/log"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 // JoinWaitingListRequest represents the structure for join waiting list request data
 type JoinWaitingListRequest struct {
 	Email string `json:"email" binding:"required,email"`
+}
+
+// generateSecurityToken generates a 32-character random security token
+func generateSecurityToken() (string, error) {
+	bytes := make([]byte, 16) // 16 bytes = 32 hex characters
+	if _, err := rand.Read(bytes); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(bytes), nil
 }
 
 // JoinWaitingList creates a new waiting list record and returns a success message
@@ -41,16 +56,78 @@ func (c *Controller) JoinWaitingList(ctx *gin.Context) {
 		return
 	}
 
+	// generate security token
+	securityToken, err := generateSecurityToken()
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "error_generating_security_token"})
+		return
+	}
+
 	// create a new waiting list record
 	now := primitive.NewDateTimeFromTime(time.Now())
 	waitingListRecord, err = c.waitingListRepo.Create(ctx, &waitinglist.WaitingList{
-		Email:     req.Email,
-		CreatedAt: &now,
-		UpdatedAt: &now,
+		Email:         req.Email,
+		SecurityToken: &securityToken,
+		CreatedAt:     &now,
+		UpdatedAt:     &now,
 	})
 
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "error_creating_waiting_list_record"})
+		return
+	}
+
+	// template the html with gotemplate
+	htmlTemplate, err := template.ParseFiles("./email_templates/join_waiting_list/join_waiting_list.html")
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to parse HTML template")
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse HTML template"})
+		return
+	}
+
+	textTemplate, err := template.ParseFiles("./email_templates/join_waiting_list/join_waiting_list.txt")
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to parse text template")
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse text template"})
+		return
+	}
+
+	// template the plain text with gotemplate
+	var htmlContent bytes.Buffer
+	err = htmlTemplate.Execute(&htmlContent, map[string]string{
+		"email":         req.Email,
+		"securityToken": securityToken,
+	})
+
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to execute HTML template")
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to execute HTML template"})
+		return
+	}
+
+	var textContent bytes.Buffer
+	err = textTemplate.Execute(&textContent, map[string]string{
+		"email":         req.Email,
+		"securityToken": securityToken,
+	})
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to execute text template")
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to execute text template"})
+		return
+	}
+
+	mailreq := mailserver.CreateSendMailInternalRequest([]string{req.Email}, "noreply@atomic-blend.com", "You just joined the waiting list!", htmlContent.String(), textContent.String())
+
+	resp, err := c.mailServerClient.SendMailInternal(ctx, mailreq)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to send email")
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to send email"})
+		return
+	}
+
+	if !resp.Msg.Success {
+		log.Error().Msg("Failed to send email")
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to send email"})
 		return
 	}
 

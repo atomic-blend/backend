@@ -17,9 +17,10 @@ func TestNewController(t *testing.T) {
 	t.Run("should create new waiting list controller", func(t *testing.T) {
 		// Setup
 		mockRepo := new(mocks.MockWaitingListRepository)
+		mockMailServerClient := new(mocks.MockMailServerClient)
 
 		// Act
-		controller := NewController(mockRepo)
+		controller := NewController(mockRepo, mockMailServerClient)
 
 		// Assert
 		assert.NotNil(t, controller, "Controller should not be nil")
@@ -75,9 +76,9 @@ func TestSetupRoutes(t *testing.T) {
 	t.Run("should setup waiting list routes with mock repository", func(t *testing.T) {
 		// Create mock repository
 		mockRepo := new(mocks.MockWaitingListRepository)
-
+		mockMailServerClient := new(mocks.MockMailServerClient)
 		// Create controller
-		controller := NewController(mockRepo)
+		controller := NewController(mockRepo, mockMailServerClient)
 
 		// Create router
 		router := gin.New()
@@ -109,9 +110,9 @@ func TestSetupRoutesWithMock(t *testing.T) {
 
 	// Create mock repository
 	mockRepo := new(mocks.MockWaitingListRepository)
-
+	mockMailServerClient := new(mocks.MockMailServerClient)
 	// Create controller
-	controller := NewController(mockRepo)
+	controller := NewController(mockRepo, mockMailServerClient)
 
 	// Create router
 	router := gin.New()
