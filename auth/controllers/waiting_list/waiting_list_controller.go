@@ -20,7 +20,7 @@ func NewController(waitingListRepo repositories.WaitingListRepositoryInterface) 
 func SetupRoutes(router *gin.Engine, database *mongo.Database) {
 	waitingListRepo := repositories.NewWaitingListRepository(database)
 	waitingListController := NewController(waitingListRepo)
-	waitingListGroup := router.Group("/waiting-list")
+	waitingListGroup := router.Group("/auth/waiting-list")
 	{
 		waitingListGroup.POST("", waitingListController.JoinWaitingList)
 	}

@@ -177,7 +177,7 @@ func TestJoinWaitingList(t *testing.T) {
 			controller := NewController(mockRepo)
 
 			router := gin.New()
-			router.POST("/waiting-list", controller.JoinWaitingList)
+			router.POST("/auth/waiting-list", controller.JoinWaitingList)
 
 			// Create request body
 			requestBodyBytes, err := json.Marshal(tc.requestBody)
@@ -185,7 +185,7 @@ func TestJoinWaitingList(t *testing.T) {
 
 			// Create request
 			w := httptest.NewRecorder()
-			req, _ := http.NewRequest(http.MethodPost, "/waiting-list", bytes.NewBuffer(requestBodyBytes))
+			req, _ := http.NewRequest(http.MethodPost, "/auth/waiting-list", bytes.NewBuffer(requestBodyBytes))
 			req.Header.Set("Content-Type", "application/json")
 
 			// Perform request
@@ -253,7 +253,7 @@ func TestJoinWaitingListIntegration(t *testing.T) {
 		assert.NoError(t, err)
 
 		w := httptest.NewRecorder()
-		req, _ := http.NewRequest(http.MethodPost, "/waiting-list", bytes.NewBuffer(requestBodyBytes))
+		req, _ := http.NewRequest(http.MethodPost, "/auth/waiting-list", bytes.NewBuffer(requestBodyBytes))
 		req.Header.Set("Content-Type", "application/json")
 
 		router.ServeHTTP(w, req)
@@ -271,7 +271,7 @@ func TestJoinWaitingListIntegration(t *testing.T) {
 
 		// Test duplicate email
 		w2 := httptest.NewRecorder()
-		req2, _ := http.NewRequest(http.MethodPost, "/waiting-list", bytes.NewBuffer(requestBodyBytes))
+		req2, _ := http.NewRequest(http.MethodPost, "/auth/waiting-list", bytes.NewBuffer(requestBodyBytes))
 		req2.Header.Set("Content-Type", "application/json")
 
 		router.ServeHTTP(w2, req2)
@@ -369,7 +369,7 @@ func TestJoinWaitingListRequestValidation(t *testing.T) {
 			controller := NewController(mockRepo)
 
 			router := gin.New()
-			router.POST("/waiting-list", controller.JoinWaitingList)
+			router.POST("/auth/waiting-list", controller.JoinWaitingList)
 
 			// Create request body
 			requestBodyBytes, err := json.Marshal(tc.requestBody)
@@ -377,7 +377,7 @@ func TestJoinWaitingListRequestValidation(t *testing.T) {
 
 			// Create request
 			w := httptest.NewRecorder()
-			req, _ := http.NewRequest(http.MethodPost, "/waiting-list", bytes.NewBuffer(requestBodyBytes))
+			req, _ := http.NewRequest(http.MethodPost, "/auth/waiting-list", bytes.NewBuffer(requestBodyBytes))
 			req.Header.Set("Content-Type", "application/json")
 
 			// Perform request

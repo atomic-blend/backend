@@ -56,7 +56,7 @@ func TestSetupRoutes(t *testing.T) {
 		SetupRoutes(router, db)
 
 		// Test that the route is properly set up by making a request
-		req, _ := http.NewRequest("POST", "/waiting-list", nil)
+		req, _ := http.NewRequest("POST", "/auth/waiting-list", nil)
 		w := httptest.NewRecorder()
 
 		// Perform request
@@ -81,13 +81,13 @@ func TestSetupRoutes(t *testing.T) {
 
 		// Create router
 		router := gin.New()
-		waitingListGroup := router.Group("/waiting-list")
+		waitingListGroup := router.Group("/auth/waiting-list")
 		{
 			waitingListGroup.POST("", controller.JoinWaitingList)
 		}
 
 		// Test that the route is properly set up by making a request
-		req, _ := http.NewRequest("POST", "/waiting-list", nil)
+		req, _ := http.NewRequest("POST", "/auth/waiting-list", nil)
 		w := httptest.NewRecorder()
 
 		// Perform request
@@ -115,14 +115,14 @@ func TestSetupRoutesWithMock(t *testing.T) {
 
 	// Create router
 	router := gin.New()
-	waitingListGroup := router.Group("/waiting-list")
+	waitingListGroup := router.Group("/auth/waiting-list")
 	{
 		waitingListGroup.POST("", controller.JoinWaitingList)
 	}
 
 	// Test that the route group is properly configured
-	// The route should be accessible at /waiting-list
-	req, _ := http.NewRequest("POST", "/waiting-list", nil)
+	// The route should be accessible at /auth/waiting-list
+	req, _ := http.NewRequest("POST", "/auth/waiting-list", nil)
 	w := httptest.NewRecorder()
 
 	router.ServeHTTP(w, req)
@@ -132,7 +132,7 @@ func TestSetupRoutesWithMock(t *testing.T) {
 
 	// Test that other routes in the group would be accessible
 	// (though we only have one route currently)
-	req2, _ := http.NewRequest("GET", "/waiting-list/nonexistent", nil)
+	req2, _ := http.NewRequest("GET", "/auth/waiting-list/nonexistent", nil)
 	w2 := httptest.NewRecorder()
 
 	router.ServeHTTP(w2, req2)
@@ -171,7 +171,7 @@ func TestControllerIntegration(t *testing.T) {
 		// Test that the route group is properly configured
 		routes := router.Routes()
 		expectedRoutes := map[string]bool{
-			"POST /waiting-list": false,
+			"POST /auth/waiting-list": false,
 		}
 
 		// Check that all expected routes are set up
