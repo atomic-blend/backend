@@ -5,7 +5,7 @@ Your email {{ .email }} has been successfully added to our waiting list.
 Please keep this security token safe - you'll need it to manage your waiting list status:
 {{ .securityToken }}
 We'll notify you as soon as Atomic Blend becomes available. In the meantime, stay tuned for updates!
-Check Status : https://{{ .domain }}/auth/register?email={{ .email }}&securityKey={{ .securityToken }}
+Check Status : https://{{ .domain }}/#/auth/register?email={{ .email }}&security-key={{ .securityToken }}
 Best regards,
 The Atomic Blend Team
 ----------
