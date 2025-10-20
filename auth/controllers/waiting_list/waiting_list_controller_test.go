@@ -172,7 +172,8 @@ func TestControllerIntegration(t *testing.T) {
 		// Test that the route group is properly configured
 		routes := router.Routes()
 		expectedRoutes := map[string]bool{
-			"POST /auth/waiting-list": false,
+			"POST /auth/waiting-list":          false,
+			"POST /auth/waiting-list/position": false,
 		}
 
 		// Check that all expected routes are set up

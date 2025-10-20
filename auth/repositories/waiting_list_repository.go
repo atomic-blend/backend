@@ -23,6 +23,7 @@ type WaitingListRepositoryInterface interface {
 	GetByID(ctx context.Context, id string) (*waitinglist.WaitingList, error)
 	GetByEmail(ctx context.Context, email string) (*waitinglist.WaitingList, error)
 	GetByCode(ctx context.Context, code string) (*waitinglist.WaitingList, error)
+	GetPositionByEmail(ctx context.Context, email string) (int64, error)
 	Update(ctx context.Context, id string, waitingList *waitinglist.WaitingList) (*waitinglist.WaitingList, error)
 	Delete(ctx context.Context, id string) error
 	DeleteByEmail(ctx context.Context, email string) error
@@ -181,4 +182,28 @@ func (r *WaitingListRepository) DeleteByCode(ctx context.Context, code string) e
 	}
 
 	return nil
+}
+
+// GetPositionByEmail returns the position of a waiting list record by email (0-based index)
+// Position is calculated by counting records created before this record (sorted by created_at)
+func (r *WaitingListRepository) GetPositionByEmail(ctx context.Context, email string) (int64, error) {
+	// First get the record to find its created_at timestamp
+	var waitingList waitinglist.WaitingList
+	err := r.collection.FindOne(ctx, bson.M{"email": email}).Decode(&waitingList)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return 0, nil // Return 0 if not found
+		}
+		return 0, err
+	}
+
+	// Count records created before this record (created_at < current record's created_at)
+	count, err := r.collection.CountDocuments(ctx, bson.M{
+		"created_at": bson.M{"$lt": waitingList.CreatedAt},
+	})
+	if err != nil {
+		return 0, err
+	}
+
+	return count, nil
 }

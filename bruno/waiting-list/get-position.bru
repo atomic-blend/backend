@@ -1,0 +1,41 @@
+meta {
+  name: /get-position
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{API_URL}}/auth/waiting-list/position
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "email": "test1@brandonguigo.com",
+    "securityToken": "a1b2c3d4e5f678901234567890123456"
+  }
+}
+
+script:post-response {
+  console.log("Response Status:", res.status);
+  console.log("Response Body:", res.body);
+  
+  if (res.status === 200) {
+    console.log("Successfully retrieved waiting list position!");
+    console.log("Entry:", res.body.entry);
+    console.log("Position:", res.body.position);
+    console.log("Total:", res.body.total);
+  } else if (res.status === 404) {
+    console.log("Email not found in waiting list:", res.body.error);
+  } else if (res.status === 401) {
+    console.log("Invalid security token:", res.body.error);
+  } else {
+    console.log("Error:", res.body.error);
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

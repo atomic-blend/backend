@@ -9,7 +9,7 @@ import (
 
 // Controller handles waiting list-related operations
 type Controller struct {
-	waitingListRepo repositories.WaitingListRepositoryInterface
+	waitingListRepo  repositories.WaitingListRepositoryInterface
 	mailServerClient mailserver.Interface
 }
 
@@ -26,5 +26,6 @@ func SetupRoutes(router *gin.Engine, database *mongo.Database) {
 	waitingListGroup := router.Group("/auth/waiting-list")
 	{
 		waitingListGroup.POST("", waitingListController.JoinWaitingList)
+		waitingListGroup.POST("/position", waitingListController.GetWaitingListPosition)
 	}
 }

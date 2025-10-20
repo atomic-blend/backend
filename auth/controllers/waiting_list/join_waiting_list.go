@@ -51,13 +51,6 @@ func (c *Controller) JoinWaitingList(ctx *gin.Context) {
 		return
 	}
 
-	// get the number of waiting list records
-	waitingBeforeCount, err := c.waitingListRepo.Count(ctx)
-	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "error_getting_waiting_list_count"})
-		return
-	}
-
 	// generate security token
 	securityToken, err := generateSecurityToken()
 	if err != nil {
@@ -83,10 +76,10 @@ func (c *Controller) JoinWaitingList(ctx *gin.Context) {
 	domain := os.Getenv("PUBLIC_ADDRESS")
 	if domain == "" {
 		domain = "mail.atomic-blend.com"
-		return
 	} else {
 		domain = "mail." + domain
 	}
+	log.Info().Msgf("Domain: %s", domain)
 
 	// template the html with gotemplate
 	htmlTemplate, err := template.ParseFiles("./email_templates/join_waiting_list/join_waiting_list.html")
@@ -144,9 +137,24 @@ func (c *Controller) JoinWaitingList(ctx *gin.Context) {
 		return
 	}
 
+	// get the position of this record (0-based index)
+	position, err := c.waitingListRepo.GetPositionByEmail(ctx, req.Email)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "error_getting_waiting_list_position"})
+		return
+	}
+
+	// get the total count after creating the record
+	totalCount, err := c.waitingListRepo.Count(ctx)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "error_getting_waiting_list_count"})
+		return
+	}
+
 	ctx.JSON(http.StatusOK, gin.H{
-		"status":       "success",
-		"entry":        waitingListRecord,
-		"before_count": waitingBeforeCount,
+		"status":   "success",
+		"entry":    waitingListRecord,
+		"position": position,
+		"total":    totalCount,
 	})
 }

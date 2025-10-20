@@ -56,9 +56,6 @@ func TestJoinWaitingList(t *testing.T) {
 				// Mock GetByEmail to return nil (email not found)
 				mockRepo.On("GetByEmail", mock.Anything, "test@example.com").Return(nil, nil)
 
-				// Mock Count to return 5 (5 people already in waiting list)
-				mockRepo.On("Count", mock.Anything).Return(int64(5), nil)
-
 				// Mock Create to return a new waiting list record
 				now := primitive.NewDateTimeFromTime(time.Now())
 				securityToken := "a1b2c3d4e5f678901234567890123456"
@@ -70,6 +67,12 @@ func TestJoinWaitingList(t *testing.T) {
 				}
 				mockRepo.On("Create", mock.Anything, mock.AnythingOfType("*waitinglist.WaitingList")).Return(expectedRecord, nil)
 
+				// Mock GetPositionByEmail to return position
+				mockRepo.On("GetPositionByEmail", mock.Anything, "test@example.com").Return(int64(5), nil)
+
+				// Mock Count to return total count after creation
+				mockRepo.On("Count", mock.Anything).Return(int64(6), nil)
+
 				// Mock email sending
 				expectedResponse := &connect.Response[mailserverv1.SendMailInternalResponse]{
 					Msg: &mailserverv1.SendMailInternalResponse{
@@ -80,8 +83,9 @@ func TestJoinWaitingList(t *testing.T) {
 			},
 			expectedStatus: http.StatusOK,
 			expectedBody: map[string]interface{}{
-				"status":       "success",
-				"before_count": float64(5),
+				"status":   "success",
+				"position": float64(5),
+				"total":    float64(6),
 			},
 		},
 		{
@@ -165,8 +169,30 @@ func TestJoinWaitingList(t *testing.T) {
 				// Mock GetByEmail to return nil (email not found)
 				mockRepo.On("GetByEmail", mock.Anything, "test@example.com").Return(nil, nil)
 
+				// Mock Create to return a new waiting list record
+				now := primitive.NewDateTimeFromTime(time.Now())
+				securityToken := "a1b2c3d4e5f678901234567890123456"
+				expectedRecord := &waitinglist.WaitingList{
+					Email:         "test@example.com",
+					SecurityToken: &securityToken,
+					CreatedAt:     &now,
+					UpdatedAt:     &now,
+				}
+				mockRepo.On("Create", mock.Anything, mock.AnythingOfType("*waitinglist.WaitingList")).Return(expectedRecord, nil)
+
+				// Mock GetPositionByEmail to return position
+				mockRepo.On("GetPositionByEmail", mock.Anything, "test@example.com").Return(int64(0), nil)
+
 				// Mock Count to return error
 				mockRepo.On("Count", mock.Anything).Return(int64(0), assert.AnError)
+
+				// Mock email sending
+				expectedResponse := &connect.Response[mailserverv1.SendMailInternalResponse]{
+					Msg: &mailserverv1.SendMailInternalResponse{
+						Success: true,
+					},
+				}
+				mockMailClient.On("SendMailInternal", mock.Anything, mock.Anything).Return(expectedResponse, nil)
 			},
 			expectedStatus: http.StatusInternalServerError,
 			expectedBody: map[string]interface{}{
@@ -181,9 +207,6 @@ func TestJoinWaitingList(t *testing.T) {
 			setupMocks: func(mockRepo *mocks.MockWaitingListRepository, mockMailClient *mocks.MockMailServerClient) {
 				// Mock GetByEmail to return nil (email not found)
 				mockRepo.On("GetByEmail", mock.Anything, "test@example.com").Return(nil, nil)
-
-				// Mock Count to return 0
-				mockRepo.On("Count", mock.Anything).Return(int64(0), nil)
 
 				// Mock Create to return error
 				mockRepo.On("Create", mock.Anything, mock.AnythingOfType("*waitinglist.WaitingList")).Return(nil, assert.AnError)
@@ -201,9 +224,6 @@ func TestJoinWaitingList(t *testing.T) {
 			setupMocks: func(mockRepo *mocks.MockWaitingListRepository, mockMailClient *mocks.MockMailServerClient) {
 				// Mock GetByEmail to return nil (email not found)
 				mockRepo.On("GetByEmail", mock.Anything, "test@example.com").Return(nil, nil)
-
-				// Mock Count to return 0
-				mockRepo.On("Count", mock.Anything).Return(int64(0), nil)
 
 				// Mock Create to return a new waiting list record
 				now := primitive.NewDateTimeFromTime(time.Now())
@@ -232,9 +252,6 @@ func TestJoinWaitingList(t *testing.T) {
 			setupMocks: func(mockRepo *mocks.MockWaitingListRepository, mockMailClient *mocks.MockMailServerClient) {
 				// Mock GetByEmail to return nil (email not found)
 				mockRepo.On("GetByEmail", mock.Anything, "test@example.com").Return(nil, nil)
-
-				// Mock Count to return 0
-				mockRepo.On("Count", mock.Anything).Return(int64(0), nil)
 
 				// Mock Create to return a new waiting list record
 				now := primitive.NewDateTimeFromTime(time.Now())
@@ -299,7 +316,8 @@ func TestJoinWaitingList(t *testing.T) {
 			// Check specific fields based on expected status
 			if tc.expectedStatus == http.StatusOK {
 				assert.Equal(t, tc.expectedBody["status"], response["status"])
-				assert.Equal(t, tc.expectedBody["before_count"], response["before_count"])
+				assert.Equal(t, tc.expectedBody["position"], response["position"])
+				assert.Equal(t, tc.expectedBody["total"], response["total"])
 				assert.Contains(t, response, "entry")
 
 				// Check that entry contains security token
@@ -403,7 +421,8 @@ func TestJoinWaitingListIntegration(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, "success", response["status"])
 		assert.Contains(t, response, "entry")
-		assert.Contains(t, response, "before_count")
+		assert.Contains(t, response, "position")
+		assert.Contains(t, response, "total")
 
 		// Verify security token in entry
 		entry, ok := response["entry"].(map[string]interface{})
@@ -469,6 +488,12 @@ func TestEmailTemplateRendering(t *testing.T) {
 			UpdatedAt:     &now,
 		}
 		mockRepo.On("Create", mock.Anything, mock.AnythingOfType("*waitinglist.WaitingList")).Return(expectedRecord, nil)
+
+		// Mock GetPositionByEmail to return position
+		mockRepo.On("GetPositionByEmail", mock.Anything, "template@example.com").Return(int64(0), nil)
+
+		// Mock Count to return total count after creation
+		mockRepo.On("Count", mock.Anything).Return(int64(1), nil)
 
 		// Mock email sending and capture the request to verify content
 		var capturedRequest *connect.Request[mailserverv1.SendMailInternalRequest]
@@ -645,6 +670,12 @@ func TestJoinWaitingListRequestValidation(t *testing.T) {
 				mockRepo.On("Create", mock.Anything, mock.AnythingOfType("*waitinglist.WaitingList")).Return(&waitinglist.WaitingList{
 					SecurityToken: &securityToken,
 				}, nil)
+
+				// Mock GetPositionByEmail to return position
+				mockRepo.On("GetPositionByEmail", mock.Anything, mock.AnythingOfType("string")).Return(int64(0), nil)
+
+				// Mock Count to return total count after creation
+				mockRepo.On("Count", mock.Anything).Return(int64(1), nil)
 
 				// Mock email sending for successful cases
 				expectedResponse := &connect.Response[mailserverv1.SendMailInternalResponse]{
