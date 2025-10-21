@@ -95,3 +95,12 @@ func (m *MockWaitingListRepository) DeleteByCode(ctx context.Context, code strin
 	args := m.Called(ctx, code)
 	return args.Error(0)
 }
+
+// GetOldest gets the oldest N waiting list records
+func (m *MockWaitingListRepository) GetOldest(ctx context.Context, limit int64) ([]*waitinglist.WaitingList, error) {
+	args := m.Called(ctx, limit)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]*waitinglist.WaitingList), args.Error(1)
+}

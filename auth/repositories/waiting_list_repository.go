@@ -20,6 +20,7 @@ type WaitingListRepositoryInterface interface {
 	Count(ctx context.Context) (int64, error)
 	Create(ctx context.Context, waitingList *waitinglist.WaitingList) (*waitinglist.WaitingList, error)
 	GetAll(ctx context.Context) ([]*waitinglist.WaitingList, error)
+	GetOldest(ctx context.Context, limit int64) ([]*waitinglist.WaitingList, error)
 	GetByID(ctx context.Context, id string) (*waitinglist.WaitingList, error)
 	GetByEmail(ctx context.Context, email string) (*waitinglist.WaitingList, error)
 	GetByCode(ctx context.Context, code string) (*waitinglist.WaitingList, error)
@@ -74,6 +75,31 @@ func (r *WaitingListRepository) Create(ctx context.Context, waitingList *waiting
 // GetAll retrieves all waiting lists sorted from oldest to newest by created_at
 func (r *WaitingListRepository) GetAll(ctx context.Context) ([]*waitinglist.WaitingList, error) {
 	cursor, err := r.collection.Find(ctx, bson.M{}, options.Find().SetSort(bson.D{{Key: "created_at", Value: 1}}))
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var waitingLists []*waitinglist.WaitingList
+	if err := cursor.All(ctx, &waitingLists); err != nil {
+		return nil, err
+	}
+
+	return waitingLists, nil
+}
+
+// GetOldest retrieves the oldest N waiting list records sorted from oldest to newest by created_at
+func (r *WaitingListRepository) GetOldest(ctx context.Context, limit int64) ([]*waitinglist.WaitingList, error) {
+	// Return empty slice for non-positive limits
+	if limit <= 0 {
+		return []*waitinglist.WaitingList{}, nil
+	}
+
+	opts := options.Find().
+		SetSort(bson.D{{Key: "created_at", Value: 1}}).
+		SetLimit(limit)
+
+	cursor, err := r.collection.Find(ctx, bson.M{}, opts)
 	if err != nil {
 		return nil, err
 	}

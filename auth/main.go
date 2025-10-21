@@ -13,9 +13,11 @@ import (
 	"github.com/atomic-blend/backend/auth/controllers/users"
 	waitinglist "github.com/atomic-blend/backend/auth/controllers/waiting_list"
 	"github.com/atomic-blend/backend/auth/controllers/webhooks"
+	"github.com/atomic-blend/backend/auth/cron"
 	"github.com/atomic-blend/backend/shared/models"
 	amqpservice "github.com/atomic-blend/backend/shared/services/amqp"
 	"github.com/atomic-blend/backend/shared/utils/db"
+	"github.com/jasonlvhit/gocron"
 
 	"github.com/gin-contrib/cors"
 
@@ -153,6 +155,15 @@ func main() {
 	webhooks.SetupRoutes(router, db.Database)
 	config.SetupRoutes(router, db.Database)
 	waitinglist.SetupRoutes(router, db.Database, amqpService)
+
+	// start cron
+	go func() {
+		err := gocron.Every(1).Minutes().Do(cron.WaitingListCron)
+		if err != nil {
+			log.Error().Err(err).Msg("Error defining cron job")
+		}
+		<-gocron.Start()
+	}()
 
 	// Define port
 	port := os.Getenv("PORT")

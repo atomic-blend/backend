@@ -1,0 +1,26 @@
+---
+preheader: You're in! Welcome to Atomic Blend
+---
+
+Atomic Blend
+
+================================================================================
+
+🎉 You're in!
+
+Great news! You've been granted access to Atomic Blend.
+
+Click the link below to complete your registration and start using Atomic Blend:
+
+https://{{ .domain }}/#/auth/register?email={{ .email }}&security-key={{ .securityToken }}
+
+Best regards,
+The Atomic Blend Team
+
+================================================================================
+
+This email was sent to {{ .email }}.
+If you didn't request this, please ignore this email.
+
+© {{ new Date().getFullYear() }} Atomic Blend. All rights reserved.
+
