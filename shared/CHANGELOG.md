@@ -2,6 +2,30 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## shared/v0.1.0 - 2025-10-21
+
+- - -
+
+## shared/v0.1.0-rc-47833be - 2025-10-21
+#### Features
+- make config return the remaining spots available - (50580f8) - Brandon Guigo
+
+- - -
+
+## shared/v0.0.2-rc-cf87e90 - 2025-10-21
+#### Bug Fixes
+- golint - (af1f6bc) - Brandon Guigo
+- linter - (705f203) - Brandon Guigo
+- migrate reset password to internal mail-server via grpc - (ce9b636) - Brandon Guigo
+- add lastname and firstname to the user entity - (44ddec5) - Brandon Guigo
+- add user first and last name - (f32bea4) - Brandon Guigo
+- backup email is optional - (d83b162) - Brandon Guigo
+- add backup email field to user and register - (d9f2c73) - Brandon Guigo
+#### Miscellaneous Chores
+- **(release)** bump versions for auth@auth/v0.11.0 grpc@grpc/v0.2.0 mail-server@mail-server/v0.1.0 mail@mail/v0.1.0 productivity@productivity/v0.11.0 shared@shared/v0.0.1 [skip ci] - (bcf942a) - GitHub Actions
+
+- - -
+
 ## shared/v0.0.1 - 2025-09-23
 #### Bug Fixes
 - linter issues + tests - (dc3ca2e) - Brandon Guigo

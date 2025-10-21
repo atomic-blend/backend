@@ -2,6 +2,20 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## grpc/v0.2.1 - 2025-10-21
+
+- - -
+
+## shared/v0.0.2-rc-cf87e90 - 2025-10-21
+#### Bug Fixes
+- linter - (705f203) - Brandon Guigo
+- migrate reset password to internal mail-server via grpc - (ce9b636) - Brandon Guigo
+- setup rpc for mail server to be able to send emails as noreply - (1ee3502) - Brandon Guigo
+#### Miscellaneous Chores
+- **(release)** bump versions for auth@auth/v0.11.0 grpc@grpc/v0.2.0 mail-server@mail-server/v0.1.0 mail@mail/v0.1.0 productivity@productivity/v0.11.0 shared@shared/v0.0.1 [skip ci] - (bcf942a) - GitHub Actions
+
+- - -
+
 ## grpc/v0.2.0 - 2025-09-23
 #### Bug Fixes
 - regenerate buf - (8f44dc4) - Brandon Guigo

@@ -2,6 +2,31 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## mail-server/v0.3.0 - 2025-10-21
+
+- - -
+
+## shared/v0.1.0-rc-47833be - 2025-10-21
+#### Bug Fixes
+- use amqp to send email to the user instead of sync grpc call - (68cc0fe) - Brandon Guigo
+#### Features
+- send email to user when he joins the waiting list - (861f34b) - Brandon Guigo
+
+- - -
+
+## shared/v0.0.2-rc-cf87e90 - 2025-10-21
+#### Bug Fixes
+- golint - (af1f6bc) - Brandon Guigo
+- linter - (705f203) - Brandon Guigo
+- handle the case of permanent failure when sending an email - (7127640) - Brandon Guigo
+- migrate reset password to internal mail-server via grpc - (ce9b636) - Brandon Guigo
+- retry only failed mails + send no reply grpc implem + add back missing Dockerfiles - (6abc995) - Brandon Guigo
+- setup rpc for mail server to be able to send emails as noreply - (1ee3502) - Brandon Guigo
+#### Miscellaneous Chores
+- **(release)** bump versions for mail-server@mail-server/v0.2.0 mail@mail/v0.2.0 [skip ci] - (a98b0da) - GitHub Actions
+
+- - -
+
 ## mail-server/v0.2.0 - 2025-09-25
 #### Features
 - upgrade the smtp connection to TLS while sending an email - (447ecf4) - Brandon Guigo

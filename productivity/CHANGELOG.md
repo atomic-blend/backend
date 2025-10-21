@@ -2,6 +2,31 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## productivity/v0.12.0 - 2025-10-21
+
+- - -
+
+## shared/v0.1.0-rc-47833be - 2025-10-21
+#### Features
+- send email to user when he joins the waiting list - (861f34b) - Brandon Guigo
+
+- - -
+
+## productivity/v0.11.1-rc-423ae3f - 2025-10-21
+
+- - -
+
+## productivity/v0.11.1-rc-67d2c26 - 2025-10-21
+#### Bug Fixes
+- add get since for task and note - (fbf928e) - Brandon Guigo
+- issues with paginated response and missing fields - (db76f21) - Brandon Guigo
+- add pagination to notes + make bruno wait for auth request - (64e2114) - Brandon Guigo
+- add pagination to task getAll - (f33257b) - Brandon Guigo
+#### Miscellaneous Chores
+- **(release)** bump versions for auth@auth/v0.11.0 grpc@grpc/v0.2.0 mail-server@mail-server/v0.1.0 mail@mail/v0.1.0 productivity@productivity/v0.11.0 shared@shared/v0.0.1 [skip ci] - (bcf942a) - GitHub Actions
+
+- - -
+
 ## productivity/v0.11.0 - 2025-09-23
 #### Bug Fixes
 - error when sending a message through amqp - (d41b2ed) - Brandon Guigo

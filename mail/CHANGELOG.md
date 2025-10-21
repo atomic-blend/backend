@@ -2,6 +2,35 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## mail/v0.3.0 - 2025-10-21
+
+- - -
+
+## shared/v0.1.0-rc-47833be - 2025-10-21
+#### Features
+- send email to user when he joins the waiting list - (861f34b) - Brandon Guigo
+
+- - -
+
+## productivity/v0.11.1-rc-67d2c26 - 2025-10-21
+#### Bug Fixes
+- issues with paginated response and missing fields - (db76f21) - Brandon Guigo
+- refactor some code - (afdc59f) - Brandon Guigo
+- add get since for draft emails too - (382e61a) - Brandon Guigo
+- split test files - (87f2b0c) - Brandon Guigo
+- trash cleanup test - (a223c23) - Brandon Guigo
+- add get mails since endpoint - (30bf1a5) - Brandon Guigo
+- update script display - (272a5be) - Brandon Guigo
+- refuse restricted emails from registering - (57092a3) - Brandon Guigo
+- migrate reset password to internal mail-server via grpc - (ce9b636) - Brandon Guigo
+- generate the notification payload when encrypting email - (416b6bd) - Brandon Guigo
+#### Features
+- send notifications with fcm when user receive an email - (1a02f82) - Brandon Guigo
+#### Miscellaneous Chores
+- **(release)** bump versions for mail-server@mail-server/v0.2.0 mail@mail/v0.2.0 [skip ci] - (a98b0da) - GitHub Actions
+
+- - -
+
 ## mail/v0.2.0 - 2025-09-25
 #### Features
 - upgrade the smtp connection to TLS while sending an email - (447ecf4) - Brandon Guigo

@@ -2,6 +2,58 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## auth/v0.12.0 - 2025-10-21
+
+- - -
+
+## auth/v0.12.0-rc-d5fa8f8 - 2025-10-21
+#### Bug Fixes
+- add npm install to docker build - (d5fa8f8) - Brandon Guigo
+
+- - -
+
+## shared/v0.1.0-rc-47833be - 2025-10-21
+#### Bug Fixes
+- linter - (761737b) - Brandon Guigo
+- remove from remaining spots the people in waiting list that have a spot - (96de5fd) - Brandon Guigo
+- use amqp to send email to the user instead of sync grpc call - (68cc0fe) - Brandon Guigo
+- edit templates and bruno files - (f79623a) - Brandon Guigo
+- update join and add get position for waiting list - (0acba42) - Brandon Guigo
+- waiting list controller - (00e3054) - Brandon Guigo
+- add tests for reset password repo - (f10b1d7) - Brandon Guigo
+- don't return negative value on remainingSpots - (9a9f7c4) - Brandon Guigo
+- refactoring - (6ef5889) - Brandon Guigo
+#### Features
+- setup cron for waiting list processing - (9c3c8a0) - Brandon Guigo
+- send email to user when join waiting list + link to track with a security Token - (e98ec99) - Brandon Guigo
+- send email to user when he joins the waiting list - (861f34b) - Brandon Guigo
+- add join waiting list endpoint - (ef1fec1) - Brandon Guigo
+- add tests and check waiting list when registering - (48f5309) - Brandon Guigo
+- make config return the remaining spots available - (50580f8) - Brandon Guigo
+- add waiting list model and repository - (0feeaea) - Brandon Guigo
+
+- - -
+
+## shared/v0.0.2-rc-cf87e90 - 2025-10-21
+#### Bug Fixes
+- path in start reset pwd test - (6cac9b9) - Brandon Guigo
+- golint - (af1f6bc) - Brandon Guigo
+- linter - (705f203) - Brandon Guigo
+- add tests for reset pwd + register check restricted emails - (eab6699) - Brandon Guigo
+- refuse restricted emails from registering - (57092a3) - Brandon Guigo
+- migrate reset password to internal mail-server via grpc - (ce9b636) - Brandon Guigo
+- setup rpc for mail server to be able to send emails as noreply - (1ee3502) - Brandon Guigo
+- add lastname and firstname to the user entity - (44ddec5) - Brandon Guigo
+- add user first and last name - (f32bea4) - Brandon Guigo
+- return err when no backup email is found for the account - (969074b) - Brandon Guigo
+- backup email is optional - (d83b162) - Brandon Guigo
+- send reset pwd email to backup email instead of main account email - (0f0c005) - Brandon Guigo
+- add backup email field to user and register - (d9f2c73) - Brandon Guigo
+#### Miscellaneous Chores
+- **(release)** bump versions for auth@auth/v0.11.0 grpc@grpc/v0.2.0 mail-server@mail-server/v0.1.0 mail@mail/v0.1.0 productivity@productivity/v0.11.0 shared@shared/v0.0.1 [skip ci] - (bcf942a) - GitHub Actions
+
+- - -
+
 ## auth/v0.11.0 - 2025-09-23
 #### Bug Fixes
 - linter issues + tests - (dc3ca2e) - Brandon Guigo
