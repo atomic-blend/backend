@@ -1,3 +1,4 @@
+// Package cron provides cron jobs for the auth service.
 package cron
 
 import (
@@ -7,6 +8,8 @@ import (
 	"os"
 	"strconv"
 
+	"slices"
+
 	waitinglist "github.com/atomic-blend/backend/auth/models/waiting_list"
 	"github.com/atomic-blend/backend/auth/repositories"
 	"github.com/atomic-blend/backend/shared/repositories/user"
@@ -14,9 +17,9 @@ import (
 	"github.com/atomic-blend/backend/shared/utils/db"
 	"github.com/atomic-blend/backend/shared/utils/password"
 	"github.com/rs/zerolog/log"
-	"slices"
 )
 
+// WaitingListCron is a cron job that sends emails to users on the waiting list.
 func WaitingListCron() {
 	log.Debug().Msg("Starting waiting list cron job")
 
