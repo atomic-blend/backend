@@ -33,7 +33,6 @@ services:
         condition: service_healthy
     env_file:
       - .env
-      - .env.versions
 
   mail-server:
     image: ghcr.io/atomic-blend/mail-server:${MAIL_SERVER_SERVICE_VERSION:-latest}
@@ -52,7 +51,6 @@ services:
         mode: host
     env_file:
       - .env
-      - .env.versions
     volumes:
       - type: bind
         source: ${HOME}${USERPROFILE}/.netrc
@@ -84,7 +82,6 @@ services:
         condition: service_healthy
     env_file:
       - .env
-      - .env.versions
 
   productivity:
     image: ghcr.io/atomic-blend/productivity:${PRODUCTIVITY_SERVICE_VERSION:-latest}
@@ -103,28 +100,24 @@ services:
         condition: service_healthy
     env_file:
       - .env
-      - .env.versions
 
   task-app:
     image: ghcr.io/atomic-blend/task-app:${TASK_APP_VERSION:-latest}
     container_name: task-app
     env_file:
       - .env
-      - .env.versions
 
   notes-app:
     image: ghcr.io/atomic-blend/notes-app:${NOTES_APP_VERSION:-latest}
     container_name: notes-app
     env_file:
       - .env
-      - .env.versions
 
   mail-app:
     image: ghcr.io/atomic-blend/mail-app:${MAIL_APP_VERSION:-latest}
     container_name: mail-app
     env_file:
       - .env
-      - .env.versions
 
   mongodb:
     image: mongo:${MONGODB_VERSION:-8.0.4}
