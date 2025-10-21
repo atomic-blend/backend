@@ -18,6 +18,7 @@ const waitingListCollection = "waiting_list"
 // WaitingListRepositoryInterface defines the interface for waiting list repository operations
 type WaitingListRepositoryInterface interface {
 	Count(ctx context.Context) (int64, error)
+	CountWithCode(ctx context.Context) (int64, error)
 	Create(ctx context.Context, waitingList *waitinglist.WaitingList) (*waitinglist.WaitingList, error)
 	GetAll(ctx context.Context) ([]*waitinglist.WaitingList, error)
 	GetOldest(ctx context.Context, limit int64) ([]*waitinglist.WaitingList, error)
@@ -46,6 +47,15 @@ func NewWaitingListRepository(database *mongo.Database) WaitingListRepositoryInt
 // Count returns the number of waiting list records
 func (r *WaitingListRepository) Count(ctx context.Context) (int64, error) {
 	count, err := r.collection.CountDocuments(ctx, bson.M{})
+	if err != nil {
+		return 0, err
+	}
+	return count, nil
+}
+
+// CountWithCode returns the number of waiting list records that have a code
+func (r *WaitingListRepository) CountWithCode(ctx context.Context) (int64, error) {
+	count, err := r.collection.CountDocuments(ctx, bson.M{"code": bson.M{"$ne": nil}})
 	if err != nil {
 		return 0, err
 	}

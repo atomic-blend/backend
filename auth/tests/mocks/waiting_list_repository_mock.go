@@ -18,6 +18,12 @@ func (m *MockWaitingListRepository) Count(ctx context.Context) (int64, error) {
 	return args.Get(0).(int64), args.Error(1)
 }
 
+// CountWithCode returns the number of waiting list records that have a code
+func (m *MockWaitingListRepository) CountWithCode(ctx context.Context) (int64, error) {
+	args := m.Called(ctx)
+	return args.Get(0).(int64), args.Error(1)
+}
+
 // Create creates a new waiting list record
 func (m *MockWaitingListRepository) Create(ctx context.Context, waitingList *waitinglist.WaitingList) (*waitinglist.WaitingList, error) {
 	args := m.Called(ctx, waitingList)

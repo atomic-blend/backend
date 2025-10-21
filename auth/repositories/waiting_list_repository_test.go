@@ -259,6 +259,112 @@ func TestWaitingListRepository_Count(t *testing.T) {
 	})
 }
 
+func TestWaitingListRepository_CountWithCode(t *testing.T) {
+	t.Run("count with code when no records exist", func(t *testing.T) {
+		// Use a fresh repository instance for this test
+		freshRepo, freshCleanup := setupWaitingListTest(t)
+		defer freshCleanup()
+
+		count, err := freshRepo.CountWithCode(context.Background())
+		require.NoError(t, err)
+		assert.Equal(t, int64(0), count)
+	})
+
+	t.Run("count with code when all records have codes", func(t *testing.T) {
+		// Use a fresh repository instance for this test
+		freshRepo, freshCleanup := setupWaitingListTest(t)
+		defer freshCleanup()
+
+		// Create multiple waiting lists with codes
+		code1 := "CODE123"
+		waitingList1 := createTestWaitingList()
+		waitingList1.Email = "test1@example.com"
+		waitingList1.Code = &code1
+
+		code2 := "CODE456"
+		waitingList2 := createTestWaitingList()
+		waitingList2.Email = "test2@example.com"
+		waitingList2.Code = &code2
+
+		code3 := "CODE789"
+		waitingList3 := createTestWaitingList()
+		waitingList3.Email = "test3@example.com"
+		waitingList3.Code = &code3
+
+		_, err := freshRepo.Create(context.Background(), waitingList1)
+		require.NoError(t, err)
+
+		_, err = freshRepo.Create(context.Background(), waitingList2)
+		require.NoError(t, err)
+
+		_, err = freshRepo.Create(context.Background(), waitingList3)
+		require.NoError(t, err)
+
+		count, err := freshRepo.CountWithCode(context.Background())
+		require.NoError(t, err)
+		assert.Equal(t, int64(3), count)
+	})
+
+	t.Run("count with code when some records have codes", func(t *testing.T) {
+		// Use a fresh repository instance for this test
+		freshRepo, freshCleanup := setupWaitingListTest(t)
+		defer freshCleanup()
+
+		// Create waiting lists with and without codes
+		code1 := "CODE123"
+		waitingList1 := createTestWaitingList()
+		waitingList1.Email = "test4@example.com"
+		waitingList1.Code = &code1
+
+		waitingList2 := createTestWaitingList()
+		waitingList2.Email = "test5@example.com"
+		waitingList2.Code = nil // No code
+
+		code3 := "CODE789"
+		waitingList3 := createTestWaitingList()
+		waitingList3.Email = "test6@example.com"
+		waitingList3.Code = &code3
+
+		_, err := freshRepo.Create(context.Background(), waitingList1)
+		require.NoError(t, err)
+
+		_, err = freshRepo.Create(context.Background(), waitingList2)
+		require.NoError(t, err)
+
+		_, err = freshRepo.Create(context.Background(), waitingList3)
+		require.NoError(t, err)
+
+		count, err := freshRepo.CountWithCode(context.Background())
+		require.NoError(t, err)
+		assert.Equal(t, int64(2), count) // Only 2 have codes
+	})
+
+	t.Run("count with code when no records have codes", func(t *testing.T) {
+		// Use a fresh repository instance for this test
+		freshRepo, freshCleanup := setupWaitingListTest(t)
+		defer freshCleanup()
+
+		// Create waiting lists without codes
+		waitingList1 := createTestWaitingList()
+		waitingList1.Email = "test7@example.com"
+		waitingList1.Code = nil
+
+		waitingList2 := createTestWaitingList()
+		waitingList2.Email = "test8@example.com"
+		waitingList2.Code = nil
+
+		_, err := freshRepo.Create(context.Background(), waitingList1)
+		require.NoError(t, err)
+
+		_, err = freshRepo.Create(context.Background(), waitingList2)
+		require.NoError(t, err)
+
+		count, err := freshRepo.CountWithCode(context.Background())
+		require.NoError(t, err)
+		assert.Equal(t, int64(0), count)
+	})
+}
+
 func TestWaitingListRepository_Update(t *testing.T) {
 	repo, cleanup := setupWaitingListTest(t)
 	defer cleanup()

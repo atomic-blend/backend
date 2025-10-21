@@ -25,7 +25,7 @@ func (c *Controller) GetConfig(ctx *gin.Context) {
 		domains = strings.Split(domainList, ",")
 	}
 
-	spotsRemaining, err := utils.GetRemainingSpots(ctx, c.userRepo)
+	spotsRemaining, err := utils.GetRemainingSpots(ctx, c.userRepo, c.waitingListRepo)
 	if err != nil {
 		// Check if it's a parsing error by checking the error message
 		if err.Error() == "strconv.ParseInt: parsing \"invalid\": invalid syntax" {

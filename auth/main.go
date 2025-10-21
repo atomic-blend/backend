@@ -158,7 +158,7 @@ func main() {
 
 	// start cron
 	go func() {
-		err := gocron.Every(1).Minutes().Do(cron.WaitingListCron)
+		err := gocron.Every(5).Minutes().Do(cron.WaitingListCron)
 		if err != nil {
 			log.Error().Err(err).Msg("Error defining cron job")
 		}

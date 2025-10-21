@@ -16,7 +16,8 @@ import (
 
 func TestNewConfigController(t *testing.T) {
 	mockUserRepo := &mocks.MockUserRepository{}
-	controller := NewConfigController(mockUserRepo)
+	mockWaitingListRepo := &mocks.MockWaitingListRepository{}
+	controller := NewConfigController(mockUserRepo, mockWaitingListRepo)
 	assert.NotNil(t, controller)
 	assert.IsType(t, &Controller{}, controller)
 }
@@ -116,8 +117,12 @@ func TestSetupConfigRoutes(t *testing.T) {
 	mockUserRepo := &mocks.MockUserRepository{}
 	mockUserRepo.On("Count", mock.Anything).Return(int64(0), nil)
 
+	// Create mock waiting list repository
+	mockWaitingListRepo := &mocks.MockWaitingListRepository{}
+	mockWaitingListRepo.On("CountWithCode", mock.Anything).Return(int64(0), nil)
+
 	// Create controller
-	controller := NewConfigController(mockUserRepo)
+	controller := NewConfigController(mockUserRepo, mockWaitingListRepo)
 
 	// Create router
 	router := gin.New()
@@ -150,8 +155,12 @@ func TestConfigRoutesGroup(t *testing.T) {
 	mockUserRepo := &mocks.MockUserRepository{}
 	mockUserRepo.On("Count", mock.Anything).Return(int64(0), nil)
 
+	// Create mock waiting list repository
+	mockWaitingListRepo := &mocks.MockWaitingListRepository{}
+	mockWaitingListRepo.On("CountWithCode", mock.Anything).Return(int64(0), nil)
+
 	// Create controller
-	controller := NewConfigController(mockUserRepo)
+	controller := NewConfigController(mockUserRepo, mockWaitingListRepo)
 
 	// Create router
 	router := gin.New()

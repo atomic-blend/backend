@@ -35,7 +35,7 @@ func (c *Controller) Register(ctx *gin.Context) {
 	}
 
 	// get the remaining spots
-	remainingSpots, err := utils.GetRemainingSpots(ctx, c.userRepo)
+	remainingSpots, err := utils.GetRemainingSpots(ctx, c.userRepo, c.waitingListRepo)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get remaining spots"})
 		return

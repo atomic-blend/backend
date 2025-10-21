@@ -2,6 +2,7 @@
 package config
 
 import (
+	"github.com/atomic-blend/backend/auth/repositories"
 	"github.com/atomic-blend/backend/shared/repositories/user"
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -9,27 +10,31 @@ import (
 
 // Controller handles config related operations
 type Controller struct {
-	userRepo user.Interface
+	userRepo        user.Interface
+	waitingListRepo repositories.WaitingListRepositoryInterface
 }
 
 // NewConfigController creates a new config controller instance
-func NewConfigController(userRepo user.Interface) *Controller {
+func NewConfigController(userRepo user.Interface, waitingListRepo repositories.WaitingListRepositoryInterface) *Controller {
 	return &Controller{
-		userRepo: userRepo,
+		userRepo:        userRepo,
+		waitingListRepo: waitingListRepo,
 	}
 }
 
 // SetupRoutes sets up the config routes
 func SetupRoutes(router *gin.Engine, database *mongo.Database) {
 	userRepo := user.NewUserRepository(database)
-	configController := NewConfigController(userRepo)
+	waitingListRepo := repositories.NewWaitingListRepository(database)
+	configController := NewConfigController(userRepo, waitingListRepo)
 	setupConfigRoutes(router, configController)
 }
 
 // SetupRoutesWithMock sets up the config routes with a mock repository for testing
 func SetupRoutesWithMock(router *gin.Engine, database *mongo.Database) {
 	userRepo := user.NewUserRepository(database)
-	configController := NewConfigController(userRepo)
+	waitingListRepo := repositories.NewWaitingListRepository(database)
+	configController := NewConfigController(userRepo, waitingListRepo)
 	setupConfigRoutes(router, configController)
 }
 

@@ -7,12 +7,14 @@ import (
 	"os"
 	"strconv"
 
+	waitinglist "github.com/atomic-blend/backend/auth/models/waiting_list"
 	"github.com/atomic-blend/backend/auth/repositories"
 	"github.com/atomic-blend/backend/shared/repositories/user"
 	amqpservice "github.com/atomic-blend/backend/shared/services/amqp"
 	"github.com/atomic-blend/backend/shared/utils/db"
 	"github.com/atomic-blend/backend/shared/utils/password"
 	"github.com/rs/zerolog/log"
+	"slices"
 )
 
 func WaitingListCron() {
@@ -67,6 +69,11 @@ func WaitingListCron() {
 		log.Error().Err(err).Msg("Failed to get waiting list")
 		return
 	}
+
+	// remove items that already have a code
+	waitingList = slices.DeleteFunc(waitingList, func(item *waitinglist.WaitingList) bool {
+		return item.Code != nil && *item.Code != ""
+	})
 
 	for _, waitingListItem := range waitingList {
 		log.Debug().Msgf("Waiting list item: %s", waitingListItem.Email)

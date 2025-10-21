@@ -107,8 +107,12 @@ func TestController_GetConfig(t *testing.T) {
 			mockUserRepo := &mocks.MockUserRepository{}
 			mockUserRepo.On("Count", mock.Anything).Return(tt.userCount, nil)
 
+			// Create mock waiting list repository
+			mockWaitingListRepo := &mocks.MockWaitingListRepository{}
+			mockWaitingListRepo.On("CountWithCode", mock.Anything).Return(int64(0), nil)
+
 			// Create controller
-			controller := NewConfigController(mockUserRepo)
+			controller := NewConfigController(mockUserRepo, mockWaitingListRepo)
 
 			// Create test router
 			router := gin.New()
@@ -153,6 +157,7 @@ func TestController_GetConfig(t *testing.T) {
 
 			// Verify mock was called
 			mockUserRepo.AssertExpectations(t)
+			mockWaitingListRepo.AssertExpectations(t)
 		})
 	}
 }
@@ -185,8 +190,12 @@ func TestController_GetConfig_EnvironmentVariableNotSet(t *testing.T) {
 	mockUserRepo := &mocks.MockUserRepository{}
 	mockUserRepo.On("Count", mock.Anything).Return(int64(0), nil)
 
+	// Create mock waiting list repository
+	mockWaitingListRepo := &mocks.MockWaitingListRepository{}
+	mockWaitingListRepo.On("CountWithCode", mock.Anything).Return(int64(0), nil)
+
 	// Create controller
-	controller := NewConfigController(mockUserRepo)
+	controller := NewConfigController(mockUserRepo, mockWaitingListRepo)
 
 	// Create test router
 	router := gin.New()
@@ -233,6 +242,7 @@ func TestController_GetConfig_EnvironmentVariableNotSet(t *testing.T) {
 
 	// Verify mock was called
 	mockUserRepo.AssertExpectations(t)
+	mockWaitingListRepo.AssertExpectations(t)
 }
 
 func TestController_GetConfig_InvalidMaxUsers(t *testing.T) {
@@ -263,8 +273,12 @@ func TestController_GetConfig_InvalidMaxUsers(t *testing.T) {
 	mockUserRepo := &mocks.MockUserRepository{}
 	mockUserRepo.On("Count", mock.Anything).Return(int64(0), nil)
 
+	// Create mock waiting list repository
+	mockWaitingListRepo := &mocks.MockWaitingListRepository{}
+	mockWaitingListRepo.On("CountWithCode", mock.Anything).Return(int64(0), nil)
+
 	// Create controller
-	controller := NewConfigController(mockUserRepo)
+	controller := NewConfigController(mockUserRepo, mockWaitingListRepo)
 
 	// Create test router
 	router := gin.New()
@@ -318,8 +332,12 @@ func TestController_GetConfig_UserCountError(t *testing.T) {
 	mockUserRepo := &mocks.MockUserRepository{}
 	mockUserRepo.On("Count", mock.Anything).Return(int64(0), assert.AnError)
 
+	// Create mock waiting list repository
+	mockWaitingListRepo := &mocks.MockWaitingListRepository{}
+	mockWaitingListRepo.On("CountWithCode", mock.Anything).Return(int64(0), nil)
+
 	// Create controller
-	controller := NewConfigController(mockUserRepo)
+	controller := NewConfigController(mockUserRepo, mockWaitingListRepo)
 
 	// Create test router
 	router := gin.New()
@@ -346,4 +364,73 @@ func TestController_GetConfig_UserCountError(t *testing.T) {
 
 	// Verify mock was called
 	mockUserRepo.AssertExpectations(t)
+}
+
+func TestController_GetConfig_WithWaitingListCodes(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	// Store original environment variable values
+	originalDomainsValue := os.Getenv("ACCOUNT_DOMAINS")
+	originalMaxUsersValue := os.Getenv("AUTH_MAX_NB_USER")
+	defer func() {
+		// Restore original values or unset if they weren't set
+		if originalDomainsValue == "" {
+			os.Unsetenv("ACCOUNT_DOMAINS")
+		} else {
+			os.Setenv("ACCOUNT_DOMAINS", originalDomainsValue)
+		}
+		if originalMaxUsersValue == "" {
+			os.Unsetenv("AUTH_MAX_NB_USER")
+		} else {
+			os.Setenv("AUTH_MAX_NB_USER", originalMaxUsersValue)
+		}
+	}()
+
+	// Set environment variables
+	os.Setenv("ACCOUNT_DOMAINS", "example.com")
+	os.Setenv("AUTH_MAX_NB_USER", "100")
+
+	// Create mock user repository
+	mockUserRepo := &mocks.MockUserRepository{}
+	mockUserRepo.On("Count", mock.Anything).Return(int64(25), nil)
+
+	// Create mock waiting list repository with 10 users having codes
+	mockWaitingListRepo := &mocks.MockWaitingListRepository{}
+	mockWaitingListRepo.On("CountWithCode", mock.Anything).Return(int64(10), nil)
+
+	// Create controller
+	controller := NewConfigController(mockUserRepo, mockWaitingListRepo)
+
+	// Create test router
+	router := gin.New()
+	router.GET("/config", controller.GetConfig)
+
+	// Create request
+	req, _ := http.NewRequest("GET", "/config", nil)
+	w := httptest.NewRecorder()
+
+	// Perform request
+	router.ServeHTTP(w, req)
+
+	// Check status code
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	// Parse response body
+	var response map[string]interface{}
+	err := json.Unmarshal(w.Body.Bytes(), &response)
+	assert.NoError(t, err)
+
+	// Extract remainingSpots value
+	remainingSpotsFloat, ok := response["remainingSpots"].(float64)
+	assert.True(t, ok, "remainingSpots should be a number")
+	remainingSpots := int64(remainingSpotsFloat)
+
+	// Check that remaining spots accounts for both users and waiting list with codes
+	// 100 max - 25 users - 10 waiting list with codes = 65
+	expectedRemainingSpots := int64(65)
+	assert.Equal(t, expectedRemainingSpots, remainingSpots)
+
+	// Verify mocks were called
+	mockUserRepo.AssertExpectations(t)
+	mockWaitingListRepo.AssertExpectations(t)
 }

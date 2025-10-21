@@ -11,7 +11,7 @@ import (
 )
 
 // GetRemainingSpots returns the remaining spots for the auth service.
-func GetRemainingSpots(ctx *gin.Context, repository user.Interface) (int64, error) {
+func GetRemainingSpots(ctx *gin.Context, repository user.Interface, waitingListRepo repositories.WaitingListRepositoryInterface) (int64, error) {
 	maxUsersString := os.Getenv("AUTH_MAX_NB_USER")
 	maxUsers := int64(1)
 	if maxUsersString != "" {
@@ -28,7 +28,13 @@ func GetRemainingSpots(ctx *gin.Context, repository user.Interface) (int64, erro
 	}
 	currentUserCount := users
 
-	remainingSpots := maxUsers - currentUserCount
+	// Count waiting list entries with codes (reserved spots)
+	waitingListWithCode, err := waitingListRepo.CountWithCode(ctx.Request.Context())
+	if err != nil {
+		return 0, err
+	}
+
+	remainingSpots := maxUsers - currentUserCount - waitingListWithCode
 	if remainingSpots < 0 {
 		remainingSpots = 0
 	}
