@@ -59,12 +59,13 @@ func TestConfirmResetPassword(t *testing.T) {
 	userRepo := userrepo.NewUserRepository(database)
 	userRoleRepo := userrolerepo.NewUserRoleRepository(database)
 	resetPasswordRepo := repositories.NewUserResetPasswordRequestRepository(database)
+	waitingListRepo := repositories.NewWaitingListRepository(database)
 
 	// Create mock mail server client
 	mockMailServerClient := &mocks.MockMailServerClient{}
 
 	// Create controller
-	authController := NewController(userRepo, userRoleRepo, resetPasswordRepo, mockMailServerClient)
+	authController := NewController(userRepo, userRoleRepo, resetPasswordRepo, waitingListRepo, mockMailServerClient)
 
 	// Create a test router
 	router := gin.Default()

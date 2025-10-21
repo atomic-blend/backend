@@ -1,0 +1,47 @@
+// Package config provides configuration-related HTTP handlers for the auth service.
+package config
+
+import (
+	"github.com/atomic-blend/backend/auth/repositories"
+	"github.com/atomic-blend/backend/shared/repositories/user"
+	"github.com/gin-gonic/gin"
+	"go.mongodb.org/mongo-driver/mongo"
+)
+
+// Controller handles config related operations
+type Controller struct {
+	userRepo        user.Interface
+	waitingListRepo repositories.WaitingListRepositoryInterface
+}
+
+// NewConfigController creates a new config controller instance
+func NewConfigController(userRepo user.Interface, waitingListRepo repositories.WaitingListRepositoryInterface) *Controller {
+	return &Controller{
+		userRepo:        userRepo,
+		waitingListRepo: waitingListRepo,
+	}
+}
+
+// SetupRoutes sets up the config routes
+func SetupRoutes(router *gin.Engine, database *mongo.Database) {
+	userRepo := user.NewUserRepository(database)
+	waitingListRepo := repositories.NewWaitingListRepository(database)
+	configController := NewConfigController(userRepo, waitingListRepo)
+	setupConfigRoutes(router, configController)
+}
+
+// SetupRoutesWithMock sets up the config routes with a mock repository for testing
+func SetupRoutesWithMock(router *gin.Engine, database *mongo.Database) {
+	userRepo := user.NewUserRepository(database)
+	waitingListRepo := repositories.NewWaitingListRepository(database)
+	configController := NewConfigController(userRepo, waitingListRepo)
+	setupConfigRoutes(router, configController)
+}
+
+// setupConfigRoutes sets up the routes for config controller
+func setupConfigRoutes(router *gin.Engine, configController *Controller) {
+	configRoutes := router.Group("/config")
+	{
+		configRoutes.GET("", configController.GetConfig)
+	}
+}

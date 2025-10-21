@@ -50,10 +50,11 @@ func TestGetBackupKeyForResetPassword(t *testing.T) {
 	userRepo := userrepo	.NewUserRepository(db)
 	userRoleRepo := userrolerepo.NewUserRoleRepository(db)
 	resetPasswordRepo := repositories.NewUserResetPasswordRequestRepository(db)
+	waitingListRepo := repositories.NewWaitingListRepository(db)
 	mailServerClient, _ := mailserver.NewMailServerClient()
 
 	// Create controller
-	authController := NewController(userRepo, userRoleRepo, resetPasswordRepo, mailServerClient)
+	authController := NewController(userRepo, userRoleRepo, resetPasswordRepo, waitingListRepo, mailServerClient)
 
 	// Create a test router
 	router := gin.Default()

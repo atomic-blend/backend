@@ -14,6 +14,12 @@ type MockUserRepository struct {
 	mock.Mock
 }
 
+// Count returns the number of users in the database
+func (m *MockUserRepository) Count(ctx context.Context) (int64, error) {
+	args := m.Called(ctx)
+	return args.Get(0).(int64), args.Error(1)
+}
+
 // Create creates a new user
 func (m *MockUserRepository) Create(ctx context.Context, user *models.UserEntity) (*models.UserEntity, error) {
 	args := m.Called(ctx, user)

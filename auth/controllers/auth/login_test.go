@@ -62,10 +62,11 @@ func TestLogin(t *testing.T) {
 	userRepo := userrepo.NewUserRepository(database)
 	userRoleRepo := userrolerepo.NewUserRoleRepository(database)
 	resetPasswordRepo := repositories.NewUserResetPasswordRequestRepository(database)
+	waitingListRepo := repositories.NewWaitingListRepository(database)
 	mailServerClient, _ := mailserver.NewMailServerClient()
 
 	// Create controller
-	authController := NewController(userRepo, userRoleRepo, resetPasswordRepo, mailServerClient)
+	authController := NewController(userRepo, userRoleRepo, resetPasswordRepo, waitingListRepo, mailServerClient)
 
 	// Create a test router
 	router := gin.Default()

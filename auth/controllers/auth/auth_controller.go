@@ -1,4 +1,4 @@
-// Package auth provides authentication and authorization 
+// Package auth provides authentication and authorization
 package auth
 
 import (
@@ -14,12 +14,13 @@ import (
 
 // RegisterRequest represents the structure for registration request data
 type RegisterRequest struct {
-	Email       string                `json:"email" binding:"required,email"`
-	BackupEmail *string               `json:"backupEmail"`
-	FirstName   *string               `json:"firstName"`
-	LastName    *string               `json:"lastName"`
-	KeySet      *models.EncryptionKey `json:"keySet" binding:"required"`
-	Password    string                `json:"password" binding:"required,min=8"` // Minimum 8 characters
+	Email           string                `json:"email" binding:"required,email"`
+	WaitingListCode *string               `json:"waitingListCode"`
+	BackupEmail     *string               `json:"backupEmail"`
+	FirstName       *string               `json:"firstName"`
+	LastName        *string               `json:"lastName"`
+	KeySet          *models.EncryptionKey `json:"keySet" binding:"required"`
+	Password        string                `json:"password" binding:"required,min=8"` // Minimum 8 characters
 }
 
 // Response represents the structure for authentication response data
@@ -35,15 +36,17 @@ type Controller struct {
 	userRepo          userrepo.Interface
 	userRoleRepo      userrolerepo.Interface
 	resetPasswordRepo repositories.UserResetPasswordRequestRepositoryInterface
-	mailServerClient mailserverv1connect.MailServerServiceClient
+	waitingListRepo repositories.WaitingListRepositoryInterface
+	mailServerClient  mailserverv1connect.MailServerServiceClient
 }
 
 // NewController creates a new auth controller
-func NewController(userRepo userrepo.Interface, userRoleRepo userrolerepo.Interface, resetPasswordRepo repositories.UserResetPasswordRequestRepositoryInterface, mailServerClient mailserverv1connect.MailServerServiceClient) *Controller {
+func NewController(userRepo userrepo.Interface, userRoleRepo userrolerepo.Interface, resetPasswordRepo repositories.UserResetPasswordRequestRepositoryInterface, waitingListRepo repositories.WaitingListRepositoryInterface, mailServerClient mailserverv1connect.MailServerServiceClient) *Controller {
 	return &Controller{
 		userRepo:          userRepo,
 		userRoleRepo:      userRoleRepo,
 		resetPasswordRepo: resetPasswordRepo,
+		waitingListRepo:   waitingListRepo,
 		mailServerClient:  mailServerClient,
 	}
 }
@@ -54,7 +57,8 @@ func SetupRoutes(router *gin.Engine, database *mongo.Database) {
 	userRoleRepo := userrolerepo.NewUserRoleRepository(database)
 	resetPasswordRepo := repositories.NewUserResetPasswordRequestRepository(database)
 	mailServerClient, _ := mailserver.NewMailServerClient()
-	authController := NewController(userRepo, userRoleRepo, resetPasswordRepo, mailServerClient)
+	waitingListRepo := repositories.NewWaitingListRepository(database)
+	authController := NewController(userRepo, userRoleRepo, resetPasswordRepo, waitingListRepo, mailServerClient)
 
 	authGroup := router.Group("/auth")
 	{

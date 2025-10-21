@@ -7,13 +7,17 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/atomic-blend/backend/auth/tests/mocks"
 	"github.com/atomic-blend/backend/shared/test_utils/inmemorymongo"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
 func TestNewConfigController(t *testing.T) {
-	controller := NewConfigController()
+	mockUserRepo := &mocks.MockUserRepository{}
+	mockWaitingListRepo := &mocks.MockWaitingListRepository{}
+	controller := NewConfigController(mockUserRepo, mockWaitingListRepo)
 	assert.NotNil(t, controller)
 	assert.IsType(t, &Controller{}, controller)
 }
@@ -59,16 +63,34 @@ func TestSetupRoutes(t *testing.T) {
 	err = json.Unmarshal(w.Body.Bytes(), &response)
 	assert.NoError(t, err)
 	assert.Contains(t, response, "domains")
+	assert.Contains(t, response, "remainingSpots")
 }
 
 func TestSetupRoutesWithMock(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
+	// Start in-memory MongoDB server
+	mongoServer, err := inmemorymongo.CreateInMemoryMongoDB()
+	if err != nil {
+		t.Fatalf("Failed to create in-memory MongoDB: %v", err)
+	}
+	defer mongoServer.Stop()
+
+	// Connect to the in-memory MongoDB
+	client, err := inmemorymongo.ConnectToInMemoryDB(mongoServer.URI())
+	if err != nil {
+		t.Fatalf("Failed to connect to in-memory MongoDB: %v", err)
+	}
+	defer client.Disconnect(context.Background())
+
+	// Get database reference
+	db := client.Database("test_db")
+
 	// Create router
 	router := gin.New()
 
 	// Setup routes with mock
-	SetupRoutesWithMock(router)
+	SetupRoutesWithMock(router, db)
 
 	// Test that the route is properly set up by making a request
 	req, _ := http.NewRequest("GET", "/config", nil)
@@ -82,16 +104,25 @@ func TestSetupRoutesWithMock(t *testing.T) {
 
 	// Parse response to verify it's the expected config response
 	var response map[string]interface{}
-	err := json.Unmarshal(w.Body.Bytes(), &response)
+	err = json.Unmarshal(w.Body.Bytes(), &response)
 	assert.NoError(t, err)
 	assert.Contains(t, response, "domains")
+	assert.Contains(t, response, "remainingSpots")
 }
 
 func TestSetupConfigRoutes(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
+	// Create mock user repository
+	mockUserRepo := &mocks.MockUserRepository{}
+	mockUserRepo.On("Count", mock.Anything).Return(int64(0), nil)
+
+	// Create mock waiting list repository
+	mockWaitingListRepo := &mocks.MockWaitingListRepository{}
+	mockWaitingListRepo.On("CountWithCode", mock.Anything).Return(int64(0), nil)
+
 	// Create controller
-	controller := NewConfigController()
+	controller := NewConfigController(mockUserRepo, mockWaitingListRepo)
 
 	// Create router
 	router := gin.New()
@@ -114,13 +145,22 @@ func TestSetupConfigRoutes(t *testing.T) {
 	err := json.Unmarshal(w.Body.Bytes(), &response)
 	assert.NoError(t, err)
 	assert.Contains(t, response, "domains")
+	assert.Contains(t, response, "remainingSpots")
 }
 
 func TestConfigRoutesGroup(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
+	// Create mock user repository
+	mockUserRepo := &mocks.MockUserRepository{}
+	mockUserRepo.On("Count", mock.Anything).Return(int64(0), nil)
+
+	// Create mock waiting list repository
+	mockWaitingListRepo := &mocks.MockWaitingListRepository{}
+	mockWaitingListRepo.On("CountWithCode", mock.Anything).Return(int64(0), nil)
+
 	// Create controller
-	controller := NewConfigController()
+	controller := NewConfigController(mockUserRepo, mockWaitingListRepo)
 
 	// Create router
 	router := gin.New()

@@ -1,0 +1,68 @@
+---
+bodyClass: bg-slate-50
+preheader: You're in! Welcome to Atomic Blend
+---
+
+<x-main>
+    <div class="bg-slate-50 sm:px-4 font-inter">
+        <table align="center" class="m-0 mx-auto">
+            <tr>
+                <td class="w-[552px] max-w-full">
+                    <x-spacer height="24px" />
+
+                    <table class="w-full">
+                        <tr>
+                            <td class="py-6 px-9 sm:p-6 bg-white [border:1px_solid_theme(colors.slate.200)] rounded-lg">
+                                <p class="font-bold">Atomic Blend</p>
+
+                                <x-spacer height="24px" />
+
+                                <h1 class="m-0 mb-6 text-2xl/8 text-slate-900 font-semibold">
+                                    🎉 You're in!
+                                </h1>
+
+                                <p class="m-0 mb-6 text-base/6 text-slate-600">
+                                    Great news! You've been granted access to Atomic Blend.
+                                </p>
+
+                                <p class="m-0 mb-6 text-base/6 text-slate-600">
+                                    Click the button below to complete your registration and start using Atomic Blend.
+                                </p>
+
+                                <x-button
+                                    href="https://{{ .domain }}/#/auth/register?email={{ .email }}&security-key={{ .securityToken }}"
+                                    align="center">
+                                    Complete Registration
+                                </x-button>
+
+                                <x-spacer height="24px" />
+
+                                <p class="m-0 text-base/6 text-slate-600">
+                                    Best regards,
+                                    <br>
+                                    <span class="font-semibold">The Atomic Blend Team</span>
+                                </p>
+
+                            </td>
+                        </tr>
+                    </table>
+
+                    <table class="w-full">
+                        <tr>
+                            <td class="py-6 px-9 sm:px-6">
+                                <p class="m-0 text-xs text-slate-500">
+                                    This email was sent to {{ .email }}.
+                                    <br>
+                                    If you didn't request this, please ignore this email.
+                                </p>
+                                <p class="m-0 text-xs text-slate-500 mt-2">
+                                    &copy; {{ new Date().getFullYear() }} Atomic Blend. All rights reserved.
+                                </p>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+    </div>
+</x-main>
