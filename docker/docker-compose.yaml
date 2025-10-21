@@ -1,0 +1,260 @@
+version: "3.8"
+name: atomic-blend
+services:
+  reverse-proxy:
+    image: nginx:alpine
+    container_name: reverse-proxy
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - auth
+      - productivity
+      - mail
+      - mail-server
+    restart: unless-stopped
+
+  auth:
+    image: ghcr.io/atomic-blend/auth:${AUTH_SERVICE_VERSION:-latest}
+    container_name: auth
+    expose:
+      - "8080"
+      - "50051" # gRPC port
+    volumes:
+      - type: bind
+        source: ${HOME}${USERPROFILE}/.netrc
+        target: /root/.netrc
+    working_dir: /workspace/auth
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    env_file:
+      - .env
+      - .env.versions
+
+  mail-server:
+    image: ghcr.io/atomic-blend/mail-server:${MAIL_SERVER_SERVICE_VERSION:-latest}
+    container_name: mail-server
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+      rspamd:
+        condition: service_started
+    ports:
+      - target: 1025
+        published: 1025
+        protocol: tcp
+        mode: host
+    env_file:
+      - .env
+      - .env.versions
+    volumes:
+      - type: bind
+        source: ${HOME}${USERPROFILE}/.netrc
+        target: /root/.netrc
+      - type: bind
+        source: ./private.key
+        target: /app/dkim_private_key.pem
+
+  mail:
+    image: ghcr.io/atomic-blend/mail:${MAIL_SERVICE_VERSION:-latest}
+    container_name: mail
+    expose:
+      - "8080"
+      - "50051" # gRPC port
+    volumes:
+      - type: bind
+        source: ${HOME}${USERPROFILE}/.netrc
+        target: /root/.netrc
+      - type: bind
+        source: ./firebase-adminsdk-prod.json
+        target: /app/firebase_sac.json
+    networks:
+      - default
+      - rspamd
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+    env_file:
+      - .env
+      - .env.versions
+
+  productivity:
+    image: ghcr.io/atomic-blend/productivity:${PRODUCTIVITY_SERVICE_VERSION:-latest}
+    container_name: productivity
+    expose:
+      - "8080"
+      - "50051" # gRPC port
+    volumes:
+      - type: bind
+        source: ${HOME}${USERPROFILE}/.netrc
+        target: /root/.netrc
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    env_file:
+      - .env
+      - .env.versions
+
+  task-app:
+    image: ghcr.io/atomic-blend/task-app:${TASK_APP_VERSION:-latest}
+    container_name: task-app
+    env_file:
+      - .env
+      - .env.versions
+
+  notes-app:
+    image: ghcr.io/atomic-blend/notes-app:${NOTES_APP_VERSION:-latest}
+    container_name: notes-app
+    env_file:
+      - .env
+      - .env.versions
+
+  mail-app:
+    image: ghcr.io/atomic-blend/mail-app:${MAIL_APP_VERSION:-latest}
+    container_name: mail-app
+    env_file:
+      - .env
+      - .env.versions
+
+  mongodb:
+    image: mongo:${MONGODB_VERSION:-8.0.4}
+    container_name: mongodb-atomic-blend
+    entrypoint: >
+      /bin/bash -c '
+      openssl rand -base64 756 > /data/keyfile.key &&
+      chmod 400 /data/keyfile.key &&
+      chown mongodb:mongodb /data/keyfile.key &&
+      /usr/local/bin/docker-entrypoint.sh mongod --replSet rs0 --keyFile /data/keyfile.key --bind_ip_all'
+    restart: always
+    ports:
+      - 127.0.0.1:27017:27017
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: mongo_user
+      MONGO_INITDB_ROOT_PASSWORD: password
+      MONGO_INITDB_DATABASE: cloudlinker
+    volumes:
+      - mongo_data:/data/db
+      - mongo_config:/data/configdb
+    healthcheck:
+      test: mongosh
+        -u $${MONGO_INITDB_ROOT_USERNAME}
+        -p $${MONGO_INITDB_ROOT_PASSWORD}
+        --eval "try { rs.status() } catch (err) { rs.initiate({_id:'rs0',members:[{_id:0,host:'mongodb:27017',priority:1}]}) }" | mongosh --port 27017 --quiet
+      interval: 5s
+      timeout: 30s
+      start_period: 0s
+      start_interval: 1s
+      retries: 30
+
+  rabbitmq:
+    image: rabbitmq:${RABBITMQ_VERSION:-4.1.2-management}
+    container_name: rabbitmq
+    restart: always
+    ports:
+      - "5672:5672" # AMQP port
+      - "15672:15672" # Management UI port
+    environment:
+      RABBITMQ_DEFAULT_USER: user
+      RABBITMQ_DEFAULT_PASS: password
+      RABBITMQ_DEFAULT_VHOST: /
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  rspamd:
+    image: rspamd/rspamd:${RSPAMD_VERSION:-latest}
+    container_name: rspamd-compose-rspamd
+    depends_on:
+      - rspamd-unbound
+      - rspamd-redis
+    environment:
+      - RSPAMD_DNS_SERVERS=round-robin:192.0.3.254:53
+      - RSPAMD_REDIS_SERVERS=rspamd-compose-redis
+      - RSPAMD_USE_BAYES=1
+    #      - RSPAMD_USE_GREYLIST=1
+    networks:
+      - rspamd
+    ports:
+      - "11332:11332"
+      - "11333:11333"
+      - "11334:11334"
+    pull_policy: build
+    # recommended for production
+    #    read_only: true
+    volumes:
+      - rspamd-compose-rspamd-dbdir:/var/lib/rspamd
+
+  rspamd-redis:
+    container_name: rspamd-compose-redis
+    command: "redis-server --save 60 1 --loglevel warning"
+    image: "redis:${REDIS_VERSION:-latest}"
+    expose:
+      - "6379"
+    sysctls:
+      - net.core.somaxconn=4096
+    networks:
+      - rspamd
+    volumes:
+      - rspamd-compose-redis-data:/data
+
+  rspamd-unbound:
+    image: alpinelinux/unbound:${UNBOUND_VERSION:-latest}
+    container_name: rspamd-compose-unbound
+    networks:
+      rspamd:
+        ipv4_address: 192.0.3.254
+    pull_policy: build
+
+  minio:
+    image: minio/minio
+    restart: unless-stopped
+    ports:
+      - "9000:9000" # MinIO API
+      - "9001:9001" # MinIO Console
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    command: server --console-address ":9001" /data --address ":9000"
+    volumes:
+      - minio_data:/data
+
+  minio-setup:
+    image: minio/mc
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      sleep 5;
+      /usr/bin/mc alias set local http://minio:9000 minioadmin minioadmin;
+      /usr/bin/mc mb local/ab-files;
+      /usr/bin/mc anonymous set public local/ab-files;
+      exit 0;
+      "
+
+networks:
+  rspamd:
+    ipam:
+      config:
+        - subnet: 192.0.3.0/24
+
+volumes:
+  rabbitmq_data:
+  mongo_data:
+  mongo_config:
+  rspamd-compose-redis-data:
+  rspamd-compose-rspamd-dbdir:
+  minio_data:

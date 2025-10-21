@@ -1,0 +1,12 @@
+meta {
+  name: /notes
+  seq: 4
+}
+
+auth {
+  mode: inherit
+}
+
+script:pre-request {
+  await bru.runRequest("/auth/login")
+}

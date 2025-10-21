@@ -1,0 +1,22 @@
+meta {
+  name: /getSince
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{API_URL}}/notes/since?since=2024-01-01T00:00:00Z&page=1&limit=10
+  body: none
+  auth: inherit
+}
+
+params:query {
+  since: 2024-01-01T00:00:00Z
+  page: 1
+  limit: 10
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

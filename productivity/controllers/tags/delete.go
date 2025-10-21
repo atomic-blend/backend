@@ -56,7 +56,7 @@ func (c *TagController) DeleteTag(ctx *gin.Context) {
 	}
 
 	// Get all tasks for the user
-	tasks, err := c.taskRepo.GetAll(ctx, &authUser.UserID)
+	tasks, _, err := c.taskRepo.GetAll(ctx, &authUser.UserID, nil, nil)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Error retrieving tasks: " + err.Error()})
 		return

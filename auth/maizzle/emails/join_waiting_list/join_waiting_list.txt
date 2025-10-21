@@ -1,0 +1,30 @@
+---
+bodyClass: bg-slate-50
+preheader: Welcome to Atomic Blend waiting list
+---
+
+Welcome to Atomic Blend!
+
+Hello!
+
+Thank you for joining the Atomic Blend waiting list! We're excited to have you on board.
+
+Your email {{ .email }} has been successfully added to our waiting list.
+
+Please keep this security token safe - you'll need it to manage your waiting list status:
+
+{{ .securityToken }}
+
+We'll notify you as soon as Atomic Blend becomes available. In the meantime, stay tuned for updates!
+
+Check Status : https://{{ .domain }}/#/auth/register?email={{ .email }}&security-key={{ .securityToken }}
+
+Best regards,
+The Atomic Blend Team
+
+----------
+
+This email was sent to {{ .email }} because you joined our waiting list.
+If you didn't request this, please ignore this email.
+
+© Atomic Blend. All rights reserved.

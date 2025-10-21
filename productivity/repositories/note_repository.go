@@ -12,19 +12,23 @@ import (
 	bson "go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 const noteCollection = "notes"
 
 // NoteRepositoryInterface defines the interface for note repository operations
 type NoteRepositoryInterface interface {
-	GetAll(ctx context.Context, userID *primitive.ObjectID) ([]*models.NoteEntity, error)
+	// GetAll retrieves notes for a user. If page and limit are both provided and >0, returns paginated results and total count. If either is nil or <=0, returns all notes and total count.
+	GetAll(ctx context.Context, userID *primitive.ObjectID, page, limit *int64) ([]*models.NoteEntity, int64, error)
 	GetByID(ctx context.Context, id string) (*models.NoteEntity, error)
 	Create(ctx context.Context, note *models.NoteEntity) (*models.NoteEntity, error)
 	Update(ctx context.Context, id string, note *models.NoteEntity) (*models.NoteEntity, error)
 	Delete(ctx context.Context, id string) error
 	DeleteByUserID(ctx context.Context, userID primitive.ObjectID) error
 	UpdatePatch(ctx context.Context, patch *patchmodels.Patch) (*models.NoteEntity, error)
+	// GetSince retrieves notes where updated_at is after the specified time for a specific user. If page and limit are both provided and >0, returns paginated results and total count. If either is nil or <=0, returns all notes and total count.
+	GetSince(ctx context.Context, userID primitive.ObjectID, since time.Time, page, limit *int64) ([]*models.NoteEntity, int64, error)
 }
 
 // NoteRepository handles database operations related to notes
@@ -39,33 +43,41 @@ func NewNoteRepository(db *mongo.Database) NoteRepositoryInterface {
 	}
 }
 
-// GetAll retrieves all notes with optional user filtering
-func (r *NoteRepository) GetAll(ctx context.Context, userID *primitive.ObjectID) ([]*models.NoteEntity, error) {
+// GetAll retrieves notes for a user. If page and limit are both provided and >0, returns paginated results and total count. If either is nil or <=0, returns all notes and total count.
+func (r *NoteRepository) GetAll(ctx context.Context, userID *primitive.ObjectID, page, limit *int64) ([]*models.NoteEntity, int64, error) {
 	filter := bson.M{}
 	if userID != nil {
 		filter["user"] = userID
 	}
 
-	cursor, err := r.collection.Find(ctx, filter)
+	totalCount, err := r.collection.CountDocuments(ctx, filter)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
+	}
+
+	// Build find options: always sort by created_at desc to return most recent first
+	findOpts := options.Find()
+	findOpts.SetSort(bson.D{{Key: "created_at", Value: -1}})
+
+	// Only apply pagination if both page and limit are provided and > 0
+	if page != nil && limit != nil && *page > 0 && *limit > 0 {
+		skip := (*page - 1) * *limit
+		findOpts.SetSkip(skip)
+		findOpts.SetLimit(*limit)
+	}
+
+	cursor, err := r.collection.Find(ctx, filter, findOpts)
+	if err != nil {
+		return nil, 0, err
 	}
 	defer cursor.Close(ctx)
 
 	var notes []*models.NoteEntity
-	for cursor.Next(ctx) {
-		var note models.NoteEntity
-		if err := cursor.Decode(&note); err != nil {
-			return nil, err
-		}
-		notes = append(notes, &note)
+	if err := cursor.All(ctx, &notes); err != nil {
+		return nil, 0, err
 	}
 
-	if err := cursor.Err(); err != nil {
-		return nil, err
-	}
-
-	return notes, nil
+	return notes, totalCount, nil
 }
 
 // GetByID retrieves a note by its ID
@@ -346,4 +358,42 @@ func convertToNoteBoolean(value interface{}, isPointer bool) (interface{}, error
 		return &boolValue, nil
 	}
 	return boolValue, nil
+}
+
+// GetSince retrieves notes where updated_at is after the specified time for a specific user. If page and limit are both provided and >0, returns paginated results and total count. If either is nil or <=0, returns all notes and total count.
+func (r *NoteRepository) GetSince(ctx context.Context, userID primitive.ObjectID, since time.Time, page, limit *int64) ([]*models.NoteEntity, int64, error) {
+	filter := bson.M{
+		"user":       userID,
+		"updated_at": bson.M{"$gt": primitive.NewDateTimeFromTime(since)},
+	}
+
+	// Count total documents matching the filter
+	totalCount, err := r.collection.CountDocuments(ctx, filter)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	// Build find options: always sort by updated_at desc to return most recent first
+	findOpts := options.Find()
+	findOpts.SetSort(bson.D{{Key: "updated_at", Value: -1}})
+
+	// Only apply pagination if both page and limit are provided and > 0
+	if page != nil && limit != nil && *page > 0 && *limit > 0 {
+		skip := (*page - 1) * *limit
+		findOpts.SetSkip(skip)
+		findOpts.SetLimit(*limit)
+	}
+
+	cursor, err := r.collection.Find(ctx, filter, findOpts)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer cursor.Close(ctx)
+
+	var notes []*models.NoteEntity
+	if err := cursor.All(ctx, &notes); err != nil {
+		return nil, 0, err
+	}
+
+	return notes, totalCount, nil
 }

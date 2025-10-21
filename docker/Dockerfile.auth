@@ -1,15 +1,27 @@
-FROM golang:1.24.5-alpine AS dev
+FROM golang:1.24.5 AS dev
 
 WORKDIR /app
 
+# Install node.Js and npm
+RUN apt update && apt install npm -y
+
 # Copy the entire monorepo
 COPY . /app/
+
+WORKDIR /app/auth/maizzle
+
+# Install maizzle
+RUN npm install
+
+# Build the email templates
+RUN npm run build
+
+WORKDIR /app/auth
 
 # Download dependencies
 RUN go mod download
 
 # Build from the auth directory to use go.work
-WORKDIR /app/auth
 RUN CGO_ENABLED=0 go build -o /go/bin/app
 
 FROM alpine:3.21

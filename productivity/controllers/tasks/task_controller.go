@@ -1,8 +1,9 @@
 package tasks
 
 import (
-	"github.com/atomic-blend/backend/shared/middlewares/auth"
 	"github.com/atomic-blend/backend/productivity/repositories"
+	"github.com/atomic-blend/backend/shared/middlewares/auth"
+	"github.com/webstradev/gin-pagination/v2/pkg/pagination"
 
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -41,7 +42,8 @@ func setupTaskRoutes(router *gin.Engine, taskController *TaskController) {
 	taskRoutes := router.Group("/tasks")
 	auth.RequireAuth(taskRoutes)
 	{
-		taskRoutes.GET("", taskController.GetAllTasks)
+		taskRoutes.GET("", pagination.New(), taskController.GetAllTasks)
+		taskRoutes.GET("/since", taskController.GetTasksSince)
 		taskRoutes.GET("/:id", taskController.GetTaskByID)
 		taskRoutes.POST("", taskController.CreateTask)
 		taskRoutes.PUT("/:id", taskController.UpdateTask)

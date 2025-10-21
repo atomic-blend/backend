@@ -1,13 +1,6 @@
 package auth
 
 import (
-	"github.com/atomic-blend/backend/shared/models"
-	"github.com/atomic-blend/backend/auth/repositories"
-	userrepo "github.com/atomic-blend/backend/shared/repositories/user"
-	userrolerepo "github.com/atomic-blend/backend/shared/repositories/user_role"
-	"github.com/atomic-blend/backend/shared/test_utils/inmemorymongo"
-	"github.com/atomic-blend/backend/shared/utils/db"
-	"github.com/atomic-blend/backend/shared/utils/password"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -15,6 +8,15 @@ import (
 	"net/http/httptest"
 	"os"
 	"testing"
+
+	"github.com/atomic-blend/backend/auth/repositories"
+	mailserver "github.com/atomic-blend/backend/shared/grpc/mail-server"
+	"github.com/atomic-blend/backend/shared/models"
+	userrepo "github.com/atomic-blend/backend/shared/repositories/user"
+	userrolerepo "github.com/atomic-blend/backend/shared/repositories/user_role"
+	"github.com/atomic-blend/backend/shared/test_utils/inmemorymongo"
+	"github.com/atomic-blend/backend/shared/utils/db"
+	"github.com/atomic-blend/backend/shared/utils/password"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
@@ -60,9 +62,11 @@ func TestLogin(t *testing.T) {
 	userRepo := userrepo.NewUserRepository(database)
 	userRoleRepo := userrolerepo.NewUserRoleRepository(database)
 	resetPasswordRepo := repositories.NewUserResetPasswordRequestRepository(database)
+	waitingListRepo := repositories.NewWaitingListRepository(database)
+	mailServerClient, _ := mailserver.NewMailServerClient()
 
 	// Create controller
-	authController := NewController(userRepo, userRoleRepo, resetPasswordRepo)
+	authController := NewController(userRepo, userRoleRepo, resetPasswordRepo, waitingListRepo, mailServerClient)
 
 	// Create a test router
 	router := gin.Default()

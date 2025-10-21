@@ -4,8 +4,8 @@ package mail
 import (
 	"net/http"
 
-	"github.com/atomic-blend/backend/shared/middlewares/auth"
 	"github.com/atomic-blend/backend/mail/models"
+	"github.com/atomic-blend/backend/shared/middlewares/auth"
 
 	"github.com/gin-gonic/gin"
 )
@@ -14,9 +14,9 @@ import (
 type PaginatedMailResponse struct {
 	Mails      []*models.Mail `json:"mails"`
 	TotalCount int64          `json:"total_count"`
-	Page       int64          `json:"page,omitempty"`
-	Size       int64          `json:"size,omitempty"`
-	TotalPages int64          `json:"total_pages,omitempty"`
+	Page       int64          `json:"page"`
+	Size       int64          `json:"size"`
+	TotalPages int64          `json:"total_pages"`
 }
 
 // GetAllMails retrieves all mails for the authenticated user with pagination

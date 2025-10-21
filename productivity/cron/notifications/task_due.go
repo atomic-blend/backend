@@ -9,9 +9,9 @@ import (
 	authv1 "github.com/atomic-blend/backend/grpc/gen/auth/v1"
 	userv1 "github.com/atomic-blend/backend/grpc/gen/user/v1"
 	"github.com/atomic-blend/backend/productivity/cron/notifications/payloads"
-	userclient "github.com/atomic-blend/backend/shared/grpc/user"
 	"github.com/atomic-blend/backend/productivity/models"
 	"github.com/atomic-blend/backend/productivity/repositories"
+	userclient "github.com/atomic-blend/backend/shared/grpc/user"
 	"github.com/atomic-blend/backend/shared/utils/db"
 	fcmutils "github.com/atomic-blend/backend/shared/utils/fcm_utils"
 	"github.com/atomic-blend/backend/shared/utils/shortcuts"
@@ -55,7 +55,7 @@ func TaskDueNotificationCron() {
 	}
 
 	// Get all tasks from the database
-	tasks, err := taskRepo.GetAll(ctx, nil) // nil to get all tasks for all users
+	tasks, _, err := taskRepo.GetAll(ctx, nil, nil, nil) // nil to get all tasks for all users
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to get tasks")
 		return

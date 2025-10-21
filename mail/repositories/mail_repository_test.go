@@ -500,7 +500,7 @@ func TestMailRepository_CleanupTrash(t *testing.T) {
 			createdMails = append(createdMails, created)
 
 			// Verify mail was created
-			found, err := repo.GetByID(context.Background(), *created.ID)
+			found, err := repo.GetByID(context.Background(), *mail.ID)
 			require.NoError(t, err)
 			assert.NotNil(t, found, "Mail %d (%s) should exist before cleanup", i, tc.name)
 		}
@@ -905,6 +905,400 @@ func TestMailRepository_CleanupTrash(t *testing.T) {
 				assert.NotNil(t, found, "Mail %d (%s) should still exist after cleanup", i, tc.name)
 			} else {
 				assert.Nil(t, found, "Mail %d (%s) should be deleted after cleanup", i, tc.name)
+			}
+		}
+	})
+}
+
+func TestMailRepository_GetSince(t *testing.T) {
+
+	t.Run("get mails updated since specific time", func(t *testing.T) {
+		repo, cleanup := setupMailTest(t)
+		defer cleanup()
+
+		userID := primitive.NewObjectID()
+		now := time.Now()
+
+		// Create mails with different updated_at timestamps
+		testCases := []struct {
+			name        string
+			updatedAt   time.Time
+			shouldMatch bool
+		}{
+			{
+				name:        "mail updated 1 hour ago",
+				updatedAt:   now.Add(-1 * time.Hour),
+				shouldMatch: false, // Should not match (older than cutoff)
+			},
+			{
+				name:        "mail updated 30 minutes ago",
+				updatedAt:   now.Add(-30 * time.Minute),
+				shouldMatch: true, // Should match (newer than cutoff)
+			},
+			{
+				name:        "mail updated 10 minutes ago",
+				updatedAt:   now.Add(-10 * time.Minute),
+				shouldMatch: true, // Should match (newer than cutoff)
+			},
+			{
+				name:        "mail updated 1 minute ago",
+				updatedAt:   now.Add(-1 * time.Minute),
+				shouldMatch: true, // Should match (newer than cutoff)
+			},
+		}
+
+		// Set cutoff time to 45 minutes ago
+		cutoffTime := now.Add(-45 * time.Minute)
+
+		for i, tc := range testCases {
+			mail := createTestMail(userID)
+			if headers, ok := mail.Headers.(map[string]string); ok {
+				headers["Subject"] = tc.name
+			}
+			// Set specific updated_at time
+			updatedAt := primitive.NewDateTimeFromTime(tc.updatedAt)
+			mail.UpdatedAt = &updatedAt
+			// Also set created_at to be consistent
+			mail.CreatedAt = &updatedAt
+
+			_, err := repo.Create(context.Background(), mail)
+			require.NoError(t, err)
+
+			// Verify mail was created
+			found, err := repo.GetByID(context.Background(), *mail.ID)
+			require.NoError(t, err)
+			assert.NotNil(t, found, "Mail %d (%s) should exist before GetSince", i, tc.name)
+		}
+
+		// Call GetSince with cutoff time
+		mails, totalCount, err := repo.GetSince(context.Background(), userID, cutoffTime, 0, 0)
+		require.NoError(t, err)
+
+		// Verify we got the expected number of mails
+		expectedCount := 0
+		for _, tc := range testCases {
+			if tc.shouldMatch {
+				expectedCount++
+			}
+		}
+		assert.Len(t, mails, expectedCount, "Should return %d mails updated since cutoff time", expectedCount)
+		assert.Equal(t, int64(expectedCount), totalCount, "Should return correct total count")
+
+		// Verify the returned mails are the correct ones
+		var returnedSubjects []string
+		for _, mail := range mails {
+			headers, err := convertHeadersToMap(mail.Headers)
+			require.NoError(t, err)
+			if headers != nil {
+				if subject, exists := headers["Subject"]; exists {
+					if subjectStr, ok := subject.(string); ok {
+						returnedSubjects = append(returnedSubjects, subjectStr)
+					}
+				}
+			}
+		}
+
+		// Check that we got the expected subjects
+		assert.Contains(t, returnedSubjects, "mail updated 30 minutes ago")
+		assert.Contains(t, returnedSubjects, "mail updated 10 minutes ago")
+		assert.Contains(t, returnedSubjects, "mail updated 1 minute ago")
+		assert.NotContains(t, returnedSubjects, "mail updated 1 hour ago")
+
+		// Verify mails are sorted by updated_at descending (most recent first)
+		if len(mails) >= 2 {
+			assert.True(t, mails[0].UpdatedAt.Time().After(mails[1].UpdatedAt.Time()),
+				"Mails should be sorted by updated_at descending")
+		}
+	})
+
+	t.Run("get mails updated since time with no matches", func(t *testing.T) {
+		repo, cleanup := setupMailTest(t)
+		defer cleanup()
+
+		userID := primitive.NewObjectID()
+		now := time.Now()
+
+		// Create a mail updated 1 hour ago
+		mail := createTestMail(userID)
+		if headers, ok := mail.Headers.(map[string]string); ok {
+			headers["Subject"] = "Old Mail"
+		}
+		updatedAt := primitive.NewDateTimeFromTime(now.Add(-1 * time.Hour))
+		mail.UpdatedAt = &updatedAt
+		mail.CreatedAt = &updatedAt
+
+		_, err := repo.Create(context.Background(), mail)
+		require.NoError(t, err)
+
+		// Set cutoff time to 30 minutes ago (newer than the mail)
+		cutoffTime := now.Add(-30 * time.Minute)
+
+		// Call GetSince
+		mails, totalCount, err := repo.GetSince(context.Background(), userID, cutoffTime, 0, 0)
+		require.NoError(t, err)
+		assert.Len(t, mails, 0, "Should return no mails when cutoff time is newer than all mails")
+		assert.Equal(t, int64(0), totalCount)
+	})
+
+	t.Run("get mails updated since time with all matches", func(t *testing.T) {
+		repo, cleanup := setupMailTest(t)
+		defer cleanup()
+
+		userID := primitive.NewObjectID()
+		now := time.Now()
+
+		// Create multiple mails updated recently
+		for i := 0; i < 3; i++ {
+			mail := createTestMail(userID)
+			if headers, ok := mail.Headers.(map[string]string); ok {
+				headers["Subject"] = fmt.Sprintf("Recent Mail %d", i+1)
+			}
+			updatedAt := primitive.NewDateTimeFromTime(now.Add(-time.Duration(i) * time.Minute))
+			mail.UpdatedAt = &updatedAt
+			mail.CreatedAt = &updatedAt
+
+			_, err := repo.Create(context.Background(), mail)
+			require.NoError(t, err)
+		}
+
+		// Set cutoff time to 5 minutes ago (older than all mails)
+		cutoffTime := now.Add(-5 * time.Minute)
+
+		// Call GetSince
+		mails, totalCount, err := repo.GetSince(context.Background(), userID, cutoffTime, 0, 0)
+		require.NoError(t, err)
+		assert.Len(t, mails, 3, "Should return all 3 mails when cutoff time is older than all mails")
+		assert.Equal(t, int64(3), totalCount)
+
+		// Verify subjects
+		var returnedSubjects []string
+		for _, mail := range mails {
+			headers, err := convertHeadersToMap(mail.Headers)
+			require.NoError(t, err)
+			if headers != nil {
+				if subject, exists := headers["Subject"]; exists {
+					if subjectStr, ok := subject.(string); ok {
+						returnedSubjects = append(returnedSubjects, subjectStr)
+					}
+				}
+			}
+		}
+		assert.Contains(t, returnedSubjects, "Recent Mail 1")
+		assert.Contains(t, returnedSubjects, "Recent Mail 2")
+		assert.Contains(t, returnedSubjects, "Recent Mail 3")
+	})
+
+	t.Run("get mails updated since time with empty collection", func(t *testing.T) {
+		repo, cleanup := setupMailTest(t)
+		defer cleanup()
+
+		userID := primitive.NewObjectID()
+		now := time.Now()
+		cutoffTime := now.Add(-1 * time.Hour)
+
+		// Call GetSince on empty collection
+		mails, totalCount, err := repo.GetSince(context.Background(), userID, cutoffTime, 0, 0)
+		require.NoError(t, err)
+		assert.Len(t, mails, 0, "Should return empty slice when collection is empty")
+		assert.Equal(t, int64(0), totalCount)
+	})
+
+	t.Run("get mails updated since time with multiple users", func(t *testing.T) {
+		repo, cleanup := setupMailTest(t)
+		defer cleanup()
+
+		userID1 := primitive.NewObjectID()
+		userID2 := primitive.NewObjectID()
+		now := time.Now()
+
+		// Create mails for both users with different timestamps
+		mail1 := createTestMail(userID1)
+		if headers, ok := mail1.Headers.(map[string]string); ok {
+			headers["Subject"] = "User 1 Mail"
+		}
+		updatedAt1 := primitive.NewDateTimeFromTime(now.Add(-30 * time.Minute))
+		mail1.UpdatedAt = &updatedAt1
+		mail1.CreatedAt = &updatedAt1
+
+		mail2 := createTestMail(userID2)
+		if headers, ok := mail2.Headers.(map[string]string); ok {
+			headers["Subject"] = "User 2 Mail"
+		}
+		updatedAt2 := primitive.NewDateTimeFromTime(now.Add(-10 * time.Minute))
+		mail2.UpdatedAt = &updatedAt2
+		mail2.CreatedAt = &updatedAt2
+
+		_, err := repo.Create(context.Background(), mail1)
+		require.NoError(t, err)
+		_, err = repo.Create(context.Background(), mail2)
+		require.NoError(t, err)
+
+		// Set cutoff time to 45 minutes ago
+		cutoffTime := now.Add(-45 * time.Minute)
+
+		// Call GetSince for user1
+		mails1, totalCount1, err := repo.GetSince(context.Background(), userID1, cutoffTime, 0, 0)
+		require.NoError(t, err)
+		assert.Len(t, mails1, 1, "Should return mail from user1")
+		assert.Equal(t, int64(1), totalCount1)
+
+		// Call GetSince for user2
+		mails2, totalCount2, err := repo.GetSince(context.Background(), userID2, cutoffTime, 0, 0)
+		require.NoError(t, err)
+		assert.Len(t, mails2, 1, "Should return mail from user2")
+		assert.Equal(t, int64(1), totalCount2)
+
+		// Verify we got mails from the correct users
+		assert.Equal(t, userID1, mails1[0].UserID)
+		assert.Equal(t, userID2, mails2[0].UserID)
+
+	})
+
+	t.Run("get mails updated since exact cutoff time", func(t *testing.T) {
+		repo, cleanup := setupMailTest(t)
+		defer cleanup()
+
+		userID := primitive.NewObjectID()
+		now := time.Now()
+
+		// Create a mail updated exactly at the cutoff time
+		mail := createTestMail(userID)
+		if headers, ok := mail.Headers.(map[string]string); ok {
+			headers["Subject"] = "Exact Time Mail"
+		}
+		cutoffTime := now.Add(-30 * time.Minute)
+		updatedAt := primitive.NewDateTimeFromTime(cutoffTime)
+		mail.UpdatedAt = &updatedAt
+		mail.CreatedAt = &updatedAt
+
+		_, err := repo.Create(context.Background(), mail)
+		require.NoError(t, err)
+
+		// Call GetSince with the exact cutoff time
+		mails, totalCount, err := repo.GetSince(context.Background(), userID, cutoffTime, 0, 0)
+		require.NoError(t, err)
+		assert.Len(t, mails, 0, "Should return no mails when updated_at equals cutoff time (not greater than)")
+		assert.Equal(t, int64(0), totalCount)
+
+		// Call GetSince with a time slightly before the cutoff
+		slightlyBefore := cutoffTime.Add(-1 * time.Millisecond)
+		mails, totalCount, err = repo.GetSince(context.Background(), userID, slightlyBefore, 0, 0)
+		require.NoError(t, err)
+		assert.Len(t, mails, 1, "Should return the mail when cutoff time is slightly before updated_at")
+		assert.Equal(t, int64(1), totalCount)
+	})
+
+	t.Run("get mails updated since future time", func(t *testing.T) {
+		repo, cleanup := setupMailTest(t)
+		defer cleanup()
+
+		userID := primitive.NewObjectID()
+		now := time.Now()
+
+		// Create a mail updated now
+		mail := createTestMail(userID)
+		if headers, ok := mail.Headers.(map[string]string); ok {
+			headers["Subject"] = "Current Mail"
+		}
+		updatedAt := primitive.NewDateTimeFromTime(now)
+		mail.UpdatedAt = &updatedAt
+		mail.CreatedAt = &updatedAt
+
+		_, err := repo.Create(context.Background(), mail)
+		require.NoError(t, err)
+
+		// Set cutoff time to future (1 hour from now)
+		futureTime := now.Add(1 * time.Hour)
+
+		// Call GetSince with future time
+		mails, totalCount, err := repo.GetSince(context.Background(), userID, futureTime, 0, 0)
+		require.NoError(t, err)
+		assert.Len(t, mails, 0, "Should return no mails when cutoff time is in the future")
+		assert.Equal(t, int64(0), totalCount)
+	})
+
+	t.Run("get mails updated since time with pagination", func(t *testing.T) {
+		repo, cleanup := setupMailTest(t)
+		defer cleanup()
+
+		userID := primitive.NewObjectID()
+		now := time.Now()
+
+		// Create 5 mails with deterministic UpdatedAt timestamps
+		baseTime := now.Add(-1 * time.Hour)
+		for i := 0; i < 5; i++ {
+			mail := createTestMail(userID)
+			if headers, ok := mail.Headers.(map[string]string); ok {
+				headers["Subject"] = fmt.Sprintf("Mail %d", i+1)
+			}
+			// Ensure UpdatedAt increases with i so Mail 1 is oldest and Mail 5 is newest
+			updatedAt := primitive.NewDateTimeFromTime(baseTime.Add(time.Duration(i) * time.Minute))
+			mail.UpdatedAt = &updatedAt
+			mail.CreatedAt = &updatedAt
+
+			_, err := repo.Create(context.Background(), mail)
+			require.NoError(t, err)
+		}
+
+		// Set cutoff time to 2 hours ago (older than all mails)
+		cutoffTime := now.Add(-2 * time.Hour)
+
+		// Get first 2 mails (page 1, limit 2) -> should be Mail 5, Mail 4
+		mails, totalCount, err := repo.GetSince(context.Background(), userID, cutoffTime, 1, 2)
+		require.NoError(t, err)
+		assert.Len(t, mails, 2)
+		assert.Equal(t, int64(5), totalCount)
+
+		// Verify the most recent mails are returned first
+		if len(mails) >= 2 {
+			headers0, err := convertHeadersToMap(mails[0].Headers)
+			require.NoError(t, err)
+			headers1, err := convertHeadersToMap(mails[1].Headers)
+			require.NoError(t, err)
+			if headers0 != nil && headers1 != nil {
+				if s0, ok := headers0["Subject"].(string); ok {
+					if s1, ok := headers1["Subject"].(string); ok {
+						assert.Equal(t, "Mail 5", s0)
+						assert.Equal(t, "Mail 4", s1)
+					}
+				}
+			}
+		}
+
+		// Get next 2 mails (page 2, limit 2) -> should be Mail 3, Mail 2
+		mails, totalCount, err = repo.GetSince(context.Background(), userID, cutoffTime, 2, 2)
+		require.NoError(t, err)
+		assert.Len(t, mails, 2)
+		assert.Equal(t, int64(5), totalCount)
+
+		if len(mails) >= 2 {
+			headers0, err := convertHeadersToMap(mails[0].Headers)
+			require.NoError(t, err)
+			headers1, err := convertHeadersToMap(mails[1].Headers)
+			require.NoError(t, err)
+			if headers0 != nil && headers1 != nil {
+				if s0, ok := headers0["Subject"].(string); ok {
+					if s1, ok := headers1["Subject"].(string); ok {
+						assert.Equal(t, "Mail 3", s0)
+						assert.Equal(t, "Mail 2", s1)
+					}
+				}
+			}
+		}
+
+		// Get last mail (page 3, limit 2) -> should be Mail 1
+		mails, totalCount, err = repo.GetSince(context.Background(), userID, cutoffTime, 3, 2)
+		require.NoError(t, err)
+		assert.Len(t, mails, 1)
+		assert.Equal(t, int64(5), totalCount)
+
+		if len(mails) == 1 {
+			headers0, err := convertHeadersToMap(mails[0].Headers)
+			require.NoError(t, err)
+			if headers0 != nil {
+				if s0, ok := headers0["Subject"].(string); ok {
+					assert.Equal(t, "Mail 1", s0)
+				}
 			}
 		}
 	})

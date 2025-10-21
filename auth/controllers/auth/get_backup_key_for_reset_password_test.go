@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/atomic-blend/backend/auth/repositories"
+	mailserver "github.com/atomic-blend/backend/shared/grpc/mail-server"
 	"github.com/atomic-blend/backend/shared/models"
 	userrepo "github.com/atomic-blend/backend/shared/repositories/user"
 	userrolerepo "github.com/atomic-blend/backend/shared/repositories/user_role"
@@ -49,9 +50,11 @@ func TestGetBackupKeyForResetPassword(t *testing.T) {
 	userRepo := userrepo	.NewUserRepository(db)
 	userRoleRepo := userrolerepo.NewUserRoleRepository(db)
 	resetPasswordRepo := repositories.NewUserResetPasswordRequestRepository(db)
+	waitingListRepo := repositories.NewWaitingListRepository(db)
+	mailServerClient, _ := mailserver.NewMailServerClient()
 
 	// Create controller
-	authController := NewController(userRepo, userRoleRepo, resetPasswordRepo)
+	authController := NewController(userRepo, userRoleRepo, resetPasswordRepo, waitingListRepo, mailServerClient)
 
 	// Create a test router
 	router := gin.Default()

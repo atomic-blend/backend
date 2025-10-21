@@ -52,6 +52,7 @@ func setupDraftMailRoutes(router *gin.Engine, draftMailController *Controller) {
 	auth.RequireAuth(draftMailRoutes)
 	{
 		draftMailRoutes.GET("", pagination.New(), draftMailController.GetAllDraftMails)
+		draftMailRoutes.GET("/since", pagination.New(), draftMailController.GetDraftMailsSince)
 		draftMailRoutes.GET("/:id", draftMailController.GetDraftMailByID)
 		draftMailRoutes.POST("", draftMailController.CreateDraftMail)
 		draftMailRoutes.PUT("/:id", draftMailController.UpdateDraftMail)

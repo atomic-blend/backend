@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/atomic-blend/backend/auth/repositories"
+	mailserver "github.com/atomic-blend/backend/shared/grpc/mail-server"
 	"github.com/atomic-blend/backend/shared/models"
 	userrepo "github.com/atomic-blend/backend/shared/repositories/user"
 	userrolerepo "github.com/atomic-blend/backend/shared/repositories/user_role"
@@ -18,9 +19,10 @@ func TestNewController(t *testing.T) {
 	mockUserRepo := &userrepo.Repository{}
 	mockUserRoleRepo := &userrolerepo.Repository{}
 	mockResetPasswordRepo := &repositories.UserResetPasswordRequestRepository{}
-
+	mockMailServerClient := &mailserver.Client{}
+	mockWaitingListRepo := &repositories.WaitingListRepository{}
 	// Create a new controller
-	controller := NewController(mockUserRepo, mockUserRoleRepo, mockResetPasswordRepo)
+	controller := NewController(mockUserRepo, mockUserRoleRepo, mockResetPasswordRepo, mockWaitingListRepo, mockMailServerClient)
 
 	// Test that the controller was created successfully
 	assert.NotNil(t, controller, "Controller should not be nil")

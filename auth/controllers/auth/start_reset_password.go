@@ -1,14 +1,14 @@
 package auth
 
 import (
-	"github.com/atomic-blend/backend/shared/models"
-	"github.com/atomic-blend/backend/shared/utils/password"
-	"github.com/atomic-blend/backend/auth/utils/resend"
 	"bytes"
 	"html/template"
 	"net/http"
-	"os"
 	"time"
+
+	mailserver "github.com/atomic-blend/backend/shared/grpc/mail-server"
+	"github.com/atomic-blend/backend/shared/models"
+	"github.com/atomic-blend/backend/shared/utils/password"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog/log"
@@ -34,6 +34,12 @@ func (c *Controller) StartResetPassword(ctx *gin.Context) {
 	if err != nil {
 		log.Error().Err(err).Msg("User not found")
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "User not found"})
+		return
+	}
+
+	if user.BackupEmail == nil {
+		log.Error().Msg("User does not have a backup email")
+		ctx.JSON(http.StatusBadRequest, gin.H{"message": "no_backup_email"})
 		return
 	}
 
@@ -91,7 +97,7 @@ func (c *Controller) StartResetPassword(ctx *gin.Context) {
 
 	// check if a reset password request already exists for this user
 	existingRequest, err := c.resetPasswordRepo.FindByUserID(ctx, user.ID.Hex())
-	if err != nil {	
+	if err != nil {
 		log.Error().Err(err).Msg("Failed to find existing reset password request")
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to find existing reset password request"})
 		return
@@ -118,19 +124,21 @@ func (c *Controller) StartResetPassword(ctx *gin.Context) {
 	}
 
 	// // send the email using the resend sdk
-	emailClient := resend.NewResendClient(os.Getenv("RESEND_API_KEY"))
-	sent, error := emailClient.Send(
-		[]string{*user.Email},
-		"Atomic Blend - Reset Password",
-		htmlContent.String(),
-		textContent.String(),
-	)
+	// TODO: replace with grpc call to mail-server
+	req := mailserver.CreateSendMailInternalRequest([]string{*user.BackupEmail}, "noreply@atomic-blend.com", "Atomic Blend - Reset Password", htmlContent.String(), textContent.String())
 
-	if error != nil {
-		log.Error().Err(error).Msg("Failed to send email")
+	resp, err := c.mailServerClient.SendMailInternal(ctx, req)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to send email")
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to send email"})
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{"message": "Reset password email sent successfully", "sent": sent})
+	if !resp.Msg.Success {
+		log.Error().Msg("Failed to send email")
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to send email"})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"message": "Reset password email sent successfully", "sent": resp.Msg.Success})
 }

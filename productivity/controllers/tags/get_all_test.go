@@ -5,10 +5,12 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+
 	"github.com/atomic-blend/backend/shared/middlewares/auth"
 
-	"github.com/atomic-blend/backend/productivity/models"
 	"testing"
+
+	"github.com/atomic-blend/backend/productivity/models"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"

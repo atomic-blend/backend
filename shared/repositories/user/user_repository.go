@@ -20,6 +20,7 @@ const userCollection = "users"
 
 // Interface defines methods that a UserRepository must implement
 type Interface interface {
+	Count(ctx context.Context) (int64, error)
 	Create(ctx context.Context, user *models.UserEntity) (*models.UserEntity, error)
 	GetByID(ctx context.Context, id string) (*models.UserEntity, error)
 	GetByEmail(ctx context.Context, email string) (*models.UserEntity, error)
@@ -56,6 +57,15 @@ func NewUserRepository(database *mongo.Database) *Repository {
 		// habitEntryCollection: database.Collection(habitEntryCollection),
 		// tagCollection:        database.Collection(tagCollection),
 	}
+}
+
+// Count returns the number of users in the database
+func (r *Repository) Count(ctx context.Context) (int64, error) {
+	count, err := r.collection.CountDocuments(ctx, bson.M{})
+	if err != nil {
+		return 0, err
+	}
+	return count, nil
 }
 
 // GetAllIterable retrieves all users from the database
