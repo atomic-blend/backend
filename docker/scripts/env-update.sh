@@ -54,9 +54,25 @@ display_update_summary() {
             update_env_file
         else
             echo -e "${YELLOW}Update cancelled. You can manually update the .env file with the values shown above.${NC}"
+            echo ""
+            echo -e "${BLUE}Would you like to configure atomic-blend settings anyway?${NC}"
+            read -p "Enter 'y' or 'yes' to proceed: " -r
+            echo ""
+            
+            if [[ $REPLY =~ ^[Yy]([Ee][Ss])?$ ]]; then
+                configure_atomic_blend
+            fi
         fi
     else
         echo -e "${GREEN}All services are up to date!${NC}"
+        echo ""
+        echo -e "${BLUE}Would you like to configure atomic-blend settings?${NC}"
+        read -p "Enter 'y' or 'yes' to proceed: " -r
+        echo ""
+        
+        if [[ $REPLY =~ ^[Yy]([Ee][Ss])?$ ]]; then
+            configure_atomic_blend
+        fi
     fi
 }
 
@@ -113,12 +129,12 @@ update_env_file() {
     
     echo -e "${GREEN}Successfully updated .env file!${NC}"
     
-    # Ask for public domain configuration
-    configure_public_address
+    # Ask for atomic-blend configuration
+    configure_atomic_blend
 }
 
-# Function to configure PUBLIC_ADDRESS in .env
-configure_public_address() {
+# Function to configure atomic-blend environment variables
+configure_atomic_blend() {
     local env_file="${ENV_FILE:-.env}"
     
     # Get the absolute path to the docker directory
@@ -177,12 +193,26 @@ configure_public_address() {
     echo ""
     echo -e "${BLUE}Public Domain Configuration${NC}"
     echo "============================"
-    echo -e "${YELLOW}Enter the public domain where your service will be accessible.${NC}"
-    echo -e "${BLUE}Example: app.example.com or leave blank to skip${NC}"
+    echo -e "${YELLOW}PUBLIC_ADDRESS and ACCOUNT_DOMAINS define where your service will be accessible.${NC}"
     echo ""
-    read -p "Public domain: " -r public_domain
     
-    if [ -n "$public_domain" ]; then
+    # Get current value for PUBLIC_ADDRESS
+    local current_public_address=$(grep "^PUBLIC_ADDRESS=" "$env_file" 2>/dev/null | cut -d'=' -f2 | tr -d '"' | tr -d "'")
+    
+    if [ -n "$current_public_address" ]; then
+        echo -e "${BLUE}Current value: ${current_public_address}${NC}"
+    else
+        echo -e "${BLUE}No current value set${NC}"
+    fi
+    
+    echo -e "${BLUE}Example: app.example.com${NC}"
+    echo ""
+    read -p "Would you like to update the public domain? (y/n): " -r update_domain
+    
+    if [[ $update_domain =~ ^[Yy]$ ]]; then
+        read -p "Enter public domain: " -r public_domain
+        
+        if [ -n "$public_domain" ]; then
         # Update or add PUBLIC_ADDRESS in .env file
         if grep -q "^PUBLIC_ADDRESS=" "$env_file"; then
             # Get the original line to check for quotes
@@ -231,8 +261,11 @@ configure_public_address() {
             echo -e "${GREEN}Added ACCOUNT_DOMAINS=\"${public_domain}\"${NC}"
         fi
         
-        # Remove temporary file created by sed
-        rm -f "${env_file}.tmp"
+            # Remove temporary file created by sed
+            rm -f "${env_file}.tmp"
+        else
+            echo -e "${RED}Error: Public domain cannot be empty.${NC}"
+        fi
     else
         echo -e "${YELLOW}Skipped PUBLIC_ADDRESS and ACCOUNT_DOMAINS configuration.${NC}"
     fi
@@ -242,7 +275,6 @@ configure_public_address() {
     echo -e "${BLUE}User Account Limit Configuration${NC}"
     echo "=================================="
     echo -e "${YELLOW}AUTH_MAX_NB_USER defines the maximum number of user accounts allowed.${NC}"
-    echo -e "${BLUE}Would you like to customize this value? (leave blank to keep current/default)${NC}"
     echo ""
     
     # Get current value
@@ -254,11 +286,15 @@ configure_public_address() {
         echo -e "${BLUE}No current value set${NC}"
     fi
     
-    read -p "Maximum number of users: " -r max_users
+    echo ""
+    read -p "Would you like to update the maximum number of users? (y/n): " -r update_max_users
     
-    if [ -n "$max_users" ]; then
-        # Validate that input is a number
-        if [[ "$max_users" =~ ^[0-9]+$ ]]; then
+    if [[ $update_max_users =~ ^[Yy]$ ]]; then
+        read -p "Enter maximum number of users: " -r max_users
+        
+        if [ -n "$max_users" ]; then
+            # Validate that input is a number
+            if [[ "$max_users" =~ ^[0-9]+$ ]]; then
             # Update or add AUTH_MAX_NB_USER in .env file
             if grep -q "^AUTH_MAX_NB_USER=" "$env_file"; then
                 # Get the original line to check for quotes
@@ -283,10 +319,13 @@ configure_public_address() {
                 echo -e "${GREEN}Added AUTH_MAX_NB_USER=\"${max_users}\"${NC}"
             fi
             
-            # Remove temporary file created by sed
-            rm -f "${env_file}.tmp"
+                # Remove temporary file created by sed
+                rm -f "${env_file}.tmp"
+            else
+                echo -e "${RED}Error: Please enter a valid number. Skipping AUTH_MAX_NB_USER configuration.${NC}"
+            fi
         else
-            echo -e "${RED}Error: Please enter a valid number. Skipping AUTH_MAX_NB_USER configuration.${NC}"
+            echo -e "${RED}Error: Maximum number of users cannot be empty.${NC}"
         fi
     else
         echo -e "${YELLOW}Skipped AUTH_MAX_NB_USER configuration.${NC}"
