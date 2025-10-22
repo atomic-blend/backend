@@ -212,7 +212,6 @@ services:
       - "11332:11332"
       - "11333:11333"
       - "11334:11334"
-    pull_policy: build
     # recommended for production
     #    read_only: true
     volumes:
@@ -237,7 +236,6 @@ services:
     networks:
       rspamd:
         ipv4_address: 192.0.3.254
-    pull_policy: build
 
   minio:
     image: minio/minio
