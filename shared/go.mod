@@ -7,13 +7,14 @@ require (
 	filippo.io/age v1.2.1
 	firebase.google.com/go/v4 v4.15.2
 	github.com/appleboy/go-fcm v1.2.3
+	github.com/atomic-blend/backend/grpc v0.2.1
 	github.com/atomic-blend/memongo v0.0.0-20250305155718-adada7465e0f
 	github.com/aws/aws-sdk-go-v2 v1.37.2
 	github.com/aws/aws-sdk-go-v2/config v1.30.3
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.86.0
 	github.com/gin-gonic/gin v1.10.1
 	github.com/go-playground/validator/v10 v10.26.0
-	github.com/golang-jwt/jwt/v5 v5.2.1
+	github.com/golang-jwt/jwt/v5 v5.2.2
 	github.com/lestrrat-go/jwx v1.2.30
 	github.com/rs/zerolog v1.33.0
 	github.com/streadway/amqp v1.1.0
