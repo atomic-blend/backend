@@ -21,6 +21,11 @@ services:
     expose:
       - "8080"
       - "50051" # gRPC port
+    environment:
+      - CORS_ALLOWED_ORIGINS=https://task.${PUBLIC_ADDRESS},https://notes.${PUBLIC_ADDRESS},https://mail.${PUBLIC_ADDRESS}
+      - CORS_ALLOWED_METHODS=GET,POST,PUT,PATCH,DELETE,OPTIONS
+      - CORS_ALLOWED_HEADERS=Content-Type,Authorization,X-Requested-With,Accept,Origin
+      - CORS_ALLOW_CREDENTIALS=true
     volumes:
       - type: bind
         source: ${HOME}${USERPROFILE}/.netrc
@@ -72,6 +77,11 @@ services:
       # - type: bind
       #   source: ./firebase-adminsdk-prod.json
       #   target: /app/firebase_sac.json
+    environment:
+      - CORS_ALLOWED_ORIGINS=https://task.${PUBLIC_ADDRESS},https://notes.${PUBLIC_ADDRESS},https://mail.${PUBLIC_ADDRESS}
+      - CORS_ALLOWED_METHODS=GET,POST,PUT,PATCH,DELETE,OPTIONS
+      - CORS_ALLOWED_HEADERS=Content-Type,Authorization,X-Requested-With,Accept,Origin
+      - CORS_ALLOW_CREDENTIALS=true
     networks:
       - default
       - rspamd
@@ -93,6 +103,11 @@ services:
       - type: bind
         source: ${HOME}${USERPROFILE}/.netrc
         target: /root/.netrc
+    environment:
+      - CORS_ALLOWED_ORIGINS=https://task.${PUBLIC_ADDRESS},https://notes.${PUBLIC_ADDRESS},https://mail.${PUBLIC_ADDRESS}
+      - CORS_ALLOWED_METHODS=GET,POST,PUT,PATCH,DELETE,OPTIONS
+      - CORS_ALLOWED_HEADERS=Content-Type,Authorization,X-Requested-With,Accept,Origin
+      - CORS_ALLOW_CREDENTIALS=true
     depends_on:
       mongodb:
         condition: service_healthy
