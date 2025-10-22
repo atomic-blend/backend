@@ -114,7 +114,7 @@ services:
     command: >
       sh -c "/bootstrap.sh && nginx -g 'daemon off;'"
     ports:
-      - "80:8080"
+      - "8083:80"
 
   notes-app:
     image: ghcr.io/atomic-blend/notes-app:${NOTES_APP_VERSION:-latest}
@@ -129,7 +129,7 @@ services:
     command: >
       sh -c "/bootstrap.sh && nginx -g 'daemon off;'"
     ports:
-      - "80:8081"
+      - "8082:80"
 
   mail-app:
     image: ghcr.io/atomic-blend/mail-app:${MAIL_APP_VERSION:-latest}
@@ -144,7 +144,7 @@ services:
     command: >
       sh -c "/bootstrap.sh && nginx -g 'daemon off;'"
     ports:
-      - "80:8082"
+      - "8081:80"
 
   mongodb:
     image: mongo:${MONGODB_VERSION:-8.0.4}
