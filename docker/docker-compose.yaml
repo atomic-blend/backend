@@ -57,7 +57,7 @@ services:
         target: /root/.netrc
       - type: bind
         source: ./private.key
-        target: /app/dkim_private_key.pem
+        target: /dkim_private_key.pem
 
   mail:
     image: ghcr.io/atomic-blend/mail:${MAIL_SERVICE_VERSION:-latest}
