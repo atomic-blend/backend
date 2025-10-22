@@ -190,10 +190,16 @@ services:
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
     healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "ping"]
-      interval: 30s
+      test:
+        [
+          "CMD-SHELL",
+          "rabbitmq-diagnostics check_running && rabbitmq-diagnostics check_local_alarms",
+        ]
+      interval: 5s
       timeout: 10s
-      retries: 5
+      retries: 10
+      start_period: 30s
+      start_interval: 2s
 
   rspamd:
     image: rspamd/rspamd:${RSPAMD_VERSION:-latest}
