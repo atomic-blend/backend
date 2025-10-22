@@ -112,7 +112,7 @@ services:
     volumes:
       - ./bootstrap.sh:/bootstrap.sh:ro
     command: >
-      sh -c "/bootstrap.sh && nginx -g 'daemon off;'"
+      sh -c "sh /bootstrap.sh && nginx -g 'daemon off;'"
     ports:
       - "8083:80"
 
@@ -127,7 +127,7 @@ services:
     volumes:
       - ./bootstrap.sh:/bootstrap.sh:ro
     command: >
-      sh -c "/bootstrap.sh && nginx -g 'daemon off;'"
+      sh -c "sh /bootstrap.sh && nginx -g 'daemon off;'"
     ports:
       - "8082:80"
 
@@ -142,7 +142,7 @@ services:
     volumes:
       - ./bootstrap.sh:/bootstrap.sh:ro
     command: >
-      sh -c "/bootstrap.sh && nginx -g 'daemon off;'"
+      sh -c "sh /bootstrap.sh && nginx -g 'daemon off;'"
     ports:
       - "8081:80"
 
