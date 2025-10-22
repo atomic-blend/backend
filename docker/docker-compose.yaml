@@ -38,6 +38,7 @@ services:
         condition: service_healthy
     env_file:
       - .env
+    restart: unless-stopped
 
   mail-server:
     image: ghcr.io/atomic-blend/mail-server:${MAIL_SERVER_SERVICE_VERSION:-latest}
@@ -63,6 +64,7 @@ services:
       - type: bind
         source: ./private.key
         target: /dkim_private_key.pem
+    restart: unless-stopped
 
   mail:
     image: ghcr.io/atomic-blend/mail:${MAIL_SERVICE_VERSION:-latest}
@@ -92,6 +94,7 @@ services:
         condition: service_healthy
     env_file:
       - .env
+    restart: unless-stopped
 
   productivity:
     image: ghcr.io/atomic-blend/productivity:${PRODUCTIVITY_SERVICE_VERSION:-latest}
@@ -115,6 +118,7 @@ services:
         condition: service_healthy
     env_file:
       - .env
+    restart: unless-stopped
 
   task-app:
     image: ghcr.io/atomic-blend/task-app:${TASK_APP_VERSION:-latest}
@@ -131,6 +135,7 @@ services:
       sh -c "sh /bootstrap.sh && nginx -c /etc/nginx/nginx.conf -g 'daemon off;'"
     ports:
       - "8083:80"
+    restart: unless-stopped
 
   notes-app:
     image: ghcr.io/atomic-blend/notes-app:${NOTES_APP_VERSION:-latest}
@@ -147,7 +152,7 @@ services:
       sh -c "sh /bootstrap.sh && nginx -c /etc/nginx/nginx.conf -g 'daemon off;'"
     ports:
       - "8082:80"
-
+    restart: unless-stopped
   mail-app:
     image: ghcr.io/atomic-blend/mail-app:${MAIL_APP_VERSION:-latest}
     container_name: mail-app
@@ -163,6 +168,7 @@ services:
       sh -c "sh /bootstrap.sh && nginx -c /etc/nginx/nginx.conf -g 'daemon off;'"
     ports:
       - "8081:80"
+    restart: unless-stopped
 
   mongodb:
     image: mongo:${MONGODB_VERSION:-8.0.4}
@@ -193,6 +199,7 @@ services:
       start_period: 0s
       start_interval: 1s
       retries: 30
+    
 
   rabbitmq:
     image: rabbitmq:${RABBITMQ_VERSION:-4.1.2-management}
@@ -240,6 +247,7 @@ services:
     #    read_only: true
     volumes:
       - rspamd-compose-rspamd-dbdir:/var/lib/rspamd
+    restart: unless-stopped
 
   rspamd-redis:
     container_name: rspamd-compose-redis
@@ -253,6 +261,7 @@ services:
       - rspamd
     volumes:
       - rspamd-compose-redis-data:/data
+    restart: unless-stopped
 
   rspamd-unbound:
     image: alpinelinux/unbound:${UNBOUND_VERSION:-latest}
@@ -260,6 +269,7 @@ services:
     networks:
       rspamd:
         ipv4_address: 192.0.3.254
+    restart: unless-stopped
 
   minio:
     image: minio/minio
@@ -273,7 +283,7 @@ services:
     command: server --console-address ":9001" /data --address ":9000"
     volumes:
       - minio_data:/data
-
+    
   minio-setup:
     image: minio/mc
     depends_on:
