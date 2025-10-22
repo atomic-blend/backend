@@ -14,7 +14,6 @@ import (
 	userclient "github.com/atomic-blend/backend/shared/grpc/user"
 	"github.com/atomic-blend/backend/shared/utils/db"
 	fcmutils "github.com/atomic-blend/backend/shared/utils/fcm_utils"
-	"github.com/atomic-blend/backend/shared/utils/shortcuts"
 
 	fcm "github.com/appleboy/go-fcm"
 	"github.com/rs/zerolog/log"
@@ -40,7 +39,11 @@ func TaskDueNotificationCron() {
 	}
 
 	log.Debug().Msg("Initializing the FCM client")
-	shortcuts.CheckRequiredEnvVar("FIREBASE_PROJECT_ID", firebaseProjectID, "FIREBASE_PROJECT_ID is required for FCM")
+
+	if firebaseProjectID == "" {
+		log.Error().Msg("FIREBASE_PROJECT_ID is required for FCM")
+		return
+	}
 
 	log.Debug().Msgf("Firebase project ID: %s", firebaseProjectID)
 
@@ -50,7 +53,7 @@ func TaskDueNotificationCron() {
 		fcm.WithCredentialsFile(os.Getenv("GOOGLE_APPLICATION_CREDENTIALS")),
 	)
 	if err != nil {
-		log.Fatal().Err(err).Msg("Failed to create FCM client")
+		log.Error().Err(err).Msg("Failed to create FCM client")
 		return
 	}
 

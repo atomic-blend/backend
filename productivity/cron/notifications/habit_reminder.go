@@ -9,9 +9,9 @@ import (
 	authv1 "github.com/atomic-blend/backend/grpc/gen/auth/v1"
 	userv1 "github.com/atomic-blend/backend/grpc/gen/user/v1"
 	"github.com/atomic-blend/backend/productivity/cron/notifications/payloads"
-	userclient "github.com/atomic-blend/backend/shared/grpc/user"
 	"github.com/atomic-blend/backend/productivity/models"
 	"github.com/atomic-blend/backend/productivity/repositories"
+	userclient "github.com/atomic-blend/backend/shared/grpc/user"
 	"github.com/atomic-blend/backend/shared/utils/db"
 	fcmutils "github.com/atomic-blend/backend/shared/utils/fcm_utils"
 	"github.com/atomic-blend/backend/shared/utils/shortcuts"
@@ -35,7 +35,11 @@ func HabitReminderNotificationCron() {
 
 	log.Debug().Msg("Initializing the FCM client")
 	firebaseProjectID := os.Getenv("FIREBASE_PROJECT_ID")
-	shortcuts.CheckRequiredEnvVar("FIREBASE_PROJECT_ID", firebaseProjectID, "FIREBASE_PROJECT_ID is required for FCM")
+
+	if firebaseProjectID == "" {
+		log.Error().Msg("FIREBASE_PROJECT_ID is required for FCM")
+		return
+	}
 
 	log.Debug().Msgf("Firebase project ID: %s", firebaseProjectID)
 
@@ -45,7 +49,7 @@ func HabitReminderNotificationCron() {
 		fcm.WithCredentialsFile(os.Getenv("GOOGLE_APPLICATION_CREDENTIALS")),
 	)
 	if err != nil {
-		log.Fatal().Err(err).Msg("Failed to create FCM client")
+		log.Error().Err(err).Msg("Failed to create FCM client")
 		return
 	}
 
