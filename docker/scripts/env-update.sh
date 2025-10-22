@@ -54,9 +54,25 @@ display_update_summary() {
             update_env_file
         else
             echo -e "${YELLOW}Update cancelled. You can manually update the .env file with the values shown above.${NC}"
+            echo ""
+            echo -e "${BLUE}Would you like to configure atomic-blend settings anyway?${NC}"
+            read -p "Enter 'y' or 'yes' to proceed: " -r
+            echo ""
+            
+            if [[ $REPLY =~ ^[Yy]([Ee][Ss])?$ ]]; then
+                configure_atomic_blend
+            fi
         fi
     else
         echo -e "${GREEN}All services are up to date!${NC}"
+        echo ""
+        echo -e "${BLUE}Would you like to configure atomic-blend settings?${NC}"
+        read -p "Enter 'y' or 'yes' to proceed: " -r
+        echo ""
+        
+        if [[ $REPLY =~ ^[Yy]([Ee][Ss])?$ ]]; then
+            configure_atomic_blend
+        fi
     fi
 }
 
@@ -112,4 +128,206 @@ update_env_file() {
     rm -f "${env_file}.tmp"
     
     echo -e "${GREEN}Successfully updated .env file!${NC}"
+    
+    # Ask for atomic-blend configuration
+    configure_atomic_blend
+}
+
+# Function to configure atomic-blend environment variables
+configure_atomic_blend() {
+    local env_file="${ENV_FILE:-.env}"
+    
+    # Get the absolute path to the docker directory
+    local docker_dir="$(dirname "$SCRIPT_DIR")"
+    
+    # Convert relative path to absolute path
+    if [[ "$env_file" != /* ]]; then
+        env_file="$docker_dir/$env_file"
+    fi
+    
+    echo ""
+    echo -e "${BLUE}Environment Configuration${NC}"
+    echo "========================="
+    echo ""
+    
+    # Check and generate SSO_SECRET if needed
+    local current_sso_secret=$(grep "^SSO_SECRET=" "$env_file" 2>/dev/null | cut -d'=' -f2 | tr -d '"' | tr -d "'")
+    
+    if [ -z "$current_sso_secret" ]; then
+        echo -e "${YELLOW}SSO_SECRET is empty or missing. Generating a new one...${NC}"
+        
+        # Generate SSO_SECRET using openssl
+        # Use tr -d '\n' for cross-platform compatibility (macOS base64 doesn't have -w0)
+        local sso_secret=$(openssl rand 256 | base64 | tr -d '\n')
+        
+        # Update or add SSO_SECRET in .env file
+        if grep -q "^SSO_SECRET=" "$env_file"; then
+            # Get the original line to check for quotes
+            local original_line=$(grep "^SSO_SECRET=" "$env_file")
+            
+            # Check if the original value was quoted (double quotes)
+            if [[ $original_line =~ ^SSO_SECRET=\".*\"$ ]]; then
+                # Replace with double quotes
+                sed -i.tmp "s|^SSO_SECRET=.*|SSO_SECRET=\"${sso_secret}\"|" "$env_file"
+            # Check if the original value was quoted (single quotes)
+            elif [[ $original_line =~ ^SSO_SECRET=\'.*\'$ ]]; then
+                # Replace with single quotes
+                sed -i.tmp "s|^SSO_SECRET=.*|SSO_SECRET='${sso_secret}'|" "$env_file"
+            else
+                # Replace without quotes
+                sed -i.tmp "s|^SSO_SECRET=.*|SSO_SECRET=${sso_secret}|" "$env_file"
+            fi
+            echo -e "${GREEN}Updated SSO_SECRET with newly generated value${NC}"
+        else
+            # Add new variable with quotes (default format)
+            echo "SSO_SECRET=\"${sso_secret}\"" >> "$env_file"
+            echo -e "${GREEN}Added SSO_SECRET with newly generated value${NC}"
+        fi
+        
+        # Remove temporary file created by sed
+        rm -f "${env_file}.tmp"
+    else
+        echo -e "${GREEN}SSO_SECRET already exists and is not empty${NC}"
+    fi
+    
+    echo ""
+    echo -e "${BLUE}Public Domain Configuration${NC}"
+    echo "============================"
+    echo -e "${YELLOW}PUBLIC_ADDRESS and ACCOUNT_DOMAINS define where your service will be accessible.${NC}"
+    echo ""
+    
+    # Get current value for PUBLIC_ADDRESS
+    local current_public_address=$(grep "^PUBLIC_ADDRESS=" "$env_file" 2>/dev/null | cut -d'=' -f2 | tr -d '"' | tr -d "'")
+    
+    if [ -n "$current_public_address" ]; then
+        echo -e "${BLUE}Current value: ${current_public_address}${NC}"
+    else
+        echo -e "${BLUE}No current value set${NC}"
+    fi
+    
+    echo -e "${BLUE}Example: app.example.com${NC}"
+    echo ""
+    read -p "Would you like to update the public domain? (y/n): " -r update_domain
+    
+    if [[ $update_domain =~ ^[Yy]$ ]]; then
+        read -p "Enter public domain: " -r public_domain
+        
+        if [ -n "$public_domain" ]; then
+        # Update or add PUBLIC_ADDRESS in .env file
+        if grep -q "^PUBLIC_ADDRESS=" "$env_file"; then
+            # Get the original line to check for quotes
+            local original_line=$(grep "^PUBLIC_ADDRESS=" "$env_file")
+            
+            # Check if the original value was quoted (double quotes)
+            if [[ $original_line =~ ^PUBLIC_ADDRESS=\".*\"$ ]]; then
+                # Replace with double quotes
+                sed -i.tmp "s|^PUBLIC_ADDRESS=.*|PUBLIC_ADDRESS=\"${public_domain}\"|" "$env_file"
+            # Check if the original value was quoted (single quotes)
+            elif [[ $original_line =~ ^PUBLIC_ADDRESS=\'.*\'$ ]]; then
+                # Replace with single quotes
+                sed -i.tmp "s|^PUBLIC_ADDRESS=.*|PUBLIC_ADDRESS='${public_domain}'|" "$env_file"
+            else
+                # Replace without quotes
+                sed -i.tmp "s|^PUBLIC_ADDRESS=.*|PUBLIC_ADDRESS=${public_domain}|" "$env_file"
+            fi
+            echo -e "${GREEN}Updated PUBLIC_ADDRESS to ${public_domain}${NC}"
+        else
+            # Add new variable with quotes (default format)
+            echo "PUBLIC_ADDRESS=\"${public_domain}\"" >> "$env_file"
+            echo -e "${GREEN}Added PUBLIC_ADDRESS=\"${public_domain}\"${NC}"
+        fi
+        
+        # Update or add ACCOUNT_DOMAINS in .env file
+        if grep -q "^ACCOUNT_DOMAINS=" "$env_file"; then
+            # Get the original line to check for quotes
+            local original_line=$(grep "^ACCOUNT_DOMAINS=" "$env_file")
+            
+            # Check if the original value was quoted (double quotes)
+            if [[ $original_line =~ ^ACCOUNT_DOMAINS=\".*\"$ ]]; then
+                # Replace with double quotes
+                sed -i.tmp "s|^ACCOUNT_DOMAINS=.*|ACCOUNT_DOMAINS=\"${public_domain}\"|" "$env_file"
+            # Check if the original value was quoted (single quotes)
+            elif [[ $original_line =~ ^ACCOUNT_DOMAINS=\'.*\'$ ]]; then
+                # Replace with single quotes
+                sed -i.tmp "s|^ACCOUNT_DOMAINS=.*|ACCOUNT_DOMAINS='${public_domain}'|" "$env_file"
+            else
+                # Replace without quotes
+                sed -i.tmp "s|^ACCOUNT_DOMAINS=.*|ACCOUNT_DOMAINS=${public_domain}|" "$env_file"
+            fi
+            echo -e "${GREEN}Updated ACCOUNT_DOMAINS to ${public_domain}${NC}"
+        else
+            # Add new variable with quotes (default format)
+            echo "ACCOUNT_DOMAINS=\"${public_domain}\"" >> "$env_file"
+            echo -e "${GREEN}Added ACCOUNT_DOMAINS=\"${public_domain}\"${NC}"
+        fi
+        
+            # Remove temporary file created by sed
+            rm -f "${env_file}.tmp"
+        else
+            echo -e "${RED}Error: Public domain cannot be empty.${NC}"
+        fi
+    else
+        echo -e "${YELLOW}Skipped PUBLIC_ADDRESS and ACCOUNT_DOMAINS configuration.${NC}"
+    fi
+    
+    # Ask about AUTH_MAX_NB_USER customization
+    echo ""
+    echo -e "${BLUE}User Account Limit Configuration${NC}"
+    echo "=================================="
+    echo -e "${YELLOW}AUTH_MAX_NB_USER defines the maximum number of user accounts allowed.${NC}"
+    echo ""
+    
+    # Get current value
+    local current_max_users=$(grep "^AUTH_MAX_NB_USER=" "$env_file" 2>/dev/null | cut -d'=' -f2 | tr -d '"' | tr -d "'")
+    
+    if [ -n "$current_max_users" ]; then
+        echo -e "${BLUE}Current value: ${current_max_users}${NC}"
+    else
+        echo -e "${BLUE}No current value set${NC}"
+    fi
+    
+    echo ""
+    read -p "Would you like to update the maximum number of users? (y/n): " -r update_max_users
+    
+    if [[ $update_max_users =~ ^[Yy]$ ]]; then
+        read -p "Enter maximum number of users: " -r max_users
+        
+        if [ -n "$max_users" ]; then
+            # Validate that input is a number
+            if [[ "$max_users" =~ ^[0-9]+$ ]]; then
+            # Update or add AUTH_MAX_NB_USER in .env file
+            if grep -q "^AUTH_MAX_NB_USER=" "$env_file"; then
+                # Get the original line to check for quotes
+                local original_line=$(grep "^AUTH_MAX_NB_USER=" "$env_file")
+                
+                # Check if the original value was quoted (double quotes)
+                if [[ $original_line =~ ^AUTH_MAX_NB_USER=\".*\"$ ]]; then
+                    # Replace with double quotes
+                    sed -i.tmp "s|^AUTH_MAX_NB_USER=.*|AUTH_MAX_NB_USER=\"${max_users}\"|" "$env_file"
+                # Check if the original value was quoted (single quotes)
+                elif [[ $original_line =~ ^AUTH_MAX_NB_USER=\'.*\'$ ]]; then
+                    # Replace with single quotes
+                    sed -i.tmp "s|^AUTH_MAX_NB_USER=.*|AUTH_MAX_NB_USER='${max_users}'|" "$env_file"
+                else
+                    # Replace without quotes
+                    sed -i.tmp "s|^AUTH_MAX_NB_USER=.*|AUTH_MAX_NB_USER=${max_users}|" "$env_file"
+                fi
+                echo -e "${GREEN}Updated AUTH_MAX_NB_USER to ${max_users}${NC}"
+            else
+                # Add new variable with quotes (default format)
+                echo "AUTH_MAX_NB_USER=\"${max_users}\"" >> "$env_file"
+                echo -e "${GREEN}Added AUTH_MAX_NB_USER=\"${max_users}\"${NC}"
+            fi
+            
+                # Remove temporary file created by sed
+                rm -f "${env_file}.tmp"
+            else
+                echo -e "${RED}Error: Please enter a valid number. Skipping AUTH_MAX_NB_USER configuration.${NC}"
+            fi
+        else
+            echo -e "${RED}Error: Maximum number of users cannot be empty.${NC}"
+        fi
+    else
+        echo -e "${YELLOW}Skipped AUTH_MAX_NB_USER configuration.${NC}"
+    fi
 }
