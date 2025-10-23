@@ -14,16 +14,34 @@ type Interface interface {
 	GetOrCreateCustomer(ctx *gin.Context, userID primitive.ObjectID) *stripe.Customer
 }
 
+type StripeClientInterface interface {
+	CreateCustomer(ctx context.Context, params *stripe.CustomerCreateParams) (*stripe.Customer, error)
+	GetCustomer(ctx context.Context, id string) (*stripe.Customer, error)
+}
+
+type StripeClientWrapper struct {
+	client *stripe.Client
+}
+
+func (w *StripeClientWrapper) CreateCustomer(ctx context.Context, params *stripe.CustomerCreateParams) (*stripe.Customer, error) {
+	return w.client.V1Customers.Create(ctx, params)
+}
+
+func (w *StripeClientWrapper) GetCustomer(ctx context.Context, id string) (*stripe.Customer, error) {
+	return w.client.V1Customers.Retrieve(ctx, id, nil)
+}
+
 type Service struct {
-	userService  *user.Repository
-	stripeClient *stripe.Client
+	userService  user.Interface
+	stripeClient StripeClientInterface
 }
 
 func NewStripeService(userRepo *user.Repository, stripeKey *string) Interface {
 	sc := stripe.NewClient(*stripeKey)
+	wrapper := &StripeClientWrapper{client: sc}
 	return &Service{
 		userService:  userRepo,
-		stripeClient: sc,
+		stripeClient: wrapper,
 	}
 }
 
@@ -40,7 +58,7 @@ func (s *Service) GetOrCreateCustomer(ctx *gin.Context, userID primitive.ObjectI
 			Name:  stripe.String(*userEntity.FirstName + " " + *userEntity.LastName),
 			Email: stripe.String(*userEntity.Email),
 		}
-		result, err := s.stripeClient.V1Customers.Create(context.TODO(), params)
+		result, err := s.stripeClient.CreateCustomer(context.TODO(), params)
 		if err != nil {
 			log.Error().Err(err).Msg("error during creation of the stripe customer")
 			return nil
@@ -54,11 +72,11 @@ func (s *Service) GetOrCreateCustomer(ctx *gin.Context, userID primitive.ObjectI
 			log.Error().Err(err).Msg("cannot save stripe customer id to user")
 			return nil
 		}
-		
+
 		return result
 	} else {
 		// get customer and return it
-		result, err := s.stripeClient.V1Customers.Retrieve(context.TODO(), *userEntity.StripeCustomerId, nil)
+		result, err := s.stripeClient.GetCustomer(context.TODO(), *userEntity.StripeCustomerId)
 		if err != nil {
 			log.Error().Err(err).Msg("cannot get stripe customer")
 			return nil
