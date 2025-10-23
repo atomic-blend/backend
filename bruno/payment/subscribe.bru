@@ -1,0 +1,31 @@
+meta {
+  name: /subscribe
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{API_URL}}/payment/subscribe
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{AUTH_BEARER}}
+}
+
+script:post-response {
+  console.log("Response Status:", res.status);
+  console.log("Response Body:", res.body);
+  
+  if (res.status === 200) {
+    console.log("Successfully subscribed!");
+  } else {
+    console.log("Error:", res.body.error);
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

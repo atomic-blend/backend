@@ -5,6 +5,7 @@ import (
 
 	"github.com/atomic-blend/backend/shared/middlewares/auth"
 	"github.com/gin-gonic/gin"
+	"github.com/rs/zerolog/log"
 )
 
 func (c *Controller) Subscribe(ctx *gin.Context) {
@@ -16,8 +17,11 @@ func (c *Controller) Subscribe(ctx *gin.Context) {
 	}
 
 	// Get or create the stripe Customer
+	log.Debug().Msg("Fetching or creating Stripe customer")
 	stripeCustomer := c.stripeService.GetOrCreateCustomer(ctx, authUser.UserID)
 	if stripeCustomer == nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "cannot_get_stripe_customer"})
 	}
+
+	log.Debug().Msgf("Stripe Customer ID: %s", stripeCustomer.ID)
 }

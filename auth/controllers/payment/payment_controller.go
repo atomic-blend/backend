@@ -4,6 +4,7 @@ import (
 	"os"
 
 	"github.com/atomic-blend/backend/auth/utils/stripe"
+	"github.com/atomic-blend/backend/shared/middlewares/auth"
 	"github.com/atomic-blend/backend/shared/repositories/user"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog/log"
@@ -11,10 +12,10 @@ import (
 )
 
 type Controller struct {
-	stripeService stripe.StripeServiceInferface
+	stripeService stripe.Interface
 }
 
-func NewController(stripeService stripe.StripeServiceInferface) *Controller {
+func NewController(stripeService stripe.Interface) *Controller {
 	return &Controller{
 		stripeService: stripeService,
 	}
@@ -31,7 +32,9 @@ func SetupRoutes(router *gin.Engine, database *mongo.Database) {
 	paymentController := NewController(stripeService)
 
 	paymentGroup := router.Group("/payment")
+
+	protectedPaymentRoutes := auth.RequireAuth(paymentGroup)
 	{
-		paymentGroup.POST("subscribe", paymentController.Subscribe)
+		protectedPaymentRoutes.POST("subscribe", paymentController.Subscribe)
 	}
 }
