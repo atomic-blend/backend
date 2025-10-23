@@ -20,3 +20,12 @@ func (m *MockStripeService) GetOrCreateCustomer(ctx *gin.Context, userID primiti
 	}
 	return args.Get(0).(*stripe.Customer)
 }
+
+// CreateSubscription mocks the CreateSubscription method
+func (m *MockStripeService) CreateSubscription(ctx *gin.Context, customerID string, priceID string) *stripe.Subscription {
+	args := m.Called(ctx, customerID, priceID)
+	if args.Get(0) == nil {
+		return nil
+	}
+	return args.Get(0).(*stripe.Subscription)
+}

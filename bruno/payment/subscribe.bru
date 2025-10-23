@@ -7,11 +7,7 @@ meta {
 post {
   url: {{API_URL}}/payment/subscribe
   body: none
-  auth: bearer
-}
-
-auth:bearer {
-  token: {{AUTH_BEARER}}
+  auth: inherit
 }
 
 script:post-response {

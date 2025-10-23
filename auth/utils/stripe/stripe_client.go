@@ -8,7 +8,7 @@ import (
 
 type ClientInterface interface {
 	CreateCustomer(ctx context.Context, params *stripe.CustomerCreateParams) (*stripe.Customer, error)
-	GetCustomer(ctx context.Context, id string) (*stripe.Customer, error)
+	GetCustomer(ctx context.Context, id string, params *stripe.CustomerRetrieveParams) (*stripe.Customer, error)
 	CreateSubscription(ctx context.Context, params *stripe.SubscriptionCreateParams) (*stripe.Subscription, error)
 }
 
@@ -20,8 +20,8 @@ func (w *ClientWrapper) CreateCustomer(ctx context.Context, params *stripe.Custo
 	return w.client.V1Customers.Create(ctx, params)
 }
 
-func (w *ClientWrapper) GetCustomer(ctx context.Context, id string) (*stripe.Customer, error) {
-	return w.client.V1Customers.Retrieve(ctx, id, nil)
+func (w *ClientWrapper) GetCustomer(ctx context.Context, id string, params *stripe.CustomerRetrieveParams) (*stripe.Customer, error) {
+	return w.client.V1Customers.Retrieve(ctx, id, params)
 }
 
 func (w *ClientWrapper) CreateSubscription(ctx context.Context, params *stripe.SubscriptionCreateParams) (*stripe.Subscription, error) {

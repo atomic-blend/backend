@@ -60,7 +60,10 @@ func (s *Service) GetOrCreateCustomer(ctx *gin.Context, userID primitive.ObjectI
 		return result
 	} else {
 		// get customer and return it
-		result, err := s.stripeClient.GetCustomer(context.TODO(), *userEntity.StripeCustomerId)
+		params := &stripe.CustomerRetrieveParams{
+			Expand: []*string{stripe.String("subscriptions")},
+		}
+		result, err := s.stripeClient.GetCustomer(context.TODO(), *userEntity.StripeCustomerId, params)
 		if err != nil {
 			log.Error().Err(err).Msg("cannot get stripe customer")
 			return nil
@@ -77,6 +80,11 @@ func (s *Service) CreateSubscription(ctx *gin.Context, customerID string, priceI
 				Price: stripe.String(priceID),
 			},
 		},
+		PaymentBehavior: stripe.String(string("default_incomplete")),
+		PaymentSettings: &stripe.SubscriptionCreatePaymentSettingsParams{
+			SaveDefaultPaymentMethod: stripe.String(string("on_subscription")),
+		},
+		Expand: []*string{stripe.String("pending_setup_intent")},
 	}
 	result, err := s.stripeClient.CreateSubscription(context.TODO(), params)
 	if err != nil {
