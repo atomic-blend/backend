@@ -1,6 +1,8 @@
 package stripe
 
 import (
+	"context"
+
 	"github.com/atomic-blend/backend/shared/repositories/user"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog/log"
@@ -9,7 +11,7 @@ import (
 )
 
 type StripeServiceInferface interface {
-	GetOrCreateCustomer(ctx *gin.Context, userID primitive.ObjectID)
+	GetOrCreateCustomer(ctx *gin.Context, userID primitive.ObjectID) *stripe.Customer
 }
 
 type StripeService struct {
@@ -25,16 +27,32 @@ func NewStripeService(userRepo *user.Repository, stripeKey *string) StripeServic
 	}
 }
 
-func (s *StripeService) GetOrCreateCustomer(ctx *gin.Context, userID primitive.ObjectID) {
+func (s *StripeService) GetOrCreateCustomer(ctx *gin.Context, userID primitive.ObjectID) *stripe.Customer {
 	user, err := s.userService.FindByID(ctx, userID)
 	if err != nil {
 		log.Error().Str("user_id", userID.Hex()).Msg("cannot find user")
-		return
+		return nil
 	}
 
 	if user.StripeCustomerId == nil {
-		// TODO: create stripe customer
+		// create stripe customer
+		params := &stripe.CustomerCreateParams{
+			Name:  stripe.String(*user.FirstName + " " + *user.LastName),
+			Email: stripe.String(*user.Email),
+		}
+		result, err := s.stripeClient.V1Customers.Create(context.TODO(), params)
+		if err != nil {
+			log.Error().Err(err).Msg("error during creation of the stripe customer")
+			return nil
+		}
+		return result
 	} else {
-		//TODO: get customer and return it
+		// get customer and return it
+		result, err := s.stripeClient.V1Customers.Retrieve(context.TODO(), *user.StripeCustomerId, nil)
+		if err != nil {
+			log.Error().Err(err).Msg("cannot get stripe customer")
+			return nil
+		}
+		return result
 	}
 }

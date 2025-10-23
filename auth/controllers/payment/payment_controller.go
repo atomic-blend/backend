@@ -11,10 +11,10 @@ import (
 )
 
 type Controller struct {
-	stripeService *stripe.StripeServiceInferface
+	stripeService stripe.StripeServiceInferface
 }
 
-func NewController(stripeService *stripe.StripeServiceInferface) *Controller {
+func NewController(stripeService stripe.StripeServiceInferface) *Controller {
 	return &Controller{
 		stripeService: stripeService,
 	}
@@ -28,7 +28,7 @@ func SetupRoutes(router *gin.Engine, database *mongo.Database) {
 		return
 	}
 	stripeService := stripe.NewStripeService(userRepo, &stripeKey)
-	paymentController := NewController(&stripeService)
+	paymentController := NewController(stripeService)
 
 	paymentGroup := router.Group("/payment")
 	{
