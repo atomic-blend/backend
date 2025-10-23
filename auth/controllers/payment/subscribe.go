@@ -21,6 +21,7 @@ func (c *Controller) Subscribe(ctx *gin.Context) {
 	stripeCustomer := c.stripeService.GetOrCreateCustomer(ctx, authUser.UserID)
 	if stripeCustomer == nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "cannot_get_stripe_customer"})
+		return
 	}
 
 	log.Debug().Msgf("Stripe Customer ID: %s", stripeCustomer.ID)
