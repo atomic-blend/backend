@@ -12,33 +12,17 @@ import (
 
 type Interface interface {
 	GetOrCreateCustomer(ctx *gin.Context, userID primitive.ObjectID) *stripe.Customer
-}
-
-type StripeClientInterface interface {
-	CreateCustomer(ctx context.Context, params *stripe.CustomerCreateParams) (*stripe.Customer, error)
-	GetCustomer(ctx context.Context, id string) (*stripe.Customer, error)
-}
-
-type StripeClientWrapper struct {
-	client *stripe.Client
-}
-
-func (w *StripeClientWrapper) CreateCustomer(ctx context.Context, params *stripe.CustomerCreateParams) (*stripe.Customer, error) {
-	return w.client.V1Customers.Create(ctx, params)
-}
-
-func (w *StripeClientWrapper) GetCustomer(ctx context.Context, id string) (*stripe.Customer, error) {
-	return w.client.V1Customers.Retrieve(ctx, id, nil)
+	CreateSubscription(ctx *gin.Context, customerID string, priceID string) *stripe.Subscription
 }
 
 type Service struct {
 	userService  user.Interface
-	stripeClient StripeClientInterface
+	stripeClient ClientInterface
 }
 
 func NewStripeService(userRepo *user.Repository, stripeKey *string) Interface {
 	sc := stripe.NewClient(*stripeKey)
-	wrapper := &StripeClientWrapper{client: sc}
+	wrapper := &ClientWrapper{client: sc}
 	return &Service{
 		userService:  userRepo,
 		stripeClient: wrapper,
@@ -83,4 +67,21 @@ func (s *Service) GetOrCreateCustomer(ctx *gin.Context, userID primitive.ObjectI
 		}
 		return result
 	}
+}
+
+func (s *Service) CreateSubscription(ctx *gin.Context, customerID string, priceID string) *stripe.Subscription {
+	params := &stripe.SubscriptionCreateParams{
+		Customer: stripe.String(customerID),
+		Items: []*stripe.SubscriptionCreateItemParams{
+			&stripe.SubscriptionCreateItemParams{
+				Price: stripe.String(priceID),
+			},
+		},
+	}
+	result, err := s.stripeClient.CreateSubscription(context.TODO(), params)
+	if err != nil {
+		log.Error().Err(err).Msg("error during creation of the stripe subscription")
+		return nil
+	}
+	return result
 }

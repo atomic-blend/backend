@@ -170,3 +170,43 @@ func TestGetOrCreateCustomer(t *testing.T) {
 		mockStripeClient.AssertExpectations(t)
 	})
 }
+
+func TestCreateSubscription(t *testing.T) {
+	// Setup
+	mockUserRepo := &mocks.MockUserRepository{}
+	mockStripeClient := &mocks.MockStripeClient{}
+	service := &Service{
+		userService:  mockUserRepo,
+		stripeClient: mockStripeClient,
+	}
+	ctx := &gin.Context{}
+
+	t.Run("successful subscription creation", func(t *testing.T) {
+		customerID := "cus_123"
+		priceID := "price_456"
+		subscriptionID := "sub_789"
+		subscription := &stripe.Subscription{
+			ID: subscriptionID,
+		}
+
+		mockStripeClient.On("CreateSubscription", mock.Anything, mock.AnythingOfType("*stripe.SubscriptionCreateParams")).Return(subscription, nil).Once()
+
+		result := service.CreateSubscription(ctx, customerID, priceID)
+
+		assert.NotNil(t, result)
+		assert.Equal(t, subscriptionID, result.ID)
+		mockStripeClient.AssertExpectations(t)
+	})
+
+	t.Run("subscription creation error", func(t *testing.T) {
+		customerID := "cus_123"
+		priceID := "price_456"
+
+		mockStripeClient.On("CreateSubscription", mock.Anything, mock.AnythingOfType("*stripe.SubscriptionCreateParams")).Return(nil, errors.New("stripe error")).Once()
+
+		result := service.CreateSubscription(ctx, customerID, priceID)
+
+		assert.Nil(t, result)
+		mockStripeClient.AssertExpectations(t)
+	})
+}
