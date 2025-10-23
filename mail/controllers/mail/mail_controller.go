@@ -40,8 +40,8 @@ func setupMailRoutes(router *gin.Engine, mailController *Controller) {
 	auth.RequireAuth(mailRoutes)
 	{
 		mailRoutes.GET("/", pagination.New(), mailController.GetAllMails)
-		mailRoutes.GET("/:id", mailController.GetMailByID)
 		mailRoutes.GET("/since", pagination.New(), mailController.GetMailsSince)
+		mailRoutes.GET("/:id", mailController.GetMailByID)
 		mailRoutes.PUT("/actions", mailController.PutMailActions)
 		mailRoutes.POST("/trash/empty", mailController.CleanupTrash)
 	}
