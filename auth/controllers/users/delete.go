@@ -1,3 +1,4 @@
+// Package users contains controllers and routes for user-related actions
 package users
 
 import (

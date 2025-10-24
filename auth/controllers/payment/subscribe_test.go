@@ -44,13 +44,13 @@ func TestSubscribe(t *testing.T) {
 					PendingSetupIntent: &stripe.SetupIntent{ClientSecret: "seti_123_secret"},
 				}
 				stripeService.On("GetOrCreateCustomer", mock.Anything, mock.AnythingOfType("primitive.ObjectID")).Return(customer, nil)
-				stripeService.On("CreateSubscription", mock.Anything, "cus_123", "price_456").Return(subscription, nil)
+				stripeService.On("CreateSubscription", mock.Anything, "cus_123", "price_456", int64(0)).Return(subscription, nil)
 			},
 			setupEnv: func() {
 				os.Setenv("STRIPE_CLOUD_SUBSCRIPTION_PRICE_ID", "price_456")
 			},
 			expectedStatus: http.StatusOK,
-			expectedBody:   map[string]interface{}{"subscription": map[string]interface{}{"intent": "", "secret": "seti_123_secret"}},
+			expectedBody:   map[string]interface{}{"pending_setup_intent": map[string]interface{}{"secret": "seti_123_secret", "intent_id": ""}},
 		},
 		{
 			name: "Stripe customer creation/retrieval failed",

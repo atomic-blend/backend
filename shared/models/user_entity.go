@@ -7,7 +7,7 @@ import "go.mongodb.org/mongo-driver/bson/primitive"
 // @Description Represents a user in the system
 type UserEntity struct {
 	ID                *primitive.ObjectID   `json:"id" bson:"_id"`
-	StripeCustomerId  *string               `json:"stripeCustomerId" bson:"stripe_customer_id"`
+	StripeCustomerID  *string               `json:"stripeCustomerId" bson:"stripe_customer_id"`
 	Email             *string               `json:"email" bson:"email" binding:"required"`
 	FirstName         *string               `json:"firstName" bson:"first_name,omitempty"`
 	LastName          *string               `json:"lastName" bson:"last_name,omitempty"`

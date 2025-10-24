@@ -51,7 +51,7 @@ func TestGetOrCreateCustomer(t *testing.T) {
 		}
 		updatedUser := &models.UserEntity{
 			ID:               &userID,
-			StripeCustomerId: &customerID,
+			StripeCustomerID: &customerID,
 			Email:            &email,
 			FirstName:        &firstName,
 			LastName:         &lastName,
@@ -126,7 +126,7 @@ func TestGetOrCreateCustomer(t *testing.T) {
 		customerID := "cus_123"
 		user := &models.UserEntity{
 			ID:               &userID,
-			StripeCustomerId: &customerID,
+			StripeCustomerID: &customerID,
 			Email:            &email,
 			FirstName:        &firstName,
 			LastName:         &lastName,
@@ -154,7 +154,7 @@ func TestGetOrCreateCustomer(t *testing.T) {
 		customerID := "cus_123"
 		user := &models.UserEntity{
 			ID:               &userID,
-			StripeCustomerId: &customerID,
+			StripeCustomerID: &customerID,
 			Email:            &email,
 			FirstName:        &firstName,
 			LastName:         &lastName,

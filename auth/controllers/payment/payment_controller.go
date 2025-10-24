@@ -1,3 +1,4 @@
+// Package payment contains controllers and routes for payment-related actions
 package payment
 
 import (
@@ -11,16 +12,19 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
+// Controller is a controller for payment-related actions
 type Controller struct {
 	stripeService stripe.Interface
 }
 
+// NewController creates a new instance of the payment controller
 func NewController(stripeService stripe.Interface) *Controller {
 	return &Controller{
 		stripeService: stripeService,
 	}
 }
 
+// SetupRoutes configures all payment-related routes
 func SetupRoutes(router *gin.Engine, database *mongo.Database) {
 	userRepo := user.NewUserRepository(database)
 	stripeKey := os.Getenv("STRIPE_SECRET_KEY")

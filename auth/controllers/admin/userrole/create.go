@@ -1,3 +1,4 @@
+// Package userrole contains controllers for managing user roles in the admin panel
 package userrole
 
 import (

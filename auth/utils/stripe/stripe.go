@@ -11,6 +11,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
+// Interface defines the methods for interacting with Stripe services
 type Interface interface {
 	GetOrCreateCustomer(ctx *gin.Context, userID primitive.ObjectID) *stripe.Customer
 	CreateSubscription(ctx *gin.Context, customerID string, priceID string, trialDays int64) *stripe.Subscription
@@ -20,11 +21,13 @@ type Interface interface {
 	FinalizeInvoice(ctx *gin.Context, invoiceID string) *stripe.Invoice
 }
 
+// Service implements the Stripe service interface
 type Service struct {
 	userService  user.Interface
 	stripeClient ClientInterface
 }
 
+// NewStripeService creates a new instance of the Stripe service
 func NewStripeService(userRepo *user.Repository, stripeKey *string) Interface {
 	sc := stripe.NewClient(*stripeKey)
 	wrapper := &ClientWrapper{client: sc}
@@ -34,6 +37,7 @@ func NewStripeService(userRepo *user.Repository, stripeKey *string) Interface {
 	}
 }
 
+// GetOrCreateCustomer retrieves an existing Stripe customer or creates a new one if it doesn't exist
 func (s *Service) GetOrCreateCustomer(ctx *gin.Context, userID primitive.ObjectID) *stripe.Customer {
 	userEntity, err := s.userService.FindByID(ctx, userID)
 	if err != nil {
@@ -41,7 +45,7 @@ func (s *Service) GetOrCreateCustomer(ctx *gin.Context, userID primitive.ObjectI
 		return nil
 	}
 
-	if userEntity.StripeCustomerId == nil {
+	if userEntity.StripeCustomerID == nil {
 		// create stripe customer
 		params := &stripe.CustomerCreateParams{
 			Name:  stripe.String(*userEntity.FirstName + " " + *userEntity.LastName),
@@ -53,7 +57,7 @@ func (s *Service) GetOrCreateCustomer(ctx *gin.Context, userID primitive.ObjectI
 			return nil
 		}
 
-		userEntity.StripeCustomerId = &result.ID
+		userEntity.StripeCustomerID = &result.ID
 
 		// save customer id to user
 		_, err = s.userService.Update(ctx, userEntity)
@@ -63,20 +67,20 @@ func (s *Service) GetOrCreateCustomer(ctx *gin.Context, userID primitive.ObjectI
 		}
 
 		return result
-	} else {
-		// get customer and return it
-		params := &stripe.CustomerRetrieveParams{
-			Expand: []*string{stripe.String("subscriptions")},
-		}
-		result, err := s.stripeClient.GetCustomer(context.TODO(), *userEntity.StripeCustomerId, params)
-		if err != nil {
-			log.Error().Err(err).Msg("cannot get stripe customer")
-			return nil
-		}
-		return result
 	}
+	// get customer and return it
+	params := &stripe.CustomerRetrieveParams{
+		Expand: []*string{stripe.String("subscriptions")},
+	}
+	result, err := s.stripeClient.GetCustomer(context.TODO(), *userEntity.StripeCustomerID, params)
+	if err != nil {
+		log.Error().Err(err).Msg("cannot get stripe customer")
+		return nil
+	}
+	return result
 }
 
+// CreateSubscription creates a new Stripe subscription for the given customer and price ID
 func (s *Service) CreateSubscription(ctx *gin.Context, customerID string, priceID string, trialDays int64) *stripe.Subscription {
 	trialEnd := time.Now().AddDate(0, 0, int(trialDays)).Unix()
 	params := &stripe.SubscriptionCreateParams{
@@ -105,6 +109,7 @@ func (s *Service) CreateSubscription(ctx *gin.Context, customerID string, priceI
 	return result
 }
 
+// GetSubscription retrieves an existing Stripe subscription for the given customer and price ID
 func (s *Service) GetSubscription(ctx *gin.Context, customerID string, priceID string) *stripe.Subscription {
 	// get customer and return it
 	params := &stripe.CustomerRetrieveParams{
@@ -126,6 +131,7 @@ func (s *Service) GetSubscription(ctx *gin.Context, customerID string, priceID s
 	return nil
 }
 
+// CreateInvoice creates a new Stripe invoice for the given customer and subscription ID
 func (s *Service) CreateInvoice(ctx *gin.Context, customerID string, subscriptionID string) *stripe.Invoice {
 	params := &stripe.InvoiceCreateParams{
 		Customer:         stripe.String(customerID),
@@ -142,6 +148,7 @@ func (s *Service) CreateInvoice(ctx *gin.Context, customerID string, subscriptio
 	return result
 }
 
+// CreateInvoiceItem creates a new Stripe invoice item for the given customer, amount, and description
 func (s *Service) CreateInvoiceItem(ctx *gin.Context, customerID string, amount float64, description string) *stripe.InvoiceItem {
 	params := &stripe.InvoiceItemCreateParams{
 		Customer:    stripe.String(customerID),
@@ -158,6 +165,7 @@ func (s *Service) CreateInvoiceItem(ctx *gin.Context, customerID string, amount 
 	return result
 }
 
+// FinalizeInvoice finalizes a Stripe invoice by its ID
 func (s *Service) FinalizeInvoice(ctx *gin.Context, invoiceID string) *stripe.Invoice {
 	params := &stripe.InvoiceFinalizeInvoiceParams{}
 	result, err := s.stripeClient.FinalizeInvoice(ctx, invoiceID, params)

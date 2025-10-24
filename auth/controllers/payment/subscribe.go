@@ -10,6 +10,16 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+// Subscribe handles user subscription requests
+// @Summary Subscribe to a plan
+// @Description Subscribe the authenticated user to a plan
+// @Tags Payment
+// @Produce json
+// @Success 200 {object} map[string]interface{} "Subscription created successfully"
+// @Failure 400 {object} map[string]interface{} "Bad request"
+// @Failure 401 {object} map[string]interface{} "Unauthorized"
+// @Failure 500 {object} map[string]interface{} "Internal server error"
+// @Router /payment/subscribe [post]
 func (c *Controller) Subscribe(ctx *gin.Context) {
 	// Get authenticated user from context
 	authUser := auth.GetAuthUser(ctx)
