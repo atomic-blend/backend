@@ -51,7 +51,7 @@ func (c *Controller) HandleStripeWebhook(ctx *gin.Context) {
 		handleSubscriptionDeleted(ctx, c.stripeService, c.userRepo, &event)
 	default:
 		log.Warn().Str("event_type", string(event.Type)).Msg("Unhandled Stripe webhook event type")
-		ctx.JSON(400, gin.H{"error": "Unhandled event type"})
+		ctx.JSON(200, gin.H{"result": "unhandled_event_type"})
 		return
 	}
 

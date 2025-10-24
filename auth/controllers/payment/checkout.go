@@ -20,7 +20,6 @@ import (
 // @Failure 401 {object} map[string]interface{} "Unauthorized"
 // @Failure 500 {object} map[string]interface{} "Internal server error"
 // @Router /payment/subscribe [post]
-
 func (c *Controller) Checkout(ctx *gin.Context) {
 	// Get authenticated user from context
 	authUser := auth.GetAuthUser(ctx)

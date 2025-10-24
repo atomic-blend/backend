@@ -59,6 +59,7 @@ func (w *ClientWrapper) GetEphemeralKeys(ctx context.Context, params *stripe.Eph
 	return w.client.V1EphemeralKeys.Create(ctx, params)
 }
 
+// CreateCheckoutSession creates a new Stripe checkout session.
 func (w *ClientWrapper) CreateCheckoutSession(ctx context.Context, params *stripe.CheckoutSessionCreateParams) (*stripe.CheckoutSession, error) {
 	return w.client.V1CheckoutSessions.Create(ctx, params)
 }

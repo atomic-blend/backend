@@ -201,6 +201,7 @@ func (s *Service) GetCustomer(ctx *gin.Context, customerID string, params *strip
 	return s.stripeClient.GetCustomer(context.TODO(), customerID, params)
 }
 
+// CreateCheckoutSession creates a new Stripe checkout session for the given customer ID and trial days
 func (s *Service) CreateCheckoutSession(ctx *gin.Context, customerID string, trialDays int64) (*stripe.CheckoutSession, error) {
 	publicAddress := os.Getenv("PUBLIC_ADDRESS")
 	if publicAddress == "" {
