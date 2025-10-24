@@ -61,7 +61,7 @@ func TestSubscribe(t *testing.T) {
 			setupMocks: func(stripeService *mocks.MockStripeService) {
 				stripeService.On("GetOrCreateCustomer", mock.Anything, mock.AnythingOfType("primitive.ObjectID")).Return(nil, nil)
 			},
-			setupEnv:       func() {},
+			setupEnv:       func() { os.Unsetenv("STRIPE_CLOUD_SUBSCRIPTION_PRICE_ID") },
 			expectedStatus: http.StatusInternalServerError,
 			expectedBody:   map[string]interface{}{"error": "cannot_get_stripe_customer"},
 		},
@@ -73,7 +73,7 @@ func TestSubscribe(t *testing.T) {
 			setupMocks: func(stripeService *mocks.MockStripeService) {
 				// No mocks needed
 			},
-			setupEnv:       func() {},
+			setupEnv:       func() { os.Unsetenv("STRIPE_CLOUD_SUBSCRIPTION_PRICE_ID") },
 			expectedStatus: http.StatusUnauthorized,
 			expectedBody:   map[string]interface{}{"error": "Authentication required"},
 		},
@@ -89,10 +89,35 @@ func TestSubscribe(t *testing.T) {
 					Subscriptions: &stripe.SubscriptionList{Data: []*stripe.Subscription{{ID: "sub_existing"}}},
 				}
 				stripeService.On("GetOrCreateCustomer", mock.Anything, mock.AnythingOfType("primitive.ObjectID")).Return(customer, nil)
+				stripeService.On("GetSubscription", mock.Anything, "cus_123", "").Return(nil, nil)
 			},
-			setupEnv:       func() {},
+			setupEnv:       func() { os.Unsetenv("STRIPE_CLOUD_SUBSCRIPTION_PRICE_ID") },
 			expectedStatus: http.StatusBadRequest,
 			expectedBody:   map[string]interface{}{"error": "subscription_already_exists"},
+		},
+		{
+			name: "Subscription already exists with pending setup intent",
+			setupAuth: func(c *gin.Context) {
+				userID := primitive.NewObjectID()
+				c.Set("authUser", &auth.UserAuthInfo{UserID: userID})
+			},
+			setupMocks: func(stripeService *mocks.MockStripeService) {
+				customer := &stripe.Customer{
+					ID:            "cus_123",
+					Subscriptions: &stripe.SubscriptionList{Data: []*stripe.Subscription{{ID: "sub_existing"}}},
+				}
+				subscription := &stripe.Subscription{
+					ID:                 "sub_existing",
+					PendingSetupIntent: &stripe.SetupIntent{ID: "seti_123", ClientSecret: "seti_123_secret"},
+				}
+				stripeService.On("GetOrCreateCustomer", mock.Anything, mock.AnythingOfType("primitive.ObjectID")).Return(customer, nil)
+				stripeService.On("GetSubscription", mock.Anything, "cus_123", "price_456").Return(subscription, nil)
+			},
+			setupEnv: func() {
+				os.Setenv("STRIPE_CLOUD_SUBSCRIPTION_PRICE_ID", "price_456")
+			},
+			expectedStatus: http.StatusOK,
+			expectedBody:   map[string]interface{}{"subscription": map[string]interface{}{"intent": "seti_123", "secret": "seti_123_secret"}},
 		},
 	}
 

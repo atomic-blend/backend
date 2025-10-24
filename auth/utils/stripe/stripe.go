@@ -13,6 +13,7 @@ import (
 type Interface interface {
 	GetOrCreateCustomer(ctx *gin.Context, userID primitive.ObjectID) *stripe.Customer
 	CreateSubscription(ctx *gin.Context, customerID string, priceID string) *stripe.Subscription
+	GetSubscription(ctx *gin.Context, customerID string, priceID string) *stripe.Subscription
 }
 
 type Service struct {
@@ -76,7 +77,7 @@ func (s *Service) CreateSubscription(ctx *gin.Context, customerID string, priceI
 	params := &stripe.SubscriptionCreateParams{
 		Customer: stripe.String(customerID),
 		Items: []*stripe.SubscriptionCreateItemParams{
-			&stripe.SubscriptionCreateItemParams{
+			{
 				Price: stripe.String(priceID),
 			},
 		},
@@ -92,4 +93,25 @@ func (s *Service) CreateSubscription(ctx *gin.Context, customerID string, priceI
 		return nil
 	}
 	return result
+}
+
+func (s *Service) GetSubscription(ctx *gin.Context, customerID string, priceID string) *stripe.Subscription {
+	// get customer and return it
+	params := &stripe.CustomerRetrieveParams{
+		Expand: []*string{stripe.String("subscriptions.data.pending_setup_intent")},
+	}
+	result, err := s.stripeClient.GetCustomer(context.TODO(), customerID, params)
+	if err != nil {
+		log.Error().Err(err).Msg("cannot get stripe customer")
+		return nil
+	}
+
+	for _, sub := range result.Subscriptions.Data {
+		for _, item := range sub.Items.Data {
+			if item.Price.ID == priceID {
+				return sub
+			}
+		}
+	}
+	return nil
 }

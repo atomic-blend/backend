@@ -32,8 +32,17 @@ func (c *Controller) Subscribe(ctx *gin.Context) {
 	// if user already have the subscription, return error
 	log.Debug().Msgf("subscriptions count: %d", len(stripeCustomer.Subscriptions.Data))
 	if stripeCustomer.Subscriptions != nil && len(stripeCustomer.Subscriptions.Data) > 0 {
-		log.Debug().Msg("User already has an active subscription")
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "subscription_already_exists"})
+		log.Debug().Msg("User already has a subscription, fetching existing subscription")
+		subscription := c.stripeService.GetSubscription(ctx, stripeCustomer.ID, priceID)
+		if subscription != nil && subscription.PendingSetupIntent != nil {
+			ctx.JSON(http.StatusOK, gin.H{"subscription": gin.H{
+				"secret": subscription.PendingSetupIntent.ClientSecret,
+				"intent": subscription.PendingSetupIntent.ID,
+			}})
+		} else {
+			log.Error().Msg("Subscription already exists without pending setup intent")
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "subscription_already_exists"})
+		}
 		return
 	}
 

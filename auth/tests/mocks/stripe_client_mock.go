@@ -22,7 +22,7 @@ func (m *MockStripeClient) CreateCustomer(ctx context.Context, params *stripe.Cu
 }
 
 // GetCustomer mocks the GetCustomer method
-func (m *MockStripeClient) GetCustomer(ctx context.Context, id string) (*stripe.Customer, error) {
+func (m *MockStripeClient) GetCustomer(ctx context.Context, id string, params *stripe.CustomerRetrieveParams) (*stripe.Customer, error) {
 	args := m.Called(ctx, id)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
