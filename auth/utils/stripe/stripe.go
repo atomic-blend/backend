@@ -14,6 +14,7 @@ import (
 // Interface defines the methods for interacting with Stripe services
 type Interface interface {
 	GetOrCreateCustomer(ctx *gin.Context, userID primitive.ObjectID) *stripe.Customer
+	GetCustomer(ctx *gin.Context, customerID string, params *stripe.CustomerRetrieveParams) (*stripe.Customer, error)
 	CreateSubscription(ctx *gin.Context, customerID string, priceID string, trialDays int64) *stripe.Subscription
 	GetSubscription(ctx *gin.Context, customerID string, priceID string) *stripe.Subscription
 	CreateInvoice(ctx *gin.Context, customerID string, subscriptionID string) *stripe.Invoice
@@ -51,6 +52,9 @@ func (s *Service) GetOrCreateCustomer(ctx *gin.Context, userID primitive.ObjectI
 		params := &stripe.CustomerCreateParams{
 			Name:  stripe.String(*userEntity.FirstName + " " + *userEntity.LastName),
 			Email: stripe.String(*userEntity.Email),
+			Metadata: map[string]string{
+				"app_user_id": userEntity.ID.Hex(),
+			},
 		}
 		result, err := s.stripeClient.CreateCustomer(context.TODO(), params)
 		if err != nil {
@@ -188,4 +192,9 @@ func (s *Service) GetEphemeralKeys(ctx *gin.Context, customerID string) *stripe.
 		return nil
 	}
 	return result
+}
+
+// GetCustomer retrieves a Stripe customer by ID.
+func (s *Service) GetCustomer(ctx *gin.Context, customerID string, params *stripe.CustomerRetrieveParams) (*stripe.Customer, error) {
+	return s.stripeClient.GetCustomer(context.TODO(), customerID, params)
 }

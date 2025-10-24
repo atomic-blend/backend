@@ -74,3 +74,12 @@ func (m *MockStripeService) GetEphemeralKeys(ctx *gin.Context, customerID string
 	}
 	return args.Get(0).(*stripe.EphemeralKey)
 }
+
+// GetCustomer mocks the GetCustomer method
+func (m *MockStripeService) GetCustomer(ctx *gin.Context, customerID string, params *stripe.CustomerRetrieveParams) (*stripe.Customer, error) {
+	args := m.Called(ctx, customerID, params)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*stripe.Customer), nil
+}

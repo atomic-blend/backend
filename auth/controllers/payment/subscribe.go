@@ -97,7 +97,7 @@ func (c *Controller) Subscribe(ctx *gin.Context) {
 	// store inside the user the subcription ID and status to trialing
 	userEntity.StripeSubscriptionID = &subscription.ID
 	status := string(subscription.Status)
-	userEntity.StripeSubscriptionStatus = &status
+	userEntity.SubscriptionStatus = &status
 
 	_, err = c.userRepo.Update(ctx, userEntity)
 	if err != nil {
