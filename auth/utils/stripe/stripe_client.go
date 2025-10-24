@@ -16,6 +16,7 @@ type ClientInterface interface {
 	CreateInvoiceItem(ctx context.Context, params *stripe.InvoiceItemCreateParams) (*stripe.InvoiceItem, error)
 	FinalizeInvoice(ctx context.Context, id string, params *stripe.InvoiceFinalizeInvoiceParams) (*stripe.Invoice, error)
 	GetEphemeralKeys(ctx context.Context, params *stripe.EphemeralKeyCreateParams) (*stripe.EphemeralKey, error)
+	CreateCheckoutSession(ctx context.Context, params *stripe.CheckoutSessionCreateParams) (*stripe.CheckoutSession, error)
 }
 
 // ClientWrapper wraps the Stripe client to implement ClientInterface.
@@ -56,4 +57,8 @@ func (w *ClientWrapper) FinalizeInvoice(ctx context.Context, id string, params *
 // GetEphemeralKeys creates a new Stripe ephemeral key.
 func (w *ClientWrapper) GetEphemeralKeys(ctx context.Context, params *stripe.EphemeralKeyCreateParams) (*stripe.EphemeralKey, error) {
 	return w.client.V1EphemeralKeys.Create(ctx, params)
+}
+
+func (w *ClientWrapper) CreateCheckoutSession(ctx context.Context, params *stripe.CheckoutSessionCreateParams) (*stripe.CheckoutSession, error) {
+	return w.client.V1CheckoutSessions.Create(ctx, params)
 }

@@ -41,6 +41,6 @@ func SetupRoutes(router *gin.Engine, database *mongo.Database) {
 
 	protectedPaymentRoutes := auth.RequireAuth(paymentGroup)
 	{
-		protectedPaymentRoutes.POST("subscribe", paymentController.Subscribe)
+		protectedPaymentRoutes.POST("checkout", paymentController.Checkout)
 	}
 }

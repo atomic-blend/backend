@@ -9,7 +9,7 @@ type UserEntity struct {
 	ID                   *primitive.ObjectID   `json:"id" bson:"_id"`
 	StripeCustomerID     *string               `json:"stripeCustomerId" bson:"stripe_customer_id"`
 	StripeSubscriptionID *string               `json:"stripeSubscriptionId" bson:"stripe_subscription_id"`
-	SubscriptionStatus   *string               `json:"subscriptionStatus" bson:"Ssubscription_status"`
+	SubscriptionStatus   *string               `json:"subscriptionStatus" bson:"subscription_status"`
 	Email                *string               `json:"email" bson:"email" binding:"required"`
 	FirstName            *string               `json:"firstName" bson:"first_name,omitempty"`
 	LastName             *string               `json:"lastName" bson:"last_name,omitempty"`

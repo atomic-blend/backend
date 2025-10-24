@@ -9,7 +9,6 @@ import (
 
 	"github.com/atomic-blend/backend/auth/tests/mocks"
 	"github.com/atomic-blend/backend/shared/middlewares/auth"
-	"github.com/atomic-blend/backend/shared/models"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -17,8 +16,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-func TestSubscribe(t *testing.T) {
-	// Set Gin to test mode
+func TestCheckout(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	testCases := []struct {
@@ -30,7 +28,7 @@ func TestSubscribe(t *testing.T) {
 		expectedBody   map[string]interface{}
 	}{
 		{
-			name: "Successful subscription",
+			name: "Successful checkout",
 			setupAuth: func(c *gin.Context) {
 				userID := primitive.NewObjectID()
 				c.Set("authUser", &auth.UserAuthInfo{UserID: userID})
@@ -40,39 +38,16 @@ func TestSubscribe(t *testing.T) {
 					ID:            "cus_123",
 					Subscriptions: &stripe.SubscriptionList{Data: []*stripe.Subscription{}},
 				}
-				subscription := &stripe.Subscription{
-					ID:                 "sub_789",
-					PendingSetupIntent: &stripe.SetupIntent{ClientSecret: "seti_123_secret"},
-				}
-				ephemeralKey := &stripe.EphemeralKey{
-					ID:      "eph_123",
-					Secret:  "eph_secret_123",
-					Expires: 1234567890,
-				}
+				checkoutSession := &stripe.CheckoutSession{ID: "cs_123", URL: "https://checkout.stripe.com/pay/cs_123"}
 				stripeService.On("GetOrCreateCustomer", mock.Anything, mock.AnythingOfType("primitive.ObjectID")).Return(customer, nil)
-				stripeService.On("CreateSubscription", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(subscription, nil)
-				stripeService.On("GetEphemeralKeys", mock.Anything, "cus_123").Return(ephemeralKey, nil)
-				userID := primitive.NewObjectID()
-				userService.On("FindByID", mock.Anything, mock.Anything).Return(&models.UserEntity{ID: &userID}, nil)
-				userService.On("Update", mock.Anything, mock.Anything).Return(nil, nil)
+				stripeService.On("CreateCheckoutSession", mock.Anything, "cus_123", mock.AnythingOfType("int64")).Return(checkoutSession, nil)
 			},
 			setupEnv: func() {
-				os.Setenv("STRIPE_CLOUD_SUBSCRIPTION_PRICE_ID", "price_456")
+				os.Unsetenv("STRIPE_CLOUD_TRIAL_DAYS")
 			},
 			expectedStatus: http.StatusOK,
 			expectedBody: map[string]interface{}{
-				"pending_setup_intent": map[string]interface{}{
-					"secret":    "seti_123_secret",
-					"intent_id": "",
-				},
-				"customer": map[string]interface{}{
-					"id": "cus_123",
-					"ephemeral_key": map[string]interface{}{
-						"id":      "eph_123",
-						"secret":  "eph_secret_123",
-						"expires": float64(1234567890),
-					},
-				},
+				"session": "https://checkout.stripe.com/pay/cs_123",
 			},
 		},
 		{
@@ -84,7 +59,7 @@ func TestSubscribe(t *testing.T) {
 			setupMocks: func(stripeService *mocks.MockStripeService, userService *mocks.MockUserRepository) {
 				stripeService.On("GetOrCreateCustomer", mock.Anything, mock.AnythingOfType("primitive.ObjectID")).Return(nil, nil)
 			},
-			setupEnv:       func() { os.Unsetenv("STRIPE_CLOUD_SUBSCRIPTION_PRICE_ID") },
+			setupEnv:       func() { os.Unsetenv("STRIPE_CLOUD_TRIAL_DAYS") },
 			expectedStatus: http.StatusInternalServerError,
 			expectedBody:   map[string]interface{}{"error": "cannot_get_stripe_customer"},
 		},
@@ -96,7 +71,7 @@ func TestSubscribe(t *testing.T) {
 			setupMocks: func(stripeService *mocks.MockStripeService, userService *mocks.MockUserRepository) {
 				// No mocks needed
 			},
-			setupEnv:       func() { os.Unsetenv("STRIPE_CLOUD_SUBSCRIPTION_PRICE_ID") },
+			setupEnv:       func() { os.Unsetenv("STRIPE_CLOUD_TRIAL_DAYS") },
 			expectedStatus: http.StatusUnauthorized,
 			expectedBody:   map[string]interface{}{"error": "Authentication required"},
 		},
@@ -112,14 +87,13 @@ func TestSubscribe(t *testing.T) {
 					Subscriptions: &stripe.SubscriptionList{Data: []*stripe.Subscription{{ID: "sub_existing"}}},
 				}
 				stripeService.On("GetOrCreateCustomer", mock.Anything, mock.AnythingOfType("primitive.ObjectID")).Return(customer, nil)
-				stripeService.On("GetSubscription", mock.Anything, "cus_123", "").Return(nil, nil)
 			},
-			setupEnv:       func() { os.Unsetenv("STRIPE_CLOUD_SUBSCRIPTION_PRICE_ID") },
+			setupEnv:       func() { os.Unsetenv("STRIPE_CLOUD_TRIAL_DAYS") },
 			expectedStatus: http.StatusBadRequest,
 			expectedBody:   map[string]interface{}{"error": "subscription_already_exists"},
 		},
 		{
-			name: "Subscription already exists with pending setup intent",
+			name: "Create checkout session failed",
 			setupAuth: func(c *gin.Context) {
 				userID := primitive.NewObjectID()
 				c.Set("authUser", &auth.UserAuthInfo{UserID: userID})
@@ -127,29 +101,23 @@ func TestSubscribe(t *testing.T) {
 			setupMocks: func(stripeService *mocks.MockStripeService, userService *mocks.MockUserRepository) {
 				customer := &stripe.Customer{
 					ID:            "cus_123",
-					Subscriptions: &stripe.SubscriptionList{Data: []*stripe.Subscription{{ID: "sub_existing"}}},
-				}
-				subscription := &stripe.Subscription{
-					ID:                 "sub_existing",
-					PendingSetupIntent: &stripe.SetupIntent{ID: "seti_123", ClientSecret: "seti_123_secret"},
+					Subscriptions: &stripe.SubscriptionList{Data: []*stripe.Subscription{}},
 				}
 				stripeService.On("GetOrCreateCustomer", mock.Anything, mock.AnythingOfType("primitive.ObjectID")).Return(customer, nil)
-				stripeService.On("GetSubscription", mock.Anything, "cus_123", "price_456").Return(subscription, nil)
+				stripeService.On("CreateCheckoutSession", mock.Anything, "cus_123", mock.AnythingOfType("int64")).Return(nil, assert.AnError)
 			},
-			setupEnv: func() {
-				os.Setenv("STRIPE_CLOUD_SUBSCRIPTION_PRICE_ID", "price_456")
-			},
-			expectedStatus: http.StatusOK,
-			expectedBody:   map[string]interface{}{"subscription": map[string]interface{}{"intent": "seti_123", "secret": "seti_123_secret"}},
+			setupEnv:       func() { os.Unsetenv("STRIPE_CLOUD_TRIAL_DAYS") },
+			expectedStatus: http.StatusInternalServerError,
+			expectedBody:   map[string]interface{}{"error": "cannot_create_checkout_session"},
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			// Setup environment
+			// Setup env
 			tc.setupEnv()
 
-			// Create mock stripe service
+			// Create mocks
 			mockStripeService := new(mocks.MockStripeService)
 			mockUserService := new(mocks.MockUserRepository)
 
@@ -159,30 +127,34 @@ func TestSubscribe(t *testing.T) {
 			// Create controller
 			controller := NewController(mockStripeService, mockUserService)
 
-			// Create a test HTTP request
-			req, _ := http.NewRequest("POST", "/payment/subscribe", nil)
+			// Create request
+			req, _ := http.NewRequest("POST", "/payment/checkout", nil)
 
-			// Create a response recorder
+			// Create response recorder
 			w := httptest.NewRecorder()
 
-			// Create a new Gin context
+			// Create gin context
 			ctx, _ := gin.CreateTestContext(w)
 			ctx.Request = req
 
 			// Setup auth
 			tc.setupAuth(ctx)
 
-			// Call the controller method
-			controller.Subscribe(ctx)
+			// Call controller
+			controller.Checkout(ctx)
 
-			// Assert status code
+			// Assert status
 			assert.Equal(t, tc.expectedStatus, w.Code)
 
-			// Assert response body
+			// Assert body (compare only expected fields so tests aren't brittle
+			// against full Stripe CheckoutSession serialization)
 			var responseBody map[string]interface{}
 			err := json.Unmarshal(w.Body.Bytes(), &responseBody)
 			assert.NoError(t, err)
-			assert.Equal(t, tc.expectedBody, responseBody)
+
+			for key, expectedVal := range tc.expectedBody {
+				assert.Equal(t, expectedVal, responseBody[key])
+			}
 
 			// Assert mocks
 			mockStripeService.AssertExpectations(t)

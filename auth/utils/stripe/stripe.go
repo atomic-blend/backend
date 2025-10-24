@@ -2,6 +2,7 @@ package stripe
 
 import (
 	"context"
+	"os"
 	"time"
 
 	"github.com/atomic-blend/backend/shared/repositories/user"
@@ -21,6 +22,7 @@ type Interface interface {
 	CreateInvoiceItem(ctx *gin.Context, customerID string, amount float64, description string) *stripe.InvoiceItem
 	FinalizeInvoice(ctx *gin.Context, invoiceID string) *stripe.Invoice
 	GetEphemeralKeys(ctx *gin.Context, customerID string) *stripe.EphemeralKey
+	CreateCheckoutSession(ctx *gin.Context, customerID string, trialDays int64) (*stripe.CheckoutSession, error)
 }
 
 // Service implements the Stripe service interface
@@ -197,4 +199,67 @@ func (s *Service) GetEphemeralKeys(ctx *gin.Context, customerID string) *stripe.
 // GetCustomer retrieves a Stripe customer by ID.
 func (s *Service) GetCustomer(ctx *gin.Context, customerID string, params *stripe.CustomerRetrieveParams) (*stripe.Customer, error) {
 	return s.stripeClient.GetCustomer(context.TODO(), customerID, params)
+}
+
+func (s *Service) CreateCheckoutSession(ctx *gin.Context, customerID string, trialDays int64) (*stripe.CheckoutSession, error) {
+	publicAddress := os.Getenv("PUBLIC_ADDRESS")
+	if publicAddress == "" {
+		publicAddress = "http://localhost:53631"
+	}
+	https := os.Getenv("HTTPS") == "true"
+
+	var baseURL string
+	if https {
+		baseURL = "https://" + publicAddress + "/#"
+	} else {
+		baseURL = "http://" + publicAddress + "/#"
+	}
+
+	cloudPriceID := os.Getenv("STRIPE_CLOUD_SUBSCRIPTION_PRICE_ID")
+	if cloudPriceID == "" {
+		log.Error().Msg("STRIPE_CLOUD_SUBSCRIPTION_PRICE_ID is not set")
+		return nil, nil
+	}
+
+	storagePriceID := os.Getenv("STRIPE_STORAGE_PRICE_ID")
+	if storagePriceID == "" {
+		log.Error().Msg("STRIPE_STORAGE_PRICE_ID is not set")
+		return nil, nil
+	}
+
+	betaCouponID := os.Getenv("STRIPE_BETA_COUPON_ID")
+	if betaCouponID != "" {
+		log.Debug().Msgf("Applying beta coupon: %s", betaCouponID)
+	}
+
+	discounts := []*stripe.CheckoutSessionCreateDiscountParams{}
+	if betaCouponID != "" {
+		discounts = append(discounts, &stripe.CheckoutSessionCreateDiscountParams{
+			Coupon: stripe.String(betaCouponID),
+		})
+	}
+
+	params := &stripe.CheckoutSessionCreateParams{
+		Customer: stripe.String(customerID),
+		LineItems: []*stripe.CheckoutSessionCreateLineItemParams{
+			{
+				Price:    stripe.String(cloudPriceID),
+				Quantity: stripe.Int64(1),
+			},
+			{
+				Price: stripe.String(storagePriceID),
+			},
+		},
+		Discounts: discounts,
+		SubscriptionData: &stripe.CheckoutSessionCreateSubscriptionDataParams{
+			TrialPeriodDays: stripe.Int64(trialDays),
+			// BillingCycleAnchor: stripe.Int64(trialEnd + 100),
+		},
+		Mode:                     stripe.String(string(stripe.CheckoutSessionModeSubscription)),
+		SuccessURL:               stripe.String(baseURL + "/checkout?success=true"),
+		CancelURL:                stripe.String(baseURL + "/checkout?canceled=true"),
+		BillingAddressCollection: stripe.String(string(stripe.CheckoutSessionBillingAddressCollectionAuto)),
+	}
+
+	return s.stripeClient.CreateCheckoutSession(context.TODO(), params)
 }
