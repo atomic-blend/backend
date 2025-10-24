@@ -1,6 +1,7 @@
 package payment
 
 import (
+	"fmt"
 	"net/http"
 	"os"
 
@@ -30,7 +31,6 @@ func (c *Controller) Subscribe(ctx *gin.Context) {
 	priceID := os.Getenv("STRIPE_CLOUD_SUBSCRIPTION_PRICE_ID")
 
 	// if user already have the subscription, return error
-	log.Debug().Msgf("subscriptions count: %d", len(stripeCustomer.Subscriptions.Data))
 	if stripeCustomer.Subscriptions != nil && len(stripeCustomer.Subscriptions.Data) > 0 {
 		log.Debug().Msg("User already has a subscription, fetching existing subscription")
 		subscription := c.stripeService.GetSubscription(ctx, stripeCustomer.ID, priceID)
@@ -54,15 +54,25 @@ func (c *Controller) Subscribe(ctx *gin.Context) {
 	}
 
 	log.Debug().Msgf("Creating subscription for Price ID: %s", priceID)
-	subscription := c.stripeService.CreateSubscription(ctx, stripeCustomer.ID, priceID)
+	trialDays := os.Getenv("STRIPE_CLOUD_TRIAL_DAYS")
+	var trialDaysInt64 int64 = 0
+	if trialDays != "" {
+		fmt.Sscanf(trialDays, "%d", &trialDaysInt64)
+	}
+	subscription := c.stripeService.CreateSubscription(ctx, stripeCustomer.ID, priceID, trialDaysInt64)
 	if subscription == nil {
 		log.Error().Msg("Failed to create subscription")
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "cannot_create_subscription"})
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{"subscription": gin.H{
-		"secret": subscription.PendingSetupIntent.ClientSecret,
-		"intent": subscription.PendingSetupIntent.ID,
+	fmt.Printf("%+v\n", subscription)
+
+	log.Debug().Msgf("Subscription created with ID: %s", subscription.ID)
+	log.Debug().Msgf("Pending Setup Intent: %v", subscription.PendingSetupIntent)
+
+	ctx.JSON(http.StatusOK, gin.H{"pending_setup_intent": gin.H{
+		"secret":    subscription.PendingSetupIntent.ClientSecret,
+		"intent_id": subscription.PendingSetupIntent.ID,
 	}})
 }

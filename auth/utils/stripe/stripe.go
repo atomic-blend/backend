@@ -2,6 +2,7 @@ package stripe
 
 import (
 	"context"
+	"time"
 
 	"github.com/atomic-blend/backend/shared/repositories/user"
 	"github.com/gin-gonic/gin"
@@ -12,8 +13,11 @@ import (
 
 type Interface interface {
 	GetOrCreateCustomer(ctx *gin.Context, userID primitive.ObjectID) *stripe.Customer
-	CreateSubscription(ctx *gin.Context, customerID string, priceID string) *stripe.Subscription
+	CreateSubscription(ctx *gin.Context, customerID string, priceID string, trialDays int64) *stripe.Subscription
 	GetSubscription(ctx *gin.Context, customerID string, priceID string) *stripe.Subscription
+	CreateInvoice(ctx *gin.Context, customerID string, subscriptionID string) *stripe.Invoice
+	CreateInvoiceItem(ctx *gin.Context, customerID string, amount float64, description string) *stripe.InvoiceItem
+	FinalizeInvoice(ctx *gin.Context, invoiceID string) *stripe.Invoice
 }
 
 type Service struct {
@@ -73,7 +77,8 @@ func (s *Service) GetOrCreateCustomer(ctx *gin.Context, userID primitive.ObjectI
 	}
 }
 
-func (s *Service) CreateSubscription(ctx *gin.Context, customerID string, priceID string) *stripe.Subscription {
+func (s *Service) CreateSubscription(ctx *gin.Context, customerID string, priceID string, trialDays int64) *stripe.Subscription {
+	trialEnd := time.Now().AddDate(0, 0, int(trialDays)).Unix()
 	params := &stripe.SubscriptionCreateParams{
 		Customer: stripe.String(customerID),
 		Items: []*stripe.SubscriptionCreateItemParams{
@@ -81,11 +86,16 @@ func (s *Service) CreateSubscription(ctx *gin.Context, customerID string, priceI
 				Price: stripe.String(priceID),
 			},
 		},
-		PaymentBehavior: stripe.String(string("default_incomplete")),
-		PaymentSettings: &stripe.SubscriptionCreatePaymentSettingsParams{
-			SaveDefaultPaymentMethod: stripe.String(string("on_subscription")),
+		TrialEnd:           stripe.Int64(trialEnd),
+		BillingCycleAnchor: stripe.Int64(trialEnd + 1000),
+		CollectionMethod:   stripe.String("charge_automatically"),
+		PaymentBehavior:    stripe.String("default_incomplete"),
+		TrialSettings: &stripe.SubscriptionCreateTrialSettingsParams{
+			EndBehavior: &stripe.SubscriptionCreateTrialSettingsEndBehaviorParams{
+				MissingPaymentMethod: stripe.String("cancel"),
+			},
 		},
-		Expand: []*string{stripe.String("pending_setup_intent")},
+		Expand: []*string{stripe.String("latest_invoice.payment_intent"), stripe.String("pending_setup_intent")},
 	}
 	result, err := s.stripeClient.CreateSubscription(context.TODO(), params)
 	if err != nil {
@@ -114,4 +124,46 @@ func (s *Service) GetSubscription(ctx *gin.Context, customerID string, priceID s
 		}
 	}
 	return nil
+}
+
+func (s *Service) CreateInvoice(ctx *gin.Context, customerID string, subscriptionID string) *stripe.Invoice {
+	params := &stripe.InvoiceCreateParams{
+		Customer:         stripe.String(customerID),
+		Subscription:     stripe.String(subscriptionID),
+		CollectionMethod: stripe.String("charge_automatically"),
+		AutoAdvance:      stripe.Bool(true),
+	}
+
+	result, err := s.stripeClient.CreateInvoice(ctx, params)
+	if err != nil {
+		log.Error().Err(err).Msg("error during creation of the stripe invoice")
+		return nil
+	}
+	return result
+}
+
+func (s *Service) CreateInvoiceItem(ctx *gin.Context, customerID string, amount float64, description string) *stripe.InvoiceItem {
+	params := &stripe.InvoiceItemCreateParams{
+		Customer:    stripe.String(customerID),
+		Amount:      stripe.Int64(int64(amount * 100)), // amount in cents
+		Currency:    stripe.String(string(stripe.CurrencyUSD)),
+		Description: stripe.String(description),
+	}
+
+	result, err := s.stripeClient.CreateInvoiceItem(ctx, params)
+	if err != nil {
+		log.Error().Err(err).Msg("error during creation of the stripe invoice item")
+		return nil
+	}
+	return result
+}
+
+func (s *Service) FinalizeInvoice(ctx *gin.Context, invoiceID string) *stripe.Invoice {
+	params := &stripe.InvoiceFinalizeInvoiceParams{}
+	result, err := s.stripeClient.FinalizeInvoice(ctx, invoiceID, params)
+	if err != nil {
+		log.Error().Err(err).Msg("error during finalization of the stripe invoice")
+		return nil
+	}
+	return result
 }

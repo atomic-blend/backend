@@ -188,10 +188,11 @@ func TestCreateSubscription(t *testing.T) {
 		subscription := &stripe.Subscription{
 			ID: subscriptionID,
 		}
+		trialDays := int64(14)
 
 		mockStripeClient.On("CreateSubscription", mock.Anything, mock.AnythingOfType("*stripe.SubscriptionCreateParams")).Return(subscription, nil).Once()
 
-		result := service.CreateSubscription(ctx, customerID, priceID)
+		result := service.CreateSubscription(ctx, customerID, priceID, trialDays)
 
 		assert.NotNil(t, result)
 		assert.Equal(t, subscriptionID, result.ID)
@@ -201,10 +202,11 @@ func TestCreateSubscription(t *testing.T) {
 	t.Run("subscription creation error", func(t *testing.T) {
 		customerID := "cus_123"
 		priceID := "price_456"
+		trialDays := int64(14)
 
 		mockStripeClient.On("CreateSubscription", mock.Anything, mock.AnythingOfType("*stripe.SubscriptionCreateParams")).Return(nil, errors.New("stripe error")).Once()
 
-		result := service.CreateSubscription(ctx, customerID, priceID)
+		result := service.CreateSubscription(ctx, customerID, priceID, trialDays)
 
 		assert.Nil(t, result)
 		mockStripeClient.AssertExpectations(t)
