@@ -75,34 +75,26 @@ func (c *Controller) Subscribe(ctx *gin.Context) {
 		return
 	}
 
-	if isExisting {
-		ctx.JSON(http.StatusOK, gin.H{
-			"subscription": gin.H{
-				"intent": subscription.PendingSetupIntent.ID,
-				"secret": subscription.PendingSetupIntent.ClientSecret,
-			},
-		})
-		return
-	}
+	if !isExisting {
+		// Get the user
+		log.Debug().Msgf("Fetching user with ID: %s", authUser.UserID.Hex())
+		userEntity, err := c.userRepo.FindByID(ctx, authUser.UserID)
+		if err != nil {
+			log.Error().Err(err).Str("user_id", authUser.UserID.Hex()).Msg("Error fetching user")
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "cannot_fetch_user"})
+			return
+		}
 
-	// Get the user
-	log.Debug().Msgf("Fetching user with ID: %s", authUser.UserID.Hex())
-	userEntity, err := c.userRepo.FindByID(ctx, authUser.UserID)
-	if err != nil {
-		log.Error().Err(err).Str("user_id", authUser.UserID.Hex()).Msg("Error fetching user")
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "cannot_fetch_user"})
-		return
-	}
+		// store inside the user the subcription ID and status to trialing
+		userEntity.StripeSubscriptionID = &subscription.ID
+		status := string(subscription.Status)
+		userEntity.SubscriptionStatus = &status
 
-	// store inside the user the subcription ID and status to trialing
-	userEntity.StripeSubscriptionID = &subscription.ID
-	status := string(subscription.Status)
-	userEntity.SubscriptionStatus = &status
-
-	_, err = c.userRepo.Update(ctx, userEntity)
-	if err != nil {
-		log.Error().Err(err).Str("user_id", authUser.UserID.Hex()).Msg("Cannot save subscription ID and status to user")
-		// not blocking error, continue
+		_, err = c.userRepo.Update(ctx, userEntity)
+		if err != nil {
+			log.Error().Err(err).Str("user_id", authUser.UserID.Hex()).Msg("Cannot save subscription ID and status to user")
+			// not blocking error, continue
+		}
 	}
 
 	// Get ephemeral keys
@@ -119,13 +111,13 @@ func (c *Controller) Subscribe(ctx *gin.Context) {
 	log.Debug().Msgf("Pending Setup Intent: %v", subscription.PendingSetupIntent)
 
 	ctx.JSON(http.StatusOK, gin.H{
-		"pending_setup_intent": gin.H{
+		"pendingSetupIntent": gin.H{
 			"secret":    subscription.PendingSetupIntent.ClientSecret,
-			"intent_id": subscription.PendingSetupIntent.ID,
+			"intentId": subscription.PendingSetupIntent.ID,
 		},
 		"customer": gin.H{
 			"id": stripeCustomer.ID,
-			"ephemeral_key": gin.H{
+			"ephemeralKey": gin.H{
 				"id":      ephemeralKeys.ID,
 				"secret":  ephemeralKeys.Secret,
 				"expires": ephemeralKeys.Expires,
