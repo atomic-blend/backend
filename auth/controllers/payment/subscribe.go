@@ -76,6 +76,8 @@ func (c *Controller) Subscribe(ctx *gin.Context) {
 		return
 	}
 
+	//TODO: store inside the user the subcription ID and status to trialing
+
 	fmt.Printf("%+v\n", subscription)
 
 	log.Debug().Msgf("Subscription created with ID: %s", subscription.ID)

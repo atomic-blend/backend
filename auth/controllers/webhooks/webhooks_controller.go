@@ -32,10 +32,16 @@ func SetupRoutes(router *gin.Engine, db *mongo.Database) {
 
 	// Protected user routes (require authentication with static token from env)
 	bearerToken := "Bearer " + os.Getenv("REVENUE_CAT_WEBHOOK_TOKEN")
-	protectedUserRoutes := staticstringmiddleware.RequireStaticStringMiddleware(revenueCatGroup, bearerToken)
-	{
-		protectedUserRoutes.POST("", webhooksController.HandleRevenueCatWebhook)
+	if bearerToken != "Bearer " {
+		rcRoutes := staticstringmiddleware.RequireStaticStringMiddleware(revenueCatGroup, bearerToken)
+		{
+			rcRoutes.POST("", webhooksController.HandleRevenueCatWebhook)
+		}
 	}
 
 	// add other groups with static security for webhooks as needed
+	stripeGroup := router.Group("/webhooks/stripe")
+	{
+		stripeGroup.POST("", webhooksController.HandleStripeWebhook)
+	}
 }
