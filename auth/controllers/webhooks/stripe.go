@@ -103,6 +103,8 @@ func handleInvoicePaid(ctx *gin.Context, stripeService stripeutils.Interface, us
 
 	log.Info().Msg("updating user subscription status for invoice.paid event")
 	user.SubscriptionStatus = stripe.String("active")
+	subscriptionID := event.Data.Object["parent"].(map[string]interface{})["subscription_details"].(map[string]interface{})["subscription"].(string)
+	user.StripeSubscriptionID = &subscriptionID
 	user.FailedAt = nil
 	user.CancelledAt = nil
 
