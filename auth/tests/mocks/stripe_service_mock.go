@@ -65,3 +65,12 @@ func (m *MockStripeService) FinalizeInvoice(ctx *gin.Context, invoiceID string) 
 	}
 	return args.Get(0).(*stripe.Invoice)
 }
+
+// GetEphemeralKeys mocks the GetEphemeralKeys method
+func (m *MockStripeService) GetEphemeralKeys(ctx *gin.Context, customerID string) *stripe.EphemeralKey {
+	args := m.Called(ctx, customerID)
+	if args.Get(0) == nil {
+		return nil
+	}
+	return args.Get(0).(*stripe.EphemeralKey)
+}

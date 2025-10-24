@@ -9,6 +9,7 @@ import (
 	"github.com/stripe/stripe-go/v83/webhook"
 )
 
+// HandleStripeWebhook processes incoming Stripe webhook events
 func (c *Controller) HandleStripeWebhook(ctx *gin.Context) {
 
 	stripeSecret := os.Getenv("STRIPE_WEBHOOK_TOKEN")

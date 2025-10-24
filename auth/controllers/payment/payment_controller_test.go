@@ -12,9 +12,11 @@ import (
 func TestNewController(t *testing.T) {
 	// Create mock stripe service
 	mockStripeService := new(mocks.MockStripeService)
+	// Create mock user repository
+	mockUserService := new(mocks.MockUserRepository)
 
 	// Create controller
-	controller := NewController(mockStripeService)
+	controller := NewController(mockStripeService, mockUserService)
 
 	// Assert controller properties
 	assert.NotNil(t, controller)

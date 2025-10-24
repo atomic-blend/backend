@@ -19,6 +19,7 @@ type Interface interface {
 	CreateInvoice(ctx *gin.Context, customerID string, subscriptionID string) *stripe.Invoice
 	CreateInvoiceItem(ctx *gin.Context, customerID string, amount float64, description string) *stripe.InvoiceItem
 	FinalizeInvoice(ctx *gin.Context, invoiceID string) *stripe.Invoice
+	GetEphemeralKeys(ctx *gin.Context, customerID string) *stripe.EphemeralKey
 }
 
 // Service implements the Stripe service interface
@@ -171,6 +172,19 @@ func (s *Service) FinalizeInvoice(ctx *gin.Context, invoiceID string) *stripe.In
 	result, err := s.stripeClient.FinalizeInvoice(ctx, invoiceID, params)
 	if err != nil {
 		log.Error().Err(err).Msg("error during finalization of the stripe invoice")
+		return nil
+	}
+	return result
+}
+
+// GetEphemeralKeys retrieves ephemeral keys for the given customer ID
+func (s *Service) GetEphemeralKeys(ctx *gin.Context, customerID string) *stripe.EphemeralKey {
+	params := &stripe.EphemeralKeyCreateParams{
+		Customer: stripe.String(customerID),
+	}
+	result, err := s.stripeClient.GetEphemeralKeys(ctx, params)
+	if err != nil {
+		log.Error().Err(err).Msg("error during retrieval of the stripe ephemeral keys")
 		return nil
 	}
 	return result

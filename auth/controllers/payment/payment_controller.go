@@ -14,13 +14,15 @@ import (
 
 // Controller is a controller for payment-related actions
 type Controller struct {
+	userRepo      user.Interface
 	stripeService stripe.Interface
 }
 
 // NewController creates a new instance of the payment controller
-func NewController(stripeService stripe.Interface) *Controller {
+func NewController(stripeService stripe.Interface, userRepo user.Interface) *Controller {
 	return &Controller{
 		stripeService: stripeService,
+		userRepo:      userRepo,
 	}
 }
 
@@ -33,7 +35,7 @@ func SetupRoutes(router *gin.Engine, database *mongo.Database) {
 		return
 	}
 	stripeService := stripe.NewStripeService(userRepo, &stripeKey)
-	paymentController := NewController(stripeService)
+	paymentController := NewController(stripeService, userRepo)
 
 	paymentGroup := router.Group("/payment")
 
