@@ -10,6 +10,12 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+type CheckoutRequest struct {
+	// Add any fields if needed in the future
+	SuccessURL *string `json:"success_url"`
+	CancelURL  *string `json:"cancel_url"`
+}
+
 // Checkout handles user checkout requests
 // @Summary Checkout for a subscription
 // @Description Checkout the authenticated user for a subscription
@@ -25,6 +31,13 @@ func (c *Controller) Checkout(ctx *gin.Context) {
 	authUser := auth.GetAuthUser(ctx)
 	if authUser == nil {
 		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
+		return
+	}
+
+	// Parse request body
+	var checkoutReq CheckoutRequest
+	if err := ctx.ShouldBindJSON(&checkoutReq); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid_request_body"})
 		return
 	}
 
@@ -53,7 +66,7 @@ func (c *Controller) Checkout(ctx *gin.Context) {
 		fmt.Sscanf(trialDaysEnv, "%d", &trialDays)
 	}
 
-	checkoutSession, err := c.stripeService.CreateCheckoutSession(ctx, stripeCustomer.ID, trialDays)
+	checkoutSession, err := c.stripeService.CreateCheckoutSession(ctx, stripeCustomer.ID, trialDays, checkoutReq.SuccessURL, checkoutReq.CancelURL)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "cannot_create_checkout_session"})
 		return

@@ -22,7 +22,7 @@ type Interface interface {
 	CreateInvoiceItem(ctx *gin.Context, customerID string, amount float64, description string) *stripe.InvoiceItem
 	FinalizeInvoice(ctx *gin.Context, invoiceID string) *stripe.Invoice
 	GetEphemeralKeys(ctx *gin.Context, customerID string) *stripe.EphemeralKey
-	CreateCheckoutSession(ctx *gin.Context, customerID string, trialDays int64) (*stripe.CheckoutSession, error)
+	CreateCheckoutSession(ctx *gin.Context, customerID string, trialDays int64, successURL *string, cancelURL *string) (*stripe.CheckoutSession, error)
 }
 
 // Service implements the Stripe service interface
@@ -84,6 +84,7 @@ func (s *Service) GetOrCreateCustomer(ctx *gin.Context, userID primitive.ObjectI
 		log.Error().Err(err).Msg("cannot get stripe customer")
 		return nil
 	}
+	log.Debug().Str("customer_id", result.ID).Interface("metadata", result.Metadata).Msg("Retrieved existing Stripe customer")
 	return result
 }
 
@@ -202,7 +203,7 @@ func (s *Service) GetCustomer(ctx *gin.Context, customerID string, params *strip
 }
 
 // CreateCheckoutSession creates a new Stripe checkout session for the given customer ID and trial days
-func (s *Service) CreateCheckoutSession(ctx *gin.Context, customerID string, trialDays int64) (*stripe.CheckoutSession, error) {
+func (s *Service) CreateCheckoutSession(ctx *gin.Context, customerID string, trialDays int64, successURL *string, cancelURL *string) (*stripe.CheckoutSession, error) {
 	publicAddress := os.Getenv("PUBLIC_ADDRESS")
 	if publicAddress == "" {
 		publicAddress = "http://localhost:53631"
@@ -240,6 +241,13 @@ func (s *Service) CreateCheckoutSession(ctx *gin.Context, customerID string, tri
 		})
 	}
 
+	if successURL == nil {
+		successURL = stripe.String(baseURL + "/paywall?success=true")
+	}
+	if cancelURL == nil {
+		cancelURL = stripe.String(baseURL + "/paywall?canceled=true")
+	}
+
 	params := &stripe.CheckoutSessionCreateParams{
 		Customer: stripe.String(customerID),
 		LineItems: []*stripe.CheckoutSessionCreateLineItemParams{
@@ -257,8 +265,8 @@ func (s *Service) CreateCheckoutSession(ctx *gin.Context, customerID string, tri
 			// BillingCycleAnchor: stripe.Int64(trialEnd + 100),
 		},
 		Mode:                     stripe.String(string(stripe.CheckoutSessionModeSubscription)),
-		SuccessURL:               stripe.String(baseURL + "/checkout?success=true"),
-		CancelURL:                stripe.String(baseURL + "/checkout?canceled=true"),
+		SuccessURL:               successURL,
+		CancelURL:                cancelURL,
 		BillingAddressCollection: stripe.String(string(stripe.CheckoutSessionBillingAddressCollectionAuto)),
 	}
 

@@ -85,8 +85,8 @@ func (m *MockStripeService) GetCustomer(ctx *gin.Context, customerID string, par
 }
 
 // CreateCheckoutSession mocks the CreateCheckoutSession method
-func (m *MockStripeService) CreateCheckoutSession(ctx *gin.Context, customerID string, trialDays int64) (*stripe.CheckoutSession, error) {
-	args := m.Called(ctx, customerID, trialDays)
+func (m *MockStripeService) CreateCheckoutSession(ctx *gin.Context, customerID string, trialDays int64, successURL *string, cancelURL *string) (*stripe.CheckoutSession, error) {
+	args := m.Called(ctx, customerID, trialDays, successURL, cancelURL)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}

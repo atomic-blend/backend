@@ -1,6 +1,7 @@
 package payment
 
 import (
+	"bytes"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -24,6 +25,7 @@ func TestCheckout(t *testing.T) {
 		setupAuth      func(*gin.Context)
 		setupMocks     func(*mocks.MockStripeService, *mocks.MockUserRepository)
 		setupEnv       func()
+		requestBody    interface{}
 		expectedStatus int
 		expectedBody   map[string]interface{}
 	}{
@@ -40,10 +42,40 @@ func TestCheckout(t *testing.T) {
 				}
 				checkoutSession := &stripe.CheckoutSession{ID: "cs_123", URL: "https://checkout.stripe.com/pay/cs_123"}
 				stripeService.On("GetOrCreateCustomer", mock.Anything, mock.AnythingOfType("primitive.ObjectID")).Return(customer, nil)
-				stripeService.On("CreateCheckoutSession", mock.Anything, "cus_123", mock.AnythingOfType("int64")).Return(checkoutSession, nil)
+				stripeService.On("CreateCheckoutSession", mock.Anything, "cus_123", mock.AnythingOfType("int64"), (*string)(nil), (*string)(nil)).Return(checkoutSession, nil)
 			},
 			setupEnv: func() {
 				os.Unsetenv("STRIPE_CLOUD_TRIAL_DAYS")
+			},
+			requestBody: nil,
+			expectedStatus: http.StatusOK,
+			expectedBody: map[string]interface{}{
+				"session": "https://checkout.stripe.com/pay/cs_123",
+			},
+		},
+		{
+			name: "Successful checkout with URLs",
+			setupAuth: func(c *gin.Context) {
+				userID := primitive.NewObjectID()
+				c.Set("authUser", &auth.UserAuthInfo{UserID: userID})
+			},
+			setupMocks: func(stripeService *mocks.MockStripeService, userService *mocks.MockUserRepository) {
+				customer := &stripe.Customer{
+					ID:            "cus_123",
+					Subscriptions: &stripe.SubscriptionList{Data: []*stripe.Subscription{}},
+				}
+				checkoutSession := &stripe.CheckoutSession{ID: "cs_123", URL: "https://checkout.stripe.com/pay/cs_123"}
+				successURL := "https://example.com/success"
+				cancelURL := "https://example.com/cancel"
+				stripeService.On("GetOrCreateCustomer", mock.Anything, mock.AnythingOfType("primitive.ObjectID")).Return(customer, nil)
+				stripeService.On("CreateCheckoutSession", mock.Anything, "cus_123", mock.AnythingOfType("int64"), &successURL, &cancelURL).Return(checkoutSession, nil)
+			},
+			setupEnv: func() {
+				os.Unsetenv("STRIPE_CLOUD_TRIAL_DAYS")
+			},
+			requestBody: map[string]interface{}{
+				"success_url": "https://example.com/success",
+				"cancel_url":  "https://example.com/cancel",
 			},
 			expectedStatus: http.StatusOK,
 			expectedBody: map[string]interface{}{
@@ -60,6 +92,7 @@ func TestCheckout(t *testing.T) {
 				stripeService.On("GetOrCreateCustomer", mock.Anything, mock.AnythingOfType("primitive.ObjectID")).Return(nil, nil)
 			},
 			setupEnv:       func() { os.Unsetenv("STRIPE_CLOUD_TRIAL_DAYS") },
+			requestBody:    nil,
 			expectedStatus: http.StatusInternalServerError,
 			expectedBody:   map[string]interface{}{"error": "cannot_get_stripe_customer"},
 		},
@@ -72,6 +105,7 @@ func TestCheckout(t *testing.T) {
 				// No mocks needed
 			},
 			setupEnv:       func() { os.Unsetenv("STRIPE_CLOUD_TRIAL_DAYS") },
+			requestBody:    nil,
 			expectedStatus: http.StatusUnauthorized,
 			expectedBody:   map[string]interface{}{"error": "Authentication required"},
 		},
@@ -89,6 +123,7 @@ func TestCheckout(t *testing.T) {
 				stripeService.On("GetOrCreateCustomer", mock.Anything, mock.AnythingOfType("primitive.ObjectID")).Return(customer, nil)
 			},
 			setupEnv:       func() { os.Unsetenv("STRIPE_CLOUD_TRIAL_DAYS") },
+			requestBody:    nil,
 			expectedStatus: http.StatusBadRequest,
 			expectedBody:   map[string]interface{}{"error": "subscription_already_exists"},
 		},
@@ -104,9 +139,10 @@ func TestCheckout(t *testing.T) {
 					Subscriptions: &stripe.SubscriptionList{Data: []*stripe.Subscription{}},
 				}
 				stripeService.On("GetOrCreateCustomer", mock.Anything, mock.AnythingOfType("primitive.ObjectID")).Return(customer, nil)
-				stripeService.On("CreateCheckoutSession", mock.Anything, "cus_123", mock.AnythingOfType("int64")).Return(nil, assert.AnError)
+				stripeService.On("CreateCheckoutSession", mock.Anything, "cus_123", mock.AnythingOfType("int64"), (*string)(nil), (*string)(nil)).Return(nil, assert.AnError)
 			},
 			setupEnv:       func() { os.Unsetenv("STRIPE_CLOUD_TRIAL_DAYS") },
+			requestBody:    nil,
 			expectedStatus: http.StatusInternalServerError,
 			expectedBody:   map[string]interface{}{"error": "cannot_create_checkout_session"},
 		},
@@ -128,7 +164,14 @@ func TestCheckout(t *testing.T) {
 			controller := NewController(mockStripeService, mockUserService)
 
 			// Create request
-			req, _ := http.NewRequest("POST", "/payment/checkout", nil)
+			var req *http.Request
+			bodyData := tc.requestBody
+			if bodyData == nil {
+				bodyData = map[string]interface{}{}
+			}
+			body, _ := json.Marshal(bodyData)
+			req, _ = http.NewRequest("POST", "/payment/checkout", bytes.NewReader(body))
+			req.Header.Set("Content-Type", "application/json")
 
 			// Create response recorder
 			w := httptest.NewRecorder()
