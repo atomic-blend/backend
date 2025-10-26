@@ -10,6 +10,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+// CheckoutRequest represents the expected request body for the Checkout endpoint
 type CheckoutRequest struct {
 	// Add any fields if needed in the future
 	SuccessURL *string `json:"success_url"`

@@ -47,7 +47,7 @@ func TestCheckout(t *testing.T) {
 			setupEnv: func() {
 				os.Unsetenv("STRIPE_CLOUD_TRIAL_DAYS")
 			},
-			requestBody: nil,
+			requestBody:    nil,
 			expectedStatus: http.StatusOK,
 			expectedBody: map[string]interface{}{
 				"session": "https://checkout.stripe.com/pay/cs_123",

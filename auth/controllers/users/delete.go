@@ -2,8 +2,10 @@
 package users
 
 import (
-	"github.com/atomic-blend/backend/shared/middlewares/auth"
 	"net/http"
+
+	userdeleter "github.com/atomic-blend/backend/auth/utils/user_deleter"
+	"github.com/atomic-blend/backend/shared/middlewares/auth"
 
 	"github.com/gin-gonic/gin"
 )
@@ -41,19 +43,11 @@ func (c *UserController) DeleteAccount(ctx *gin.Context) {
 	}
 
 	// Delete all personal data first
-	if err := c.DeletePersonalData(ctx, userID); err != nil {
+	if err := userdeleter.DeletePersonalDataAndUser(userID, c.productivityClient, c.userRepo); err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete personal data: " + err.Error()})
 		return
 	}
 
-	// Delete the user
-	err = c.userRepo.Delete(ctx, userID.Hex())
-	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete account: " + err.Error()})
-		return
-	}
-
-	// Return success response
 	ctx.JSON(http.StatusOK, gin.H{
 		"message": "Account successfully deleted",
 	})
