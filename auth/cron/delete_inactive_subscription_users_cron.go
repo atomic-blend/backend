@@ -11,6 +11,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+// DeleteInactiveSubscriptionUsersCron deletes users with inactive subscriptions.
 func DeleteInactiveSubscriptionUsersCron() {
 	log.Info().Msg("Running DeleteInactiveSubscriptionUsersCron")
 	// TODO: get the user with subscriptionId == nil || status == cancelled
@@ -28,6 +29,7 @@ func DeleteInactiveSubscriptionUsersCron() {
 	log.Info().Msg("Completed DeleteInactiveSubscriptionUsersCron")
 }
 
+// DeleteInactiveSubscriptionUsers deletes users with inactive subscriptions.
 func DeleteInactiveSubscriptionUsers(userRepo user.Interface, productivityClient productivityclient.Interface) {
 	// get users with inactive subscriptions that exceed the grace period
 	gracePeriodDays := 7
