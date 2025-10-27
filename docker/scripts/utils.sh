@@ -22,6 +22,7 @@ show_help() {
     echo "  -e, --env-file FILE        Specify .env file (default: .env)"
     echo "  -b, --branch BRANCH        Specify branch to download files from (default: main)"
     echo "  -h, --help                 Show this help message"
+    echo "      --rc                   Prefer RC (release-candidate) images when available"
     echo ""
     echo "Examples:"
     echo "  $0                                    # Use default files"
@@ -56,6 +57,10 @@ parse_arguments() {
                 show_help
                 exit 0
                 ;;
+            --rc)
+                RC_MODE=1
+                shift 1
+                ;;
             *)
                 echo -e "${RED}Error: Unknown option $1${NC}" >&2
                 echo "Use -h or --help for usage information." >&2
@@ -69,6 +74,7 @@ parse_arguments() {
     export ENV_FILE="$env_file"
     export BRANCH="$branch"
     export GITHUB_REPO="$github_repo"
+    export RC_MODE="${RC_MODE:-0}"
 }
 
 # Function to check if required tools are installed

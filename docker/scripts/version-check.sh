@@ -11,6 +11,7 @@ source "$SCRIPT_DIR/utils.sh"
 get_ghcr_latest() {
     local image=$1
     local org_repo=$(echo $image | sed 's/ghcr\.io\///')
+    local rc_mode="${RC_MODE:-0}"
     
     # Get tags from GitHub API with authentication
     local response
@@ -35,17 +36,74 @@ get_ghcr_latest() {
         exit 1
     fi
     
-    local latest=$(echo "$response" | \
-        jq -r '.[]? | select(.metadata.container.tags[]? | test("^[0-9]+\\.[0-9]+(\\.[0-9]+)?$")) | .metadata.container.tags[]?' 2>/dev/null | \
-        grep -E '^[0-9]+\.[0-9]+(\.[0-9]+)?$' | \
-        sort -V | tail -1)
-    
-    if [ -z "$latest" ] || [ "$latest" = "null" ]; then
-        echo -e "${RED}Error: No valid version found for $image${NC}" >&2
-        exit 1
-    else
-        echo "$latest"
+    # Build a list of <tag>||<created_at> entries for all tags
+    local tags_and_dates
+    tags_and_dates=$(echo "$response" | \
+        jq -r '.[]? | (.metadata.container.tags[]? // empty) as $t | "",$t,"||",
+            (.created_at // "") | join("")' 2>/dev/null | sed '/^$/d' | sed 'N;s/\n//')
+
+    # Fallback simple extraction if above fails (older API shapes)
+    if [ -z "$tags_and_dates" ]; then
+        tags_and_dates=$(echo "$response" | \
+            jq -r '.[]? | .metadata.container.tags[]? as $t | "\($t)||\(.created_at)"' 2>/dev/null)
     fi
+
+    # Extract latest stable tag (semantic versions) by version sort
+    local latest_stable
+    latest_stable=$(echo "$tags_and_dates" | cut -d'|' -f1 | grep -E '^[0-9]+\.[0-9]+(\.[0-9]+)?$' | sort -V | tail -1)
+
+    # Get created_at for latest stable (if any)
+    local latest_stable_date=""
+    if [ -n "$latest_stable" ]; then
+        latest_stable_date=$(echo "$tags_and_dates" | awk -F"||" -v tag="$latest_stable" '$1==tag{print $2; exit}')
+    fi
+
+    # Extract most recent RC tag by created_at (if any)
+    local latest_rc_line
+    latest_rc_line=$(echo "$tags_and_dates" | grep -E '^[0-9]+\.[0-9]+(\.[0-9]+)?-rc-' | sort -t'|' -k2 | tail -1)
+    local latest_rc_tag=""
+    local latest_rc_date=""
+    if [ -n "$latest_rc_line" ]; then
+        latest_rc_tag=$(echo "$latest_rc_line" | cut -d'|' -f1)
+        latest_rc_date=$(echo "$latest_rc_line" | cut -d'|' -f2)
+    fi
+
+    # Decide which to return
+    if [ "$rc_mode" = "1" ]; then
+        # If RC exists and is newer than stable (by created_at), return RC
+        if [ -n "$latest_rc_tag" ]; then
+            if [ -z "$latest_stable_date" ]; then
+                echo "$latest_rc_tag"
+                return 0
+            fi
+            # Compare dates (ISO8601 strings compare lexicographically)
+            if [[ "$latest_rc_date" > "$latest_stable_date" ]]; then
+                echo "$latest_rc_tag"
+                return 0
+            fi
+        fi
+        # Otherwise fall back to stable if available
+        if [ -n "$latest_stable" ]; then
+            echo "$latest_stable"
+            return 0
+        fi
+    else
+        if [ -n "$latest_stable" ]; then
+            echo "$latest_stable"
+            return 0
+        fi
+    fi
+
+    # If we reach here, try to return any tag present (last resort)
+    local any_tag
+    any_tag=$(echo "$tags_and_dates" | cut -d'|' -f1 | tail -1)
+    if [ -n "$any_tag" ]; then
+        echo "$any_tag"
+        return 0
+    fi
+
+    echo -e "${RED}Error: No valid version found for $image${NC}" >&2
+    exit 1
 }
 
 # Function to get latest version for GitHub Container Registry images
