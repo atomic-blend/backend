@@ -173,3 +173,107 @@ func TestUserRepository_Delete(t *testing.T) {
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "user not found")
 }
+
+func TestUserRepository_FindInactiveSubscriptionUsers(t *testing.T) {
+	repo, cleanup := setupTestDB(t)
+	defer cleanup()
+
+	now := time.Now()
+	cutoffDate := now.AddDate(0, 0, -7) // 7 days ago
+
+	// Create users with different scenarios
+
+	// User 1: No subscriptionId, created more than 7 days ago (should be found)
+	email1 := "inactive1@example.com"
+	user1 := &models.UserEntity{
+		Email: &email1,
+	}
+	created1, err := repo.Create(context.Background(), user1)
+	require.NoError(t, err)
+	// Set createdAt to 8 days ago
+	pastCreatedAt1 := primitive.NewDateTimeFromTime(cutoffDate.AddDate(0, 0, -1))
+	created1.CreatedAt = &pastCreatedAt1
+	_, err = repo.Update(context.Background(), created1)
+	require.NoError(t, err)
+
+	// User 2: No subscriptionId, created recently (should not be found)
+	email2 := "active@example.com"
+	user2 := &models.UserEntity{
+		Email: &email2,
+	}
+	created2, err := repo.Create(context.Background(), user2)
+	require.NoError(t, err)
+	// CreatedAt is recent, no need to change
+
+	// User 3: Cancelled subscription, cancelled more than 7 days ago (should be found)
+	email3 := "cancelled_old@example.com"
+	status3 := "cancelled"
+	subID3 := "sub_cancelled"
+	user3 := &models.UserEntity{
+		Email: &email3,
+	}
+	created3, err := repo.Create(context.Background(), user3)
+	require.NoError(t, err)
+	// Set createdAt to 10 days ago
+	pastCreatedAt3 := primitive.NewDateTimeFromTime(now.AddDate(0, 0, -10))
+	created3.CreatedAt = &pastCreatedAt3
+	created3.SubscriptionStatus = &status3
+	created3.StripeSubscriptionID = &subID3
+	pastCancelledAt3 := primitive.NewDateTimeFromTime(cutoffDate.AddDate(0, 0, -1))
+	created3.CancelledAt = &pastCancelledAt3
+	_, err = repo.Update(context.Background(), created3)
+	require.NoError(t, err)
+
+	// User 4: Cancelled subscription, cancelled recently (should not be found)
+	email4 := "cancelled_recent@example.com"
+	status4 := "cancelled"
+	subID4 := "sub_cancelled_recent"
+	user4 := &models.UserEntity{
+		Email: &email4,
+	}
+	created4, err := repo.Create(context.Background(), user4)
+	require.NoError(t, err)
+	// Set createdAt to 10 days ago
+	pastCreatedAt4 := primitive.NewDateTimeFromTime(now.AddDate(0, 0, -10))
+	created4.CreatedAt = &pastCreatedAt4
+	created4.SubscriptionStatus = &status4
+	created4.StripeSubscriptionID = &subID4
+	recentCancelledAt4 := primitive.NewDateTimeFromTime(now.AddDate(0, 0, -1))
+	created4.CancelledAt = &recentCancelledAt4
+	_, err = repo.Update(context.Background(), created4)
+	require.NoError(t, err)
+
+	// User 5: Active subscription (should not be found)
+	email5 := "active_sub@example.com"
+	subID5 := "sub_123"
+	user5 := &models.UserEntity{
+		Email:                &email5,
+		StripeSubscriptionID: &subID5,
+	}
+	created5, err := repo.Create(context.Background(), user5)
+	require.NoError(t, err)
+	// Set createdAt to 8 days ago
+	pastCreatedAt5 := primitive.NewDateTimeFromTime(cutoffDate.AddDate(0, 0, -1))
+	created5.CreatedAt = &pastCreatedAt5
+	_, err = repo.Update(context.Background(), created5)
+	require.NoError(t, err)
+
+	// Call FindInactiveSubscriptionUsers with gracePeriodDays = 7
+	inactiveUsers, err := repo.FindInactiveSubscriptionUsers(context.Background(), 7)
+	assert.NoError(t, err)
+
+	// Should find user1 and user3
+	assert.Len(t, inactiveUsers, 2)
+
+	// Check that the found users are user1 and user3
+	foundIDs := make(map[string]bool)
+	for _, u := range inactiveUsers {
+		foundIDs[u.ID.Hex()] = true
+	}
+
+	assert.True(t, foundIDs[created1.ID.Hex()], "User1 should be found")
+	assert.True(t, foundIDs[created3.ID.Hex()], "User3 should be found")
+	assert.False(t, foundIDs[created2.ID.Hex()], "User2 should not be found")
+	assert.False(t, foundIDs[created4.ID.Hex()], "User4 should not be found")
+	assert.False(t, foundIDs[created5.ID.Hex()], "User5 should not be found")
+}

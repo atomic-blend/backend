@@ -277,12 +277,11 @@ func (r *Repository) AddPurchase(ctx *gin.Context, userID primitive.ObjectID, pu
 func (r *Repository) FindInactiveSubscriptionUsers(ctx context.Context, gracePeriodDays int) ([]*models.UserEntity, error) {
 	var filter bson.M
 
-	// get users with subscriptionId == nil and createdAt < cutoffDate
+	// get users with stripe_subscription_id == nil and created_at < cutoffDate
 	filter = bson.M{
-		"$or": []bson.M{
-			{"subscriptionId": nil},
-		},
-		"createdAt": bson.M{"$lt": primitive.NewDateTimeFromTime(time.Now().AddDate(0, 0, int(-gracePeriodDays)))},
+		"stripe_subscription_id": nil,
+		"subscription_status":    bson.M{"$ne": "cancelled"},
+		"created_at":             bson.M{"$lt": primitive.NewDateTimeFromTime(time.Now().AddDate(0, 0, int(-gracePeriodDays)))},
 	}
 
 	cursor, err := r.collection.Find(ctx, filter)
@@ -304,10 +303,10 @@ func (r *Repository) FindInactiveSubscriptionUsers(ctx context.Context, gracePer
 		return nil, err
 	}
 
-	// get users with status == cancelled and cancellationDate < cutoffDate
+	// get users with subscription_status == cancelled and cancelled_at < cutoffDate
 	filter = bson.M{
-		"subscriptionStatus": "cancelled",
-		"cancelledAt":        bson.M{"$lt": primitive.NewDateTimeFromTime(time.Now().AddDate(0, 0, int(-gracePeriodDays)))},
+		"subscription_status": "cancelled",
+		"cancelled_at":        bson.M{"$lt": primitive.NewDateTimeFromTime(time.Now().AddDate(0, 0, int(-gracePeriodDays)))},
 	}
 
 	cursor, err = r.collection.Find(ctx, filter)

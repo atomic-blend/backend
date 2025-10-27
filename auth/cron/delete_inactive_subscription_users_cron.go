@@ -23,6 +23,12 @@ func DeleteInactiveSubscriptionUsersCron() {
 		return
 	}
 
+	DeleteInactiveSubscriptionUsers(userRepo, productivityclientClient)
+
+	log.Info().Msg("Completed DeleteInactiveSubscriptionUsersCron")
+}
+
+func DeleteInactiveSubscriptionUsers(userRepo user.Interface, productivityClient productivityclient.Interface) {
 	// get users with inactive subscriptions that exceed the grace period
 	gracePeriodDays := 7
 	users, err := userRepo.FindInactiveSubscriptionUsers(context.TODO(), gracePeriodDays)
@@ -34,15 +40,13 @@ func DeleteInactiveSubscriptionUsersCron() {
 	for _, u := range users {
 		// delete user and data
 		log.Info().Str("userID", u.ID.Hex()).Msg("delete user with inactive subscription")
-		err := userdeleter.DeletePersonalDataAndUser(*u.ID, productivityclientClient, userRepo)
+		err := userdeleter.DeletePersonalDataAndUser(*u.ID, productivityClient, userRepo)
 		if err != nil {
 			log.Error().Err(err).Str("userID", u.ID.Hex()).Msg("Failed to delete personal data and user")
 			continue
 		}
 		log.Info().Str("userID", u.ID.Hex()).Msg("Successfully deleted user with inactive subscription")
 	}
-
-	log.Info().Msg("Completed DeleteInactiveSubscriptionUsersCron")
 }
 
 func initialize() (*user.Repository, *productivityclient.ProductivityClient, error) {
