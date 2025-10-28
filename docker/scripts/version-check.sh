@@ -112,6 +112,48 @@ get_ghcr_latest() {
     exit 1
 }
 
+# Function to get both latest stable and latest RC (with dates) for an image
+get_ghcr_versions() {
+    local image=$1
+    local org_repo=$(echo $image | sed 's/ghcr\.io\///')
+
+    # Get tags from GitHub API with authentication
+    local response
+    if [ -n "${GITHUB_TOKEN:-}" ]; then
+        response=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" "https://api.github.com/orgs/$(echo $org_repo | cut -d'/' -f1)/packages/container/$(echo $org_repo | cut -d'/' -f2)/versions")
+    else
+        response=$(curl -s "https://api.github.com/orgs/$(echo $org_repo | cut -d'/' -f1)/packages/container/$(echo $org_repo | cut -d'/' -f2)/versions")
+    fi
+
+    # Build simple lines: "<tag>||<created_at>"
+    local tags_and_dates
+    tags_and_dates=$(echo "$response" | jq -r '.[]? | .metadata.container.tags[]? as $t | "\($t)||\(.created_at)"' 2>/dev/null)
+
+    # latest stable tag by semver
+    local latest_stable
+    latest_stable=$(echo "$tags_and_dates" | awk -F'\\|\\|' '{print $1}' | grep -E '^[0-9]+\.[0-9]+(\.[0-9]+)?$' | sort -V | tail -1)
+
+    local latest_stable_date=""
+    if [ -n "$latest_stable" ]; then
+        latest_stable_date=$(echo "$tags_and_dates" | awk -F'\\|\\|' -v tag="$latest_stable" '$1==tag{print $2; exit}')
+    fi
+
+    # latest rc by created_at
+    local rc_lines
+    rc_lines=$(echo "$tags_and_dates" | awk -F'\\|\\|' '/-rc-/{print $2 "||" $1}')
+    local latest_rc_tag=""
+    local latest_rc_date=""
+    if [ -n "$rc_lines" ]; then
+        local latest_rc_line
+        latest_rc_line=$(echo "$rc_lines" | sort | tail -1)
+        latest_rc_date=$(echo "$latest_rc_line" | cut -d'|' -f1)
+        latest_rc_tag=$(echo "$latest_rc_line" | cut -d'|' -f3-)
+    fi
+
+    # Output: stable||stable_date||rc||rc_date
+    echo "${latest_stable}||${latest_stable_date}||${latest_rc_tag}||${latest_rc_date}"
+}
+
 # Function to get latest version for GitHub Container Registry images
 get_latest_version() {
     local image=$1
@@ -190,7 +232,22 @@ display_version_table() {
         local base_image="${IMAGES[$i]}"
         local env_var="${ENV_VARS[$i]}"
         local current_version=$(get_current_version "$env_var")
-        local latest_version=$(get_latest_version "$base_image" "$current_version")
+        # Get both stable and rc candidates so we can show RC in the table when requested
+        local versions_line
+        versions_line=$(get_ghcr_versions "$base_image")
+        # versions_line: stable||stable_date||rc||rc_date
+        local latest_stable=$(echo "$versions_line" | cut -d'|' -f1)
+        local latest_stable_date=$(echo "$versions_line" | cut -d'|' -f3)
+        local latest_rc=$(echo "$versions_line" | cut -d'|' -f5-)
+        local latest_rc_date=$(echo "$versions_line" | cut -d'|' -f7)
+
+        # Decide which to present as 'latest' in the table
+        local latest_version
+        if [ "${RC_MODE:-0}" = "1" ] && [ -n "$latest_rc" ] && [ -n "$latest_rc_date" ] && [ -n "$latest_stable_date" ] && [[ "$latest_rc_date" > "$latest_stable_date" ]]; then
+            latest_version="$latest_rc"
+        else
+            latest_version="$latest_stable"
+        fi
         
         # Extract just the service name for cleaner display
         local service_name=$(echo $base_image | sed 's/ghcr\.io\/atomic-blend\///')
