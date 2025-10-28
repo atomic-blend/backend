@@ -95,20 +95,13 @@ func TestIsUserSubscribed_UserWithExpiredSubscription(t *testing.T) {
 
 	// Create purchase with expired subscription
 	expiredTime := time.Now().Add(-24 * time.Hour).UnixMilli() // 1 day ago
-	purchaseType := "REVENUE_CAT"
-	purchases := []*models.PurchaseEntity{
-		{
-			ID:   primitive.NewObjectID(),
-			Type: &purchaseType,
-			PurchaseData: models.RevenueCatPurchaseData{
-				ExpirationAtMs: expiredTime,
-				ProductID:      "test_product",
-				AppUserID:      "test_user",
-			},
-			CreatedAt: primitive.NewDateTimeFromTime(time.Now()),
-			UpdatedAt: primitive.NewDateTimeFromTime(time.Now()),
-		},
+	purchaseData := models.RevenueCatPurchaseData{
+		ExpirationAtMs: expiredTime,
+		ProductID:      "test_product",
+		AppUserID:      "test_user",
 	}
+	purchase := models.NewRevenueCatPurchase(purchaseData)
+	purchases := []*models.PurchaseEntity{&purchase}
 
 	user := createTestUser(t, repo, purchases)
 
@@ -122,20 +115,13 @@ func TestIsUserSubscribed_UserWithActiveSubscription(t *testing.T) {
 
 	// Create purchase with active subscription
 	futureTime := time.Now().Add(24 * time.Hour).UnixMilli() // 1 day in future
-	purchaseType := "REVENUE_CAT"
-	purchases := []*models.PurchaseEntity{
-		{
-			ID:   primitive.NewObjectID(),
-			Type: &purchaseType,
-			PurchaseData: models.RevenueCatPurchaseData{
-				ExpirationAtMs: futureTime,
-				ProductID:      "test_product",
-				AppUserID:      "test_user",
-			},
-			CreatedAt: primitive.NewDateTimeFromTime(time.Now()),
-			UpdatedAt: primitive.NewDateTimeFromTime(time.Now()),
-		},
+	purchaseData := models.RevenueCatPurchaseData{
+		ExpirationAtMs: futureTime,
+		ProductID:      "test_product",
+		AppUserID:      "test_user",
 	}
+	purchase := models.NewRevenueCatPurchase(purchaseData)
+	purchases := []*models.PurchaseEntity{&purchase}
 
 	user := createTestUser(t, repo, purchases)
 
@@ -150,31 +136,22 @@ func TestIsUserSubscribed_UserWithMultiplePurchases_OneActive(t *testing.T) {
 	// Create multiple purchases - one expired, one active
 	expiredTime := time.Now().Add(-24 * time.Hour).UnixMilli() // 1 day ago
 	futureTime := time.Now().Add(24 * time.Hour).UnixMilli()   // 1 day in future
-	purchaseType := "REVENUE_CAT"
-	purchases := []*models.PurchaseEntity{
-		{
-			ID:   primitive.NewObjectID(),
-			Type: &purchaseType,
-			PurchaseData: models.RevenueCatPurchaseData{
-				ExpirationAtMs: expiredTime,
-				ProductID:      "expired_product",
-				AppUserID:      "test_user",
-			},
-			CreatedAt: primitive.NewDateTimeFromTime(time.Now()),
-			UpdatedAt: primitive.NewDateTimeFromTime(time.Now()),
-		},
-		{
-			ID:   primitive.NewObjectID(),
-			Type: &purchaseType,
-			PurchaseData: models.RevenueCatPurchaseData{
-				ExpirationAtMs: futureTime,
-				ProductID:      "active_product",
-				AppUserID:      "test_user",
-			},
-			CreatedAt: primitive.NewDateTimeFromTime(time.Now()),
-			UpdatedAt: primitive.NewDateTimeFromTime(time.Now()),
-		},
+
+	expiredPurchaseData := models.RevenueCatPurchaseData{
+		ExpirationAtMs: expiredTime,
+		ProductID:      "expired_product",
+		AppUserID:      "test_user",
 	}
+	expiredPurchase := models.NewRevenueCatPurchase(expiredPurchaseData)
+
+	activePurchaseData := models.RevenueCatPurchaseData{
+		ExpirationAtMs: futureTime,
+		ProductID:      "active_product",
+		AppUserID:      "test_user",
+	}
+	activePurchase := models.NewRevenueCatPurchase(activePurchaseData)
+
+	purchases := []*models.PurchaseEntity{&expiredPurchase, &activePurchase}
 
 	user := createTestUser(t, repo, purchases)
 
@@ -187,20 +164,13 @@ func TestIsUserSubscribed_UserWithZeroExpirationTime(t *testing.T) {
 	defer cleanup()
 
 	// Create purchase with zero expiration time (should be treated as expired)
-	purchaseType := "REVENUE_CAT"
-	purchases := []*models.PurchaseEntity{
-		{
-			ID:   primitive.NewObjectID(),
-			Type: &purchaseType,
-			PurchaseData: models.RevenueCatPurchaseData{
-				ExpirationAtMs: 0,
-				ProductID:      "test_product",
-				AppUserID:      "test_user",
-			},
-			CreatedAt: primitive.NewDateTimeFromTime(time.Now()),
-			UpdatedAt: primitive.NewDateTimeFromTime(time.Now()),
-		},
+	purchaseData := models.RevenueCatPurchaseData{
+		ExpirationAtMs: 0,
+		ProductID:      "test_product",
+		AppUserID:      "test_user",
 	}
+	purchase := models.NewRevenueCatPurchase(purchaseData)
+	purchases := []*models.PurchaseEntity{&purchase}
 
 	user := createTestUser(t, repo, purchases)
 
@@ -213,23 +183,239 @@ func TestIsUserSubscribed_UserWithNegativeExpirationTime(t *testing.T) {
 	defer cleanup()
 
 	// Create purchase with negative expiration time (should be treated as expired)
-	purchaseType := "REVENUE_CAT"
-	purchases := []*models.PurchaseEntity{
-		{
-			ID:   primitive.NewObjectID(),
-			Type: &purchaseType,
-			PurchaseData: models.RevenueCatPurchaseData{
-				ExpirationAtMs: -1000,
-				ProductID:      "test_product",
-				AppUserID:      "test_user",
-			},
-			CreatedAt: primitive.NewDateTimeFromTime(time.Now()),
-			UpdatedAt: primitive.NewDateTimeFromTime(time.Now()),
-		},
+	purchaseData := models.RevenueCatPurchaseData{
+		ExpirationAtMs: -1000,
+		ProductID:      "test_product",
+		AppUserID:      "test_user",
 	}
+	purchase := models.NewRevenueCatPurchase(purchaseData)
+	purchases := []*models.PurchaseEntity{&purchase}
 
 	user := createTestUser(t, repo, purchases)
 
 	result := IsUserSubscribed(ctx, *user.ID)
 	assert.False(t, result)
+}
+
+func TestIsUserSubscribed_UserWithActiveStripeSubscription(t *testing.T) {
+	repo, ctx, cleanup := setupTestDB(t)
+	defer cleanup()
+
+	// Create purchase with active Stripe subscription
+	stripePurchaseData := models.StripePurchaseData{
+		ID:             "sub_123456",
+		Status:         "active",
+		CustomerID:     "cus_123456",
+		SubscriptionID: "sub_123456",
+		Amount:         999,
+		Currency:       "usd",
+	}
+	purchase := models.NewStripePurchase(stripePurchaseData)
+	purchases := []*models.PurchaseEntity{&purchase}
+
+	user := createTestUser(t, repo, purchases)
+
+	result := IsUserSubscribed(ctx, *user.ID)
+	assert.True(t, result)
+}
+
+func TestIsUserSubscribed_UserWithInactiveStripeSubscription(t *testing.T) {
+	repo, ctx, cleanup := setupTestDB(t)
+	defer cleanup()
+
+	// Create purchase with inactive Stripe subscription
+	stripePurchaseData := models.StripePurchaseData{
+		ID:             "sub_123456",
+		Status:         "canceled",
+		CustomerID:     "cus_123456",
+		SubscriptionID: "sub_123456",
+		Amount:         999,
+		Currency:       "usd",
+	}
+	purchase := models.NewStripePurchase(stripePurchaseData)
+	purchases := []*models.PurchaseEntity{&purchase}
+
+	user := createTestUser(t, repo, purchases)
+
+	result := IsUserSubscribed(ctx, *user.ID)
+	assert.False(t, result)
+}
+
+func TestIsUserSubscribed_UserWithPastDueStripeSubscription(t *testing.T) {
+	repo, ctx, cleanup := setupTestDB(t)
+	defer cleanup()
+
+	// Create purchase with past_due Stripe subscription (should be treated as inactive)
+	stripePurchaseData := models.StripePurchaseData{
+		ID:             "sub_123456",
+		Status:         "past_due",
+		CustomerID:     "cus_123456",
+		SubscriptionID: "sub_123456",
+		Amount:         999,
+		Currency:       "usd",
+	}
+	purchase := models.NewStripePurchase(stripePurchaseData)
+	purchases := []*models.PurchaseEntity{&purchase}
+
+	user := createTestUser(t, repo, purchases)
+
+	result := IsUserSubscribed(ctx, *user.ID)
+	assert.False(t, result)
+}
+
+func TestIsUserSubscribed_UserWithBothRevenueCatAndStripe_BothActive(t *testing.T) {
+	repo, ctx, cleanup := setupTestDB(t)
+	defer cleanup()
+
+	// Create both RevenueCat and Stripe purchases, both active
+	futureTime := time.Now().Add(24 * time.Hour).UnixMilli()
+	rcPurchaseData := models.RevenueCatPurchaseData{
+		ExpirationAtMs: futureTime,
+		ProductID:      "test_product",
+		AppUserID:      "test_user",
+	}
+	rcPurchase := models.NewRevenueCatPurchase(rcPurchaseData)
+
+	stripePurchaseData := models.StripePurchaseData{
+		ID:             "sub_123456",
+		Status:         "active",
+		CustomerID:     "cus_123456",
+		SubscriptionID: "sub_123456",
+		Amount:         999,
+		Currency:       "usd",
+	}
+	stripePurchase := models.NewStripePurchase(stripePurchaseData)
+
+	purchases := []*models.PurchaseEntity{&rcPurchase, &stripePurchase}
+
+	user := createTestUser(t, repo, purchases)
+
+	result := IsUserSubscribed(ctx, *user.ID)
+	assert.True(t, result)
+}
+
+func TestIsUserSubscribed_UserWithBothRevenueCatAndStripe_OnlyStripeActive(t *testing.T) {
+	repo, ctx, cleanup := setupTestDB(t)
+	defer cleanup()
+
+	// Create both purchases - RevenueCat expired, Stripe active
+	expiredTime := time.Now().Add(-24 * time.Hour).UnixMilli()
+	rcPurchaseData := models.RevenueCatPurchaseData{
+		ExpirationAtMs: expiredTime,
+		ProductID:      "test_product",
+		AppUserID:      "test_user",
+	}
+	rcPurchase := models.NewRevenueCatPurchase(rcPurchaseData)
+
+	stripePurchaseData := models.StripePurchaseData{
+		ID:             "sub_123456",
+		Status:         "active",
+		CustomerID:     "cus_123456",
+		SubscriptionID: "sub_123456",
+		Amount:         999,
+		Currency:       "usd",
+	}
+	stripePurchase := models.NewStripePurchase(stripePurchaseData)
+
+	purchases := []*models.PurchaseEntity{&rcPurchase, &stripePurchase}
+
+	user := createTestUser(t, repo, purchases)
+
+	result := IsUserSubscribed(ctx, *user.ID)
+	assert.True(t, result)
+}
+
+func TestIsUserSubscribed_UserWithBothRevenueCatAndStripe_OnlyRevenueCatActive(t *testing.T) {
+	repo, ctx, cleanup := setupTestDB(t)
+	defer cleanup()
+
+	// Create both purchases - RevenueCat active, Stripe inactive
+	futureTime := time.Now().Add(24 * time.Hour).UnixMilli()
+	rcPurchaseData := models.RevenueCatPurchaseData{
+		ExpirationAtMs: futureTime,
+		ProductID:      "test_product",
+		AppUserID:      "test_user",
+	}
+	rcPurchase := models.NewRevenueCatPurchase(rcPurchaseData)
+
+	stripePurchaseData := models.StripePurchaseData{
+		ID:             "sub_123456",
+		Status:         "canceled",
+		CustomerID:     "cus_123456",
+		SubscriptionID: "sub_123456",
+		Amount:         999,
+		Currency:       "usd",
+	}
+	stripePurchase := models.NewStripePurchase(stripePurchaseData)
+
+	purchases := []*models.PurchaseEntity{&rcPurchase, &stripePurchase}
+
+	user := createTestUser(t, repo, purchases)
+
+	result := IsUserSubscribed(ctx, *user.ID)
+	assert.True(t, result)
+}
+
+func TestIsUserSubscribed_UserWithBothRevenueCatAndStripe_BothInactive(t *testing.T) {
+	repo, ctx, cleanup := setupTestDB(t)
+	defer cleanup()
+
+	// Create both purchases - both inactive
+	expiredTime := time.Now().Add(-24 * time.Hour).UnixMilli()
+	rcPurchaseData := models.RevenueCatPurchaseData{
+		ExpirationAtMs: expiredTime,
+		ProductID:      "test_product",
+		AppUserID:      "test_user",
+	}
+	rcPurchase := models.NewRevenueCatPurchase(rcPurchaseData)
+
+	stripePurchaseData := models.StripePurchaseData{
+		ID:             "sub_123456",
+		Status:         "incomplete_expired",
+		CustomerID:     "cus_123456",
+		SubscriptionID: "sub_123456",
+		Amount:         999,
+		Currency:       "usd",
+	}
+	stripePurchase := models.NewStripePurchase(stripePurchaseData)
+
+	purchases := []*models.PurchaseEntity{&rcPurchase, &stripePurchase}
+
+	user := createTestUser(t, repo, purchases)
+
+	result := IsUserSubscribed(ctx, *user.ID)
+	assert.False(t, result)
+}
+
+func TestIsUserSubscribed_UserWithMultipleStripePurchases(t *testing.T) {
+	repo, ctx, cleanup := setupTestDB(t)
+	defer cleanup()
+
+	// Create multiple Stripe purchases - one inactive, one active
+	inactiveStripePurchaseData := models.StripePurchaseData{
+		ID:             "sub_111111",
+		Status:         "canceled",
+		CustomerID:     "cus_123456",
+		SubscriptionID: "sub_111111",
+		Amount:         999,
+		Currency:       "usd",
+	}
+	inactivePurchase := models.NewStripePurchase(inactiveStripePurchaseData)
+
+	activeStripePurchaseData := models.StripePurchaseData{
+		ID:             "sub_222222",
+		Status:         "active",
+		CustomerID:     "cus_123456",
+		SubscriptionID: "sub_222222",
+		Amount:         1999,
+		Currency:       "usd",
+	}
+	activePurchase := models.NewStripePurchase(activeStripePurchaseData)
+
+	purchases := []*models.PurchaseEntity{&inactivePurchase, &activePurchase}
+
+	user := createTestUser(t, repo, purchases)
+
+	result := IsUserSubscribed(ctx, *user.ID)
+	assert.True(t, result)
 }

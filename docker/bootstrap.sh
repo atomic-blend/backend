@@ -8,6 +8,14 @@ if [ -z "$PUBLIC_ADDRESS" ]; then
     exit 1
 fi
 
+# The first positional argument is the app name (e.g. mail, task)
+APP_NAME="$1"
+if [ -z "$APP_NAME" ]; then
+    echo "Usage: $0 <app-name>"
+    echo "Example: $0 mail"
+    exit 1
+fi
+
 # Generate the rest API URL based on HTTPS setting
 # Check if PUBLIC_ADDRESS is an IP address (IPv4 pattern)
 if [[ "$PUBLIC_ADDRESS" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
@@ -32,3 +40,26 @@ echo "Generated REST API URL: $REST_API_URL"
 sed -i "s|\"restApiUrl\":[[:space:]]*\"[^\"]*\"|\"restApiUrl\": \"$REST_API_URL\"|g" /usr/share/nginx/html/assets/assets/configs/prod.json
 
 echo "Updated prod.json with REST API URL"
+
+# Build public URL for the given app name and update publicUrl key in prod.json
+# If PUBLIC_ADDRESS is an IP, we won't prefix with the app name (same behaviour as restApiUrl logic)
+if [[ "$PUBLIC_ADDRESS" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    if [ "$HTTPS" = "true" ]; then
+        PUBLIC_URL="https://${PUBLIC_ADDRESS}"
+    else
+        PUBLIC_URL="http://${PUBLIC_ADDRESS}"
+    fi
+else
+    if [ "$HTTPS" = "true" ]; then
+        PUBLIC_URL="https://${APP_NAME}.${PUBLIC_ADDRESS}"
+    else
+        PUBLIC_URL="http://${APP_NAME}.${PUBLIC_ADDRESS}"
+    fi
+fi
+
+echo "Generated PUBLIC URL for app '$APP_NAME': $PUBLIC_URL"
+
+# Replace the publicUrl in the assets/assets/configs/prod.json
+sed -i "s|\"publicUrl\":[[:space:]]*\"[^\"]*\"|\"publicUrl\": \"$PUBLIC_URL\"|g" /usr/share/nginx/html/assets/assets/configs/prod.json
+
+echo "Updated prod.json with PUBLIC URL for app '$APP_NAME'"
