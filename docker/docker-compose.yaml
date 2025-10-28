@@ -63,7 +63,7 @@ services:
         target: /root/.netrc
       - type: bind
         source: ./private.key
-        target: /dkim_private_key.pem
+        target: /app/dkim_private_key.pem
     restart: unless-stopped
 
   mail:
