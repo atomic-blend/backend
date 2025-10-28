@@ -89,10 +89,10 @@ else
             # key missing -> decide whether to prefix with a comma depending on existing keys
             if grep -q '"[[:alnum:]_]\+"' "$PROD_JSON"; then
                 # file contains other keys -> add a leading comma
-                sed -e ':a' -e 'N' -e '$!ba' -e "s/}\s*$/,\n  \"${key}\": \"${value}\"\n}/" "$PROD_JSON" > "$tmp" && mv "$tmp" "$PROD_JSON"
+                sed -e ':a' -e 'N' -e '$!ba' -e "s|}[[:space:]]*$|,\n  \"${key}\": \"${value}\"\n}|" "$PROD_JSON" > "$tmp" && mv "$tmp" "$PROD_JSON"
             else
                 # empty object -> don't add leading comma
-                sed -e ':a' -e 'N' -e '$!ba' -e "s/}\s*$/  \"${key}\": \"${value}\"\n}/" "$PROD_JSON" > "$tmp" && mv "$tmp" "$PROD_JSON"
+                sed -e ':a' -e 'N' -e '$!ba' -e "s|}[[:space:]]*$|  \"${key}\": \"${value}\"\n}|" "$PROD_JSON" > "$tmp" && mv "$tmp" "$PROD_JSON"
             fi
         fi
     }
@@ -102,3 +102,16 @@ else
 
     echo "Updated prod.json with REST API URL and PUBLIC URL (sed fallback)"
 fi
+
+# Ensure the file is readable by the webserver and parent dir is executable.
+# Make prod.json world-readable and parent dir accessible. Try to chown to common nginx users if available.
+chmod 644 "$PROD_JSON" || true
+chmod 755 "$(dirname "$PROD_JSON")" || true
+
+if id nginx >/dev/null 2>&1; then
+    chown nginx:nginx "$PROD_JSON" 2>/dev/null || true
+elif id www-data >/dev/null 2>&1; then
+    chown www-data:www-data "$PROD_JSON" 2>/dev/null || true
+fi
+
+echo "Set permissions on $PROD_JSON"
