@@ -52,7 +52,6 @@ func receiveMail(m *amqp.Delivery, payload ReceivedMailPayload) {
 	)
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed to create FCM client")
-		return
 	}
 
 	mailContent := &models.RawMail{
