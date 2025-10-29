@@ -51,8 +51,7 @@ func receiveMail(m *amqp.Delivery, payload ReceivedMailPayload) {
 		fcm.WithCredentialsFile(googleApplicationCredentials),
 	)
 	if err != nil {
-		log.Fatal().Err(err).Msg("Failed to create FCM client")
-		return
+		log.Error().Err(err).Msg("Failed to create FCM client")
 	}
 
 	mailContent := &models.RawMail{

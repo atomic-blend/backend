@@ -30,6 +30,7 @@ type Interface interface {
 	FindByID(ctx *gin.Context, id primitive.ObjectID) (*models.UserEntity, error)
 	ResetAllUserData(ctx *gin.Context, userID primitive.ObjectID) error
 	AddPurchase(ctx *gin.Context, userID primitive.ObjectID, purchaseEntry *models.PurchaseEntity) error
+	FindInactiveSubscriptionUsers(ctx context.Context, gracePeriodDays int) ([]*models.UserEntity, error)
 }
 
 // Repository provides methods to interact with user data in the database
@@ -270,4 +271,61 @@ func (r *Repository) AddPurchase(ctx *gin.Context, userID primitive.ObjectID, pu
 	}
 
 	return nil
+}
+
+// FindInactiveSubscriptionUsers finds users with inactive or cancelled subscriptions before a cutoff date
+func (r *Repository) FindInactiveSubscriptionUsers(ctx context.Context, gracePeriodDays int) ([]*models.UserEntity, error) {
+	var filter bson.M
+
+	// get users with stripe_subscription_id == nil and created_at < cutoffDate
+	filter = bson.M{
+		"stripe_subscription_id": nil,
+		"subscription_status":    bson.M{"$ne": "cancelled"},
+		"created_at":             bson.M{"$lt": primitive.NewDateTimeFromTime(time.Now().AddDate(0, 0, int(-gracePeriodDays)))},
+	}
+
+	cursor, err := r.collection.Find(ctx, filter)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var users []*models.UserEntity
+	for cursor.Next(ctx) {
+		var user models.UserEntity
+		if err := cursor.Decode(&user); err != nil {
+			return nil, err
+		}
+		users = append(users, &user)
+	}
+
+	if err := cursor.Err(); err != nil {
+		return nil, err
+	}
+
+	// get users with subscription_status == cancelled and cancelled_at < cutoffDate
+	filter = bson.M{
+		"subscription_status": "cancelled",
+		"cancelled_at":        bson.M{"$lt": primitive.NewDateTimeFromTime(time.Now().AddDate(0, 0, int(-gracePeriodDays)))},
+	}
+
+	cursor, err = r.collection.Find(ctx, filter)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	for cursor.Next(ctx) {
+		var user models.UserEntity
+		if err := cursor.Decode(&user); err != nil {
+			return nil, err
+		}
+		users = append(users, &user)
+	}
+
+	if err := cursor.Err(); err != nil {
+		return nil, err
+	}
+
+	return users, nil
 }

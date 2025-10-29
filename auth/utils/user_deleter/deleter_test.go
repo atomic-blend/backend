@@ -1,5 +1,5 @@
 // filepath: /Users/brandonguigo/workspace/atomic-blend/backend/controllers/users/utils_test.go
-package users
+package userdeleter
 
 import (
 	"errors"
@@ -17,11 +17,7 @@ import (
 
 func TestDeletePersonalData_Success(t *testing.T) {
 	// Setup
-	mockUserRepo := new(mocks.MockUserRepository)
-	mockUserRoleRepo := new(mocks.MockUserRoleRepository)
 	mockProductivityClient := new(mocks.MockProductivityClient)
-
-	controller := NewUserController(mockUserRepo, mockUserRoleRepo, mockProductivityClient)
 
 	// Create gin context
 	gin.SetMode(gin.TestMode)
@@ -35,22 +31,21 @@ func TestDeletePersonalData_Success(t *testing.T) {
 	// Mock successful gRPC call
 	mockResponse := &connect.Response[productivityv1.DeleteUserDataResponse]{}
 	mockProductivityClient.On("DeleteUserData", mock.Anything, mock.Anything).Return(mockResponse, nil)
+	mockUserRepo := new(mocks.MockUserRepository)
+	mockUserRepo.On("Delete", mock.Anything, userID.Hex()).Return(nil)
 
 	// Call the function
-	err := controller.DeletePersonalData(ctx, userID)
+	err := DeletePersonalDataAndUser(userID, mockProductivityClient, mockUserRepo)
 
 	// Assertions
 	assert.NoError(t, err)
 	mockProductivityClient.AssertExpectations(t)
+	mockUserRepo.AssertExpectations(t)
 }
 
 func TestDeletePersonalData_gRPCError(t *testing.T) {
 	// Setup
-	mockUserRepo := new(mocks.MockUserRepository)
-	mockUserRoleRepo := new(mocks.MockUserRoleRepository)
 	mockProductivityClient := new(mocks.MockProductivityClient)
-
-	controller := NewUserController(mockUserRepo, mockUserRoleRepo, mockProductivityClient)
 
 	// Create gin context
 	gin.SetMode(gin.TestMode)
@@ -64,23 +59,21 @@ func TestDeletePersonalData_gRPCError(t *testing.T) {
 
 	// Mock failing gRPC call
 	mockProductivityClient.On("DeleteUserData", mock.Anything, mock.Anything).Return(nil, expectedErr)
+	mockUserRepo := new(mocks.MockUserRepository)
 
 	// Call the function
-	err := controller.DeletePersonalData(ctx, userID)
+	err := DeletePersonalDataAndUser(userID, mockProductivityClient, mockUserRepo)
 
 	// Assertions
 	assert.Error(t, err)
 	assert.Equal(t, expectedErr, err)
 	mockProductivityClient.AssertExpectations(t)
+	mockUserRepo.AssertExpectations(t)
 }
 
 func TestDeletePersonalData_CorrectRequestData(t *testing.T) {
 	// Setup
-	mockUserRepo := new(mocks.MockUserRepository)
-	mockUserRoleRepo := new(mocks.MockUserRoleRepository)
 	mockProductivityClient := new(mocks.MockProductivityClient)
-
-	controller := NewUserController(mockUserRepo, mockUserRoleRepo, mockProductivityClient)
 
 	// Create gin context
 	gin.SetMode(gin.TestMode)
@@ -100,8 +93,12 @@ func TestDeletePersonalData_CorrectRequestData(t *testing.T) {
 			return req.Msg != nil
 		})).Return(mockResponse, nil)
 
+	// Mock user repository delete
+	mockUserRepo := new(mocks.MockUserRepository)
+	mockUserRepo.On("Delete", mock.Anything, userID.Hex()).Return(nil)
+
 	// Call the function
-	err := controller.DeletePersonalData(ctx, userID)
+	err := DeletePersonalDataAndUser(userID, mockProductivityClient, mockUserRepo)
 
 	// Assertions
 	assert.NoError(t, err)

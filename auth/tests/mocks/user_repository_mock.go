@@ -1,8 +1,9 @@
 package mocks
 
 import (
-	"github.com/atomic-blend/backend/shared/models"
 	"context"
+
+	"github.com/atomic-blend/backend/shared/models"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/mock"
@@ -90,4 +91,13 @@ func (m *MockUserRepository) GetByEmail(ctx context.Context, email string) (*mod
 		return nil, args.Error(1)
 	}
 	return args.Get(0).(*models.UserEntity), args.Error(1)
+}
+
+// FindInactiveSubscriptionUsers finds users with inactive subscriptions
+func (m *MockUserRepository) FindInactiveSubscriptionUsers(ctx context.Context, gracePeriodDays int) ([]*models.UserEntity, error) {
+	args := m.Called(ctx, gracePeriodDays)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]*models.UserEntity), args.Error(1)
 }

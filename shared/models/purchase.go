@@ -9,15 +9,18 @@ import (
 // ValidPurchaseTypes is used in validators.go
 var ValidPurchaseTypes = []string{
 	"REVENUE_CAT",
+	"STRIPE",
 }
 
-// PurchaseEntity represents a generic purchase record
+// PurchaseEntity represents a generic purchase record using a tagged union pattern
+// Only one of RevenueCatData or StripeData should be non-nil, indicated by the Type field
 type PurchaseEntity struct {
-	ID           primitive.ObjectID     `json:"id" bson:"_id,omitempty"`
-	Type         *string                `json:"type" bson:"type" binding:"required,validPurchaseType"`
-	PurchaseData RevenueCatPurchaseData `json:"purchaseData" bson:"purchase_data"`
-	CreatedAt    primitive.DateTime     `json:"createdAt" bson:"created_at"`
-	UpdatedAt    primitive.DateTime     `json:"updatedAt" bson:"updated_at"`
+	ID             primitive.ObjectID      `json:"id" bson:"_id,omitempty"`
+	Type           *string                 `json:"type" bson:"type" binding:"required,validPurchaseType"`
+	RevenueCatData *RevenueCatPurchaseData `json:"revenueCatData,omitempty" bson:"revenue_cat_data,omitempty"`
+	StripeData     *StripePurchaseData     `json:"stripeData,omitempty" bson:"stripe_data,omitempty"`
+	CreatedAt      primitive.DateTime      `json:"createdAt" bson:"created_at"`
+	UpdatedAt      primitive.DateTime      `json:"updatedAt" bson:"updated_at"`
 }
 
 // RevenueCatPurchaseData represents RevenueCat specific purchase data
@@ -64,16 +67,92 @@ type RevenueCatPayload struct {
 	Event      RevenueCatPurchaseData `json:"event"`
 }
 
+// StripePurchaseData represents Stripe specific purchase data
+type StripePurchaseData struct {
+	ID             string            `json:"id"`
+	Object         string            `json:"object"`
+	Amount         int64             `json:"amount"`
+	AmountCaptured int64             `json:"amount_captured"`
+	AmountRefunded int64             `json:"amount_refunded"`
+	Currency       string            `json:"currency"`
+	CustomerID     string            `json:"customer"`
+	Description    string            `json:"description"`
+	Invoice        string            `json:"invoice"`
+	Metadata       map[string]string `json:"metadata"`
+	PaymentIntent  string            `json:"payment_intent"`
+	PaymentMethod  string            `json:"payment_method"`
+	ReceiptEmail   string            `json:"receipt_email"`
+	ReceiptURL     string            `json:"receipt_url"`
+	Status         string            `json:"status"`
+	SubscriptionID string            `json:"subscription"`
+	Created        int64             `json:"created"`
+	// Add additional Stripe-specific fields as needed
+}
+
+// StripePayload represents the structure of a Stripe webhook payload
+type StripePayload struct {
+	ID      string          `json:"id"`
+	Object  string          `json:"object"`
+	Type    string          `json:"type"`
+	Data    StripeEventData `json:"data"`
+	Created int64           `json:"created"`
+}
+
+// StripeEventData represents the data field in a Stripe webhook event
+type StripeEventData struct {
+	Object StripePurchaseData `json:"object"`
+}
+
 // NewRevenueCatPurchase creates a new PurchaseEntity with RevenueCat data
 func NewRevenueCatPurchase(rcData RevenueCatPurchaseData) PurchaseEntity {
 	now := primitive.NewDateTimeFromTime(time.Now())
 	return PurchaseEntity{
-		ID:           primitive.NewObjectID(),
-		Type:         stringPtr("REVENUE_CAT"),
-		PurchaseData: rcData,
-		CreatedAt:    now,
-		UpdatedAt:    now,
+		ID:             primitive.NewObjectID(),
+		Type:           stringPtr("REVENUE_CAT"),
+		RevenueCatData: &rcData,
+		StripeData:     nil,
+		CreatedAt:      now,
+		UpdatedAt:      now,
 	}
+}
+
+// NewStripePurchase creates a new PurchaseEntity with Stripe data
+func NewStripePurchase(stripeData StripePurchaseData) PurchaseEntity {
+	now := primitive.NewDateTimeFromTime(time.Now())
+	return PurchaseEntity{
+		ID:             primitive.NewObjectID(),
+		Type:           stringPtr("STRIPE"),
+		RevenueCatData: nil,
+		StripeData:     &stripeData,
+		CreatedAt:      now,
+		UpdatedAt:      now,
+	}
+}
+
+// IsRevenueCat returns true if this purchase is from RevenueCat
+func (p *PurchaseEntity) IsRevenueCat() bool {
+	return p.Type != nil && *p.Type == "REVENUE_CAT" && p.RevenueCatData != nil
+}
+
+// IsStripe returns true if this purchase is from Stripe
+func (p *PurchaseEntity) IsStripe() bool {
+	return p.Type != nil && *p.Type == "STRIPE" && p.StripeData != nil
+}
+
+// GetRevenueCatData safely retrieves the RevenueCat data if available
+func (p *PurchaseEntity) GetRevenueCatData() (*RevenueCatPurchaseData, bool) {
+	if p.IsRevenueCat() {
+		return p.RevenueCatData, true
+	}
+	return nil, false
+}
+
+// GetStripeData safely retrieves the Stripe data if available
+func (p *PurchaseEntity) GetStripeData() (*StripePurchaseData, bool) {
+	if p.IsStripe() {
+		return p.StripeData, true
+	}
+	return nil, false
 }
 
 // stringPtr is a helper function to create a pointer to a string

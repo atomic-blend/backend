@@ -10,7 +10,9 @@ source "$SCRIPT_DIR/utils.sh"
 # Function to get latest version from GitHub Container Registry
 get_ghcr_latest() {
     local image=$1
+    local current_version="${2:-}"
     local org_repo=$(echo $image | sed 's/ghcr\.io\///')
+    local rc_mode="${RC_MODE:-0}"
     
     # Get tags from GitHub API with authentication
     local response
@@ -35,27 +37,132 @@ get_ghcr_latest() {
         exit 1
     fi
     
-    local latest=$(echo "$response" | \
-        jq -r '.[]? | select(.metadata.container.tags[]? | test("^[0-9]+\\.[0-9]+(\\.[0-9]+)?$")) | .metadata.container.tags[]?' 2>/dev/null | \
-        grep -E '^[0-9]+\.[0-9]+(\.[0-9]+)?$' | \
-        sort -V | tail -1)
-    
-    if [ -z "$latest" ] || [ "$latest" = "null" ]; then
-        echo -e "${RED}Error: No valid version found for $image${NC}" >&2
-        exit 1
-    else
-        echo "$latest"
+    # Build a list of <tag>||<created_at> entries for all tags.
+    # Use a simple, consistent jq output: "<tag>||<created_at>" per line.
+    local tags_and_dates
+    tags_and_dates=$(echo "$response" | \
+        jq -r '.[]? | .metadata.container.tags[]? as $t | "\($t)||\(.created_at)"' 2>/dev/null)
+
+    # Extract latest stable tag (semantic versions) by version sort
+    local latest_stable
+    # Extract tag part (field before '||'), filter semver, sort and pick latest
+    latest_stable=$(echo "$tags_and_dates" | awk -F'\\|\\|' '{print $1}' | grep -E '^[0-9]+\.[0-9]+(\.[0-9]+)?$' | sort -V | tail -1)
+
+    # Get created_at for latest stable (if any)
+    local latest_stable_date=""
+    if [ -n "$latest_stable" ]; then
+        # Use escaped field separator for awk to avoid regex issues
+        latest_stable_date=$(echo "$tags_and_dates" | awk -F'\\|\\|' -v tag="$latest_stable" '$1==tag{print $2; exit}')
     fi
+    # Extract most recent RC tag by created_at (if any).
+    # Transform to lines with date first to sort by date safely.
+    local latest_rc_tag=""
+    local latest_rc_date=""
+    local rc_lines
+    rc_lines=$(echo "$tags_and_dates" | awk -F'\\|\\|' '/-rc-/{print $2 "||" $1}')
+    if [ -n "$rc_lines" ]; then
+        # rc_lines format: <created_at>||<tag>
+        local latest_rc_line
+        latest_rc_line=$(echo "$rc_lines" | sort | tail -1)
+        latest_rc_date=$(echo "$latest_rc_line" | cut -d'|' -f1)
+        latest_rc_tag=$(echo "$latest_rc_line" | cut -d'|' -f3-)
+    fi
+
+    # Decide which to return
+    # If we have a current_version that already equals the latest stable, prefer stable (treat as up-to-date)
+    if [ -n "$current_version" ] && [ -n "$latest_stable" ] && [ "$current_version" = "$latest_stable" ]; then
+        echo "$latest_stable"
+        return 0
+    fi
+
+    if [ "$rc_mode" = "1" ]; then
+        # If RC exists and is newer than stable (by created_at), return RC
+        if [ -n "$latest_rc_tag" ]; then
+            if [ -z "$latest_stable_date" ]; then
+                echo "$latest_rc_tag"
+                return 0
+            fi
+            # Compare dates (ISO8601 strings compare lexicographically)
+            if [[ "$latest_rc_date" > "$latest_stable_date" ]]; then
+                echo "$latest_rc_tag"
+                return 0
+            fi
+        fi
+        # Otherwise fall back to stable if available
+        if [ -n "$latest_stable" ]; then
+            echo "$latest_stable"
+            return 0
+        fi
+    else
+        if [ -n "$latest_stable" ]; then
+            echo "$latest_stable"
+            return 0
+        fi
+    fi
+
+    # If we reach here, try to return any tag present (last resort)
+    local any_tag
+    any_tag=$(echo "$tags_and_dates" | cut -d'|' -f1 | tail -1)
+    if [ -n "$any_tag" ]; then
+        echo "$any_tag"
+        return 0
+    fi
+
+    echo -e "${RED}Error: No valid version found for $image${NC}" >&2
+    exit 1
+}
+
+# Function to get both latest stable and latest RC (with dates) for an image
+get_ghcr_versions() {
+    local image=$1
+    local org_repo=$(echo $image | sed 's/ghcr\.io\///')
+
+    # Get tags from GitHub API with authentication
+    local response
+    if [ -n "${GITHUB_TOKEN:-}" ]; then
+        response=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" "https://api.github.com/orgs/$(echo $org_repo | cut -d'/' -f1)/packages/container/$(echo $org_repo | cut -d'/' -f2)/versions")
+    else
+        response=$(curl -s "https://api.github.com/orgs/$(echo $org_repo | cut -d'/' -f1)/packages/container/$(echo $org_repo | cut -d'/' -f2)/versions")
+    fi
+
+    # Build simple lines: "<tag>||<created_at>"
+    local tags_and_dates
+    tags_and_dates=$(echo "$response" | jq -r '.[]? | .metadata.container.tags[]? as $t | "\($t)||\(.created_at)"' 2>/dev/null)
+
+    # latest stable tag by semver
+    local latest_stable
+    latest_stable=$(echo "$tags_and_dates" | awk -F'\\|\\|' '{print $1}' | grep -E '^[0-9]+\.[0-9]+(\.[0-9]+)?$' | sort -V | tail -1)
+
+    local latest_stable_date=""
+    if [ -n "$latest_stable" ]; then
+        latest_stable_date=$(echo "$tags_and_dates" | awk -F'\\|\\|' -v tag="$latest_stable" '$1==tag{print $2; exit}')
+    fi
+
+    # latest rc by created_at
+    local rc_lines
+    rc_lines=$(echo "$tags_and_dates" | awk -F'\\|\\|' '/-rc-/{print $2 "||" $1}')
+    local latest_rc_tag=""
+    local latest_rc_date=""
+    if [ -n "$rc_lines" ]; then
+        local latest_rc_line
+        latest_rc_line=$(echo "$rc_lines" | sort | tail -1)
+        latest_rc_date=$(echo "$latest_rc_line" | cut -d'|' -f1)
+        latest_rc_tag=$(echo "$latest_rc_line" | cut -d'|' -f3-)
+    fi
+
+    # Output: stable||stable_date||rc||rc_date
+    echo "${latest_stable}||${latest_stable_date}||${latest_rc_tag}||${latest_rc_date}"
 }
 
 # Function to get latest version for GitHub Container Registry images
 get_latest_version() {
     local image=$1
+    local current_version="${2:-}"
     local base_image=$(echo $image | cut -d':' -f1)
     
     case $base_image in
         ghcr.io/atomic-blend/*)
-            get_ghcr_latest "$base_image"
+            get_ghcr_latest "$base_image" "$current_version"
             ;;
         *)
             echo -e "${RED}Error: Unsupported image type: $base_image${NC}" >&2
@@ -125,7 +232,22 @@ display_version_table() {
         local base_image="${IMAGES[$i]}"
         local env_var="${ENV_VARS[$i]}"
         local current_version=$(get_current_version "$env_var")
-        local latest_version=$(get_latest_version "$base_image")
+        # Get both stable and rc candidates so we can show RC in the table when requested
+        local versions_line
+        versions_line=$(get_ghcr_versions "$base_image")
+        # versions_line: stable||stable_date||rc||rc_date
+        local latest_stable=$(echo "$versions_line" | cut -d'|' -f1)
+        local latest_stable_date=$(echo "$versions_line" | cut -d'|' -f3)
+        local latest_rc=$(echo "$versions_line" | cut -d'|' -f5-)
+        local latest_rc_date=$(echo "$versions_line" | cut -d'|' -f7)
+
+        # Decide which to present as 'latest' in the table
+        local latest_version
+        if [ "${RC_MODE:-0}" = "1" ] && [ -n "$latest_rc" ] && [ -n "$latest_rc_date" ] && [ -n "$latest_stable_date" ] && [[ "$latest_rc_date" > "$latest_stable_date" ]]; then
+            latest_version="$latest_rc"
+        else
+            latest_version="$latest_stable"
+        fi
         
         # Extract just the service name for cleaner display
         local service_name=$(echo $base_image | sed 's/ghcr\.io\/atomic-blend\///')

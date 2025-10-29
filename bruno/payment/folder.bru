@@ -1,0 +1,12 @@
+meta {
+  name: /payment
+  seq: 3
+}
+
+auth {
+  mode: inherit
+}
+
+script:pre-request {
+  await bru.runRequest("/auth/login")
+}
