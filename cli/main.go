@@ -15,12 +15,5 @@ func main() {
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 
-	debug := os.Getenv("LOG_LEVEL")
-
-	zerolog.SetGlobalLevel(zerolog.InfoLevel)
-	if debug == "debug" {
-		zerolog.SetGlobalLevel(zerolog.DebugLevel)
-	}
-
 	rootcmd.Execute()
 }
