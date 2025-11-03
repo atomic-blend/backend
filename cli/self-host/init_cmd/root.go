@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/atomic-blend/backend/cli/config"
+	"github.com/atomic-blend/backend/cli/utils/yamlutils"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -53,21 +54,11 @@ func initSelfHost(cmd *cobra.Command, args []string) {
 		// Persist both the flattened and nested keys for compatibility.
 		viper.Set("channel", chosen)
 
-		// Determine where to write the config. Prefer the config file viper already knows about,
-		// otherwise create `.ab-config.yaml` in the current working directory.
-		cfgPath := viper.ConfigFileUsed()
-		if cfgPath == "" {
-			cfgPath = ".ab-config.yaml"
-			viper.SetConfigFile(cfgPath)
-		}
-
-		if err := viper.WriteConfigAs(cfgPath); err != nil {
-			// Try SafeWriteConfig (writes only if file doesn't exist) as a fallback, then log error.
-			if safeErr := viper.SafeWriteConfig(); safeErr != nil {
-				log.Error().Err(err).Str("path", cfgPath).Msg("failed to write config file")
-			}
+		// Persist into the config file, preserving comments/formatting.
+		if err := yamlutils.PersistInConfigFile("channel", chosen); err != nil {
+			log.Error().Err(err).Msg("failed to persist channel to config file")
 		} else {
-			log.Info().Str("channel", chosen).Str("path", cfgPath).Msg("wrote channel to config file")
+			log.Info().Str("channel", chosen).Msg("wrote channel to config file")
 		}
 	} else {
 		log.Info().Str("channel", channel).Msg("Using configured update channel")

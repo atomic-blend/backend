@@ -51,7 +51,7 @@ func init() {
 	envmapper.MapFlagToEnv(rootCmd, "directory", "ATOMIC_BLEND_DIRECTORY", "directory")
 	rootCmd.PersistentFlags().BoolP("debug", "", false, "Enable debug logging")
 	envmapper.MapFlagToEnv(rootCmd, "debug", "ATOMIC_BLEND_DEBUG", "debug")
-	rootCmd.PersistentFlags().StringP("channel", "c", "stable", "Update channel to use (stable or rc)")
+	rootCmd.PersistentFlags().StringP("channel", "c", "", "Update channel to use (stable or rc)")
 	envmapper.MapFlagToEnv(rootCmd, "channel", "ATOMIC_BLEND_CHANNEL", "channel")
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is /.ab-config.yaml)")
 	rootCmd.AddCommand(selfhost.NewCommand())
