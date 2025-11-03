@@ -1,16 +1,17 @@
-/*
-Copyright © 2025 NAME HERE <EMAIL ADDRESS>
-*/
+// Package rootcmd contains the root command for the CLI.
+//
+// Copyright © 2025 NAME HERE <EMAIL ADDRESS>
 package rootcmd
 
 import (
 	"errors"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/atomic-blend/backend/cli/config"
 	selfhost "github.com/atomic-blend/backend/cli/self-host"
-	envmapper "github.com/atomic-blend/backend/cli/utils/env_mapper"
+	envmapper "github.com/atomic-blend/backend/cli/utils/viperutils"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -48,6 +49,10 @@ func Execute() {
 func init() {
 	rootCmd.PersistentFlags().StringP("directory", "d", ".", "Directory where configurations and data are stored")
 	envmapper.MapFlagToEnv(rootCmd, "directory", "ATOMIC_BLEND_DIRECTORY", "directory")
+	rootCmd.PersistentFlags().BoolP("debug", "", false, "Enable debug logging")
+	envmapper.MapFlagToEnv(rootCmd, "debug", "ATOMIC_BLEND_DEBUG", "debug")
+	rootCmd.PersistentFlags().StringP("channel", "c", "stable", "Update channel to use (stable or rc)")
+	envmapper.MapFlagToEnv(rootCmd, "channel", "ATOMIC_BLEND_CHANNEL", "channel")
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is /.ab-config.yaml)")
 	rootCmd.AddCommand(selfhost.NewCommand())
 	// Here you will define your flags and configuration settings.
@@ -66,23 +71,37 @@ func initializeConfig(cmd *cobra.Command) error {
 	// Allow for nested keys in environment variables (e.g. `ATOMIC_BLEND_DATABASE_HOST`)
 	// Replace dots and dashes with underscores so keys like `selfhost.directory`
 	// map to env vars like `ATOMIC_BLEND_SELFHOST_DIRECTORY`.
-	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_", "-", "*"))
+	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_", "-", "_"))
 	viper.AutomaticEnv()
 
-	// if --directory is set, use it to set the config file path
-	dir := viper.GetString("directory")
-	if dir != "" {
-		viper.AddConfigPath(dir)
+	// 2. Bind Cobra flags to Viper early so flags (and their defaults) and env vars
+	// are available when we need to determine paths (e.g. the --directory flag
+	// is used to locate the config file).
+	if err := viper.BindPFlags(cmd.Flags()); err != nil {
+		return err
 	}
 
+	// 3. Configure Viper to read from the config file.
+	// If --directory is set, use it; otherwise default to current directory.
+	dir := viper.GetString("directory")
+	if dir == "" {
+		dir = "."
+	}
+
+	// Prefer explicit config file override via --config flag.
 	if cfgFile != "" {
-		// Use config file from the flag.
 		viper.SetConfigFile(cfgFile)
 	} else {
-		// Search for a config file with the name "config" (without extension).
-		viper.AddConfigPath(".ab-config.yaml")
-		viper.SetConfigName("config")
-		viper.SetConfigType("yaml")
+		// Prefer a hidden file named .ab-config.yaml if present in the directory.
+		abConfigPath := filepath.Join(dir, ".ab-config.yaml")
+		if _, err := os.Stat(abConfigPath); err == nil {
+			viper.SetConfigFile(abConfigPath)
+		} else {
+			// Fall back to searching for a file named config.(yaml|yml|json)
+			viper.AddConfigPath(dir)
+			viper.SetConfigName("config")
+			viper.SetConfigType("yaml")
+		}
 	}
 
 	// 3. Read the configuration file.
@@ -96,16 +115,8 @@ func initializeConfig(cmd *cobra.Command) error {
 		}
 	}
 
-	// 4. Bind Cobra flags to Viper.
-	// This is the magic that makes the flag values available through Viper.
-	// It binds the full flag set of the command passed in.
-	err := viper.BindPFlags(cmd.Flags())
-	if err != nil {
-		return err
-	}
-
 	// 5. Unmarshal the configuration into the CliConfig struct.
-	err = viper.Unmarshal(&config.CliConfig)
+	err := viper.Unmarshal(&config.CliConfig)
 	if err != nil {
 		return err
 	}
