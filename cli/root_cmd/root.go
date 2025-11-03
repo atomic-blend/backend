@@ -45,7 +45,7 @@ func Execute() {
 }
 
 func init() {
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.myapp.yaml)")
+	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is /.ab-config.yaml)")
 	rootCmd.AddCommand(selfhost.NewCommand())
 	// Here you will define your flags and configuration settings.
 	// Cobra supports persistent flags, which, if defined here,
@@ -70,14 +70,9 @@ func initializeConfig(cmd *cobra.Command) error {
 		// Use config file from the flag.
 		viper.SetConfigFile(cfgFile)
 	} else {
-		// Search for a config file in default locations.
-		home, err := os.UserHomeDir()
-		// Only panic if we can't get the home directory.
-		cobra.CheckErr(err)
-
 		// Search for a config file with the name "config" (without extension).
 		viper.AddConfigPath(".")
-		viper.AddConfigPath(home + "/.ab-config")
+		viper.AddConfigPath(".ab-config.yaml")
 		viper.SetConfigName("config")
 		viper.SetConfigType("yaml")
 	}
