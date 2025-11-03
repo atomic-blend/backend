@@ -10,6 +10,7 @@ import (
 
 	"github.com/atomic-blend/backend/cli/config"
 	selfhost "github.com/atomic-blend/backend/cli/self-host"
+	envmapper "github.com/atomic-blend/backend/cli/utils/env_mapper"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -45,6 +46,8 @@ func Execute() {
 }
 
 func init() {
+	rootCmd.PersistentFlags().StringP("directory", "d", ".", "Directory where configurations and data are stored")
+	envmapper.MapFlagToEnv(rootCmd, "directory", "ATOMIC_BLEND_DIRECTORY", "directory")
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is /.ab-config.yaml)")
 	rootCmd.AddCommand(selfhost.NewCommand())
 	// Here you will define your flags and configuration settings.
@@ -66,12 +69,17 @@ func initializeConfig(cmd *cobra.Command) error {
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_", "-", "*"))
 	viper.AutomaticEnv()
 
+	// if --directory is set, use it to set the config file path
+	dir := viper.GetString("directory")
+	if dir != "" {
+		viper.AddConfigPath(dir)
+	}
+
 	if cfgFile != "" {
 		// Use config file from the flag.
 		viper.SetConfigFile(cfgFile)
 	} else {
 		// Search for a config file with the name "config" (without extension).
-		viper.AddConfigPath(".")
 		viper.AddConfigPath(".ab-config.yaml")
 		viper.SetConfigName("config")
 		viper.SetConfigType("yaml")
