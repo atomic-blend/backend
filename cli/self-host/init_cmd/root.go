@@ -58,10 +58,10 @@ func initSelfHost(cmd *cobra.Command, args []string) {
 		if err := yamlutils.PersistInConfigFile("channel", chosen); err != nil {
 			log.Error().Err(err).Msg("failed to persist channel to config file")
 		} else {
-			log.Info().Str("channel", chosen).Msg("wrote channel to config file")
+			log.Debug().Str("channel", chosen).Msg("wrote channel to config file")
 		}
 	} else {
-		log.Info().Str("channel", channel).Msg("Using configured update channel")
+		log.Debug().Str("channel", channel).Msg("Using configured update channel")
 	}
 	log.Info().Msg("Self-hosted atomic blend instance initialized successfully")
 }

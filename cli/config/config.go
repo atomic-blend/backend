@@ -3,9 +3,8 @@ package config
 // Config holds CLI configuration that can be populated via env / unmarshal.
 // Fields must be exported (capitalized) so reflection-based unmarshalers can set them.
 type Config struct {
-	Debug     bool   `mapstructure:"debug" json:"debug"`
-	Directory string `mapstructure:"directory" json:"directory"`
-	Channel   string `mapstructure:"channel" json:"channel"`
+	Debug   bool   `mapstructure:"debug" json:"debug"`
+	Channel string `mapstructure:"channel" json:"channel"`
 }
 
 // CliConfig is the package-level configuration instance used by the CLI.
