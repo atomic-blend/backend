@@ -97,9 +97,9 @@ func initializeConfig(cmd *cobra.Command) error {
 		if _, err := os.Stat(abConfigPath); err == nil {
 			viper.SetConfigFile(abConfigPath)
 		} else {
-			// Fall back to searching for a file named config.(yaml|yml|json)
-			viper.AddConfigPath(dir)
-			viper.SetConfigName("config")
+			// Fall back to searching for a file named .ab-config.(yaml|yml|json) in the home directory.
+			viper.AddConfigPath("$HOME")
+			viper.SetConfigName(".ab-config")
 			viper.SetConfigType("yaml")
 		}
 	}
