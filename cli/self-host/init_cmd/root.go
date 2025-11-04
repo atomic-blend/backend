@@ -6,9 +6,9 @@ import (
 	"path"
 
 	"github.com/atomic-blend/backend/cli/config"
-	"github.com/atomic-blend/backend/cli/self-host/init_cmd/ui"
+	channelselector "github.com/atomic-blend/backend/cli/self-host/init_cmd/ui/channel_selector"
+	filedownloader "github.com/atomic-blend/backend/cli/self-host/init_cmd/ui/file_downloader"
 	"github.com/atomic-blend/backend/cli/utils/yamlutils"
-	"github.com/charmbracelet/bubbles/progress"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -57,7 +57,7 @@ func getOrSetupChannel() string {
 	if channel == "" {
 		// No configured channel — prompt the user using a Bubble Tea interactive selector.
 		chosenCh := make(chan string, 1)
-		m := ui.ChannelSelector{
+		m := channelselector.ChannelSelector{
 			Choices:  []string{"stable", "rc"},
 			Cursor:   1, // default to rc
 			ChosenCh: chosenCh,
@@ -122,53 +122,49 @@ func setupSelfHostedDirectory() error {
 			GitHubPath := file.GitHubPath
 			downloadURL := "https://raw.githubusercontent.com/" + file.Repository + "/main/" + GitHubPath
 			log.Debug().Str("url", downloadURL).Msg("Downloading file from URL")
-			resp, err := ui.GetResponse(downloadURL)
+			// Ensure target directory exists
+			destDir := path.Dir(filename)
+			if err := os.MkdirAll(destDir, 0o755); err != nil {
+				fmt.Println("could not create directory:", err)
+				os.Exit(1)
+			}
+
+			// Prepare absolute paths so we can safely chdir while still renaming later.
+			cwd, err := os.Getwd()
 			if err != nil {
-				fmt.Println("could not get response", err)
+				fmt.Println("could not get working dir:", err)
 				os.Exit(1)
 			}
-			defer resp.Body.Close() // nolint:errcheck
+			destDirAbs := path.Join(cwd, destDir)
+			filenameAbs := path.Join(cwd, filename)
 
-			log.Debug().Int64("content-length", resp.ContentLength).Msg("Received response")
-			log.Debug().Str("status", resp.Status).Msg("Response status")
-
-			// Don't add TUI if the header doesn't include content size
-			// it's impossible see progress without total
-			if resp.ContentLength <= 0 {
-				fmt.Println("can't parse content length, aborting download")
+			// Change into the destination dir and run the downloader which will write the URL basename here.
+			if err := os.Chdir(destDirAbs); err != nil {
+				fmt.Println("could not change to dest dir:", err)
 				os.Exit(1)
 			}
 
-			log.Debug().Str("filename", filename).Msg("Creating file")
-			file, err := os.Create(filename)
-			if err != nil {
-				fmt.Println("could not create file:", err)
+			if err := filedownloader.Download(downloadURL); err != nil {
+				fmt.Println("error downloading:", err)
+				// attempt to return to previous cwd before exiting
+				_ = os.Chdir(cwd)
 				os.Exit(1)
 			}
-			defer file.Close() // nolint:errcheck
 
-			pw := &ui.ProgressWriter{
-				Total:  int(resp.ContentLength),
-				File:   file,
-				Reader: resp.Body,
-				OnProgress: func(ratio float64) {
-					ui.P.Send(ui.ProgressMsg(ratio))
-				},
+			// rename downloaded file (URL basename) to desired local filename if needed
+			downloadedBasename := path.Base(GitHubPath)
+			srcAbs := path.Join(destDirAbs, downloadedBasename)
+			if srcAbs != filenameAbs {
+				if err := os.Rename(srcAbs, filenameAbs); err != nil {
+					fmt.Println("could not rename downloaded file:", err)
+					_ = os.Chdir(cwd)
+					os.Exit(1)
+				}
 			}
 
-			m := ui.Model{
-				Pw:       pw,
-				Progress: progress.New(progress.WithDefaultGradient()),
-			}
-			// Start Bubble Tea
-			ui.P = tea.NewProgram(m)
-
-			// Start the download
-			go pw.Start()
-
-			if _, err := ui.P.Run(); err != nil {
-				fmt.Println("error running program:", err)
-				os.Exit(1)
+			// return to original working dir
+			if err := os.Chdir(cwd); err != nil {
+				fmt.Println("warning: couldn't return to cwd:", err)
 			}
 		} else {
 			log.Info().Str("file", file.LocalPath).Msg("File already exists, skipping...")
