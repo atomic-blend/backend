@@ -6,8 +6,9 @@ import (
 	"path"
 
 	"github.com/atomic-blend/backend/cli/config"
-	channelselector "github.com/atomic-blend/backend/cli/self-host/init_cmd/ui/channel_selector"
-	filedownloader "github.com/atomic-blend/backend/cli/self-host/init_cmd/ui/file_downloader"
+	bulkfiledownloader "github.com/atomic-blend/backend/cli/ui/bulk_file_downloader"
+	channelselector "github.com/atomic-blend/backend/cli/ui/channel_selector"
+	types "github.com/atomic-blend/backend/cli/ui/types"
 	"github.com/atomic-blend/backend/cli/utils/yamlutils"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/rs/zerolog/log"
@@ -98,78 +99,46 @@ func getOrSetupChannel() string {
 	}
 }
 
-type FileSetup struct {
-	LocalPath  string
-	GitHubPath string
-	Repository string
-}
-
 func setupSelfHostedDirectory() error {
 	// TODO: Implement the directory setup logic
-	files := []FileSetup{
+	files := []types.GithubRemoteFile{
 		{LocalPath: ".env", GitHubPath: "docker/.env.example", Repository: "atomic-blend/backend"},
 		{LocalPath: "docker-compose.yaml", GitHubPath: "docker/docker-compose.yaml", Repository: "atomic-blend/backend"},
 		{LocalPath: "app-nginx.conf", GitHubPath: "docker/app-nginx.conf", Repository: "atomic-blend/backend"},
 		{LocalPath: "nginx.conf", GitHubPath: "nginx.conf", Repository: "atomic-blend/backend"},
 	}
 
+	var toDownload []types.DownloadableFile
 	for _, file := range files {
-		log.Info().Str("file", file.LocalPath).Msg("Setting up file in self-hosted directory")
 		filename := path.Join(config.CliConfig.Directory, file.LocalPath)
-		if _, err := os.Stat(filename); err != nil {
-			log.Info().Str("file", filename).Msg("File does not exist, creating...")
-			// Create or download the file
-			GitHubPath := file.GitHubPath
-			downloadURL := "https://raw.githubusercontent.com/" + file.Repository + "/main/" + GitHubPath
-			log.Debug().Str("url", downloadURL).Msg("Downloading file from URL")
-			// Ensure target directory exists
-			destDir := path.Dir(filename)
-			if err := os.MkdirAll(destDir, 0o755); err != nil {
-				fmt.Println("could not create directory:", err)
-				os.Exit(1)
-			}
-
-			// Prepare absolute paths so we can safely chdir while still renaming later.
-			cwd, err := os.Getwd()
-			if err != nil {
-				fmt.Println("could not get working dir:", err)
-				os.Exit(1)
-			}
-			destDirAbs := path.Join(cwd, destDir)
-			filenameAbs := path.Join(cwd, filename)
-
-			// Change into the destination dir and run the downloader which will write the URL basename here.
-			if err := os.Chdir(destDirAbs); err != nil {
-				fmt.Println("could not change to dest dir:", err)
-				os.Exit(1)
-			}
-
-			if err := filedownloader.Download(downloadURL); err != nil {
-				fmt.Println("error downloading:", err)
-				// attempt to return to previous cwd before exiting
-				_ = os.Chdir(cwd)
-				os.Exit(1)
-			}
-
-			// rename downloaded file (URL basename) to desired local filename if needed
-			downloadedBasename := path.Base(GitHubPath)
-			srcAbs := path.Join(destDirAbs, downloadedBasename)
-			if srcAbs != filenameAbs {
-				if err := os.Rename(srcAbs, filenameAbs); err != nil {
-					fmt.Println("could not rename downloaded file:", err)
-					_ = os.Chdir(cwd)
-					os.Exit(1)
-				}
-			}
-
-			// return to original working dir
-			if err := os.Chdir(cwd); err != nil {
-				fmt.Println("warning: couldn't return to cwd:", err)
-			}
-		} else {
+		if _, err := os.Stat(filename); err == nil {
 			log.Info().Str("file", file.LocalPath).Msg("File already exists, skipping...")
+			continue
 		}
 
+		log.Debug().Str("file", file.LocalPath).Msg("File does not exist, scheduling download")
+
+		// Ensure target directory exists
+		destDir := path.Dir(filename)
+		if err := os.MkdirAll(destDir, 0o755); err != nil {
+			fmt.Println("could not create directory:", err)
+			os.Exit(1)
+		}
+
+		downloadURL := "https://raw.githubusercontent.com/" + file.Repository + "/main/" + file.GitHubPath
+		toDownload = append(toDownload, types.DownloadableFile{
+			URL:       downloadURL,
+			LocalPath: filename,
+		})
+	}
+
+	if len(toDownload) == 0 {
+		return nil
+	}
+
+	if err := bulkfiledownloader.DownloadBulk(toDownload); err != nil {
+		fmt.Println("error downloading files:", err)
+		os.Exit(1)
 	}
 	return nil
 }
