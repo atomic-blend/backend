@@ -8,8 +8,11 @@ import (
 	"github.com/atomic-blend/backend/cli/config"
 	bulkfiledownloader "github.com/atomic-blend/backend/cli/ui/bulk_file_downloader"
 	channelselector "github.com/atomic-blend/backend/cli/ui/channel_selector"
-	"github.com/atomic-blend/backend/cli/ui/types/file_types"
+	envvareditor "github.com/atomic-blend/backend/cli/ui/env_var_editor"
+	platformcomponentupdater "github.com/atomic-blend/backend/cli/ui/platform_component_updater"
+	filetypes "github.com/atomic-blend/backend/cli/ui/types/file_types"
 	envfilesutils "github.com/atomic-blend/backend/cli/utils/env_files_utils"
+	envmapper "github.com/atomic-blend/backend/cli/utils/viperutils"
 	"github.com/atomic-blend/backend/cli/utils/yamlutils"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/rs/zerolog/log"
@@ -30,7 +33,8 @@ It guides you through the necessary steps to configure and deploy your instance.
 			initSelfHost(cmd, args)
 		},
 	}
-
+	cmd.PersistentFlags().String("github-token", "", "GitHub token for authentication")
+	envmapper.MapFlagToEnv(cmd, "github-token", "GITHUB_TOKEN", "github-token")
 	return cmd
 }
 
@@ -54,11 +58,61 @@ func initSelfHost(cmd *cobra.Command, args []string) {
 		log.Fatal().Err(err).Msg("failed to get platform config")
 	}
 
-	log.Info().Msg("Platform components and versions:")
-	for _, comp := range platformComponents {
-		log.Info().Str("component", comp.Name).Str("version", comp.Version)
-	}
+	log.Debug().Msg("Checking for platform component updates")
 
+	log.Info().Msg("Starting platform component updater")
+
+	isRC := config.CliConfig.Channel == "rc"
+	platformcomponentupdater.GetUpdates(platformComponents, &isRC)
+
+	log.Info().Msg("Platform component updater finished")
+
+	// config necessary env values
+	envvareditor.EditEnvVar("AUTH_MAX_NB_USER", true, false, func(val string) error {
+		// validate that it's a positive integer
+		var intVal int
+		_, err := fmt.Sscanf(val, "%d", &intVal)
+		if err != nil || intVal <= 0 {
+			return fmt.Errorf("value must be a positive integer")
+		}
+		return nil
+	}, "Set the maximum number of users allowed in your self-hosted atomic blend instance. Enter a positive integer value.")
+
+	// Prompt the user to set the SSO_SECRET if not already set
+	envvareditor.EditEnvVar("SSO_SECRET", true, true, func(val string) error {
+		// validate that it's a non-empty string
+		if val == "" {
+			return fmt.Errorf("value must be a non-empty string")
+		}
+		if len(val) < 32 {
+			return fmt.Errorf("SSO_SECRET should be at least 32 characters long for security reasons")
+		}
+		return nil
+	}, "Set the SSO secret for your self-hosted atomic blend instance.\n\nGenerate a strong random string of at least 32 characters to use as the SSO_SECRET using:\n\n\topenssl rand -hex 64 | base64 -w0\n\n")
+
+	envvareditor.EditEnvVar("PUBLIC_ADDRESS", true, false, func(val string) error {
+		// validate that it's a non-empty string
+		if val == "" {
+			return fmt.Errorf("value must be a non-empty string")
+		}
+		return nil
+	}, "Set the public address (URL) for your self-hosted atomic blend instance.\n\nThis should be the URL that users will use to access the platform, e.g., https://blend.yourdomain.com")
+
+	envvareditor.EditEnvVar("HTTPS", true, false, func(val string) error {
+		// validate that it's either "true" or "false"
+		if val != "true" && val != "false" {
+			return fmt.Errorf("value must be either 'true' or 'false'")
+		}
+		return nil
+	}, "Specify whether your self-hosted atomic blend instance will use HTTPS.\n\nEnter 'true' if you have set up HTTPS (recommended), or 'false' for HTTP.")
+
+	envvareditor.EditEnvVar("ACCOUNT_DOMAINS", true, false, func(val string) error {
+		// validate that it's a non-empty string
+		if val == "" {
+			return fmt.Errorf("value must be a non-empty string")
+		}
+		return nil
+	}, "Set the allowed email domains for user registration in your self-hosted atomic blend instance.\n\nProvide a comma-separated list of domains (e.g., example.com,anotherdomain.org).")
 	log.Info().Msg("Self-hosted atomic blend instance initialized successfully")
 }
 
