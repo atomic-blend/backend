@@ -8,7 +8,7 @@ import (
 	"path"
 	"sync"
 
-	"github.com/atomic-blend/backend/cli/ui/types"
+	"github.com/atomic-blend/backend/cli/ui/types/file_types"
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/rs/zerolog/log"
@@ -122,7 +122,7 @@ func (m model) View() string {
 // and displays a TUI showing one line per file with a spinner and percent.
 // Each DownloadableFile.LocalPath should be the final destination path for the
 // file (absolute or relative).
-func DownloadBulk(files []types.DownloadableFile) error {
+func DownloadBulk(files []filetypes.DownloadableFile) error {
 	if len(files) == 0 {
 		return nil
 	}
@@ -155,7 +155,7 @@ func DownloadBulk(files []types.DownloadableFile) error {
 	var wg sync.WaitGroup
 	wg.Add(n)
 	for i, f := range files {
-		go func(idx int, file types.DownloadableFile) {
+		go func(idx int, file filetypes.DownloadableFile) {
 			defer wg.Done()
 
 			url := file.URL

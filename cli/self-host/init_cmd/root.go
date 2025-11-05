@@ -8,7 +8,7 @@ import (
 	"github.com/atomic-blend/backend/cli/config"
 	bulkfiledownloader "github.com/atomic-blend/backend/cli/ui/bulk_file_downloader"
 	channelselector "github.com/atomic-blend/backend/cli/ui/channel_selector"
-	types "github.com/atomic-blend/backend/cli/ui/types"
+	"github.com/atomic-blend/backend/cli/ui/types/file_types"
 	envfilesutils "github.com/atomic-blend/backend/cli/utils/env_files_utils"
 	"github.com/atomic-blend/backend/cli/utils/yamlutils"
 	tea "github.com/charmbracelet/bubbletea"
@@ -113,14 +113,14 @@ func getOrSetupChannel() string {
 
 func setupSelfHostedDirectory() error {
 	// TODO: Implement the directory setup logic
-	files := []types.GithubRemoteFile{
+	files := []filetypes.DownloadableGithubFile{
 		{LocalPath: ".env", GitHubPath: "docker/.env.example", Repository: "atomic-blend/backend"},
 		{LocalPath: "docker-compose.yaml", GitHubPath: "docker/docker-compose.yaml", Repository: "atomic-blend/backend"},
 		{LocalPath: "app-nginx.conf", GitHubPath: "docker/app-nginx.conf", Repository: "atomic-blend/backend"},
 		{LocalPath: "nginx.conf", GitHubPath: "nginx.conf", Repository: "atomic-blend/backend"},
 	}
 
-	var toDownload []types.DownloadableFile
+	var toDownload []filetypes.DownloadableFile
 	for _, file := range files {
 		filename := path.Join(config.CliConfig.Directory, file.LocalPath)
 		if _, err := os.Stat(filename); err == nil {
@@ -138,7 +138,7 @@ func setupSelfHostedDirectory() error {
 		}
 
 		downloadURL := "https://raw.githubusercontent.com/" + file.Repository + "/main/" + file.GitHubPath
-		toDownload = append(toDownload, types.DownloadableFile{
+		toDownload = append(toDownload, filetypes.DownloadableFile{
 			URL:       downloadURL,
 			LocalPath: filename,
 		})

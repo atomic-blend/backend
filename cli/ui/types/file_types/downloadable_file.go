@@ -1,4 +1,4 @@
-package types
+package filetypes
 
 // DownloadableFile represents a file that can be downloaded from a URL and
 // written to a local path. LocalPath is the final absolute or relative path
