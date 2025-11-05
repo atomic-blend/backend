@@ -9,6 +9,7 @@ import (
 	bulkfiledownloader "github.com/atomic-blend/backend/cli/ui/bulk_file_downloader"
 	channelselector "github.com/atomic-blend/backend/cli/ui/channel_selector"
 	types "github.com/atomic-blend/backend/cli/ui/types"
+	envfilesutils "github.com/atomic-blend/backend/cli/utils/env_files_utils"
 	"github.com/atomic-blend/backend/cli/utils/yamlutils"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/rs/zerolog/log"
@@ -45,6 +46,17 @@ func initSelfHost(cmd *cobra.Command, args []string) {
 	err := setupSelfHostedDirectory()
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to set up self-hosted directory")
+	}
+
+	log.Debug().Msg("Reading configuration from local files")
+	platformComponents, err := envfilesutils.GetPlatformConfig(path.Join(config.CliConfig.Directory, ".env"), path.Join(config.CliConfig.Directory, "docker-compose.yaml"))
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to get platform config")
+	}
+
+	log.Info().Msg("Platform components and versions:")
+	for _, comp := range platformComponents {
+		log.Info().Str("component", comp.Name).Str("version", comp.Version)
 	}
 
 	log.Info().Msg("Self-hosted atomic blend instance initialized successfully")
@@ -140,5 +152,7 @@ func setupSelfHostedDirectory() error {
 		fmt.Println("error downloading files:", err)
 		os.Exit(1)
 	}
+
+	log.Debug().Msg("All necessary files downloaded successfully")
 	return nil
 }
