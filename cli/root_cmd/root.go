@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/atomic-blend/backend/cli/config"
+	"github.com/atomic-blend/backend/cli/developper"
 	selfhost "github.com/atomic-blend/backend/cli/self-host"
 	envmapper "github.com/atomic-blend/backend/cli/utils/viperutils"
 	"github.com/rs/zerolog"
@@ -53,8 +54,13 @@ func init() {
 	envmapper.MapFlagToEnv(rootCmd, "debug", "ATOMIC_BLEND_DEBUG", "debug")
 	rootCmd.PersistentFlags().StringP("channel", "c", "", "Update channel to use (stable or rc)")
 	envmapper.MapFlagToEnv(rootCmd, "channel", "ATOMIC_BLEND_CHANNEL", "channel")
+	rootCmd.PersistentFlags().String("developper-mode", "", "Enable developper mode")
+	envmapper.MapFlagToEnv(rootCmd, "developper-mode", "ATOMIC_BLEND_DEVELOPPER_MODE", "developper_mode")
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is /.ab-config.yaml)")
+
 	rootCmd.AddCommand(selfhost.NewCommand())
+	rootCmd.AddCommand(developper.NewCommand())
+
 	// Here you will define your flags and configuration settings.
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.
