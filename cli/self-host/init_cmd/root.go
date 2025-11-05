@@ -1,14 +1,16 @@
 package initcmd
 
 import (
+	"bufio"
 	"fmt"
 	"os"
+	"os/exec"
 	"path"
+	"strings"
 
 	"github.com/atomic-blend/backend/cli/config"
 	bulkfiledownloader "github.com/atomic-blend/backend/cli/ui/bulk_file_downloader"
 	channelselector "github.com/atomic-blend/backend/cli/ui/channel_selector"
-	envvareditor "github.com/atomic-blend/backend/cli/ui/env_var_editor"
 	platformcomponentupdater "github.com/atomic-blend/backend/cli/ui/platform_component_updater"
 	filetypes "github.com/atomic-blend/backend/cli/ui/types/file_types"
 	envfilesutils "github.com/atomic-blend/backend/cli/utils/env_files_utils"
@@ -67,52 +69,33 @@ func initSelfHost(cmd *cobra.Command, args []string) {
 
 	log.Info().Msg("Platform component updater finished")
 
-	// config necessary env values
-	envvareditor.EditEnvVar("AUTH_MAX_NB_USER", true, false, func(val string) error {
-		// validate that it's a positive integer
-		var intVal int
-		_, err := fmt.Sscanf(val, "%d", &intVal)
-		if err != nil || intVal <= 0 {
-			return fmt.Errorf("value must be a positive integer")
-		}
-		return nil
-	}, "Set the maximum number of users allowed in your self-hosted atomic blend instance. Enter a positive integer value.")
+	// ask the user if he wants to update the .env config, and if yes, open a vim editor
+	reader := bufio.NewReader(os.Stdin)
+	fmt.Print("Do you want to update the .env config? (y/N): ")
+	input, err := reader.ReadString('\n')
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to read user input")
+	}
+	input = strings.TrimSpace(input)
 
-	// Prompt the user to set the SSO_SECRET if not already set
-	envvareditor.EditEnvVar("SSO_SECRET", true, true, func(val string) error {
-		// validate that it's a non-empty string
-		if val == "" {
-			return fmt.Errorf("value must be a non-empty string")
+	updateEnv := false
+	if input != "" {
+		lower := strings.ToLower(input)
+		if strings.HasPrefix(lower, "y") {
+			updateEnv = true
 		}
-		if len(val) < 32 {
-			return fmt.Errorf("SSO_SECRET should be at least 32 characters long for security reasons")
-		}
-		return nil
-	}, "Set the SSO secret for your self-hosted atomic blend instance.\n\nGenerate a strong random string of at least 32 characters to use as the SSO_SECRET using:\n\n\topenssl rand -hex 64 | base64 -w0\n\n")
+	}
 
-	envvareditor.EditEnvVar("PUBLIC_ADDRESS", true, false, func(val string) error {
-		// validate that it's a non-empty string
-		if val == "" {
-			return fmt.Errorf("value must be a non-empty string")
+	if updateEnv {
+		log.Info().Msg("Opening .env config in editor")
+		cmd := exec.Command("vim", path.Join(config.CliConfig.Directory, ".env"))
+		err = cmd.Start()
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to edit .env file")
 		}
-		return nil
-	}, "Set the public address (URL) for your self-hosted atomic blend instance.\n\nThis should be the URL that users will use to access the platform, e.g., https://blend.yourdomain.com")
+		log.Info().Msg(".env config updated successfully")
+	}
 
-	envvareditor.EditEnvVar("HTTPS", true, false, func(val string) error {
-		// validate that it's either "true" or "false"
-		if val != "true" && val != "false" {
-			return fmt.Errorf("value must be either 'true' or 'false'")
-		}
-		return nil
-	}, "Specify whether your self-hosted atomic blend instance will use HTTPS.\n\nEnter 'true' if you have set up HTTPS (recommended), or 'false' for HTTP.")
-
-	envvareditor.EditEnvVar("ACCOUNT_DOMAINS", true, false, func(val string) error {
-		// validate that it's a non-empty string
-		if val == "" {
-			return fmt.Errorf("value must be a non-empty string")
-		}
-		return nil
-	}, "Set the allowed email domains for user registration in your self-hosted atomic blend instance.\n\nProvide a comma-separated list of domains (e.g., example.com,anotherdomain.org).")
 	log.Info().Msg("Self-hosted atomic blend instance initialized successfully")
 }
 
