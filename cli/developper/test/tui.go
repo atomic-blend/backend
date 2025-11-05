@@ -53,6 +53,7 @@ type updateSvcMsg struct {
 type logMsg string
 type finishedMsg struct{}
 type tickMsg time.Time
+type quitNow struct{}
 
 // compositeMsg lets a background Cmd return several messages at once. The
 // Update loop will unpack and apply them sequentially.
@@ -177,7 +178,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.done = true
 		m.logs = append(m.logs, "✅ All checks finished. Press q to quit.")
 		// trigger an extra tick to refresh animation/frame one last time
-		return m, tickCmd()
+		// and schedule an automatic quit after 3 seconds so the TUI closes
+		quitCmd := func() tea.Msg {
+			time.Sleep(3 * time.Second)
+			return quitNow{}
+		}
+		return m, tea.Batch(tickCmd(), quitCmd)
 	case tickMsg:
 		// advance animation frame and schedule next tick while not done
 		m.frame = (m.frame + 1)
@@ -189,6 +195,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if v.String() == "q" || v.String() == "ctrl+c" {
 			return m, tea.Quit
 		}
+	case quitNow:
+		return m, tea.Quit
 	}
 	return m, nil
 }
