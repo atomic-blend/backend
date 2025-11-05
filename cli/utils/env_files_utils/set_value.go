@@ -121,8 +121,12 @@ func SetEnvVarValue(envPath, varName, newVal string) error {
 			newValStr = string(quoteChar) + newVal + string(quoteChar)
 		}
 
-		// preserve spacing around '=' by reusing left part exactly as in original
-		newLine := line[:eqIdx+1] + " " + newValStr
+		// build left side: preserve optional 'export' prefix, but do not add a space after '='
+		prefix := ""
+		if strings.HasPrefix(left, "export ") {
+			prefix = "export "
+		}
+		newLine := prefix + key + "=" + newValStr
 		if commentPart != "" {
 			// ensure a space before inline comment if not present
 			if !strings.HasPrefix(commentPart, " ") {

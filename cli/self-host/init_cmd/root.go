@@ -89,8 +89,10 @@ func initSelfHost(cmd *cobra.Command, args []string) {
 	if updateEnv {
 		log.Info().Msg("Opening .env config in editor")
 		cmd := exec.Command("vim", path.Join(config.CliConfig.Directory, ".env"))
-		err = cmd.Start()
-		if err != nil {
+		cmd.Stdin = os.Stdin
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		if err := cmd.Run(); err != nil {
 			log.Fatal().Err(err).Msg("failed to edit .env file")
 		}
 		log.Info().Msg(".env config updated successfully")

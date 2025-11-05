@@ -7,6 +7,7 @@ import (
 	"path"
 	"strconv"
 	"strings"
+	"unicode"
 
 	"github.com/atomic-blend/backend/cli/config"
 	env_files_utils "github.com/atomic-blend/backend/cli/utils/env_files_utils"
@@ -205,7 +206,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m model) View() string {
 	if m.selecting {
 		v := m.selectTbl.View()
-		v = v + "\n\nApply updates to .env (use ↑/↓, space to toggle, Enter to confirm, q to cancel)."
+		// Trim trailing whitespace from the table view so appended
+		// instructions don't create large blank areas when terminal
+		// height is limited. Some terminals/tables pad with spaces
+		// rather than pure newlines, so trim all trailing whitespace.
+		v = strings.TrimRightFunc(v, unicode.IsSpace)
+		v = v + "\nApply updates to .env (use ↑/↓, space to toggle, Enter to confirm, q to cancel)."
 		if len(m.errors) > 0 {
 			v = v + "\n\nErrors:\n"
 			for _, e := range m.errors {
@@ -216,8 +222,11 @@ func (m model) View() string {
 	}
 
 	v := m.tbl.View()
+	// Trim trailing whitespace from the table view for compact rendering
+	// on terminals with small height.
+	v = strings.TrimRightFunc(v, unicode.IsSpace)
 	if m.completed >= m.total {
-		v = v + "\n\nAll checks complete. Press Enter to continue or q to cancel."
+		v = v + "\nAll checks complete. Press Enter to continue or q to cancel."
 	}
 	if len(m.errors) > 0 {
 		v = v + "\n\nErrors:\n"
