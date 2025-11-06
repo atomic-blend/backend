@@ -7,7 +7,6 @@ use (
 	./mail
 	./mail-server
 	./productivity
-	./scripts/run-tests-and-lint
 	./scripts/send-email-via-smtp
 	./shared
 )
