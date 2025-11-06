@@ -36,7 +36,7 @@ type Controller struct {
 	userRepo          userrepo.Interface
 	userRoleRepo      userrolerepo.Interface
 	resetPasswordRepo repositories.UserResetPasswordRequestRepositoryInterface
-	waitingListRepo repositories.WaitingListRepositoryInterface
+	waitingListRepo   repositories.WaitingListRepositoryInterface
 	mailServerClient  mailserverv1connect.MailServerServiceClient
 }
 
