@@ -2,12 +2,12 @@
 package selfhost
 
 import (
+	configcmd "github.com/atomic-blend/backend/ab-cli/cmd/self-host/config"
 	deletecmd "github.com/atomic-blend/backend/ab-cli/cmd/self-host/delete"
 	initcmd "github.com/atomic-blend/backend/ab-cli/cmd/self-host/init"
 	startcmd "github.com/atomic-blend/backend/ab-cli/cmd/self-host/start"
 	stopcmd "github.com/atomic-blend/backend/ab-cli/cmd/self-host/stop"
 	updatecmd "github.com/atomic-blend/backend/ab-cli/cmd/self-host/update"
-	configcmd "github.com/atomic-blend/backend/ab-cli/cmd/self-host/config"
 	"github.com/spf13/cobra"
 )
 
