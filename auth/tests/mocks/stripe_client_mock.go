@@ -92,3 +92,12 @@ func (m *MockStripeClient) CreateCheckoutSession(ctx context.Context, params *st
 	}
 	return args.Get(0).(*stripe.CheckoutSession), args.Error(1)
 }
+
+// CreateCustomerPortalSession mocks the CreateCustomerPortalSession method
+func (m *MockStripeClient) CreateCustomerPortalSession(ctx context.Context, params *stripe.BillingPortalSessionCreateParams) (*stripe.BillingPortalSession, error) {
+	args := m.Called(ctx, params)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*stripe.BillingPortalSession), args.Error(1)
+}

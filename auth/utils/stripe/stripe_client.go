@@ -17,6 +17,7 @@ type ClientInterface interface {
 	FinalizeInvoice(ctx context.Context, id string, params *stripe.InvoiceFinalizeInvoiceParams) (*stripe.Invoice, error)
 	GetEphemeralKeys(ctx context.Context, params *stripe.EphemeralKeyCreateParams) (*stripe.EphemeralKey, error)
 	CreateCheckoutSession(ctx context.Context, params *stripe.CheckoutSessionCreateParams) (*stripe.CheckoutSession, error)
+	CreateCustomerPortalSession(ctx context.Context, params *stripe.BillingPortalSessionCreateParams) (*stripe.BillingPortalSession, error)
 }
 
 // ClientWrapper wraps the Stripe client to implement ClientInterface.
@@ -62,4 +63,9 @@ func (w *ClientWrapper) GetEphemeralKeys(ctx context.Context, params *stripe.Eph
 // CreateCheckoutSession creates a new Stripe checkout session.
 func (w *ClientWrapper) CreateCheckoutSession(ctx context.Context, params *stripe.CheckoutSessionCreateParams) (*stripe.CheckoutSession, error) {
 	return w.client.V1CheckoutSessions.Create(ctx, params)
+}
+
+// CreateCustomerPortalSession creates a new Stripe customer portal session.
+func (w *ClientWrapper) CreateCustomerPortalSession(ctx context.Context, params *stripe.BillingPortalSessionCreateParams) (*stripe.BillingPortalSession, error) {
+	return w.client.V1BillingPortalSessions.Create(ctx, params)
 }

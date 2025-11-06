@@ -1,0 +1,33 @@
+meta {
+  name: /customer_portal
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{API_URL}}/payment/customer-portal
+  body: none
+  auth: inherit
+}
+
+script:post-response {
+  console.log("Response Status:", res.status);
+  console.log("Response Body:", res.body);
+  
+  try {
+    const body = JSON.parse(res.body);
+    if (res.status === 200 && body.url) {
+      console.log("Customer portal URL:", body.url);
+      console.log("Open this URL in your browser to manage the subscription.");
+    } else {
+      console.log("Error or missing URL:", body.error || res.body);
+    }
+  } catch (e) {
+    console.log("Failed to parse response body:", e.message);
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
