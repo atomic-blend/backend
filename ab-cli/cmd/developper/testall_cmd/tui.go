@@ -1,4 +1,4 @@
-// Package test implements a small Bubble Tea TUI to run golint and tests
+// Package testall implements a small Bubble Tea TUI to run golint and tests
 // for microservices. It is used by the `developper test` command.
 package testall
 
@@ -10,8 +10,11 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
+	"github.com/atomic-blend/backend/ab-cli/config"
+	btable "github.com/charmbracelet/bubbles/table"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
@@ -21,14 +24,7 @@ import (
 // replicate all the features of the external script; it focuses on providing
 // a daemon-style visual while the checks run.
 
-var servicesList = []string{
-	"auth",
-	"productivity",
-	"grpc",
-	"mail",
-	"mail-server",
-	"shared",
-}
+var servicesList = config.BackendServices
 
 type svcStatus struct {
 	Name     string
@@ -44,6 +40,7 @@ type model struct {
 	logs     []string
 	done     bool
 	frame    int
+	table    btable.Model
 }
 
 type updateSvcMsg struct {
@@ -68,7 +65,41 @@ func initialModel() model {
 		}
 		svcs[i] = svcStatus{Name: s, Status: "queued", Golint: "pending", Tests: "pending", GRPC: grpcState, Progress: "Waiting..."}
 	}
-	return model{services: svcs, logs: []string{}, done: false}
+	// Build table
+	cols := []btable.Column{
+		{Title: "SERVICE", Width: 15},
+		{Title: "STATUS", Width: 8},
+		{Title: "GOLINT", Width: 8},
+		{Title: "TESTS", Width: 8},
+		{Title: "GRPC", Width: 8},
+		{Title: "PROGRESS", Width: 20},
+	}
+	rows := servicesToRows(svcs, 0)
+	// Set table height to fit rows + header to avoid the table filling the
+	// remaining terminal height and creating large empty space below.
+	// Also neutralize the selected style so the first row isn't highlighted
+	// (this table is immutable / informational only).
+	styles := btable.DefaultStyles()
+	styles.Selected = lipgloss.NewStyle()
+
+	tbl := btable.New(
+		btable.WithColumns(cols),
+		btable.WithRows(rows),
+		btable.WithHeight(len(rows)+1),
+		btable.WithFocused(false),
+		btable.WithStyles(styles),
+	)
+
+	return model{services: svcs, logs: []string{}, done: false, table: tbl}
+}
+
+// servicesToRows converts the svcStatus slice into table rows.
+func servicesToRows(svcs []svcStatus, frame int) []btable.Row {
+	rows := make([]btable.Row, len(svcs))
+	for i, s := range svcs {
+		rows[i] = btable.Row{s.Name, getStatusIcon(s.Status), getAnimatedIcon(s.Golint, frame), getAnimatedIcon(s.Tests, frame), getAnimatedIcon(s.GRPC, frame), s.Progress}
+	}
+	return rows
 }
 
 func (m model) Init() tea.Cmd {
@@ -108,9 +139,13 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			case finishedMsg:
 				m.done = true
-				m.logs = append(m.logs, "✅ All checks finished. Press q to quit.")
+				m.logs = append(m.logs, "✅ All checks finished.")
 			}
 		}
+		// update table rows after applying all inner messages and set height
+		rows := servicesToRows(m.services, m.frame)
+		m.table.SetRows(rows)
+		m.table.SetHeight(len(rows) + 1)
 		return m, nil
 	case updateSvcMsg:
 		if v.Index >= 0 && v.Index < len(m.services) {
@@ -130,6 +165,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.services[v.Index].GRPC = v.GRPC
 			}
 		}
+		// sync table with updated service state and adjust height
+		rows := servicesToRows(m.services, m.frame)
+		m.table.SetRows(rows)
+		m.table.SetHeight(len(rows) + 1)
 		return m, nil
 	case logMsg:
 		// keep logs bounded to last 200 lines
@@ -176,17 +215,25 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 		m.done = true
-		m.logs = append(m.logs, "✅ All checks finished. Press q to quit.")
+		m.logs = append(m.logs, "✅ All checks finished.")
 		// trigger an extra tick to refresh animation/frame one last time
 		// and schedule an automatic quit after 3 seconds so the TUI closes
 		quitCmd := func() tea.Msg {
 			time.Sleep(3 * time.Second)
 			return quitNow{}
 		}
+		// refresh table rows to show final icons and adjust height
+		rows := servicesToRows(m.services, m.frame)
+		m.table.SetRows(rows)
+		m.table.SetHeight(len(rows) + 1)
 		return m, tea.Batch(tickCmd(), quitCmd)
 	case tickMsg:
 		// advance animation frame and schedule next tick while not done
 		m.frame = (m.frame + 1)
+		// update animated icons in the table and keep height fixed to rows
+		rows := servicesToRows(m.services, m.frame)
+		m.table.SetRows(rows)
+		m.table.SetHeight(len(rows) + 1)
 		if !m.done {
 			return m, tickCmd()
 		}
@@ -207,27 +254,17 @@ func (m model) View() string {
 	b.WriteString(headerStyle.Render("Atomic Blend — Tests & Linting Daemon"))
 	b.WriteString("\n\n")
 
-	// Table header
-	b.WriteString(fmt.Sprintf("%-15s %-8s %-8s %-8s %-8s %-20s\n",
-		"SERVICE", "STATUS", "GOLINT", "TESTS", "GRPC", "PROGRESS"))
-	b.WriteString(strings.Repeat("-", 80) + "\n")
-	for _, s := range m.services {
-		statusIcon := getStatusIcon(s.Status)
-		golintIcon := getAnimatedIcon(s.Golint, m.frame)
-		testIcon := getAnimatedIcon(s.Tests, m.frame)
-		grpcIcon := getAnimatedIcon(s.GRPC, m.frame)
-
-		b.WriteString(fmt.Sprintf("%-15s %-8s %-8s %-8s %-8s %-20s\n",
-			s.Name, statusIcon, golintIcon, testIcon, grpcIcon, s.Progress))
-	}
+	// Table view (uses bubbles/table)
+	b.WriteString(m.table.View())
 
 	// Live logs display removed — keeping TUI compact
+	// Keep exactly one blank line between table and footer
 	b.WriteString("\n")
 
 	if m.done {
-		b.WriteString("\nPress q to quit.\n")
+		b.WriteString("Press q to quit.\n")
 	} else {
-		b.WriteString("\nRunning... press q to quit (will not stop checks).\n")
+		b.WriteString("Running... press q to quit (will not stop checks).\n")
 	}
 
 	return b.String()
@@ -284,12 +321,17 @@ func StartTUI(ctx context.Context) error {
 // runAllChecks returns a tea.Cmd that launches the background workflow and
 // sends messages back into the Bubble Tea program.
 func runAllChecks() tea.Cmd {
-	// Build a sequence of tea.Cmds so the UI receives updates incrementally.
-	cmds := make([]tea.Cmd, 0)
+	// Build per-service commands that run the checks sequentially for that
+	// service and use a WaitGroup so the final finishedMsg is emitted only
+	// after all services are done. This avoids the previous behaviour where
+	// the final finished message could be emitted immediately when using
+	// `tea.Batch` on all cmds, leaving some long-running checks showing a
+	// spinner.
 	wd, _ := os.Getwd()
+	var wg sync.WaitGroup
+	cmds := make([]tea.Cmd, 0, len(servicesList)+1)
 
 	for i, svc := range servicesList {
-		// capture loop variables
 		idx := i
 		svcName := svc
 		svcPath := filepath.Join(wd, "..", svcName)
@@ -297,89 +339,78 @@ func runAllChecks() tea.Cmd {
 			svcPath = filepath.Join(wd, "..", "..", svcName)
 		}
 
-		// Cmd to set service -> running and golint -> running
-		cmds = append(cmds, func() tea.Msg {
-			return updateSvcMsg{Index: idx, Status: "running", Golint: "running", Progress: "Running golint..."}
-		})
+		wg.Add(1)
 
-		// Cmd to run golint and return result messages
+		// Create a command that runs golint, tests and grpc lint (for grpc)
+		// sequentially for this service and returns a composite message with
+		// the sequence of update/log messages for the service.
 		cmds = append(cmds, func() tea.Msg {
+			defer wg.Done()
+			msgs := make([]tea.Msg, 0)
+
+			// mark golint running
+			msgs = append(msgs, updateSvcMsg{Index: idx, Status: "running", Golint: "running", Progress: "Running golint..."})
+
 			// run golint
 			passed, out := runGolint(svcPath)
 			if passed {
-				return compositeMsg{msgs: []tea.Msg{
-					updateSvcMsg{Index: idx, Golint: "passed", Progress: "Running tests..."},
-					logMsg(fmt.Sprintf("✔ [%s] golint passed", svcName)),
-				}}
-			}
-			st := "failed"
-			if strings.Contains(strings.ToLower(out), "not found") || strings.Contains(strings.ToLower(out), "executable file not found") || strings.Contains(strings.ToLower(out), "golint not installed") {
-				st = "unavailable"
-			}
-			return compositeMsg{msgs: []tea.Msg{
-				updateSvcMsg{Index: idx, Golint: st, Progress: "Running tests..."},
-				logMsg(fmt.Sprintf("✖ [%s] golint: %s", svcName, summarizeOutput(out, 200))),
-			}}
-		})
-
-		// Check for go.mod
-		hasGoMod := false
-		if _, err := os.Stat(filepath.Join(svcPath, "go.mod")); err == nil {
-			hasGoMod = true
-		}
-		if !hasGoMod {
-			// Add commands to mark tests as none and log, mark completed
-			cmds = append(cmds, func() tea.Msg {
-				return updateSvcMsg{Index: idx, Tests: "none", Progress: "No tests", Status: "completed"}
-			})
-			cmds = append(cmds, func() tea.Msg {
-				return logMsg(fmt.Sprintf("→ [%s] no go.mod, skipping tests", svcName))
-			})
-		} else {
-			// Add running indicator for tests
-			cmds = append(cmds, func() tea.Msg {
-				return updateSvcMsg{Index: idx, Tests: "running", Progress: "Running tests..."}
-			})
-
-			// Cmd to run tests and send results
-			cmds = append(cmds, func() tea.Msg {
-				passed, out := runTests(svcPath)
-				if passed {
-					return compositeMsg{msgs: []tea.Msg{
-						updateSvcMsg{Index: idx, Tests: "passed", Progress: "Completed", Status: "completed"},
-						logMsg(fmt.Sprintf("✔ [%s] tests passed", svcName)),
-					}}
+				msgs = append(msgs, updateSvcMsg{Index: idx, Golint: "passed", Progress: "Running tests..."})
+				msgs = append(msgs, logMsg(fmt.Sprintf("✔ [%s] golint passed", svcName)))
+			} else {
+				st := "failed"
+				if strings.Contains(strings.ToLower(out), "not found") || strings.Contains(strings.ToLower(out), "executable file not found") || strings.Contains(strings.ToLower(out), "golint not installed") {
+					st = "unavailable"
 				}
-				return compositeMsg{msgs: []tea.Msg{
-					updateSvcMsg{Index: idx, Tests: "failed", Progress: "Completed", Status: "failed"},
-					logMsg(fmt.Sprintf("✖ [%s] tests failed: %s", svcName, summarizeOutput(out, 200))),
-				}}
-			})
-		}
+				msgs = append(msgs, updateSvcMsg{Index: idx, Golint: st, Progress: "Running tests..."})
+				msgs = append(msgs, logMsg(fmt.Sprintf("✖ [%s] golint: %s", svcName, summarizeOutput(out, 200))))
+			}
 
-		// If this is the grpc service, run gRPC lint too
-		if svcName == "grpc" {
-			// mark grpc running
-			cmds = append(cmds, func() tea.Msg { return updateSvcMsg{Index: idx, GRPC: "running", Progress: "Running gRPC lint..."} })
-			cmds = append(cmds, func() tea.Msg {
-				// run grpc lint
+			// Check for go.mod
+			hasGoMod := false
+			if _, err := os.Stat(filepath.Join(svcPath, "go.mod")); err == nil {
+				hasGoMod = true
+			}
+
+			if !hasGoMod {
+				msgs = append(msgs, updateSvcMsg{Index: idx, Tests: "none", Progress: "No tests", Status: "completed"})
+				msgs = append(msgs, logMsg(fmt.Sprintf("→ [%s] no go.mod, skipping tests", svcName)))
+				return compositeMsg{msgs: msgs}
+			}
+
+			// mark tests running
+			msgs = append(msgs, updateSvcMsg{Index: idx, Tests: "running", Progress: "Running tests..."})
+
+			passed, out = runTests(svcPath)
+			if passed {
+				msgs = append(msgs, updateSvcMsg{Index: idx, Tests: "passed", Progress: "Completed", Status: "completed"})
+				msgs = append(msgs, logMsg(fmt.Sprintf("✔ [%s] tests passed", svcName)))
+			} else {
+				msgs = append(msgs, updateSvcMsg{Index: idx, Tests: "failed", Progress: "Completed", Status: "failed"})
+				msgs = append(msgs, logMsg(fmt.Sprintf("✖ [%s] tests failed: %s", svcName, summarizeOutput(out, 200))))
+			}
+
+			// If this is the grpc service, run gRPC lint too
+			if svcName == "grpc" {
+				msgs = append(msgs, updateSvcMsg{Index: idx, GRPC: "running", Progress: "Running gRPC lint..."})
 				passed, out := runGRPCLint(svcPath)
 				if passed {
-					return compositeMsg{msgs: []tea.Msg{
-						updateSvcMsg{Index: idx, GRPC: "passed", Progress: "Completed"},
-						logMsg(fmt.Sprintf("✔ [%s] gRPC lint passed", svcName)),
-					}}
+					msgs = append(msgs, updateSvcMsg{Index: idx, GRPC: "passed", Progress: "Completed"})
+					msgs = append(msgs, logMsg(fmt.Sprintf("✔ [%s] gRPC lint passed", svcName)))
+				} else {
+					msgs = append(msgs, updateSvcMsg{Index: idx, GRPC: "failed", Progress: "Completed"})
+					msgs = append(msgs, logMsg(fmt.Sprintf("✖ [%s] gRPC lint: %s", svcName, summarizeOutput(out, 200))))
 				}
-				return compositeMsg{msgs: []tea.Msg{
-					updateSvcMsg{Index: idx, GRPC: "failed", Progress: "Completed"},
-					logMsg(fmt.Sprintf("✖ [%s] gRPC lint: %s", svcName, summarizeOutput(out, 200))),
-				}}
-			})
-		}
+			}
+
+			return compositeMsg{msgs: msgs}
+		})
 	}
 
-	// final cmd to signal finished
-	cmds = append(cmds, func() tea.Msg { return finishedMsg{} })
+	// final cmd: wait for all per-service cmds to finish, then send finishedMsg
+	cmds = append(cmds, func() tea.Msg {
+		wg.Wait()
+		return finishedMsg{}
+	})
 
 	return tea.Batch(cmds...)
 }

@@ -1,8 +1,8 @@
 package developper
 
 import (
-	"github.com/atomic-blend/backend/ab-cli/developper/test"
-	"github.com/atomic-blend/backend/ab-cli/developper/testall"
+	test "github.com/atomic-blend/backend/ab-cli/cmd/developper/test_cmd"
+	testall "github.com/atomic-blend/backend/ab-cli/cmd/developper/testall_cmd"
 	"github.com/spf13/cobra"
 )
 

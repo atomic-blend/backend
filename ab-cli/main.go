@@ -6,7 +6,7 @@ package main
 import (
 	"os"
 
-	rootcmd "github.com/atomic-blend/backend/ab-cli/root_cmd"
+	rootcmd "github.com/atomic-blend/backend/ab-cli/cmd/root"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )

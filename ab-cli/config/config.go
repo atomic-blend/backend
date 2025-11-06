@@ -30,3 +30,12 @@ var EnvComponentVersionMapping = map[string]string{
 	"notes-app":    "NOTES_APP_VERSION",
 	"mail-app":     "MAIL_APP_VERSION",
 }
+
+var BackendServices = []string{
+	"auth",
+	"productivity",
+	"grpc",
+	"mail",
+	"mail-server",
+	"shared",
+}

@@ -9,9 +9,9 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/atomic-blend/backend/ab-cli/cmd/developper"
 	"github.com/atomic-blend/backend/ab-cli/config"
-	"github.com/atomic-blend/backend/ab-cli/developper"
-	selfhost "github.com/atomic-blend/backend/ab-cli/self-host"
+	selfhost "github.com/atomic-blend/backend/ab-cli/cmd/self-host"
 	envmapper "github.com/atomic-blend/backend/ab-cli/utils/viperutils"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
