@@ -7,6 +7,7 @@ import (
 	startcmd "github.com/atomic-blend/backend/ab-cli/cmd/self-host/start"
 	stopcmd "github.com/atomic-blend/backend/ab-cli/cmd/self-host/stop"
 	updatecmd "github.com/atomic-blend/backend/ab-cli/cmd/self-host/update"
+	configcmd "github.com/atomic-blend/backend/ab-cli/cmd/self-host/config"
 	"github.com/spf13/cobra"
 )
 
@@ -25,5 +26,6 @@ and deployment.`,
 	cmd.AddCommand(stopcmd.NewCommand())
 	cmd.AddCommand(deletecmd.NewCommand())
 	cmd.AddCommand(updatecmd.NewCommand())
+	cmd.AddCommand(configcmd.NewCommand())
 	return cmd
 }
