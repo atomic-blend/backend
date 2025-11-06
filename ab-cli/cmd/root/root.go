@@ -10,8 +10,8 @@ import (
 	"strings"
 
 	"github.com/atomic-blend/backend/ab-cli/cmd/developper"
-	"github.com/atomic-blend/backend/ab-cli/config"
 	selfhost "github.com/atomic-blend/backend/ab-cli/cmd/self-host"
+	"github.com/atomic-blend/backend/ab-cli/config"
 	envmapper "github.com/atomic-blend/backend/ab-cli/utils/viperutils"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"

@@ -22,6 +22,7 @@ import (
 type latestMsg struct {
 	idx    int
 	latest string
+	image  string
 }
 type fetchErrMsg struct {
 	idx int
@@ -180,7 +181,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case latestMsg:
 		if msg.idx >= 0 && msg.idx < len(m.tbl.Rows()) {
 			rows := m.tbl.Rows()
-			rows = updateTableRowWithLatest(rows, msg.idx, msg.latest)
+			rows = updateTableRowWithLatest(rows, msg.idx, msg.latest, msg.image)
 			m.tbl.SetRows(rows)
 			m.completed++
 		}
@@ -270,13 +271,13 @@ func GetUpdates(components []env_files_utils.PlatformComponent, rc *bool) error 
 	p := tea.NewProgram(m, tea.WithAltScreen())
 
 	for i, c := range components {
-		go func(idx int, comp env_files_utils.PlatformComponent) {
-			latest, err := fetchLatestTagForImage(comp.Image, rc)
+			go func(idx int, comp env_files_utils.PlatformComponent) {
+				latest, err := fetchLatestTagForImage(comp.Image, rc)
 			if err != nil {
-				p.Send(fetchErrMsg{idx: idx, err: err})
+					p.Send(fetchErrMsg{idx: idx, err: err})
 				return
 			}
-			p.Send(latestMsg{idx: idx, latest: latest})
+				p.Send(latestMsg{idx: idx, latest: latest, image: comp.Image})
 		}(i, c)
 	}
 
@@ -343,7 +344,7 @@ func fetchLatestTagForImage(image string, rc *bool) (string, error) {
 
 // determineStatus returns one of: "OK", "OUT-OF-DATE", or "ERROR" based
 // on a comparison between current and latest version strings.
-func determineStatus(current, latest string) string {
+func determineStatus(current, latest, image string) string {
 	if latest == "-" {
 		return "ERROR"
 	}
@@ -354,6 +355,30 @@ func determineStatus(current, latest string) string {
 		// compareVersions returns -1 if current < latest
 		if cmp == -1 {
 			return "OUT-OF-DATE"
+		}
+		// If numeric parts are equal but tags differ (e.g. RCs with different
+		// commit hashes), use the tag creation timestamps from GHCR to decide.
+		if cmp == 0 {
+			if current != latest && strings.Contains(current, "-rc-") && strings.Contains(latest, "-rc-") {
+				tcur, errCur := ghutils.GetTagCreatedAt(image, current)
+				tlat, errLat := ghutils.GetTagCreatedAt(image, latest)
+				if errCur != nil {
+					log.Error().Err(errCur).Str("image", image).Str("tag", current).Msg("failed to get created_at for current tag")
+				}
+				if errLat != nil {
+					log.Error().Err(errLat).Str("image", image).Str("tag", latest).Msg("failed to get created_at for latest tag")
+				}
+				if errCur != nil || errLat != nil {
+					// If we cannot determine timestamps, treat as out-of-date
+					// so the user is prompted to update rather than silently
+					// accepting a potentially newer RC.
+					return "OUT-OF-DATE"
+				}
+				if tcur.Before(tlat) {
+					return "OUT-OF-DATE"
+				}
+				return "OK"
+			}
 		}
 		return "OK"
 	}
@@ -448,11 +473,11 @@ func createSelectionTable(origRows []table.Row, candidateIdx []int) table.Model 
 
 // updateTableRowWithLatest updates the provided rows slice at index idx with
 // the supplied latest value and computes the status.
-func updateTableRowWithLatest(rows []table.Row, idx int, latest string) []table.Row {
+func updateTableRowWithLatest(rows []table.Row, idx int, latest string, image string) []table.Row {
 	if idx >= 0 && idx < len(rows) {
 		r := rows[idx]
 		current := fmt.Sprintf("%v", r[1])
-		status := determineStatus(current, latest)
+		status := determineStatus(current, latest, image)
 		rows[idx] = table.Row{r[0], r[1], latest, status}
 	}
 	return rows
