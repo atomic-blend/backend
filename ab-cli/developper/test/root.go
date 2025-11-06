@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/atomic-blend/backend/cli/config"
+	"github.com/atomic-blend/backend/ab-cli/config"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/cobra"
 )

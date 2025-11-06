@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/atomic-blend/backend/cli/config"
+	"github.com/atomic-blend/backend/ab-cli/config"
 	"github.com/google/go-github/v77/github"
 	"golang.org/x/oauth2"
 )

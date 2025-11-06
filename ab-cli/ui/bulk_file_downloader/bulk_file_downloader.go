@@ -8,7 +8,7 @@ import (
 	"path"
 	"sync"
 
-	"github.com/atomic-blend/backend/cli/ui/types/file_types"
+	"github.com/atomic-blend/backend/ab-cli/ui/types/file_types"
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/rs/zerolog/log"

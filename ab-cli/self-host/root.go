@@ -1,7 +1,7 @@
 package selfhost
 
 import (
-	initcmd "github.com/atomic-blend/backend/cli/self-host/init_cmd"
+	initcmd "github.com/atomic-blend/backend/ab-cli/self-host/init_cmd"
 	"github.com/spf13/cobra"
 )
 

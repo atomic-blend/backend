@@ -9,7 +9,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"gopkg.in/yaml.v3"
 
-	"github.com/atomic-blend/backend/cli/config"
+	"github.com/atomic-blend/backend/ab-cli/config"
 )
 
 type PlatformComponent struct {

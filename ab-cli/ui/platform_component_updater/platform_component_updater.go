@@ -9,9 +9,9 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/atomic-blend/backend/cli/config"
-	env_files_utils "github.com/atomic-blend/backend/cli/utils/env_files_utils"
-	ghutils "github.com/atomic-blend/backend/cli/utils/gh_utils"
+	"github.com/atomic-blend/backend/ab-cli/config"
+	env_files_utils "github.com/atomic-blend/backend/ab-cli/utils/env_files_utils"
+	ghutils "github.com/atomic-blend/backend/ab-cli/utils/gh_utils"
 	"github.com/charmbracelet/bubbles/table"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
