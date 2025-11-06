@@ -1,6 +1,6 @@
 // Package test implements a small Bubble Tea TUI to run golint and tests
 // for microservices. It is used by the `developper test` command.
-package test
+package testall
 
 import (
 	"bytes"
