@@ -23,6 +23,7 @@ type Interface interface {
 	FinalizeInvoice(ctx *gin.Context, invoiceID string) *stripe.Invoice
 	GetEphemeralKeys(ctx *gin.Context, customerID string) *stripe.EphemeralKey
 	CreateCheckoutSession(ctx *gin.Context, customerID string, trialDays int64, successURL *string, cancelURL *string) (*stripe.CheckoutSession, error)
+	CreateCustomerPortalSession(ctx *gin.Context, customerID string, returnURL *string) (*stripe.BillingPortalSession, error)
 }
 
 // Service implements the Stripe service interface
@@ -271,4 +272,30 @@ func (s *Service) CreateCheckoutSession(ctx *gin.Context, customerID string, tri
 	}
 
 	return s.stripeClient.CreateCheckoutSession(context.TODO(), params)
+}
+
+// CreateCustomerPortalSession creates a new Stripe customer portal session for the given customer ID
+func (s *Service) CreateCustomerPortalSession(ctx *gin.Context, customerID string, returnURL *string) (*stripe.BillingPortalSession, error) {
+	publicAddress := os.Getenv("PUBLIC_ADDRESS")
+	if publicAddress == "" {
+		publicAddress = "http://localhost:53631"
+	}
+
+	if returnURL == nil {
+		https := os.Getenv("HTTPS") == "true"
+		var baseURL string
+		if https {
+			baseURL = "https://" + publicAddress + "/#"
+		} else {
+			baseURL = "http://" + publicAddress + "/#"
+		}
+		returnURL = stripe.String(baseURL + "/dashboard")
+	}
+
+	params := &stripe.BillingPortalSessionCreateParams{
+		Customer:  stripe.String(customerID),
+		ReturnURL: returnURL,
+	}
+
+	return s.stripeClient.CreateCustomerPortalSession(context.TODO(), params)
 }

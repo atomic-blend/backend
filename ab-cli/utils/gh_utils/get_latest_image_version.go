@@ -221,3 +221,73 @@ func GetLatestImageVersion(imageName string, rc *bool) (string, error) {
 
 	return "", errors.New("no suitable version found")
 }
+
+// GetTagCreatedAt returns the creation time for a specific tag of a GHCR
+// package. The provided tag must match the form returned by the package
+// metadata (service prefix like `auth/` is tolerated). If the tag cannot be
+// found an error is returned.
+func GetTagCreatedAt(imageName, tag string) (time.Time, error) {
+	if !strings.HasPrefix(imageName, "ghcr.io/") {
+		return time.Time{}, fmt.Errorf("unsupported image registry: %s", imageName)
+	}
+
+	parts := strings.Split(strings.TrimPrefix(imageName, "ghcr.io/"), "/")
+	if len(parts) < 2 {
+		return time.Time{}, fmt.Errorf("invalid ghcr image name: %s", imageName)
+	}
+	owner := parts[0]
+	pkgName := parts[1]
+
+	ctx := context.Background()
+
+	// build HTTP client with optional token
+	var httpClient *http.Client
+	if token := config.CliConfig.GithubToken; token != "" {
+		ts := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: token})
+		httpClient = oauth2.NewClient(ctx, ts)
+	}
+	client := github.NewClient(httpClient)
+
+	url := fmt.Sprintf("/orgs/%s/packages/container/%s/versions", owner, pkgName)
+	req, err := client.NewRequest("GET", url, nil)
+	if err != nil {
+		return time.Time{}, err
+	}
+
+	type containerMeta struct {
+		Tags []string `json:"tags"`
+	}
+	type meta struct {
+		Container containerMeta `json:"container"`
+	}
+	type versionItem struct {
+		CreatedAt time.Time `json:"created_at"`
+		Metadata  meta      `json:"metadata"`
+	}
+
+	var items []versionItem
+	_, err = client.Do(ctx, req, &items)
+	if err != nil {
+		return time.Time{}, err
+	}
+
+	// normalize tag for comparison
+	stripServicePrefix := func(t string) string {
+		if idx := strings.Index(t, "/"); idx != -1 {
+			return t[idx+1:]
+		}
+		return t
+	}
+
+	want := stripServicePrefix(tag)
+	for _, it := range items {
+		for _, rawTag := range it.Metadata.Container.Tags {
+			t := stripServicePrefix(rawTag)
+			if t == want {
+				return it.CreatedAt, nil
+			}
+		}
+	}
+
+	return time.Time{}, fmt.Errorf("tag %s not found for package %s/%s", tag, owner, pkgName)
+}

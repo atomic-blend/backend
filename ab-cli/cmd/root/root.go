@@ -10,8 +10,8 @@ import (
 	"strings"
 
 	"github.com/atomic-blend/backend/ab-cli/cmd/developper"
-	"github.com/atomic-blend/backend/ab-cli/config"
 	selfhost "github.com/atomic-blend/backend/ab-cli/cmd/self-host"
+	"github.com/atomic-blend/backend/ab-cli/config"
 	envmapper "github.com/atomic-blend/backend/ab-cli/utils/viperutils"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -52,11 +52,11 @@ func init() {
 	envmapper.MapFlagToEnv(rootCmd, "directory", "ATOMIC_BLEND_DIRECTORY", "directory")
 	rootCmd.PersistentFlags().BoolP("debug", "", false, "Enable debug logging")
 	envmapper.MapFlagToEnv(rootCmd, "debug", "ATOMIC_BLEND_DEBUG", "debug")
-	rootCmd.PersistentFlags().StringP("channel", "c", "", "Update channel to use (stable or rc)")
+	rootCmd.PersistentFlags().StringP("channel", "C", "", "Update channel to use (stable or rc)")
 	envmapper.MapFlagToEnv(rootCmd, "channel", "ATOMIC_BLEND_CHANNEL", "channel")
 	rootCmd.PersistentFlags().String("developper-mode", "", "Enable developper mode")
 	envmapper.MapFlagToEnv(rootCmd, "developper-mode", "ATOMIC_BLEND_DEVELOPPER_MODE", "developper_mode")
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is /.ab-config.yaml)")
+	rootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "c", "", "config file (default is /.ab-config.yaml)")
 
 	rootCmd.AddCommand(selfhost.NewCommand())
 	rootCmd.AddCommand(developper.NewCommand())
@@ -82,9 +82,20 @@ func initializeConfig(cmd *cobra.Command) error {
 
 	// 2. Bind Cobra flags to Viper early so flags (and their defaults) and env vars
 	// are available when we need to determine paths (e.g. the --directory flag
-	// is used to locate the config file).
+	// is used to locate the config file). Bind both the command-local flags and
+	// the root persistent flags so flags passed to subcommands are recognized.
 	if err := viper.BindPFlags(cmd.Flags()); err != nil {
 		return err
+	}
+	if err := viper.BindPFlags(cmd.PersistentFlags()); err != nil {
+		return err
+	}
+	// Also ensure root-level persistent flags are bound (covers some cobra versions
+	// where cmd.PersistentFlags() may not include parent persistent flags).
+	if root := cmd.Root(); root != nil {
+		if err := viper.BindPFlags(root.PersistentFlags()); err != nil {
+			return err
+		}
 	}
 
 	// 3. Configure Viper to read from the config file.

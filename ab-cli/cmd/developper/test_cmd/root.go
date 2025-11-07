@@ -26,8 +26,13 @@ func NewCommand() *cobra.Command {
 				return nil
 			}
 
-			// From the `cli` directory the components live in the parent dir.
-			componentDir := filepath.Join("..", component)
+			// Locate repository root and build absolute path to component.
+			repoRoot, err := findRepoRoot()
+			if err != nil {
+				fmt.Printf("could not locate repo root: %v\n", err)
+				return nil
+			}
+			componentDir := filepath.Join(repoRoot, component)
 
 			// Ensure directory exists
 			if _, err := os.Stat(componentDir); os.IsNotExist(err) {
@@ -72,6 +77,30 @@ func NewCommand() *cobra.Command {
 		},
 	}
 	return cmd
+}
+
+// findRepoRoot walks up from the current working directory until it finds
+// a marker of the repository root (either `go.work` or `.git`). Returns an
+// error if no root is found.
+func findRepoRoot() (string, error) {
+	dir, err := os.Getwd()
+	if err != nil {
+		return "", err
+	}
+	for {
+		if _, err := os.Stat(filepath.Join(dir, "go.work")); err == nil {
+			return dir, nil
+		}
+		if _, err := os.Stat(filepath.Join(dir, ".git")); err == nil {
+			return dir, nil
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			break
+		}
+		dir = parent
+	}
+	return "", fmt.Errorf("repo root not found (go.work or .git)")
 }
 
 // selectorModel is a simple Bubbletea model used for selecting a string from a list.

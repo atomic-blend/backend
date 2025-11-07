@@ -327,17 +327,19 @@ func runAllChecks() tea.Cmd {
 	// the final finished message could be emitted immediately when using
 	// `tea.Batch` on all cmds, leaving some long-running checks showing a
 	// spinner.
-	wd, _ := os.Getwd()
+	repoRoot, err := findRepoRoot()
+	if err != nil {
+		// fallback to working dir if repo root can't be determined
+		wd, _ := os.Getwd()
+		repoRoot = wd
+	}
 	var wg sync.WaitGroup
 	cmds := make([]tea.Cmd, 0, len(servicesList)+1)
 
 	for i, svc := range servicesList {
 		idx := i
 		svcName := svc
-		svcPath := filepath.Join(wd, "..", svcName)
-		if _, err := os.Stat(svcPath); os.IsNotExist(err) {
-			svcPath = filepath.Join(wd, "..", "..", svcName)
-		}
+			svcPath := filepath.Join(repoRoot, svcName)
 
 		wg.Add(1)
 
@@ -413,6 +415,30 @@ func runAllChecks() tea.Cmd {
 	})
 
 	return tea.Batch(cmds...)
+}
+
+// findRepoRoot walks up from the current working directory until it finds
+// a marker of the repository root (either `go.work` or `.git`). Returns an
+// error if no root is found.
+func findRepoRoot() (string, error) {
+	dir, err := os.Getwd()
+	if err != nil {
+		return "", err
+	}
+	for {
+		if _, err := os.Stat(filepath.Join(dir, "go.work")); err == nil {
+			return dir, nil
+		}
+		if _, err := os.Stat(filepath.Join(dir, ".git")); err == nil {
+			return dir, nil
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			break
+		}
+		dir = parent
+	}
+	return "", fmt.Errorf("repo root not found (go.work or .git)")
 }
 
 // runGRPCLint runs `buf lint` in the given service path if proto files exist.
