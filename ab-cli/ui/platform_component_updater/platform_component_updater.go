@@ -271,13 +271,13 @@ func GetUpdates(components []env_files_utils.PlatformComponent, rc *bool) error 
 	p := tea.NewProgram(m, tea.WithAltScreen())
 
 	for i, c := range components {
-			go func(idx int, comp env_files_utils.PlatformComponent) {
-				latest, err := fetchLatestTagForImage(comp.Image, rc)
+		go func(idx int, comp env_files_utils.PlatformComponent) {
+			latest, err := fetchLatestTagForImage(comp.Image, rc)
 			if err != nil {
-					p.Send(fetchErrMsg{idx: idx, err: err})
+				p.Send(fetchErrMsg{idx: idx, err: err})
 				return
 			}
-				p.Send(latestMsg{idx: idx, latest: latest, image: comp.Image})
+			p.Send(latestMsg{idx: idx, latest: latest, image: comp.Image})
 		}(i, c)
 	}
 
