@@ -52,6 +52,7 @@ func setupSendMailRoutes(router *gin.Engine, sendMailController *Controller) {
 	auth.RequireAuth(sendMailRoutes)
 	{
 		sendMailRoutes.GET("", pagination.New(), sendMailController.GetAllSendMails)
+		sendMailRoutes.GET("/since", pagination.New(), sendMailController.GetSendMailsSince)
 		sendMailRoutes.GET("/:id", sendMailController.GetSendMailByID)
 		sendMailRoutes.POST("", sendMailController.CreateSendMail)
 		sendMailRoutes.DELETE("/:id", sendMailController.DeleteSendMail)

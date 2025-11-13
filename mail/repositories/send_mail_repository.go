@@ -23,6 +23,8 @@ type SendMailRepositoryInterface interface {
 	Create(ctx context.Context, sendMail *models.SendMail) (*models.SendMail, error)
 	Update(ctx context.Context, id primitive.ObjectID, update bson.M) (*models.SendMail, error)
 	Delete(ctx context.Context, id primitive.ObjectID) error
+	// GetSince retrieves send mails where updated_at is after the specified time for a specific user. If page and limit are >0, returns paginated results and total count. If page or limit <=0, returns all send mails and total count.
+	GetSince(ctx context.Context, userID primitive.ObjectID, since time.Time, page, limit int64) ([]*models.SendMail, int64, error)
 }
 
 // SendMailRepository handles database operations related to send mails
@@ -180,4 +182,41 @@ func (r *SendMailRepository) Delete(ctx context.Context, id primitive.ObjectID) 
 
 	_, err := r.collection.UpdateOne(ctx, filter, update)
 	return err
+}
+
+// GetSince retrieves send mails where updated_at is after the specified time for a specific user. If page and limit are >0, returns paginated results and total count. If page or limit <=0, returns all send mails and total count.
+func (r *SendMailRepository) GetSince(ctx context.Context, userID primitive.ObjectID, since time.Time, page, limit int64) ([]*models.SendMail, int64, error) {
+	filter := bson.M{
+		"mail.user_id": userID,
+		"updated_at":   bson.M{"$gt": primitive.NewDateTimeFromTime(since)},
+	}
+
+	// Count total documents matching the filter
+	totalCount, err := r.collection.CountDocuments(ctx, filter)
+	if err != nil {
+		return []*models.SendMail{}, 0, err
+	}
+
+	// Build find options: always sort by updated_at desc to return most recent first
+	findOpts := options.Find()
+	findOpts.SetSort(bson.D{{Key: "updated_at", Value: -1}})
+
+	if page > 0 && limit > 0 {
+		skip := (page - 1) * limit
+		findOpts.SetSkip(skip)
+		findOpts.SetLimit(limit)
+	}
+
+	cursor, err := r.collection.Find(ctx, filter, findOpts)
+	if err != nil {
+		return []*models.SendMail{}, 0, err
+	}
+	defer cursor.Close(ctx)
+
+	var sendMails []*models.SendMail
+	if err = cursor.All(ctx, &sendMails); err != nil {
+		return []*models.SendMail{}, 0, err
+	}
+
+	return sendMails, totalCount, nil
 }
