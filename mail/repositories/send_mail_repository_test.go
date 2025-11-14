@@ -259,3 +259,92 @@ func TestGetSendMailByIDNotFound(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Nil(t, sendMail)
 }
+
+func TestGetSendMailsSince(t *testing.T) {
+	repository, cleanup := setupSendMailTest(t)
+	defer cleanup()
+
+	ctx := context.Background()
+
+	userID := primitive.NewObjectID()
+	otherUserID := primitive.NewObjectID()
+
+	// Create send mails with different updated_at times
+	baseTime := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
+
+	// Create send mail before the since time
+	oldMailID := primitive.NewObjectID()
+	oldMail := &models.Mail{
+		ID:     &oldMailID,
+		UserID: userID,
+	}
+	oldSendMail := &models.SendMail{
+		Mail:       oldMail,
+		SendStatus: models.SendStatusPending,
+		Trashed:    false,
+	}
+	oldSendMail, err := repository.Create(ctx, oldSendMail)
+	assert.NoError(t, err)
+
+	// Manually set updated_at to before since time
+	_, err = repository.Update(ctx, oldSendMail.ID, bson.M{"updated_at": primitive.NewDateTimeFromTime(baseTime.Add(-time.Hour))})
+	assert.NoError(t, err)
+
+	// Create send mails after the since time
+	newMailIDs := make([]primitive.ObjectID, 3)
+	for i := 0; i < 3; i++ {
+		mailID := primitive.NewObjectID()
+		newMailIDs[i] = mailID
+		mail := &models.Mail{
+			ID:     &mailID,
+			UserID: userID,
+		}
+		sendMail := &models.SendMail{
+			Mail:       mail,
+			SendStatus: models.SendStatusPending,
+			Trashed:    false,
+		}
+		newSendMail, err := repository.Create(ctx, sendMail)
+		assert.NoError(t, err)
+
+		// Manually set updated_at to after since time
+		_, err = repository.Update(ctx, newSendMail.ID, bson.M{"updated_at": primitive.NewDateTimeFromTime(baseTime.Add(time.Duration(i+1) * time.Hour))})
+		assert.NoError(t, err)
+	}
+
+	// Create send mail for different user after since time (should not be returned)
+	otherUserMailID := primitive.NewObjectID()
+	otherUserMail := &models.Mail{
+		ID:     &otherUserMailID,
+		UserID: otherUserID,
+	}
+	otherUserSendMail := &models.SendMail{
+		Mail:       otherUserMail,
+		SendStatus: models.SendStatusPending,
+		Trashed:    false,
+	}
+	otherUserSendMail, err = repository.Create(ctx, otherUserSendMail)
+	assert.NoError(t, err)
+	_, err = repository.Update(ctx, otherUserSendMail.ID, bson.M{"updated_at": primitive.NewDateTimeFromTime(baseTime.Add(2 * time.Hour))})
+	assert.NoError(t, err)
+
+	// Test GetSince with pagination
+	sendMails, totalCount, err := repository.GetSince(ctx, userID, baseTime, 1, 2)
+
+	assert.NoError(t, err)
+	assert.Len(t, sendMails, 2) // Should return 2 due to pagination
+	assert.Equal(t, int64(3), totalCount)
+
+	// Verify all returned send mails are for the correct user and after since time
+	for _, sendMail := range sendMails {
+		assert.Equal(t, userID, sendMail.Mail.UserID)
+		assert.True(t, sendMail.UpdatedAt.Time().After(baseTime))
+	}
+
+	// Test GetSince without pagination (page=0, limit=0)
+	allSendMails, totalCountAll, err := repository.GetSince(ctx, userID, baseTime, 0, 0)
+
+	assert.NoError(t, err)
+	assert.Len(t, allSendMails, 3)
+	assert.Equal(t, int64(3), totalCountAll)
+}

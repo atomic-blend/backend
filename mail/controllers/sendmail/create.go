@@ -8,8 +8,8 @@ import (
 
 	"connectrpc.com/connect"
 	userv1 "github.com/atomic-blend/backend/grpc/gen/user/v1"
-	"github.com/atomic-blend/backend/shared/middlewares/auth"
 	"github.com/atomic-blend/backend/mail/models"
+	"github.com/atomic-blend/backend/shared/middlewares/auth"
 	awss3 "github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
@@ -106,11 +106,15 @@ func (c *Controller) CreateSendMail(ctx *gin.Context) {
 		return
 	}
 
+	// set the user ID on the encrypted mail
+	encryptedMailEntity := encryptedMail.ToMailEntity()
+	encryptedMailEntity.UserID = authUser.UserID
+
 	log.Debug().Interface("encrypted_mail", encryptedMail).Msg("Encrypted mail ready for sending")
 
 	// Create send mail entity
 	sendMail := &models.SendMail{
-		Mail:       encryptedMail.ToMailEntity(),
+		Mail:       encryptedMailEntity,
 		SendStatus: models.SendStatusPending,
 		Trashed:    false,
 	}
