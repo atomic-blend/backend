@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"os"
 
 	"connectrpc.com/connect"
 	userv1 "github.com/atomic-blend/backend/grpc/gen/user/v1"
@@ -35,6 +36,13 @@ type CreateSendMailRequest struct {
 // @Failure 500 {object} map[string]interface{}
 // @Router /mail/send [post]
 func (c *Controller) CreateSendMail(ctx *gin.Context) {
+	// get public address from environment for generating message IDs
+	publicAddress := os.Getenv("PUBLIC_ADDRESS")
+	if publicAddress == "" {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Public address not configured"})
+		return
+	}
+
 	// Get authenticated user from context
 	authUser := auth.GetAuthUser(ctx)
 	if authUser == nil {
@@ -55,7 +63,7 @@ func (c *Controller) CreateSendMail(ctx *gin.Context) {
 		return
 	}
 
-	// // Normalize headers to preserve list structure
+	// Normalize headers to preserve list structure
 	if rawMail.Headers != nil {
 		normalizedHeaders := make(map[string]interface{})
 		for key, value := range rawMail.Headers {
@@ -79,8 +87,15 @@ func (c *Controller) CreateSendMail(ctx *gin.Context) {
 		rawMail.Headers = normalizedHeaders
 	}
 
-	//TODO: check email validity here
+	// // generate a message ID header if not provided
+	if rawMail.Headers == nil {
+		rawMail.Headers = make(map[string]interface{})
+	}
 
+	messageID := fmt.Sprintf("<%s@%s>", uuid.New().String(), publicAddress)
+	rawMail.Headers["Message-ID"] = messageID
+
+	//TODO: check email validity here
 	log.Debug().Interface("raw_mail", rawMail).Msg("Received raw mail for sending")
 
 	// get the user public key from the auth service via grpc
