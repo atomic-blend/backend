@@ -14,6 +14,7 @@ import (
 	awss3 "github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 
 	"github.com/gin-gonic/gin"
 )
@@ -94,6 +95,39 @@ func (c *Controller) CreateSendMail(ctx *gin.Context) {
 
 	messageID := fmt.Sprintf("<%s@%s>", uuid.New().String(), publicAddress)
 	rawMail.Headers["Message-ID"] = messageID
+
+	// Set In-Reply-To header if replying to another mail
+	if rawMail.InReplyTo != nil {
+		func() {
+			// fetch the original mail to get its message ID
+			originalMailID := *rawMail.InReplyTo
+			objectID, err := primitive.ObjectIDFromHex(originalMailID)
+			if err != nil {
+				log.Error().Err(err).Str("original_mail_id", originalMailID).Msg("Invalid original mail ID for In-Reply-To header")
+				return
+			}
+			originalMail, err := c.mailRepo.GetByID(ctx, objectID)
+			if err != nil {
+				log.Error().Err(err).Str("original_mail_id", originalMailID).Msg("Failed to fetch original mail for In-Reply-To header")
+				return
+			}
+
+			originalMailMessageID := ""
+			if originalMail != nil && originalMail.Headers != nil {
+				if msgID, ok := originalMail.Headers["Message-ID"].(string); ok {
+					originalMailMessageID = msgID
+				}
+			}
+
+			if originalMailMessageID == "" {
+				log.Error().Str("original_mail_id", originalMailID).Msg("Original mail has no Message-ID header for In-Reply-To")
+				return
+			}
+
+			log.Debug().Str("in_reply_to", originalMailMessageID).Msg("Setting In-Reply-To header")
+			rawMail.Headers["In-Reply-To"] = originalMailMessageID
+		}()
+	}
 
 	//TODO: check email validity here
 	log.Debug().Interface("raw_mail", rawMail).Msg("Received raw mail for sending")

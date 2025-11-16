@@ -73,24 +73,22 @@ func TestSendMailController_CreateSendMail(t *testing.T) {
 					}
 
 					// Validate Message-ID exists and is non-empty (headers are encrypted before repo call)
-					if headers, ok := sendMail.Mail.Headers.(map[string]interface{}); ok {
-						if v, exists := headers["Message-ID"]; exists {
-							switch mv := v.(type) {
-							case string:
-								return mv != ""
-							case []string:
-								return len(mv) > 0 && mv[0] != ""
+					if v, exists := sendMail.Mail.Headers["Message-ID"]; exists {
+						switch mv := v.(type) {
+						case string:
+							return mv != ""
+						case []string:
+							return len(mv) > 0 && mv[0] != ""
+						case []interface{}:
+							if len(mv) > 0 {
+								if s, ok := mv[0].(string); ok {
+									return s != ""
+								}
 							}
 						}
-						return false
 					}
 
-					if headers2, ok := sendMail.Mail.Headers.(map[string][]string); ok {
-						if mv, exists := headers2["Message-ID"]; exists {
-							return len(mv) > 0 && mv[0] != ""
-						}
-						return false
-					}
+					// Headers surface as map[string]interface{}; values can still be string or []string
 
 					return false
 				})).Return(&models.SendMail{
@@ -152,27 +150,22 @@ func TestSendMailController_CreateSendMail(t *testing.T) {
 					}
 
 					// Message-ID should be present and encrypted (so just assert presence and non-empty)
-					if headers, ok := sendMail.Mail.Headers.(map[string]interface{}); ok {
-						if v, exists := headers["Message-ID"]; exists {
-							switch mv := v.(type) {
-							case string:
-								return mv != "" && mv != "<custom-id@example.com>"
-							case []string:
-								return len(mv) > 0 && mv[0] != "" && mv[0] != "<custom-id@example.com>"
+					if v, exists := sendMail.Mail.Headers["Message-ID"]; exists {
+						switch mv := v.(type) {
+						case string:
+							return mv != "" && mv != "<custom-id@example.com>"
+						case []string:
+							return len(mv) > 0 && mv[0] != "" && mv[0] != "<custom-id@example.com>"
+						case []interface{}:
+							if len(mv) > 0 {
+								if s, ok := mv[0].(string); ok {
+									return s != "" && s != "<custom-id@example.com>"
+								}
 							}
 						}
-						return false
 					}
 
-					if headers2, ok := sendMail.Mail.Headers.(map[string][]string); ok {
-						if arr, exists := headers2["Message-ID"]; exists {
-							if len(arr) == 0 {
-								return false
-							}
-							return arr[0] != "" && arr[0] != "<custom-id@example.com>"
-						}
-						return false
-					}
+					// No extra assertion here: handled above via the map[string]interface{} branch
 
 					return false
 				})).Return(&models.SendMail{
@@ -250,6 +243,7 @@ func TestSendMailController_CreateSendMail(t *testing.T) {
 			mockUserClient := &mocks.MockUserClient{}
 			mockAMQPService := &amqpservice.MockAMQPService{}
 			mockS3Service := &s3service.MockS3Service{}
+			mockMailRepo := &mocks.MockMailRepository{}
 			userID := primitive.NewObjectID()
 
 			tt.setupMock(mockRepo, userID)
@@ -257,7 +251,7 @@ func TestSendMailController_CreateSendMail(t *testing.T) {
 			tt.setupAMQPMock(mockAMQPService, userID)
 			tt.setupS3Mock(mockS3Service, userID)
 
-			controller := NewSendMailController(mockRepo, mockUserClient, mockAMQPService, mockS3Service)
+			controller := NewSendMailController(mockRepo, mockMailRepo, mockUserClient, mockAMQPService, mockS3Service)
 
 			router := gin.New()
 			router.Use(func(c *gin.Context) {

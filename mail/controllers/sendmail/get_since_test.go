@@ -47,7 +47,7 @@ func TestSendMailController_GetSendMailsSince(t *testing.T) {
 						Mail: &models.Mail{
 							ID:     &mailID1,
 							UserID: userID,
-							Headers: map[string]string{
+							Headers: map[string]interface{}{
 								"Subject": "User Send Mail 1",
 							},
 						},
@@ -57,7 +57,7 @@ func TestSendMailController_GetSendMailsSince(t *testing.T) {
 						Mail: &models.Mail{
 							ID:     &mailID2,
 							UserID: userID,
-							Headers: map[string]string{
+							Headers: map[string]interface{}{
 								"Subject": "User Send Mail 2",
 							},
 						},
@@ -83,7 +83,7 @@ func TestSendMailController_GetSendMailsSince(t *testing.T) {
 						Mail: &models.Mail{
 							ID:     &mailID,
 							UserID: userID,
-							Headers: map[string]string{
+							Headers: map[string]interface{}{
 								"Subject": "User Send Mail",
 							},
 						},
@@ -175,7 +175,7 @@ func TestSendMailController_GetSendMailsSince(t *testing.T) {
 						Mail: &models.Mail{
 							ID:     &mailID,
 							UserID: userID,
-							Headers: map[string]string{
+							Headers: map[string]interface{}{
 								"Subject": "User Send Mail",
 							},
 						},
@@ -193,6 +193,7 @@ func TestSendMailController_GetSendMailsSince(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockRepo := &mocks.MockSendMailRepository{}
+			mockMailRepo := &mocks.MockMailRepository{}
 			userID := primitive.NewObjectID()
 
 			// Parse the since parameter to get the expected time
@@ -226,7 +227,7 @@ func TestSendMailController_GetSendMailsSince(t *testing.T) {
 
 			tt.setupMock(mockRepo, userID, sinceTime, page, limit)
 
-			controller := NewSendMailController(mockRepo, nil, nil, nil)
+			controller := NewSendMailController(mockRepo, mockMailRepo, nil, nil, nil)
 
 			router := gin.New()
 			router.Use(func(c *gin.Context) {

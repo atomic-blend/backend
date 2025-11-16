@@ -7,6 +7,7 @@ import (
 
 	ageencryptionservice "github.com/atomic-blend/backend/shared/services/age_encryption"
 	"github.com/emersion/go-message"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 // RawMail represents the collected content from an email
@@ -15,6 +16,7 @@ type RawMail struct {
 	TextContent    string                 `json:"textContent"`
 	HTMLContent    string                 `json:"htmlContent"`
 	Attachments    []RawAttachment        `json:"attachments"`
+	InReplyTo      *string                `json:"inReplyTo"`
 	Rejected       bool                   `json:"rejected"`
 	RewriteSubject bool                   `json:"rewriteSubject"`
 	Greylisted     bool                   `json:"graylisted"`
@@ -33,6 +35,7 @@ func (m *RawMail) Encrypt(publicKey string) (*RawMail, error) {
 
 	encryptedMail := &RawMail{
 		Attachments:    make([]RawAttachment, 0),
+		InReplyTo:      m.InReplyTo,
 		Rejected:       m.Rejected,
 		RewriteSubject: m.RewriteSubject,
 		Greylisted:     m.Greylisted,
@@ -112,10 +115,19 @@ func (m *RawMail) Encrypt(publicKey string) (*RawMail, error) {
 
 // ToMailEntity converts a RawMail to a Mail entity
 func (m *RawMail) ToMailEntity() *Mail {
+	var inReplyTo *primitive.ObjectID
+	if m.InReplyTo != nil {
+		objectID, err := primitive.ObjectIDFromHex(*m.InReplyTo)
+		if err == nil {
+			inReplyTo = &objectID
+		}
+	}
+
 	return &Mail{
 		Headers:        m.Headers,
 		TextContent:    m.TextContent,
 		HTMLContent:    m.HTMLContent,
+		InReplyTo:      inReplyTo,
 		Attachments:    make([]MailAttachment, len(m.Attachments)),
 		Rejected:       &m.Rejected,
 		RewriteSubject: &m.RewriteSubject,

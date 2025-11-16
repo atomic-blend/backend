@@ -628,7 +628,7 @@ func TestProcessMessageBody_HeaderExtraction(t *testing.T) {
 	tests := []struct {
 		name            string
 		mimeData        string
-		expectedHeaders map[string]string
+		expectedHeaders map[string]interface{}
 	}{
 		{
 			name: "basic headers extraction",
@@ -642,7 +642,7 @@ Bcc: bcc@example.com
 Content-Type: text/plain
 
 This is a test email.`,
-			expectedHeaders: map[string]string{
+			expectedHeaders: map[string]interface{}{
 				"From":       "sender@example.com",
 				"To":         "recipient@example.com",
 				"Subject":    "Test Email",
@@ -663,7 +663,7 @@ X-Mailer: AtomicBlend
 Content-Type: text/plain
 
 Email with custom headers.`,
-			expectedHeaders: map[string]string{
+			expectedHeaders: map[string]interface{}{
 				"From":            "sender@example.com",
 				"To":              "recipient@example.com",
 				"Subject":         "Custom Headers Test",

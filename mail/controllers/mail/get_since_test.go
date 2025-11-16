@@ -46,14 +46,14 @@ func TestMailController_GetMailsSince(t *testing.T) {
 					{
 						ID:     &mailID1,
 						UserID: userID,
-						Headers: map[string]string{
+						Headers: map[string]interface{}{
 							"Subject": "User Mail 1",
 						},
 					},
 					{
 						ID:     &mailID2,
 						UserID: userID,
-						Headers: map[string]string{
+						Headers: map[string]interface{}{
 							"Subject": "User Mail 2",
 						},
 					},
@@ -76,7 +76,7 @@ func TestMailController_GetMailsSince(t *testing.T) {
 					{
 						ID:     &mailID,
 						UserID: userID,
-						Headers: map[string]string{
+						Headers: map[string]interface{}{
 							"Subject": "User Mail",
 						},
 					},
@@ -165,7 +165,7 @@ func TestMailController_GetMailsSince(t *testing.T) {
 					{
 						ID:     &mailID,
 						UserID: userID,
-						Headers: map[string]string{
+						Headers: map[string]interface{}{
 							"Subject": "User Mail",
 						},
 					},

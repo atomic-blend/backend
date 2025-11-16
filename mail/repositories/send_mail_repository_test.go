@@ -49,7 +49,7 @@ func TestCreateSendMail(t *testing.T) {
 		ID:          &mailID,
 		UserID:      userID,
 		TextContent: "Test email content",
-		Headers: map[string]string{
+		Headers: map[string]interface{}{
 			"Subject": "Test Email",
 			"From":    "test@example.com",
 		},

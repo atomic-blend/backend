@@ -49,7 +49,7 @@ func TestCreateDraftMail(t *testing.T) {
 		ID:          &mailID,
 		UserID:      userID,
 		TextContent: "Test draft email content",
-		Headers: map[string]string{
+		Headers: map[string]interface{}{
 			"Subject": "Test Draft Email",
 			"From":    "test@example.com",
 		},
