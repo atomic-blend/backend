@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"regexp"
 
 	"connectrpc.com/connect"
 	userv1 "github.com/atomic-blend/backend/grpc/gen/user/v1"
@@ -135,6 +136,65 @@ func (c *Controller) CreateSendMail(ctx *gin.Context) {
 			}
 		}()
 	}
+
+	// Reformat To and From fields to match RFC 5322 if necessary
+	// Format: Display Name <email@domain>
+	// TODO: test this
+	fromHeader := rawMail.Headers["From"]
+	if !regexp.MustCompile(`^.*<.*@.*>$`).MatchString(fmt.Sprintf("%v", fromHeader)) {
+		if regexp.MustCompile(`^.*@.*$`).MatchString(fmt.Sprintf("%v", fromHeader)) {
+			//TODO: call the auth service to get user name and emails
+			log.Debug().Msg("[NOT IMPLEMENTED] Reformatting From header, using provided email only")
+
+			// temporary, until the auth service is called
+			// Only email provided, add display name as the part before @
+			emailStr := fmt.Sprintf("%v", fromHeader)
+			reformattedFrom := fmt.Sprintf("<%s>", emailStr)
+			fromHeader = reformattedFrom
+		} else {
+			log.Debug().Msg("From header is not a valid email address")
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid_email_sender"})
+			return
+		}
+
+	}
+
+	// Reformat the To header to match RFC 5322 if necessary
+	// Single Recipient: Display Name <email@domain>
+	// Multiple Recipients: alice@example.com, bob@example.com, "Charlie Brown" <charlie@domain.org>
+	// To header in rawMail.Headers can be string or []string
+	// TODO: test this
+	toHeader := rawMail.Headers["To"]
+	switch v := toHeader.(type) {
+	case string:
+		if !regexp.MustCompile(`^.*@.*$`).MatchString(v) {
+			log.Debug().Msg("To header is not a valid email address")
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid_single_email_recipient"})
+			return
+		}
+	case []string:
+		toListString := ""
+		for index, recipient := range v {
+			if !regexp.MustCompile(`^.*@.*$`).MatchString(recipient) {
+				log.Debug().Msg("One of the To header emails is not a valid email address")
+				ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid_multiple_email_recipients"})
+				return
+			}
+			toListString += recipient
+			if index < len(v)-1 {
+				toListString += ", "
+			}
+		}
+		toHeader = toListString
+	default:
+		log.Debug().Msg("To header is of invalid type")
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid_to_header_type"})
+		return
+	}
+
+	// update the headers with reformatted values
+	rawMail.Headers["From"] = fromHeader
+	rawMail.Headers["To"] = toHeader
 
 	//TODO: check email validity here
 	log.Debug().Interface("raw_mail", rawMail).Msg("Received raw mail for sending")
