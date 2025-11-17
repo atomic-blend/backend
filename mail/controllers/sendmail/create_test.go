@@ -58,6 +58,7 @@ func TestSendMailController_CreateSendMail(t *testing.T) {
 					Headers: map[string]interface{}{
 						"Subject": "Test Email",
 						"From":    "test@example.com",
+						"To":      "recipient@example.com",
 					},
 					TextContent: "Test email content",
 				}
@@ -138,6 +139,7 @@ func TestSendMailController_CreateSendMail(t *testing.T) {
 						"Message-ID": "<custom-id@example.com>",
 						"Subject":    "Test Email",
 						"From":       "test@example.com",
+						"To":         "recipient@example.com",
 					},
 					TextContent: "Test email content",
 				}
@@ -216,6 +218,7 @@ func TestSendMailController_CreateSendMail(t *testing.T) {
 					Headers: map[string]interface{}{
 						"Subject": "Re: Test Email",
 						"From":    "test@example.com",
+						"To":      "recipient@example.com",
 					},
 					TextContent: "Reply content",
 					InReplyTo:   &originalMailIDHex,
@@ -354,6 +357,7 @@ func TestSendMailController_CreateSendMail(t *testing.T) {
 					Headers: map[string]interface{}{
 						"Subject": "Re: Test Email",
 						"From":    "test@example.com",
+						"To":      "recipient@example.com",
 					},
 					TextContent: "Reply content",
 					InReplyTo:   &originalMailIDHex,
@@ -477,7 +481,7 @@ func TestSendMailController_CreateSendMail(t *testing.T) {
 			setupMailMock: func(mockMailRepo *mocks.MockMailRepository, userID primitive.ObjectID) {
 				mockMailRepo.On("GetByID", mock.Anything, originalMailID).Return(&models.Mail{
 					Headers: map[string]interface{}{
-						"Message-ID":  "<original@example.com>",
+						"Message-ID": "<original@example.com>",
 						"References": "<ref1@example.com> <ref2@example.com>",
 					},
 				}, nil)
@@ -526,6 +530,306 @@ func TestSendMailController_CreateSendMail(t *testing.T) {
 			setupS3Mock:    func(mockS3Service *s3service.MockS3Service, userID primitive.ObjectID) {},
 			setupMailMock:  func(mockMailRepo *mocks.MockMailRepository, userID primitive.ObjectID) {},
 			setupAuth:      func(c *gin.Context, userID primitive.ObjectID) {},
+		},
+		{
+			name: "Invalid From header - not an email",
+			requestBody: func() interface{} {
+				return models.RawMail{
+					Headers: map[string]interface{}{
+						"From": "notanemail",
+						"To":   "valid@example.com",
+					},
+					TextContent: "Test",
+				}
+			},
+			expectedStatus: http.StatusBadRequest,
+			setupMock:      func(mockRepo *mocks.MockSendMailRepository, userID primitive.ObjectID) {},
+			setupUserMock:  func(mockUserClient *mocks.MockUserClient, userID primitive.ObjectID) {},
+			setupAMQPMock:  func(mockAMQPService *amqpservice.MockAMQPService, userID primitive.ObjectID) {},
+			setupS3Mock:    func(mockS3Service *s3service.MockS3Service, userID primitive.ObjectID) {},
+			setupMailMock:  func(mockMailRepo *mocks.MockMailRepository, userID primitive.ObjectID) {},
+			setupAuth: func(c *gin.Context, userID primitive.ObjectID) {
+				c.Set("authUser", &auth.UserAuthInfo{UserID: userID})
+			},
+		},
+		{
+			name: "From header reformatted - email to <email>",
+			requestBody: func() interface{} {
+				return models.RawMail{
+					Headers: map[string]interface{}{
+						"From": "test@example.com",
+						"To":   "recipient@example.com",
+					},
+					TextContent: "Test",
+				}
+			},
+			expectedStatus: http.StatusCreated,
+			setupMock: func(mockRepo *mocks.MockSendMailRepository, userID primitive.ObjectID) {
+				mockRepo.On("Create", mock.Anything, mock.MatchedBy(func(arg interface{}) bool {
+					sendMail, ok := arg.(*models.SendMail)
+					if !ok || sendMail.Mail == nil || sendMail.SendStatus != models.SendStatusPending {
+						return false
+					}
+					return true
+				})).Return(&models.SendMail{
+					ID:         primitive.NewObjectID(),
+					SendStatus: models.SendStatusPending,
+				}, nil)
+			},
+			setupUserMock: func(mockUserClient *mocks.MockUserClient, userID primitive.ObjectID) {
+				mockUserClient.On("GetUserPublicKey", mock.Anything, mock.MatchedBy(func(req *connect.Request[userv1.GetUserPublicKeyRequest]) bool {
+					return req.Msg.Id == userID.Hex()
+				})).Return(&connect.Response[userv1.GetUserPublicKeyResponse]{
+					Msg: &userv1.GetUserPublicKeyResponse{
+						PublicKey: "age1jl76v4rmz5ukg9danl3v0zmyet9sqejmngs52wj9m497wgd02s9quq4qfl",
+						UserId:    userID.Hex(),
+					},
+				}, nil)
+			},
+			setupAMQPMock: func(mockAMQPService *amqpservice.MockAMQPService, userID primitive.ObjectID) {
+				mockAMQPService.On("PublishMessage", "mail", "sent", mock.MatchedBy(func(message map[string]interface{}) bool {
+					rawMail, ok := message["content"].(models.RawMail)
+					if !ok {
+						return false
+					}
+					from, ok := rawMail.Headers["From"].(string)
+					return ok && from == "<test@example.com>"
+				}), (*amqp.Table)(nil)).Return()
+			},
+			setupS3Mock: func(mockS3Service *s3service.MockS3Service, userID primitive.ObjectID) {
+				mockS3Service.On("BulkUploadFiles", mock.Anything, mock.MatchedBy(func(payloads []*s3.PutObjectInput) bool {
+					return len(payloads) == 0
+				})).Return([]string{}, nil)
+			},
+			setupMailMock: func(mockMailRepo *mocks.MockMailRepository, userID primitive.ObjectID) {},
+			setupAuth: func(c *gin.Context, userID primitive.ObjectID) {
+				c.Set("authUser", &auth.UserAuthInfo{UserID: userID})
+			},
+		},
+		{
+			name: "From header already formatted",
+			requestBody: func() interface{} {
+				return models.RawMail{
+					Headers: map[string]interface{}{
+						"From": "Test User <test@example.com>",
+						"To":   "recipient@example.com",
+					},
+					TextContent: "Test",
+				}
+			},
+			expectedStatus: http.StatusCreated,
+			setupMock: func(mockRepo *mocks.MockSendMailRepository, userID primitive.ObjectID) {
+				mockRepo.On("Create", mock.Anything, mock.MatchedBy(func(arg interface{}) bool {
+					sendMail, ok := arg.(*models.SendMail)
+					if !ok || sendMail.Mail == nil || sendMail.SendStatus != models.SendStatusPending {
+						return false
+					}
+					return true
+				})).Return(&models.SendMail{
+					ID:         primitive.NewObjectID(),
+					SendStatus: models.SendStatusPending,
+				}, nil)
+			},
+			setupUserMock: func(mockUserClient *mocks.MockUserClient, userID primitive.ObjectID) {
+				mockUserClient.On("GetUserPublicKey", mock.Anything, mock.MatchedBy(func(req *connect.Request[userv1.GetUserPublicKeyRequest]) bool {
+					return req.Msg.Id == userID.Hex()
+				})).Return(&connect.Response[userv1.GetUserPublicKeyResponse]{
+					Msg: &userv1.GetUserPublicKeyResponse{
+						PublicKey: "age1jl76v4rmz5ukg9danl3v0zmyet9sqejmngs52wj9m497wgd02s9quq4qfl",
+						UserId:    userID.Hex(),
+					},
+				}, nil)
+			},
+			setupAMQPMock: func(mockAMQPService *amqpservice.MockAMQPService, userID primitive.ObjectID) {
+				mockAMQPService.On("PublishMessage", "mail", "sent", mock.MatchedBy(func(message map[string]interface{}) bool {
+					rawMail, ok := message["content"].(models.RawMail)
+					if !ok {
+						return false
+					}
+					from, ok := rawMail.Headers["From"].(string)
+					return ok && from == "Test User <test@example.com>"
+				}), (*amqp.Table)(nil)).Return()
+			},
+			setupS3Mock: func(mockS3Service *s3service.MockS3Service, userID primitive.ObjectID) {
+				mockS3Service.On("BulkUploadFiles", mock.Anything, mock.MatchedBy(func(payloads []*s3.PutObjectInput) bool {
+					return len(payloads) == 0
+				})).Return([]string{}, nil)
+			},
+			setupMailMock: func(mockMailRepo *mocks.MockMailRepository, userID primitive.ObjectID) {},
+			setupAuth: func(c *gin.Context, userID primitive.ObjectID) {
+				c.Set("authUser", &auth.UserAuthInfo{UserID: userID})
+			},
+		},
+		{
+			name: "Invalid To header - single invalid email",
+			requestBody: func() interface{} {
+				return models.RawMail{
+					Headers: map[string]interface{}{
+						"From": "test@example.com",
+						"To":   "invalid",
+					},
+					TextContent: "Test",
+				}
+			},
+			expectedStatus: http.StatusBadRequest,
+			setupMock:      func(mockRepo *mocks.MockSendMailRepository, userID primitive.ObjectID) {},
+			setupUserMock:  func(mockUserClient *mocks.MockUserClient, userID primitive.ObjectID) {},
+			setupAMQPMock:  func(mockAMQPService *amqpservice.MockAMQPService, userID primitive.ObjectID) {},
+			setupS3Mock:    func(mockS3Service *s3service.MockS3Service, userID primitive.ObjectID) {},
+			setupMailMock:  func(mockMailRepo *mocks.MockMailRepository, userID primitive.ObjectID) {},
+			setupAuth: func(c *gin.Context, userID primitive.ObjectID) {
+				c.Set("authUser", &auth.UserAuthInfo{UserID: userID})
+			},
+		},
+		{
+			name: "Invalid To header - multiple with invalid",
+			requestBody: func() interface{} {
+				return models.RawMail{
+					Headers: map[string]interface{}{
+						"From": "test@example.com",
+						"To":   []string{"valid@example.com", "invalid"},
+					},
+					TextContent: "Test",
+				}
+			},
+			expectedStatus: http.StatusBadRequest,
+			setupMock:      func(mockRepo *mocks.MockSendMailRepository, userID primitive.ObjectID) {},
+			setupUserMock:  func(mockUserClient *mocks.MockUserClient, userID primitive.ObjectID) {},
+			setupAMQPMock:  func(mockAMQPService *amqpservice.MockAMQPService, userID primitive.ObjectID) {},
+			setupS3Mock:    func(mockS3Service *s3service.MockS3Service, userID primitive.ObjectID) {},
+			setupMailMock:  func(mockMailRepo *mocks.MockMailRepository, userID primitive.ObjectID) {},
+			setupAuth: func(c *gin.Context, userID primitive.ObjectID) {
+				c.Set("authUser", &auth.UserAuthInfo{UserID: userID})
+			},
+		},
+		{
+			name: "Invalid To header - wrong type",
+			requestBody: func() interface{} {
+				return models.RawMail{
+					Headers: map[string]interface{}{
+						"From": "test@example.com",
+						"To":   123,
+					},
+					TextContent: "Test",
+				}
+			},
+			expectedStatus: http.StatusBadRequest,
+			setupMock:      func(mockRepo *mocks.MockSendMailRepository, userID primitive.ObjectID) {},
+			setupUserMock:  func(mockUserClient *mocks.MockUserClient, userID primitive.ObjectID) {},
+			setupAMQPMock:  func(mockAMQPService *amqpservice.MockAMQPService, userID primitive.ObjectID) {},
+			setupS3Mock:    func(mockS3Service *s3service.MockS3Service, userID primitive.ObjectID) {},
+			setupMailMock:  func(mockMailRepo *mocks.MockMailRepository, userID primitive.ObjectID) {},
+			setupAuth: func(c *gin.Context, userID primitive.ObjectID) {
+				c.Set("authUser", &auth.UserAuthInfo{UserID: userID})
+			},
+		},
+		{
+			name: "To header reformatted - multiple valid emails",
+			requestBody: func() interface{} {
+				return models.RawMail{
+					Headers: map[string]interface{}{
+						"From": "test@example.com",
+						"To":   []string{"alice@example.com", "bob@example.com"},
+					},
+					TextContent: "Test",
+				}
+			},
+			expectedStatus: http.StatusCreated,
+			setupMock: func(mockRepo *mocks.MockSendMailRepository, userID primitive.ObjectID) {
+				mockRepo.On("Create", mock.Anything, mock.MatchedBy(func(arg interface{}) bool {
+					sendMail, ok := arg.(*models.SendMail)
+					if !ok || sendMail.Mail == nil || sendMail.SendStatus != models.SendStatusPending {
+						return false
+					}
+					return true
+				})).Return(&models.SendMail{
+					ID:         primitive.NewObjectID(),
+					SendStatus: models.SendStatusPending,
+				}, nil)
+			},
+			setupUserMock: func(mockUserClient *mocks.MockUserClient, userID primitive.ObjectID) {
+				mockUserClient.On("GetUserPublicKey", mock.Anything, mock.MatchedBy(func(req *connect.Request[userv1.GetUserPublicKeyRequest]) bool {
+					return req.Msg.Id == userID.Hex()
+				})).Return(&connect.Response[userv1.GetUserPublicKeyResponse]{
+					Msg: &userv1.GetUserPublicKeyResponse{
+						PublicKey: "age1jl76v4rmz5ukg9danl3v0zmyet9sqejmngs52wj9m497wgd02s9quq4qfl",
+						UserId:    userID.Hex(),
+					},
+				}, nil)
+			},
+			setupAMQPMock: func(mockAMQPService *amqpservice.MockAMQPService, userID primitive.ObjectID) {
+				mockAMQPService.On("PublishMessage", "mail", "sent", mock.MatchedBy(func(message map[string]interface{}) bool {
+					rawMail, ok := message["content"].(models.RawMail)
+					if !ok {
+						return false
+					}
+					to, ok := rawMail.Headers["To"].(string)
+					return ok && to == "alice@example.com, bob@example.com"
+				}), (*amqp.Table)(nil)).Return()
+			},
+			setupS3Mock: func(mockS3Service *s3service.MockS3Service, userID primitive.ObjectID) {
+				mockS3Service.On("BulkUploadFiles", mock.Anything, mock.MatchedBy(func(payloads []*s3.PutObjectInput) bool {
+					return len(payloads) == 0
+				})).Return([]string{}, nil)
+			},
+			setupMailMock: func(mockMailRepo *mocks.MockMailRepository, userID primitive.ObjectID) {},
+			setupAuth: func(c *gin.Context, userID primitive.ObjectID) {
+				c.Set("authUser", &auth.UserAuthInfo{UserID: userID})
+			},
+		},
+		{
+			name: "To header - single valid email",
+			requestBody: func() interface{} {
+				return models.RawMail{
+					Headers: map[string]interface{}{
+						"From": "test@example.com",
+						"To":   "recipient@example.com",
+					},
+					TextContent: "Test",
+				}
+			},
+			expectedStatus: http.StatusCreated,
+			setupMock: func(mockRepo *mocks.MockSendMailRepository, userID primitive.ObjectID) {
+				mockRepo.On("Create", mock.Anything, mock.MatchedBy(func(arg interface{}) bool {
+					sendMail, ok := arg.(*models.SendMail)
+					if !ok || sendMail.Mail == nil || sendMail.SendStatus != models.SendStatusPending {
+						return false
+					}
+					return true
+				})).Return(&models.SendMail{
+					ID:         primitive.NewObjectID(),
+					SendStatus: models.SendStatusPending,
+				}, nil)
+			},
+			setupUserMock: func(mockUserClient *mocks.MockUserClient, userID primitive.ObjectID) {
+				mockUserClient.On("GetUserPublicKey", mock.Anything, mock.MatchedBy(func(req *connect.Request[userv1.GetUserPublicKeyRequest]) bool {
+					return req.Msg.Id == userID.Hex()
+				})).Return(&connect.Response[userv1.GetUserPublicKeyResponse]{
+					Msg: &userv1.GetUserPublicKeyResponse{
+						PublicKey: "age1jl76v4rmz5ukg9danl3v0zmyet9sqejmngs52wj9m497wgd02s9quq4qfl",
+						UserId:    userID.Hex(),
+					},
+				}, nil)
+			},
+			setupAMQPMock: func(mockAMQPService *amqpservice.MockAMQPService, userID primitive.ObjectID) {
+				mockAMQPService.On("PublishMessage", "mail", "sent", mock.MatchedBy(func(message map[string]interface{}) bool {
+					rawMail, ok := message["content"].(models.RawMail)
+					if !ok {
+						return false
+					}
+					to, ok := rawMail.Headers["To"].(string)
+					return ok && to == "recipient@example.com"
+				}), (*amqp.Table)(nil)).Return()
+			},
+			setupS3Mock: func(mockS3Service *s3service.MockS3Service, userID primitive.ObjectID) {
+				mockS3Service.On("BulkUploadFiles", mock.Anything, mock.MatchedBy(func(payloads []*s3.PutObjectInput) bool {
+					return len(payloads) == 0
+				})).Return([]string{}, nil)
+			},
+			setupMailMock: func(mockMailRepo *mocks.MockMailRepository, userID primitive.ObjectID) {},
+			setupAuth: func(c *gin.Context, userID primitive.ObjectID) {
+				c.Set("authUser", &auth.UserAuthInfo{UserID: userID})
+			},
 		},
 	}
 
