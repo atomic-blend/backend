@@ -126,6 +126,13 @@ func (c *Controller) CreateSendMail(ctx *gin.Context) {
 
 			log.Debug().Str("in_reply_to", originalMailMessageID).Msg("Setting In-Reply-To header")
 			rawMail.Headers["In-Reply-To"] = originalMailMessageID
+
+			// Also set References header to include new message ID
+			if refs, ok := originalMail.Headers["References"].(string); ok && refs != "" {
+				rawMail.Headers["References"] = fmt.Sprintf("%s %s", refs, originalMailMessageID)
+			} else {
+				rawMail.Headers["References"] = originalMailMessageID
+			}
 		}()
 	}
 
