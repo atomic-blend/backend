@@ -78,7 +78,7 @@ func receiveMail(m *amqp.Delivery, payload ReceivedMailPayload) {
 		log.Error().Err(err).Msg("Failed to check message with Rspamd")
 		// Continue processing even if Rspamd check fails
 	} else {
-		log.Info().
+		log.Debug().
 			Str("action", checkResponse.Action).
 			Float64("score", checkResponse.Score).
 			Float64("required_score", checkResponse.RequiredScore).
@@ -87,30 +87,30 @@ func receiveMail(m *amqp.Delivery, payload ReceivedMailPayload) {
 
 		// Log triggered symbols if any
 		if len(checkResponse.Symbols) > 0 {
-			log.Info().Interface("symbols", checkResponse.Symbols).Msg("Rspamd triggered symbols")
+			log.Debug().Interface("symbols", checkResponse.Symbols).Msg("Rspamd triggered symbols")
 		}
 
 		switch checkResponse.Action {
 		case "reject":
-			log.Info().Msg("Rejecting email")
+			log.Debug().Msg("Rejecting email")
 			mailContent.Rejected = true
 		case "soft reject":
-			log.Info().Msg("Soft rejecting email")
+			log.Debug().Msg("Soft rejecting email")
 			mailContent.Rejected = true
 		case "no action":
-			log.Info().Msg("No action taken")
+			log.Debug().Msg("No action taken")
 		case "add header":
-			log.Info().Msg("Adding spam header")
+			log.Debug().Msg("Adding spam header")
 			mailContent.RewriteSubject = true
 		case "rewrite subject":
-			log.Info().Msg("Rewrite subject")
+			log.Debug().Msg("Rewrite subject")
 			// mark the email subject as needing a rewrite (only when sending, ignored on receiving)
 			mailContent.RewriteSubject = true
 		case "greylist":
-			log.Info().Msg("Greylisting email")
+			log.Debug().Msg("Greylisting email")
 			mailContent.Greylisted = true
 		default:
-			log.Info().Msg("No action taken")
+			log.Debug().Msg("No action taken")
 		}
 	}
 
@@ -121,7 +121,7 @@ func receiveMail(m *amqp.Delivery, payload ReceivedMailPayload) {
 		return
 	}
 
-	log.Info().
+	log.Debug().
 		Str("from", payload.From).
 		Interface("to", payload.Rcpt).
 		Str("date", payload.ReceivedAt).
@@ -145,12 +145,12 @@ func receiveMail(m *amqp.Delivery, payload ReceivedMailPayload) {
 	haveErrors := false
 
 	for _, rcpt := range payload.Rcpt {
-		log.Info().Str("rcpt", rcpt).Msg("Handling recepient")
+		log.Debug().Str("rcpt", rcpt).Msg("Handling recepient")
 
 		mailEntity := &models.Mail{}
 
 		// get the user public key from the auth service via grpc
-		log.Info().Str("rcpt", rcpt).Msg("Instantiating user client")
+		log.Debug().Str("rcpt", rcpt).Msg("Instantiating user client")
 		userClient, err := userclient.NewUserClient()
 		if err != nil {
 			log.Error().Err(err).Msg("Failed to create user client")
@@ -158,14 +158,14 @@ func receiveMail(m *amqp.Delivery, payload ReceivedMailPayload) {
 			continue
 		}
 
-		log.Info().Str("rcpt", rcpt).Msg("Getting user public key")
+		log.Debug().Str("rcpt", rcpt).Msg("Getting user public key")
 		rcptPublicKey, err := userClient.GetUserPublicKey(context.Background(), &connect.Request[userv1.GetUserPublicKeyRequest]{
 			Msg: &userv1.GetUserPublicKeyRequest{
 				Email: rcpt,
 			},
 		})
 		if err != nil {
-			log.Info().Str("rcpt", rcpt).Msg("User not found, skipping")
+			log.Debug().Str("rcpt", rcpt).Msg("User not found, skipping")
 			continue
 		}
 
@@ -177,13 +177,13 @@ func receiveMail(m *amqp.Delivery, payload ReceivedMailPayload) {
 		}
 		mailEntity.UserID = userID
 
-		log.Info().Str("rcpt", rcpt).Str("publicKey", rcptPublicKey.Msg.PublicKey).Msg("User public key")
-		log.Info().Interface("encryptedMails", encryptedMails).Msg("Encrypted mails")
+		log.Debug().Str("rcpt", rcpt).Str("publicKey", rcptPublicKey.Msg.PublicKey).Msg("User public key")
+		log.Debug().Interface("encryptedMails", encryptedMails).Msg("Encrypted mails")
 
 		userPublicKey := rcptPublicKey.Msg.PublicKey
 
 		// encrypt the mail content for mongodb with user's public key
-		log.Info().Str("rcpt", rcpt).Msg("Encrypting mail content")
+		log.Debug().Str("rcpt", rcpt).Msg("Encrypting mail content")
 		encryptedMailContent, err := mailContent.Encrypt(userPublicKey)
 		if err != nil {
 			log.Error().Err(err).Msg("Failed to encrypt mail content")
@@ -191,7 +191,7 @@ func receiveMail(m *amqp.Delivery, payload ReceivedMailPayload) {
 			continue
 		}
 
-		log.Info().Str("rcpt", rcpt).Interface("encryptedContent", encryptedMailContent).Msg("Encrypted mail content")
+		log.Debug().Str("rcpt", rcpt).Interface("encryptedContent", encryptedMailContent).Msg("Encrypted mail content")
 
 		// upload the attachments to s3 and store the references in the mail entity
 		for _, attachment := range encryptedMailContent.Attachments {
@@ -224,7 +224,7 @@ func receiveMail(m *amqp.Delivery, payload ReceivedMailPayload) {
 		encryptedMails = append(encryptedMails, *mailEntity)
 
 		// encrypt the notification content for mongodb with user's public key
-		log.Info().Str("rcpt", rcpt).Msg("Encrypting notification content")
+		log.Debug().Str("rcpt", rcpt).Msg("Encrypting notification content")
 		ageService := ageencryptionservice.NewAgeEncryptionService()
 		contentPreview := truncateString(mailContent.TextContent, 100)
 		encryptedContentPreview, err := ageService.EncryptString(userPublicKey, contentPreview)
@@ -243,6 +243,7 @@ func receiveMail(m *amqp.Delivery, payload ReceivedMailPayload) {
 	}
 
 	// upload the attachments to s3 in bulk
+	log.Debug().Msg("Uploading attachments to S3 in bulk")
 	uploadedKeys, err := s3Service.BulkUploadFiles(context.Background(), encryptedAttachments)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to upload attachments to S3")
@@ -250,6 +251,7 @@ func receiveMail(m *amqp.Delivery, payload ReceivedMailPayload) {
 	}
 
 	// save the mail documents with s3 references to mongodb
+	log.Debug().Msg("Saving mail documents to MongoDB")
 	_, err = mailRepository.CreateMany(context.Background(), encryptedMails)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to save mail documents to MongoDB")
@@ -258,9 +260,11 @@ func receiveMail(m *amqp.Delivery, payload ReceivedMailPayload) {
 	}
 
 	// send notifications to the user
+	log.Info().Msg("Sending notifications to users")
 	for userID, notification := range encryptedNotifications {
 
 		// Get user devices using gRPC client
+		log.Debug().Str("userID", userID).Msg("Getting user devices for notification")
 		req := &connect.Request[userv1.GetUserDevicesRequest]{
 			Msg: &userv1.GetUserDevicesRequest{
 				User: &authv1.User{
@@ -275,6 +279,7 @@ func receiveMail(m *amqp.Delivery, payload ReceivedMailPayload) {
 			return
 		}
 
+		log.Debug().Str("userID", userID).Msg("Fetching user devices via gRPC")
 		resp, err := userService.GetUserDevices(context.TODO(), req)
 		if err != nil {
 			log.Error().Err(err).Msgf("Failed to get user devices for user: %s", userID)
@@ -289,7 +294,7 @@ func receiveMail(m *amqp.Delivery, payload ReceivedMailPayload) {
 		}
 
 		if len(deviceTokens) == 0 {
-			log.Debug().Msgf("No device tokens found for user: %s", userID)
+			log.Debug().Str("userID", userID).Msg("No device tokens found for user")
 			continue
 		}
 		data := notification.GetData()
@@ -298,6 +303,7 @@ func receiveMail(m *amqp.Delivery, payload ReceivedMailPayload) {
 		log.Debug().Msgf("Data: %v", data)
 
 		// send the notification to the user
+		log.Debug().Str("userID", userID).Msg("Sending FCM notification to user devices")
 		fcmutils.SendMulticast(context.TODO(), fcmClient, data, deviceTokens)
 	}
 
