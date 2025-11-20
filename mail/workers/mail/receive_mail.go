@@ -244,23 +244,23 @@ func receiveMail(m *amqp.Delivery, payload ReceivedMailPayload) {
 
 	// upload the attachments to s3 in bulk
 	log.Debug().Msg("Uploading attachments to S3 in bulk")
-	uploadedKeys, err := s3Service.BulkUploadFiles(context.Background(), encryptedAttachments)
+	uploadedKeys, err := s3Service.BulkUploadFiles(context.TODO(), encryptedAttachments)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to upload attachments to S3")
 		return
 	}
 
 	// save the mail documents with s3 references to mongodb
-	log.Debug().Msg("Saving mail documents to MongoDB")
-	_, err = mailRepository.CreateMany(context.Background(), encryptedMails)
+	log.Debug().Int("count", len(encryptedMails)).Msg("Saving mail documents to MongoDB")
+	_, err = mailRepository.CreateMany(context.TODO(), encryptedMails)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to save mail documents to MongoDB")
-		s3Service.BulkDeleteFiles(context.Background(), uploadedKeys)
+		s3Service.BulkDeleteFiles(context.TODO(), uploadedKeys)
 		return
 	}
 
 	// send notifications to the user
-	log.Info().Msg("Sending notifications to users")
+	log.Debug().Msg("Sending notifications to users")
 	for userID, notification := range encryptedNotifications {
 
 		// Get user devices using gRPC client
