@@ -77,7 +77,7 @@ func createTestMail(userID primitive.ObjectID) *models.Mail {
 	now := primitive.NewDateTimeFromTime(time.Now())
 	return &models.Mail{
 		UserID: userID,
-		Headers: map[string]string{
+		Headers: map[string]interface{}{
 			"From":       "sender@example.com",
 			"To":         "recipient@example.com",
 			"Subject":    "Test Subject",
@@ -165,19 +165,19 @@ func TestMailRepository_GetAll(t *testing.T) {
 		mail2.CreatedAt = &createdAt2
 		mail2.UpdatedAt = &createdAt2
 
-		if headers1, ok := mail1.Headers.(map[string]string); ok {
-			headers1["Subject"] = "Mail 1"
+		if mail1.Headers != nil {
+			mail1.Headers["Subject"] = "Mail 1"
 		}
 
-		if headers2, ok := mail2.Headers.(map[string]string); ok {
-			headers2["Subject"] = "Mail 2"
+		if mail2.Headers != nil {
+			mail2.Headers["Subject"] = "Mail 2"
 		}
 
 		// Create one mail for another user
 		otherUserID := primitive.NewObjectID()
 		otherMail := createTestMail(otherUserID)
-		if headersOther, ok := otherMail.Headers.(map[string]string); ok {
-			headersOther["Subject"] = "Other User Mail"
+		if otherMail.Headers != nil {
+			otherMail.Headers["Subject"] = "Other User Mail"
 		}
 
 		_, err := repo.Create(context.Background(), mail1)
@@ -248,8 +248,8 @@ func TestMailRepository_GetAll(t *testing.T) {
 			createdAt := primitive.NewDateTimeFromTime(baseTime.Add(time.Duration(i) * time.Millisecond))
 			mail.CreatedAt = &createdAt
 			mail.UpdatedAt = &createdAt
-			if headers, ok := mail.Headers.(map[string]string); ok {
-				headers["Subject"] = fmt.Sprintf("Mail %d", i+1)
+			if mail.Headers != nil {
+				mail.Headers["Subject"] = fmt.Sprintf("Mail %d", i+1)
 			}
 			_, err := repo.Create(context.Background(), mail)
 			require.NoError(t, err)
@@ -358,14 +358,14 @@ func TestMailRepository_CreateMany(t *testing.T) {
 		}
 
 		// Set different subjects for each mail
-		if headers0, ok := mails[0].Headers.(map[string]string); ok {
-			headers0["Subject"] = "Batch Mail 1"
+		if mails[0].Headers != nil {
+			mails[0].Headers["Subject"] = "Batch Mail 1"
 		}
-		if headers1, ok := mails[1].Headers.(map[string]string); ok {
-			headers1["Subject"] = "Batch Mail 2"
+		if mails[1].Headers != nil {
+			mails[1].Headers["Subject"] = "Batch Mail 2"
 		}
-		if headers2, ok := mails[2].Headers.(map[string]string); ok {
-			headers2["Subject"] = "Batch Mail 3"
+		if mails[2].Headers != nil {
+			mails[2].Headers["Subject"] = "Batch Mail 3"
 		}
 
 		success, err := repo.CreateMany(context.Background(), mails)
@@ -409,11 +409,11 @@ func TestMailRepository_CreateMany(t *testing.T) {
 			*createTestMail(userID2),
 		}
 
-		if headers0, ok := mails[0].Headers.(map[string]string); ok {
-			headers0["Subject"] = "User 1 Mail"
+		if mails[0].Headers != nil {
+			mails[0].Headers["Subject"] = "User 1 Mail"
 		}
-		if headers1, ok := mails[1].Headers.(map[string]string); ok {
-			headers1["Subject"] = "User 2 Mail"
+		if mails[1].Headers != nil {
+			mails[1].Headers["Subject"] = "User 2 Mail"
 		}
 
 		success, err := repo.CreateMany(context.Background(), mails)
@@ -489,8 +489,8 @@ func TestMailRepository_CleanupTrash(t *testing.T) {
 		var createdMails []*models.Mail
 		for i, tc := range testCases {
 			mail := createTestMail(userID)
-			if headers, ok := mail.Headers.(map[string]string); ok {
-				headers["Subject"] = tc.name
+			if mail.Headers != nil {
+				mail.Headers["Subject"] = tc.name
 			}
 			mail.Trashed = &tc.trashed
 			mail.TrashedAt = tc.trashedAt
@@ -817,8 +817,8 @@ func TestMailRepository_CleanupTrash(t *testing.T) {
 		var createdMails []*models.Mail
 		for _, tc := range testCases {
 			mail := createTestMail(userID)
-			if headers, ok := mail.Headers.(map[string]string); ok {
-				headers["Subject"] = tc.name
+			if mail.Headers != nil {
+				mail.Headers["Subject"] = tc.name
 			}
 			mail.Trashed = &tc.trashed
 			mail.TrashedAt = tc.trashedAt
@@ -880,8 +880,8 @@ func TestMailRepository_CleanupTrash(t *testing.T) {
 		var createdMails []*models.Mail
 		for _, tc := range testCases {
 			mail := createTestMail(userID)
-			if headers, ok := mail.Headers.(map[string]string); ok {
-				headers["Subject"] = tc.name
+			if mail.Headers != nil {
+				mail.Headers["Subject"] = tc.name
 			}
 			mail.Trashed = &tc.trashed
 			mail.TrashedAt = tc.trashedAt
@@ -952,8 +952,8 @@ func TestMailRepository_GetSince(t *testing.T) {
 
 		for i, tc := range testCases {
 			mail := createTestMail(userID)
-			if headers, ok := mail.Headers.(map[string]string); ok {
-				headers["Subject"] = tc.name
+			if mail.Headers != nil {
+				mail.Headers["Subject"] = tc.name
 			}
 			// Set specific updated_at time
 			updatedAt := primitive.NewDateTimeFromTime(tc.updatedAt)
@@ -1020,8 +1020,8 @@ func TestMailRepository_GetSince(t *testing.T) {
 
 		// Create a mail updated 1 hour ago
 		mail := createTestMail(userID)
-		if headers, ok := mail.Headers.(map[string]string); ok {
-			headers["Subject"] = "Old Mail"
+		if mail.Headers != nil {
+			mail.Headers["Subject"] = "Old Mail"
 		}
 		updatedAt := primitive.NewDateTimeFromTime(now.Add(-1 * time.Hour))
 		mail.UpdatedAt = &updatedAt
@@ -1050,8 +1050,8 @@ func TestMailRepository_GetSince(t *testing.T) {
 		// Create multiple mails updated recently
 		for i := 0; i < 3; i++ {
 			mail := createTestMail(userID)
-			if headers, ok := mail.Headers.(map[string]string); ok {
-				headers["Subject"] = fmt.Sprintf("Recent Mail %d", i+1)
+			if mail.Headers != nil {
+				mail.Headers["Subject"] = fmt.Sprintf("Recent Mail %d", i+1)
 			}
 			updatedAt := primitive.NewDateTimeFromTime(now.Add(-time.Duration(i) * time.Minute))
 			mail.UpdatedAt = &updatedAt
@@ -1113,16 +1113,16 @@ func TestMailRepository_GetSince(t *testing.T) {
 
 		// Create mails for both users with different timestamps
 		mail1 := createTestMail(userID1)
-		if headers, ok := mail1.Headers.(map[string]string); ok {
-			headers["Subject"] = "User 1 Mail"
+		if mail1.Headers != nil {
+			mail1.Headers["Subject"] = "User 1 Mail"
 		}
 		updatedAt1 := primitive.NewDateTimeFromTime(now.Add(-30 * time.Minute))
 		mail1.UpdatedAt = &updatedAt1
 		mail1.CreatedAt = &updatedAt1
 
 		mail2 := createTestMail(userID2)
-		if headers, ok := mail2.Headers.(map[string]string); ok {
-			headers["Subject"] = "User 2 Mail"
+		if mail2.Headers != nil {
+			mail2.Headers["Subject"] = "User 2 Mail"
 		}
 		updatedAt2 := primitive.NewDateTimeFromTime(now.Add(-10 * time.Minute))
 		mail2.UpdatedAt = &updatedAt2
@@ -1163,8 +1163,8 @@ func TestMailRepository_GetSince(t *testing.T) {
 
 		// Create a mail updated exactly at the cutoff time
 		mail := createTestMail(userID)
-		if headers, ok := mail.Headers.(map[string]string); ok {
-			headers["Subject"] = "Exact Time Mail"
+		if mail.Headers != nil {
+			mail.Headers["Subject"] = "Exact Time Mail"
 		}
 		cutoffTime := now.Add(-30 * time.Minute)
 		updatedAt := primitive.NewDateTimeFromTime(cutoffTime)
@@ -1197,8 +1197,8 @@ func TestMailRepository_GetSince(t *testing.T) {
 
 		// Create a mail updated now
 		mail := createTestMail(userID)
-		if headers, ok := mail.Headers.(map[string]string); ok {
-			headers["Subject"] = "Current Mail"
+		if mail.Headers != nil {
+			mail.Headers["Subject"] = "Current Mail"
 		}
 		updatedAt := primitive.NewDateTimeFromTime(now)
 		mail.UpdatedAt = &updatedAt
@@ -1228,8 +1228,8 @@ func TestMailRepository_GetSince(t *testing.T) {
 		baseTime := now.Add(-1 * time.Hour)
 		for i := 0; i < 5; i++ {
 			mail := createTestMail(userID)
-			if headers, ok := mail.Headers.(map[string]string); ok {
-				headers["Subject"] = fmt.Sprintf("Mail %d", i+1)
+			if mail.Headers != nil {
+				mail.Headers["Subject"] = fmt.Sprintf("Mail %d", i+1)
 			}
 			// Ensure UpdatedAt increases with i so Mail 1 is oldest and Mail 5 is newest
 			updatedAt := primitive.NewDateTimeFromTime(baseTime.Add(time.Duration(i) * time.Minute))
@@ -1313,8 +1313,8 @@ func TestMailRepository_Integration(t *testing.T) {
 
 		// Create a mail
 		mail := createTestMail(userID)
-		if headers, ok := mail.Headers.(map[string]string); ok {
-			headers["Subject"] = "Integration Test Mail"
+		if mail.Headers != nil {
+			mail.Headers["Subject"] = "Integration Test Mail"
 		}
 		created, err := repo.Create(context.Background(), mail)
 		require.NoError(t, err)

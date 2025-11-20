@@ -5,6 +5,8 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"os"
+	"regexp"
 
 	"connectrpc.com/connect"
 	userv1 "github.com/atomic-blend/backend/grpc/gen/user/v1"
@@ -13,6 +15,7 @@ import (
 	awss3 "github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 
 	"github.com/gin-gonic/gin"
 )
@@ -35,6 +38,13 @@ type CreateSendMailRequest struct {
 // @Failure 500 {object} map[string]interface{}
 // @Router /mail/send [post]
 func (c *Controller) CreateSendMail(ctx *gin.Context) {
+	// get public address from environment for generating message IDs
+	publicAddress := os.Getenv("PUBLIC_ADDRESS")
+	if publicAddress == "" {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Public address not configured"})
+		return
+	}
+
 	// Get authenticated user from context
 	authUser := auth.GetAuthUser(ctx)
 	if authUser == nil {
@@ -55,7 +65,7 @@ func (c *Controller) CreateSendMail(ctx *gin.Context) {
 		return
 	}
 
-	// // Normalize headers to preserve list structure
+	// Normalize headers to preserve list structure
 	if rawMail.Headers != nil {
 		normalizedHeaders := make(map[string]interface{})
 		for key, value := range rawMail.Headers {
@@ -79,8 +89,114 @@ func (c *Controller) CreateSendMail(ctx *gin.Context) {
 		rawMail.Headers = normalizedHeaders
 	}
 
-	//TODO: check email validity here
+	// // generate a message ID header if not provided
+	if rawMail.Headers == nil {
+		rawMail.Headers = make(map[string]interface{})
+	}
 
+	messageID := fmt.Sprintf("<%s@%s>", uuid.New().String(), publicAddress)
+	rawMail.Headers["Message-ID"] = messageID
+
+	// Set In-Reply-To header if replying to another mail
+	if rawMail.InReplyTo != nil {
+		func() {
+			// fetch the original mail to get its message ID
+			originalMailID := *rawMail.InReplyTo
+			objectID, err := primitive.ObjectIDFromHex(originalMailID)
+			if err != nil {
+				log.Error().Err(err).Str("original_mail_id", originalMailID).Msg("Invalid original mail ID for In-Reply-To header")
+				return
+			}
+			originalMail, err := c.mailRepo.GetByID(ctx, objectID)
+			if err != nil {
+				log.Error().Err(err).Str("original_mail_id", originalMailID).Msg("Failed to fetch original mail for In-Reply-To header")
+				return
+			}
+
+			originalMailMessageID := ""
+			if originalMail != nil && originalMail.Headers != nil {
+				if msgID, ok := originalMail.Headers["Message-ID"].(string); ok {
+					originalMailMessageID = msgID
+				}
+			}
+
+			if originalMailMessageID == "" {
+				log.Error().Str("original_mail_id", originalMailID).Msg("Original mail has no Message-ID header for In-Reply-To")
+				return
+			}
+
+			log.Debug().Str("in_reply_to", originalMailMessageID).Msg("Setting In-Reply-To header")
+			rawMail.Headers["In-Reply-To"] = originalMailMessageID
+
+			// Also set References header to include new message ID
+			if refs, ok := originalMail.Headers["References"].(string); ok && refs != "" {
+				rawMail.Headers["References"] = fmt.Sprintf("%s %s", refs, originalMailMessageID)
+			} else {
+				rawMail.Headers["References"] = originalMailMessageID
+			}
+		}()
+	}
+
+	// Reformat To and From fields to match RFC 5322 if necessary
+	// Format: Display Name <email@domain>
+	// TODO: test this
+	fromHeader := rawMail.Headers["From"]
+	if !regexp.MustCompile(`^.*<.*@.*>$`).MatchString(fmt.Sprintf("%v", fromHeader)) {
+		if regexp.MustCompile(`^.*@.*$`).MatchString(fmt.Sprintf("%v", fromHeader)) {
+			//TODO: call the auth service to get user name and emails
+			log.Debug().Msg("[NOT IMPLEMENTED] Reformatting From header, using provided email only")
+
+			// temporary, until the auth service is called
+			// Only email provided, add display name as the part before @
+			emailStr := fmt.Sprintf("%v", fromHeader)
+			reformattedFrom := fmt.Sprintf("<%s>", emailStr)
+			fromHeader = reformattedFrom
+		} else {
+			log.Debug().Msg("From header is not a valid email address")
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid_email_sender"})
+			return
+		}
+
+	}
+
+	// Reformat the To header to match RFC 5322 if necessary
+	// Single Recipient: Display Name <email@domain>
+	// Multiple Recipients: alice@example.com, bob@example.com, "Charlie Brown" <charlie@domain.org>
+	// To header in rawMail.Headers can be string or []string
+	// TODO: test this
+	toHeader := rawMail.Headers["To"]
+	switch v := toHeader.(type) {
+	case string:
+		if !regexp.MustCompile(`^.*@.*$`).MatchString(v) {
+			log.Debug().Msg("To header is not a valid email address")
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid_single_email_recipient"})
+			return
+		}
+	case []string:
+		toListString := ""
+		for index, recipient := range v {
+			if !regexp.MustCompile(`^.*@.*$`).MatchString(recipient) {
+				log.Debug().Msg("One of the To header emails is not a valid email address")
+				ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid_multiple_email_recipients"})
+				return
+			}
+			toListString += recipient
+			if index < len(v)-1 {
+				toListString += ", "
+			}
+		}
+		toHeader = toListString
+	default:
+		log.Debug().Msg("To header is of invalid type")
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid_to_header_type"})
+		return
+	}
+
+	// update the headers with reformatted values
+	rawMail.Headers["From"] = fromHeader
+	rawMail.Headers["To"] = toHeader
+
+	//TODO: check email validity here
 	log.Debug().Interface("raw_mail", rawMail).Msg("Received raw mail for sending")
 
 	// get the user public key from the auth service via grpc

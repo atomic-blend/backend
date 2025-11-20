@@ -15,21 +15,22 @@ type MailAttachment struct {
 
 // Mail represents a mail message
 type Mail struct {
-	ID             *primitive.ObjectID `bson:"_id,omitempty" json:"id,omitempty"`
-	UserID         primitive.ObjectID  `bson:"user_id" json:"userId"`
-	Headers        interface{}         `bson:"headers" json:"headers"`
-	TextContent    string              `bson:"text_content" json:"textContent"`
-	HTMLContent    string              `bson:"html_content" json:"htmlContent"`
-	Attachments    []MailAttachment    `bson:"attachments,omitempty" json:"attachments,omitempty"`
-	Read           *bool               `bson:"read,omitempty" json:"read,omitempty"`
-	Archived       *bool               `bson:"archived,omitempty" json:"archived,omitempty"`
-	Trashed        *bool               `bson:"trashed,omitempty" json:"trashed,omitempty"`
-	TrashedAt      *primitive.DateTime `bson:"trashed_at,omitempty" json:"trashedAt,omitempty"`
-	Greylisted     *bool               `bson:"graylisted,omitempty" json:"graylisted,omitempty"`
-	Rejected       *bool               `bson:"rejected,omitempty" json:"rejected,omitempty"`
-	RewriteSubject *bool               `bson:"rewrite_subject,omitempty" json:"rewriteSubject,omitempty"`
-	CreatedAt      *primitive.DateTime `bson:"created_at,omitempty" json:"createdAt,omitempty"`
-	UpdatedAt      *primitive.DateTime `bson:"updated_at,omitempty" json:"updatedAt,omitempty"`
+	ID             *primitive.ObjectID    `bson:"_id,omitempty" json:"id,omitempty"`
+	UserID         primitive.ObjectID     `bson:"user_id" json:"userId"`
+	Headers        map[string]interface{} `bson:"headers" json:"headers"`
+	TextContent    string                 `bson:"text_content" json:"textContent"`
+	HTMLContent    string                 `bson:"html_content" json:"htmlContent"`
+	Attachments    []MailAttachment       `bson:"attachments,omitempty" json:"attachments,omitempty"`
+	Read           *bool                  `bson:"read,omitempty" json:"read,omitempty"`
+	InReplyTo      *primitive.ObjectID    `bson:"in_reply_to,omitempty" json:"inReplyTo,omitempty"`
+	Archived       *bool                  `bson:"archived,omitempty" json:"archived,omitempty"`
+	Trashed        *bool                  `bson:"trashed,omitempty" json:"trashed,omitempty"`
+	TrashedAt      *primitive.DateTime    `bson:"trashed_at,omitempty" json:"trashedAt,omitempty"`
+	Greylisted     *bool                  `bson:"graylisted,omitempty" json:"graylisted,omitempty"`
+	Rejected       *bool                  `bson:"rejected,omitempty" json:"rejected,omitempty"`
+	RewriteSubject *bool                  `bson:"rewrite_subject,omitempty" json:"rewriteSubject,omitempty"`
+	CreatedAt      *primitive.DateTime    `bson:"created_at,omitempty" json:"createdAt,omitempty"`
+	UpdatedAt      *primitive.DateTime    `bson:"updated_at,omitempty" json:"updatedAt,omitempty"`
 }
 
 // Encrypt encrypts the mail data

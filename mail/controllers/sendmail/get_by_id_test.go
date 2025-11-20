@@ -85,6 +85,7 @@ func TestSendMailController_GetSendMailByID(t *testing.T) {
 			mockUserClient := &mocks.MockUserClient{}
 			mockAMQPService := &amqpservice.MockAMQPService{}
 			mockS3Service := &s3service.MockS3Service{}
+			mockMailRepo := &mocks.MockMailRepository{}
 			userID := primitive.NewObjectID()
 
 			var sendMailID primitive.ObjectID
@@ -94,7 +95,7 @@ func TestSendMailController_GetSendMailByID(t *testing.T) {
 
 			tt.setupMock(mockRepo, userID, sendMailID)
 
-			controller := NewSendMailController(mockRepo, mockUserClient, mockAMQPService, mockS3Service)
+			controller := NewSendMailController(mockRepo, mockMailRepo, mockUserClient, mockAMQPService, mockS3Service)
 
 			router := gin.New()
 			router.Use(func(c *gin.Context) {
