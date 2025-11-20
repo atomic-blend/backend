@@ -241,67 +241,67 @@ func TestSendMailController_CreateSendMail(t *testing.T) {
 					}
 
 					// Check Message-ID is present
-					if v, exists := sendMail.Mail.Headers["Message-ID"]; !exists {
+					v, exists := sendMail.Mail.Headers["Message-ID"]
+					if !exists {
 						return false
-					} else {
-						switch mv := v.(type) {
-						case string:
-							if mv == "" {
+					}
+					switch mv := v.(type) {
+					case string:
+						if mv == "" {
+							return false
+						}
+					case []string:
+						if len(mv) == 0 || mv[0] == "" {
+							return false
+						}
+					case []interface{}:
+						if len(mv) == 0 {
+							if s, ok := mv[0].(string); !ok || s == "" {
 								return false
-							}
-						case []string:
-							if len(mv) == 0 || mv[0] == "" {
-								return false
-							}
-						case []interface{}:
-							if len(mv) == 0 {
-								if s, ok := mv[0].(string); !ok || s == "" {
-									return false
-								}
 							}
 						}
 					}
 
 					// Check In-Reply-To is present
-					if v, exists := sendMail.Mail.Headers["In-Reply-To"]; !exists {
+					v2, exists2 := sendMail.Mail.Headers["In-Reply-To"]
+					if !exists2 {
 						return false
-					} else {
-						switch mv := v.(type) {
-						case string:
-							if mv == "" {
+					}
+					switch mv := v2.(type) {
+					case string:
+						if mv == "" {
+							return false
+						}
+					case []string:
+						if len(mv) == 0 || mv[0] == "" {
+							return false
+						}
+					case []interface{}:
+						if len(mv) == 0 {
+							if s, ok := mv[0].(string); !ok || s == "" {
 								return false
-							}
-						case []string:
-							if len(mv) == 0 || mv[0] == "" {
-								return false
-							}
-						case []interface{}:
-							if len(mv) == 0 {
-								if s, ok := mv[0].(string); !ok || s == "" {
-									return false
-								}
 							}
 						}
 					}
 
 					// Check References is present
-					if v, exists := sendMail.Mail.Headers["References"]; !exists {
+					v3, exists3 := sendMail.Mail.Headers["References"]
+					if !exists3 {
 						return false
-					} else {
-						switch mv := v.(type) {
-						case string:
-							if mv == "" {
+					}
+					switch mv := v3.(type) {
+					case string:
+						if mv == "" {
+							return false
+						}
+					case []string:
+						if len(mv) == 0 || mv[0] == "" {
+							return false
+						}
+					case []interface{}:
+						if len(mv) == 0 {
+							if s, ok := mv[0].(string); !ok || s == "" {
 								return false
-							}
-						case []string:
-							if len(mv) == 0 || mv[0] == "" {
-								return false
-							}
-						case []interface{}:
-							if len(mv) == 0 {
-								if s, ok := mv[0].(string); !ok || s == "" {
-									return false
-								}
 							}
 						}
 					}
@@ -380,67 +380,67 @@ func TestSendMailController_CreateSendMail(t *testing.T) {
 					}
 
 					// Check Message-ID is present
-					if v, exists := sendMail.Mail.Headers["Message-ID"]; !exists {
+					v4, exists4 := sendMail.Mail.Headers["Message-ID"]
+					if !exists4 {
 						return false
-					} else {
-						switch mv := v.(type) {
-						case string:
-							if mv == "" {
+					}
+					switch mv := v4.(type) {
+					case string:
+						if mv == "" {
+							return false
+						}
+					case []string:
+						if len(mv) == 0 || mv[0] == "" {
+							return false
+						}
+					case []interface{}:
+						if len(mv) == 0 {
+							if s, ok := mv[0].(string); !ok || s == "" {
 								return false
-							}
-						case []string:
-							if len(mv) == 0 || mv[0] == "" {
-								return false
-							}
-						case []interface{}:
-							if len(mv) == 0 {
-								if s, ok := mv[0].(string); !ok || s == "" {
-									return false
-								}
 							}
 						}
 					}
 
 					// Check In-Reply-To is present
-					if v, exists := sendMail.Mail.Headers["In-Reply-To"]; !exists {
+					v5, exists5 := sendMail.Mail.Headers["In-Reply-To"]
+					if !exists5 {
 						return false
-					} else {
-						switch mv := v.(type) {
-						case string:
-							if mv == "" {
+					}
+					switch mv := v5.(type) {
+					case string:
+						if mv == "" {
+							return false
+						}
+					case []string:
+						if len(mv) == 0 || mv[0] == "" {
+							return false
+						}
+					case []interface{}:
+						if len(mv) == 0 {
+							if s, ok := mv[0].(string); !ok || s == "" {
 								return false
-							}
-						case []string:
-							if len(mv) == 0 || mv[0] == "" {
-								return false
-							}
-						case []interface{}:
-							if len(mv) == 0 {
-								if s, ok := mv[0].(string); !ok || s == "" {
-									return false
-								}
 							}
 						}
 					}
 
 					// Check References is present
-					if v, exists := sendMail.Mail.Headers["References"]; !exists {
+					v6, exists6 := sendMail.Mail.Headers["References"]
+					if !exists6 {
 						return false
-					} else {
-						switch mv := v.(type) {
-						case string:
-							if mv == "" {
+					}
+					switch mv := v6.(type) {
+					case string:
+						if mv == "" {
+							return false
+						}
+					case []string:
+						if len(mv) == 0 || mv[0] == "" {
+							return false
+						}
+					case []interface{}:
+						if len(mv) == 0 {
+							if s, ok := mv[0].(string); !ok || s == "" {
 								return false
-							}
-						case []string:
-							if len(mv) == 0 || mv[0] == "" {
-								return false
-							}
-						case []interface{}:
-							if len(mv) == 0 {
-								if s, ok := mv[0].(string); !ok || s == "" {
-									return false
-								}
 							}
 						}
 					}
