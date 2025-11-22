@@ -190,23 +190,56 @@ func CreateRFCMessage(cfg *EmailConfig) ([]byte, error) {
 
 func createSimpleMessage(cfg *EmailConfig) []byte {
 	var b strings.Builder
-	b.WriteString(fmt.Sprintf("From: %s\r\n", cfg.Sender))
+	// helper to wrap addresses in angle brackets unless already provided
+	wrapAddr := func(a string) string {
+		a = strings.TrimSpace(a)
+		if a == "" {
+			return a
+		}
+		if strings.Contains(a, "<") && strings.Contains(a, ">") {
+			return a
+		}
+		return fmt.Sprintf("<%s>", a)
+	}
+	wrapList := func(list []string) string {
+		if len(list) == 0 {
+			return ""
+		}
+		out := make([]string, len(list))
+		for i, v := range list {
+			out[i] = wrapAddr(v)
+		}
+		return strings.Join(out, ", ")
+	}
+
+	b.WriteString(fmt.Sprintf("From: %s\r\n", wrapAddr(cfg.Sender)))
 	if len(cfg.Recipients) > 0 {
-		b.WriteString(fmt.Sprintf("To: %s\r\n", strings.Join(cfg.Recipients, ", ")))
+		b.WriteString(fmt.Sprintf("To: %s\r\n", wrapList(cfg.Recipients)))
 	}
 	if len(cfg.CCRecipients) > 0 {
-		b.WriteString(fmt.Sprintf("Cc: %s\r\n", strings.Join(cfg.CCRecipients, ", ")))
+		b.WriteString(fmt.Sprintf("Cc: %s\r\n", wrapList(cfg.CCRecipients)))
 	}
 	b.WriteString(fmt.Sprintf("Subject: %s\r\n", mime.QEncoding.Encode("utf-8", cfg.Subject)))
 	b.WriteString(fmt.Sprintf("Date: %s\r\n", formatDateRFC5322(cfg.Date)))
-	b.WriteString(fmt.Sprintf("Message-ID: <%s>\r\n", cfg.MessageID))
+	// Message-ID / In-Reply-To / References: avoid double-wrapping if IDs already include angle brackets
+	writeMsgID := func(id string) string {
+		id = strings.TrimSpace(id)
+		if id == "" {
+			return ""
+		}
+		if strings.HasPrefix(id, "<") && strings.HasSuffix(id, ">") {
+			return id
+		}
+		return fmt.Sprintf("<%s>", id)
+	}
+	b.WriteString(fmt.Sprintf("Message-ID: %s\r\n", writeMsgID(cfg.MessageID)))
 	if cfg.InReplyTo != "" {
-		b.WriteString(fmt.Sprintf("In-Reply-To: <%s>\r\n", cfg.InReplyTo))
+		b.WriteString(fmt.Sprintf("In-Reply-To: %s\r\n", writeMsgID(cfg.InReplyTo)))
 	}
 	if len(cfg.References) > 0 {
 		refs := make([]string, len(cfg.References))
 		for i, r := range cfg.References {
-			refs[i] = fmt.Sprintf("<%s>", r)
+			refs[i] = writeMsgID(r)
 		}
 		b.WriteString(fmt.Sprintf("References: %s\r\n", strings.Join(refs, " ")))
 	}
@@ -222,23 +255,56 @@ func createMultipartMessage(cfg *EmailConfig) ([]byte, error) {
 	writer := multipart.NewWriter(&buffer)
 	boundary := writer.Boundary()
 
-	buffer.WriteString(fmt.Sprintf("From: %s\r\n", cfg.Sender))
+	// helper to wrap addresses in angle brackets unless already provided
+	wrapAddr := func(a string) string {
+		a = strings.TrimSpace(a)
+		if a == "" {
+			return a
+		}
+		if strings.Contains(a, "<") && strings.Contains(a, ">") {
+			return a
+		}
+		return fmt.Sprintf("<%s>", a)
+	}
+	wrapList := func(list []string) string {
+		if len(list) == 0 {
+			return ""
+		}
+		out := make([]string, len(list))
+		for i, v := range list {
+			out[i] = wrapAddr(v)
+		}
+		return strings.Join(out, ", ")
+	}
+
+	buffer.WriteString(fmt.Sprintf("From: %s\r\n", wrapAddr(cfg.Sender)))
 	if len(cfg.Recipients) > 0 {
-		buffer.WriteString(fmt.Sprintf("To: %s\r\n", strings.Join(cfg.Recipients, ", ")))
+		buffer.WriteString(fmt.Sprintf("To: %s\r\n", wrapList(cfg.Recipients)))
 	}
 	if len(cfg.CCRecipients) > 0 {
-		buffer.WriteString(fmt.Sprintf("Cc: %s\r\n", strings.Join(cfg.CCRecipients, ", ")))
+		buffer.WriteString(fmt.Sprintf("Cc: %s\r\n", wrapList(cfg.CCRecipients)))
 	}
 	buffer.WriteString(fmt.Sprintf("Subject: %s\r\n", mime.QEncoding.Encode("utf-8", cfg.Subject)))
 	buffer.WriteString(fmt.Sprintf("Date: %s\r\n", formatDateRFC5322(cfg.Date)))
-	buffer.WriteString(fmt.Sprintf("Message-ID: <%s>\r\n", cfg.MessageID))
+	// Message-ID / In-Reply-To / References: avoid double-wrapping if IDs already include angle brackets
+	writeMsgID := func(id string) string {
+		id = strings.TrimSpace(id)
+		if id == "" {
+			return ""
+		}
+		if strings.HasPrefix(id, "<") && strings.HasSuffix(id, ">") {
+			return id
+		}
+		return fmt.Sprintf("<%s>", id)
+	}
+	buffer.WriteString(fmt.Sprintf("Message-ID: %s\r\n", writeMsgID(cfg.MessageID)))
 	if cfg.InReplyTo != "" {
-		buffer.WriteString(fmt.Sprintf("In-Reply-To: <%s>\r\n", cfg.InReplyTo))
+		buffer.WriteString(fmt.Sprintf("In-Reply-To: %s\r\n", writeMsgID(cfg.InReplyTo)))
 	}
 	if len(cfg.References) > 0 {
 		refs := make([]string, len(cfg.References))
 		for i, r := range cfg.References {
-			refs[i] = fmt.Sprintf("<%s>", r)
+			refs[i] = writeMsgID(r)
 		}
 		buffer.WriteString(fmt.Sprintf("References: %s\r\n", strings.Join(refs, " ")))
 	}

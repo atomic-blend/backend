@@ -10,8 +10,8 @@ import (
 	"time"
 
 	sendemail "github.com/atomic-blend/backend/ab-cli/internal/sendemail"
-	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/bubbles/table"
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/cobra"
 )
 
@@ -60,7 +60,7 @@ func NewCommand() *cobra.Command {
 				summary := fmt.Sprintf("From: %s\nTo: %s\nSubject: %s\nBody length: %d chars\nAttachment: %v\nSMTP: %s\nThread size: %d\n", cfg.Sender, recipients, cfg.Subject, len(cfg.Body), cfg.AttachmentPath != "", cfg.SMTPServer, effectiveThread)
 				// append the pre-generated Message-IDs so the user can see the thread linking
 				for i, id := range ids {
-					summary += fmt.Sprintf("Message-ID %d: %s\n", i+1, id)
+					summary += fmt.Sprintf("Message-ID %d: <%s>\n", i+1, id)
 				}
 
 				ok, err := showSummaryTUI(summary)
@@ -122,7 +122,7 @@ func NewCommand() *cobra.Command {
 				}
 				summary := fmt.Sprintf("From: %s\nTo: %s\nSubject: %s\nBody length: %d chars\nAttachment: %v\nSMTP: %s\nThread size: %d\n", cfg.Sender, recipients, cfg.Subject, len(cfg.Body), cfg.AttachmentPath != "", cfg.SMTPServer, effectiveThread)
 				for i, id := range ids {
-					summary += fmt.Sprintf("Message-ID %d: %s\n", i+1, id)
+					summary += fmt.Sprintf("Message-ID %d: <%s>\n", i+1, id)
 				}
 				ok, err := showSummaryTUI(summary)
 				if err != nil {
@@ -186,7 +186,7 @@ func NewCommand() *cobra.Command {
 			}
 			summary := fmt.Sprintf("From: %s\nTo: %s\nSubject: %s\nBody length: %d chars\nAttachment: %v\nSMTP: %s\nThread size: %d\n", cfg.Sender, recipients, cfg.Subject, len(cfg.Body), cfg.AttachmentPath != "", cfg.SMTPServer, effectiveThread)
 			for i, id := range ids {
-				summary += fmt.Sprintf("Message-ID %d: %s\n", i+1, id)
+				summary += fmt.Sprintf("Message-ID %d: <%s>\n", i+1, id)
 			}
 			ok, err := showSummaryTUI(summary)
 			if err != nil {
@@ -305,7 +305,7 @@ func genMessageID() string {
 	}
 	b := make([]byte, 8)
 	if _, err := rand.Read(b); err != nil {
-		return fmt.Sprintf("<%s@%s>", strings.ReplaceAll(time.Now().Format(time.RFC3339Nano), ":", ""), host)
+		return fmt.Sprintf("%s@%s", strings.ReplaceAll(time.Now().Format(time.RFC3339Nano), ":", ""), host)
 	}
-	return fmt.Sprintf("<%s-%s@%s>", hex.EncodeToString(b), strings.ReplaceAll(time.Now().Format(time.RFC3339Nano), ":", ""), host)
+	return fmt.Sprintf("%s-%s@%s", hex.EncodeToString(b), strings.ReplaceAll(time.Now().Format(time.RFC3339Nano), ":", ""), host)
 }

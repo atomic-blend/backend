@@ -142,21 +142,20 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		case "shift+enter", "ctrl+enter", "alt+enter", "meta+enter":
 			// Terminals frequently don't differentiate Shift+Enter; accept common variants.
-			if m.focusIndex == 6 {
-				m.status = "Sending..."
-				cfg := &sendemail.EmailConfig{
-					Sender:        strings.TrimSpace(m.from.Value()),
-					Recipients:    parseComma(m.to.Value()),
-					CCRecipients:  parseComma(m.cc.Value()),
-					BCCRecipients: parseComma(m.bcc.Value()),
-					Subject:       strings.TrimSpace(m.subject.Value()),
-					Body:          m.body.Value(),
-					SMTPServer:    strings.TrimSpace(m.smtp.Value()),
-				}
-				m.cfg = cfg
-				m.done = true
-				return m, tea.Quit
+			// Send from anywhere in the composer (not only when body has focus).
+			m.status = "Sending..."
+			cfg := &sendemail.EmailConfig{
+				Sender:        strings.TrimSpace(m.from.Value()),
+				Recipients:    parseComma(m.to.Value()),
+				CCRecipients:  parseComma(m.cc.Value()),
+				BCCRecipients: parseComma(m.bcc.Value()),
+				Subject:       strings.TrimSpace(m.subject.Value()),
+				Body:          m.body.Value(),
+				SMTPServer:    strings.TrimSpace(m.smtp.Value()),
 			}
+			m.cfg = cfg
+			m.done = true
+			return m, tea.Quit
 		case "up":
 			// if body has focus, let it handle arrow keys
 			if m.focusIndex != 6 {
