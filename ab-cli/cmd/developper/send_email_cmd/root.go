@@ -58,10 +58,8 @@ func NewCommand() *cobra.Command {
 					recipients += ", cc:" + strings.Join(cfg.CCRecipients, ",")
 				}
 				summary := fmt.Sprintf("From: %s\nTo: %s\nSubject: %s\nBody length: %d chars\nAttachment: %v\nSMTP: %s\nThread size: %d\n", cfg.Sender, recipients, cfg.Subject, len(cfg.Body), cfg.AttachmentPath != "", cfg.SMTPServer, effectiveThread)
-				// append the pre-generated Message-IDs so the user can see the thread linking
-				for i, id := range ids {
-					summary += fmt.Sprintf("Message-ID %d: <%s>\n", i+1, id)
-				}
+				// append full headers for each email in the thread so user sees exact headers
+				summary += buildThreadHeaders(cfg, ids)
 
 				ok, err := showSummaryTUI(summary)
 				if err != nil {
@@ -121,9 +119,7 @@ func NewCommand() *cobra.Command {
 					recipients += ", cc:" + strings.Join(cfg.CCRecipients, ",")
 				}
 				summary := fmt.Sprintf("From: %s\nTo: %s\nSubject: %s\nBody length: %d chars\nAttachment: %v\nSMTP: %s\nThread size: %d\n", cfg.Sender, recipients, cfg.Subject, len(cfg.Body), cfg.AttachmentPath != "", cfg.SMTPServer, effectiveThread)
-				for i, id := range ids {
-					summary += fmt.Sprintf("Message-ID %d: <%s>\n", i+1, id)
-				}
+				summary += buildThreadHeaders(cfg, ids)
 				ok, err := showSummaryTUI(summary)
 				if err != nil {
 					return err
@@ -185,9 +181,7 @@ func NewCommand() *cobra.Command {
 				recipients += ", cc:" + strings.Join(cfg.CCRecipients, ",")
 			}
 			summary := fmt.Sprintf("From: %s\nTo: %s\nSubject: %s\nBody length: %d chars\nAttachment: %v\nSMTP: %s\nThread size: %d\n", cfg.Sender, recipients, cfg.Subject, len(cfg.Body), cfg.AttachmentPath != "", cfg.SMTPServer, effectiveThread)
-			for i, id := range ids {
-				summary += fmt.Sprintf("Message-ID %d: <%s>\n", i+1, id)
-			}
+			summary += buildThreadHeaders(cfg, ids)
 			ok, err := showSummaryTUI(summary)
 			if err != nil {
 				return err
@@ -234,9 +228,10 @@ func NewCommand() *cobra.Command {
 func showSummaryTUI(summary string) (bool, error) {
 	// parse summary lines into table rows
 	lines := strings.Split(strings.TrimSpace(summary), "\n")
+	// Give a very wide Value column so nothing is truncated; user can scroll.
 	cols := []table.Column{
-		{Title: "Field", Width: 20},
-		{Title: "Value", Width: 60},
+		{Title: "Field", Width: 24},
+		{Title: "Value", Width: 2000},
 	}
 	rows := make([]table.Row, 0, len(lines))
 	for _, l := range lines {
@@ -271,6 +266,7 @@ func showSummaryTUI(summary string) (bool, error) {
 type summaryModel struct {
 	table     table.Model
 	confirmed bool
+	xOffset   int
 }
 
 func (m *summaryModel) Init() tea.Cmd { return nil }
@@ -287,6 +283,19 @@ func (m *summaryModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.confirmed = false
 			return m, tea.Quit
 		}
+		// horizontal pan: left/right adjust xOffset
+		if k == "left" {
+			if m.xOffset >= 4 {
+				m.xOffset -= 4
+			} else {
+				m.xOffset = 0
+			}
+			return m, nil
+		}
+		if k == "right" {
+			m.xOffset += 4
+			return m, nil
+		}
 	}
 	var cmd tea.Cmd
 	m.table, cmd = m.table.Update(msg)
@@ -294,7 +303,20 @@ func (m *summaryModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m *summaryModel) View() string {
-	return m.table.View() + "\n\nPress Y/Enter to confirm, N/ESC/Q to cancel"
+	// Render the table and apply horizontal offset by slicing each line.
+	raw := m.table.View()
+	lines := strings.Split(raw, "\n")
+	for i, line := range lines {
+		if m.xOffset >= len(line) {
+			lines[i] = ""
+		} else if m.xOffset > 0 {
+			// slice by rune index to avoid breaking multi-byte chars
+			// but for performance and simplicity assume ASCII table output
+			lines[i] = line[m.xOffset:]
+		}
+	}
+	out := strings.Join(lines, "\n")
+	return out + "\n\nUse ←/→ to scroll horizontally. Press Y/Enter to confirm, N/ESC/Q to cancel"
 }
 
 // genMessageID produces a unique, RFC-like Message-ID value.
@@ -308,4 +330,71 @@ func genMessageID() string {
 		return fmt.Sprintf("%s@%s", strings.ReplaceAll(time.Now().Format(time.RFC3339Nano), ":", ""), host)
 	}
 	return fmt.Sprintf("%s-%s@%s", hex.EncodeToString(b), strings.ReplaceAll(time.Now().Format(time.RFC3339Nano), ":", ""), host)
+}
+
+// buildThreadHeaders returns a string containing lines representing the headers
+// for each message in the thread. For each message it emits one row with the
+// field "Email N Headers" and the first header as the value, then additional
+// rows with an empty field and one header per row so the TUI shows one header
+// per line in the value column.
+func buildThreadHeaders(orig *sendemail.EmailConfig, ids []string) string {
+	var sb strings.Builder
+	// For each id, build a copy of cfg with appropriate InReplyTo/References
+	for i, id := range ids {
+		cfg := *orig
+		// set MessageID raw (no <>)
+		cfg.MessageID = id
+		if i > 0 {
+			cfg.InReplyTo = ids[i-1]
+			// References should include all previous IDs
+			cfg.References = make([]string, i)
+			copy(cfg.References, ids[:i])
+		} else {
+			cfg.InReplyTo = ""
+			cfg.References = nil
+		}
+		// Generate the raw message bytes and extract headers
+		msg, _ := sendemail.CreateRFCMessage(&cfg)
+		headerEnd := -1
+		if idx := strings.Index(string(msg), "\r\n\r\n"); idx != -1 {
+			headerEnd = idx
+		} else if idx := strings.Index(string(msg), "\n\n"); idx != -1 {
+			headerEnd = idx
+		}
+		var headers []string
+		if headerEnd != -1 {
+			rawHeaders := string(msg[:headerEnd])
+			// split on CRLF or LF
+			for _, line := range strings.Split(rawHeaders, "\r\n") {
+				if strings.TrimSpace(line) == "" {
+					continue
+				}
+				headers = append(headers, line)
+			}
+			if len(headers) == 0 {
+				// fallback to LF-only
+				for _, line := range strings.Split(rawHeaders, "\n") {
+					if strings.TrimSpace(line) == "" {
+						continue
+					}
+					headers = append(headers, line)
+				}
+			}
+		}
+
+		// Emit rows: first row with field, subsequent with empty field
+		field := fmt.Sprintf("Email %d Headers", i+1)
+		if len(headers) == 0 {
+			sb.WriteString(fmt.Sprintf("%s: <no-headers>\n", field))
+			continue
+		}
+		for j, h := range headers {
+			if j == 0 {
+				sb.WriteString(fmt.Sprintf("%s: %s\n", field, h))
+			} else {
+				sb.WriteString(fmt.Sprintf(": %s\n", h))
+			}
+		}
+	}
+	return sb.String()
 }
