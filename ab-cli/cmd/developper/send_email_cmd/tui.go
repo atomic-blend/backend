@@ -3,6 +3,7 @@ package sendemailcmd
 import (
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/textarea"
@@ -21,6 +22,7 @@ type model struct {
 	bcc        textinput.Model
 	subject    textinput.Model
 	smtp       textinput.Model
+	thread     textinput.Model
 	body       textarea.Model
 	status     string
 	done       bool
@@ -66,6 +68,12 @@ func initialModel() model {
 	smtp.Placeholder = ""
 	smtp.Width = 36
 
+		thread := textinput.New()
+		thread.Placeholder = "1"
+		thread.CharLimit = 6
+		thread.Width = 6
+		thread.SetValue("1")
+
 	ta := textarea.New()
 	// adjust for VSCode integrated terminal if detected
 	if os.Getenv("TERM_PROGRAM") == "vscode" {
@@ -85,6 +93,7 @@ func initialModel() model {
 		bcc:        bcc,
 		subject:    subj,
 		smtp:       smtp,
+			thread:     thread,
 		body:       ta,
 		status:     "",
 		done:       false,
@@ -128,17 +137,23 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				Body:          m.body.Value(),
 				SMTPServer:    strings.TrimSpace(m.smtp.Value()),
 			}
+				// parse thread size
+				if n, err := strconv.Atoi(strings.TrimSpace(m.thread.Value())); err == nil && n > 0 {
+					cfg.ThreadSize = n
+				} else {
+					cfg.ThreadSize = 1
+				}
 			m.cfg = cfg
 			m.done = true
 			return m, tea.Quit
 		case "tab":
-			m.focusIndex = (m.focusIndex + 1) % 7
+				m.focusIndex = (m.focusIndex + 1) % 8
 		case "shift+tab":
-			m.focusIndex = (m.focusIndex + 6) % 7
+				m.focusIndex = (m.focusIndex + 7) % 8
 		case "enter":
 			// When body (textarea) has focus, let it handle Enter (create newline).
-			if m.focusIndex != 6 {
-				m.focusIndex = (m.focusIndex + 1) % 7
+				if m.focusIndex != 7 {
+					m.focusIndex = (m.focusIndex + 1) % 8
 			}
 		case "shift+enter", "ctrl+enter", "alt+enter", "meta+enter":
 			// Terminals frequently don't differentiate Shift+Enter; accept common variants.
@@ -153,25 +168,30 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				Body:          m.body.Value(),
 				SMTPServer:    strings.TrimSpace(m.smtp.Value()),
 			}
+				if n, err := strconv.Atoi(strings.TrimSpace(m.thread.Value())); err == nil && n > 0 {
+					cfg.ThreadSize = n
+				} else {
+					cfg.ThreadSize = 1
+				}
 			m.cfg = cfg
 			m.done = true
 			return m, tea.Quit
 		case "up":
 			// if body has focus, let it handle arrow keys
-			if m.focusIndex != 6 {
-				m.focusIndex = (m.focusIndex + 6) % 7
+				if m.focusIndex != 7 {
+					m.focusIndex = (m.focusIndex + 6) % 8
 			}
 		case "down":
-			if m.focusIndex != 6 {
-				m.focusIndex = (m.focusIndex + 1) % 7
+				if m.focusIndex != 7 {
+					m.focusIndex = (m.focusIndex + 1) % 8
 			}
 		case "left":
-			if m.focusIndex != 6 {
-				m.focusIndex = (m.focusIndex + 6) % 7
+				if m.focusIndex != 7 {
+					m.focusIndex = (m.focusIndex + 6) % 8
 			}
 		case "right":
-			if m.focusIndex != 6 {
-				m.focusIndex = (m.focusIndex + 1) % 7
+				if m.focusIndex != 7 {
+					m.focusIndex = (m.focusIndex + 1) % 8
 			}
 		}
 	}
@@ -185,6 +205,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.bcc.Blur()
 		m.subject.Blur()
 		m.smtp.Blur()
+		m.thread.Blur()
 		m.body.Blur()
 	case 1:
 		m.to.Focus()
@@ -193,6 +214,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.bcc.Blur()
 		m.subject.Blur()
 		m.smtp.Blur()
+		m.thread.Blur()
 		m.body.Blur()
 	case 2:
 		m.cc.Focus()
@@ -201,6 +223,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.bcc.Blur()
 		m.subject.Blur()
 		m.smtp.Blur()
+		m.thread.Blur()
 		m.body.Blur()
 	case 3:
 		m.bcc.Focus()
@@ -209,6 +232,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.cc.Blur()
 		m.subject.Blur()
 		m.smtp.Blur()
+		m.thread.Blur()
 		m.body.Blur()
 	case 4:
 		m.subject.Focus()
@@ -217,6 +241,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.cc.Blur()
 		m.bcc.Blur()
 		m.smtp.Blur()
+		m.thread.Blur()
 		m.body.Blur()
 	case 5:
 		m.smtp.Focus()
@@ -225,8 +250,18 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.cc.Blur()
 		m.bcc.Blur()
 		m.subject.Blur()
+		m.thread.Blur()
 		m.body.Blur()
 	case 6:
+		m.thread.Focus()
+		m.from.Blur()
+		m.to.Blur()
+		m.cc.Blur()
+		m.bcc.Blur()
+		m.subject.Blur()
+		m.smtp.Blur()
+		m.body.Blur()
+	case 7:
 		m.body.Focus()
 		m.from.Blur()
 		m.to.Blur()
@@ -234,6 +269,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.bcc.Blur()
 		m.subject.Blur()
 		m.smtp.Blur()
+		m.thread.Blur()
 	}
 
 	// Update focused component
@@ -251,6 +287,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case 5:
 		m.smtp, cmd = m.smtp.Update(msg)
 	case 6:
+		m.thread, cmd = m.thread.Update(msg)
+	case 7:
 		m.body, cmd = m.body.Update(msg)
 	}
 
@@ -293,6 +331,7 @@ func (m model) View() string {
 		smtpView = "localhost:1025"
 	}
 	b.WriteString(labelStyle.Render("SMTP: ") + smtpView + "\n\n")
+	b.WriteString(labelStyle.Render("Thread: ") + renderInput(m.thread, 6) + "\n\n")
 	b.WriteString(labelStyle.Render("Body:\n"))
 	b.WriteString(renderTextarea(m.body, func() int {
 		// match the textarea width used in initialModel
