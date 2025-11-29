@@ -17,7 +17,7 @@ var CliConfig Config
 // These correspond to services defined in docker-compose.yml and
 // components that have versions defined in the .env file.
 var PlatformComponents = []string{
-	"auth", "mail", "mail-server", "productivity", "task-app", "notes-app", "mail-app",
+	"auth", "mail", "mail-server", "calendar", "productivity", "task-app", "notes-app", "mail-app",
 }
 
 // EnvComponentVersionMapping maps component names to their corresponding environment variable names for versioning.
@@ -25,6 +25,7 @@ var EnvComponentVersionMapping = map[string]string{
 	"auth":         "AUTH_SERVICE_VERSION",
 	"mail":         "MAIL_SERVICE_VERSION",
 	"mail-server":  "MAIL_SERVER_SERVICE_VERSION",
+	"calendar":     "CALENDAR_SERVICE_VERSION",
 	"productivity": "PRODUCTIVITY_SERVICE_VERSION",
 	"task-app":     "TASK_APP_VERSION",
 	"notes-app":    "NOTES_APP_VERSION",
@@ -34,6 +35,7 @@ var EnvComponentVersionMapping = map[string]string{
 var BackendServices = []string{
 	"auth",
 	"productivity",
+	"calendar",
 	"grpc",
 	"mail",
 	"mail-server",
