@@ -20,6 +20,7 @@ type Mail struct {
 	Headers        map[string]interface{} `bson:"headers" json:"headers"`
 	TextContent    string                 `bson:"text_content" json:"textContent"`
 	HTMLContent    string                 `bson:"html_content" json:"htmlContent"`
+	CalendarEvent  *primitive.ObjectID    `bson:"calendar_event,omitempty" json:"calendarEvent,omitempty"`
 	Attachments    []MailAttachment       `bson:"attachments,omitempty" json:"attachments,omitempty"`
 	Read           *bool                  `bson:"read,omitempty" json:"read,omitempty"`
 	InReplyTo      *primitive.ObjectID    `bson:"in_reply_to,omitempty" json:"inReplyTo,omitempty"`
@@ -31,24 +32,4 @@ type Mail struct {
 	RewriteSubject *bool                  `bson:"rewrite_subject,omitempty" json:"rewriteSubject,omitempty"`
 	CreatedAt      *primitive.DateTime    `bson:"created_at,omitempty" json:"createdAt,omitempty"`
 	UpdatedAt      *primitive.DateTime    `bson:"updated_at,omitempty" json:"updatedAt,omitempty"`
-}
-
-// Encrypt encrypts the mail data
-func (s *Mail) Encrypt(publicKey string) (*Mail, error) {
-	encryptedMail := &Mail{
-		ID:             s.ID,
-		UserID:         s.UserID,
-		Attachments:    s.Attachments,
-		Archived:       s.Archived,
-		Trashed:        s.Trashed,
-		Greylisted:     s.Greylisted,
-		Rejected:       s.Rejected,
-		RewriteSubject: s.RewriteSubject,
-		CreatedAt:      s.CreatedAt,
-		UpdatedAt:      s.UpdatedAt,
-	}
-
-	// Encrypt the mail data here
-
-	return encryptedMail, nil
 }
