@@ -29,7 +29,7 @@ func getEnvWithFallback(workerName, suffix string, isProducer bool) string {
 	}
 
 	// Fall back to global variable
-	return os.Getenv("AMQP_" + suffix)
+	return os.Getenv("AM.QP_" + suffix)
 }
 
 // getAMQPURL returns the AMQP URL from environment variables
