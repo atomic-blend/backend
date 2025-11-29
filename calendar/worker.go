@@ -2,7 +2,7 @@ package main
 
 import (
 	amqpinterfaces "github.com/atomic-blend/backend/shared/services/amqp/interfaces"
-	"github.com/atomic-blend/backend/mail/workers"
+	"github.com/atomic-blend/backend/calendar/workers"
 )
 
 func processMessages(amqpService amqpinterfaces.AMQPServiceInterface) {

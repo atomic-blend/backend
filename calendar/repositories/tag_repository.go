@@ -5,7 +5,7 @@ import (
 	"errors"
 	"time"
 
-	"github.com/atomic-blend/backend/mail/models"
+	"github.com/atomic-blend/backend/calendar/models"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"

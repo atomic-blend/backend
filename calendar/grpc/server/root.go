@@ -1,6 +1,6 @@
 package global
 
-// GrpcServer is the gRPC server for the productivity service
+// GrpcServer is the gRPC server for the calendar service
 type GrpcServer struct {
 }
 

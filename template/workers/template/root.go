@@ -1,4 +1,4 @@
-package mail
+package template
 
 import (
 	"github.com/streadway/amqp"

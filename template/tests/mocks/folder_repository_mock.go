@@ -3,7 +3,7 @@ package mocks
 import (
 	"context"
 
-	"github.com/atomic-blend/backend/mail/models"
+	"github.com/atomic-blend/backend/calendar/models"
 
 	"github.com/stretchr/testify/mock"
 	"go.mongodb.org/mongo-driver/bson/primitive"

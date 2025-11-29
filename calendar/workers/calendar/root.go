@@ -1,4 +1,4 @@
-package mail
+package calendar
 
 import (
 	"github.com/streadway/amqp"

@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/atomic-blend/backend/mail/models"
+	"github.com/atomic-blend/backend/calendar/models"
 	"github.com/atomic-blend/backend/shared/test_utils/inmemorymongo"
 
 	"github.com/stretchr/testify/assert"

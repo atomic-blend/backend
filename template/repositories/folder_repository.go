@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/atomic-blend/backend/mail/models"
+	"github.com/atomic-blend/backend/calendar/models"
 	"github.com/atomic-blend/backend/shared/utils/db"
 
 	bson "go.mongodb.org/mongo-driver/bson"
