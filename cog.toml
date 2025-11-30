@@ -30,4 +30,5 @@ productivity = { path="productivity" }
 grpc = { path="grpc" }
 mail = { path="mail" }
 mail-server = { path="mail-server" }
+calendar = { path="calendar" }
 shared = { path="shared" }
