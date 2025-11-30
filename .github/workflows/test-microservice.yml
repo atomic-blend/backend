@@ -37,6 +37,7 @@ jobs:
             mail/**
             mail-server/**
             shared/**
+            calendar/**
           quotepath: false
 
       - name: "Set output in the matrix format"

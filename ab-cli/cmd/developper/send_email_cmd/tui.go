@@ -68,11 +68,11 @@ func initialModel() model {
 	smtp.Placeholder = ""
 	smtp.Width = 36
 
-		thread := textinput.New()
-		thread.Placeholder = "1"
-		thread.CharLimit = 6
-		thread.Width = 6
-		thread.SetValue("1")
+	thread := textinput.New()
+	thread.Placeholder = "1"
+	thread.CharLimit = 6
+	thread.Width = 6
+	thread.SetValue("1")
 
 	ta := textarea.New()
 	// adjust for VSCode integrated terminal if detected
@@ -93,7 +93,7 @@ func initialModel() model {
 		bcc:        bcc,
 		subject:    subj,
 		smtp:       smtp,
-			thread:     thread,
+		thread:     thread,
 		body:       ta,
 		status:     "",
 		done:       false,
@@ -137,23 +137,23 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				Body:          m.body.Value(),
 				SMTPServer:    strings.TrimSpace(m.smtp.Value()),
 			}
-				// parse thread size
-				if n, err := strconv.Atoi(strings.TrimSpace(m.thread.Value())); err == nil && n > 0 {
-					cfg.ThreadSize = n
-				} else {
-					cfg.ThreadSize = 1
-				}
+			// parse thread size
+			if n, err := strconv.Atoi(strings.TrimSpace(m.thread.Value())); err == nil && n > 0 {
+				cfg.ThreadSize = n
+			} else {
+				cfg.ThreadSize = 1
+			}
 			m.cfg = cfg
 			m.done = true
 			return m, tea.Quit
 		case "tab":
-				m.focusIndex = (m.focusIndex + 1) % 8
+			m.focusIndex = (m.focusIndex + 1) % 8
 		case "shift+tab":
-				m.focusIndex = (m.focusIndex + 7) % 8
+			m.focusIndex = (m.focusIndex + 7) % 8
 		case "enter":
 			// When body (textarea) has focus, let it handle Enter (create newline).
-				if m.focusIndex != 7 {
-					m.focusIndex = (m.focusIndex + 1) % 8
+			if m.focusIndex != 7 {
+				m.focusIndex = (m.focusIndex + 1) % 8
 			}
 		case "shift+enter", "ctrl+enter", "alt+enter", "meta+enter":
 			// Terminals frequently don't differentiate Shift+Enter; accept common variants.
@@ -168,30 +168,30 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				Body:          m.body.Value(),
 				SMTPServer:    strings.TrimSpace(m.smtp.Value()),
 			}
-				if n, err := strconv.Atoi(strings.TrimSpace(m.thread.Value())); err == nil && n > 0 {
-					cfg.ThreadSize = n
-				} else {
-					cfg.ThreadSize = 1
-				}
+			if n, err := strconv.Atoi(strings.TrimSpace(m.thread.Value())); err == nil && n > 0 {
+				cfg.ThreadSize = n
+			} else {
+				cfg.ThreadSize = 1
+			}
 			m.cfg = cfg
 			m.done = true
 			return m, tea.Quit
 		case "up":
 			// if body has focus, let it handle arrow keys
-				if m.focusIndex != 7 {
-					m.focusIndex = (m.focusIndex + 6) % 8
+			if m.focusIndex != 7 {
+				m.focusIndex = (m.focusIndex + 6) % 8
 			}
 		case "down":
-				if m.focusIndex != 7 {
-					m.focusIndex = (m.focusIndex + 1) % 8
+			if m.focusIndex != 7 {
+				m.focusIndex = (m.focusIndex + 1) % 8
 			}
 		case "left":
-				if m.focusIndex != 7 {
-					m.focusIndex = (m.focusIndex + 6) % 8
+			if m.focusIndex != 7 {
+				m.focusIndex = (m.focusIndex + 6) % 8
 			}
 		case "right":
-				if m.focusIndex != 7 {
-					m.focusIndex = (m.focusIndex + 1) % 8
+			if m.focusIndex != 7 {
+				m.focusIndex = (m.focusIndex + 1) % 8
 			}
 		}
 	}

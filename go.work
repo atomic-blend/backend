@@ -6,6 +6,8 @@ use (
 	./grpc
 	./mail
 	./mail-server
+	./calendar
+	./template
 	./productivity
 	./shared
 )

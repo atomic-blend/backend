@@ -212,6 +212,9 @@ func receiveMail(m *amqp.Delivery, payload ReceivedMailPayload) {
 			encryptedAttachments = append(encryptedAttachments, payload)
 		}
 
+		//TODO: send the calendar event to the calendar service via grpc
+		//TODO: set the CalendarEvent field in the mail entity with the returned event ID
+
 		// set the mail entity fields
 		mailEntity.Headers = encryptedMailContent.Headers
 

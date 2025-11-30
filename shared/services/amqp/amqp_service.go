@@ -4,6 +4,7 @@ package amqpservice
 import (
 	amqpinterfaces "github.com/atomic-blend/backend/shared/services/amqp/interfaces"
 	amqputils "github.com/atomic-blend/backend/shared/services/amqp/utils"
+	"github.com/rs/zerolog/log"
 	"github.com/streadway/amqp"
 )
 
@@ -14,6 +15,7 @@ type Wrapper struct {
 
 // NewAMQPService creates a new AMQP service wrapper
 func NewAMQPService(workerName string) amqpinterfaces.AMQPServiceInterface {
+	log.Info().Msgf("Initializing AMQP Service for worker: %s", workerName)
 	return &Wrapper{
 		workerName: workerName,
 	}
