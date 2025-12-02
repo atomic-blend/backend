@@ -1,6 +1,7 @@
 package repositories
 
 import (
+	"context"
 	"time"
 
 	"github.com/atomic-blend/backend/calendar/models"
@@ -21,6 +22,7 @@ type CalendarRepositoryInterface interface {
 	GetSince(ctx *gin.Context, userID primitive.ObjectID, since time.Time, page int64, size int64) ([]*models.Calendar, int64, error)
 	GetByID(ctx *gin.Context, id primitive.ObjectID) (*models.Calendar, error)
 	Create(ctx *gin.Context, calendar *models.Calendar) (*models.Calendar, error)
+	CreateWithContext(ctx context.Context, calendar *models.Calendar) (*models.Calendar, error)
 	Update(ctx *gin.Context, id primitive.ObjectID, calendar *models.Calendar) (*models.Calendar, error)
 	Delete(ctx *gin.Context, id primitive.ObjectID) error
 }
@@ -154,4 +156,21 @@ func (r *CalendarRepository) Delete(ctx *gin.Context, id primitive.ObjectID) err
 	cctx := ctx.Request.Context()
 	_, err := r.collection.DeleteOne(cctx, filter)
 	return err
+}
+
+// CreateWithContext inserts a new calendar using the provided context
+func (r *CalendarRepository) CreateWithContext(ctx context.Context, calendar *models.Calendar) (*models.Calendar, error) {
+	now := primitive.NewDateTimeFromTime(time.Now())
+	if calendar.ID == nil {
+		id := primitive.NewObjectID()
+		calendar.ID = &id
+	}
+	calendar.CreatedAt = &now
+	calendar.UpdatedAt = &now
+
+	_, err := r.collection.InsertOne(ctx, calendar)
+	if err != nil {
+		return nil, err
+	}
+	return calendar, nil
 }

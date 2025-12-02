@@ -1170,5 +1170,5 @@ Email with custom headers.`,
 	}
 }
 func stringPtr(s string) *string {
-return &s
+	return &s
 }

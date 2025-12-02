@@ -1,6 +1,7 @@
 package mocks
 
 import (
+	"context"
 	"time"
 
 	"github.com/atomic-blend/backend/calendar/models"
@@ -76,4 +77,13 @@ func (m *MockCalendarRepository) Delete(ctx *gin.Context, id primitive.ObjectID)
 		return args.Error(0)
 	}
 	return nil
+}
+
+// CreateWithContext adds a new calendar using context.Context
+func (m *MockCalendarRepository) CreateWithContext(ctx context.Context, calendar *models.Calendar) (*models.Calendar, error) {
+	args := m.Called(ctx, calendar)
+	if args.Get(0) != nil {
+		return args.Get(0).(*models.Calendar), args.Error(1)
+	}
+	return args.Get(0).(*models.Calendar), args.Error(1)
 }
