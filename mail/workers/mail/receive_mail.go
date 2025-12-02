@@ -193,6 +193,14 @@ func receiveMail(m *amqp.Delivery, payload ReceivedMailPayload) {
 
 		log.Debug().Str("rcpt", rcpt).Interface("encryptedContent", encryptedMailContent).Msg("Encrypted mail content")
 
+		var calendarAttachment *models.RawAttachment
+
+		// capture the calendar attachment only if there's a single attachment and it's a calendar file
+		if len(encryptedMailContent.Attachments) == 1 && (encryptedMailContent.Attachments[0].ContentType == "text/calendar" || strings.HasSuffix(encryptedMailContent.Attachments[0].Filename, ".ics")) {
+			calendarAttachment = &encryptedMailContent.Attachments[0]
+			log.Debug().Str("rcpt", rcpt).Str("filename", calendarAttachment.Filename).Msg("Found calendar attachment")
+		}
+
 		// upload the attachments to s3 and store the references in the mail entity
 		for _, attachment := range encryptedMailContent.Attachments {
 			uniqueFileID := uuid.New().String()
@@ -212,7 +220,8 @@ func receiveMail(m *amqp.Delivery, payload ReceivedMailPayload) {
 			encryptedAttachments = append(encryptedAttachments, payload)
 		}
 
-		//TODO: send the calendar event to the calendar service via grpc
+		//TODO: parse the calendar attachment and create a calendar event in the calendar service via gRPC
+
 		//TODO: set the CalendarEvent field in the mail entity with the returned event ID
 
 		// set the mail entity fields
