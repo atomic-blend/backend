@@ -13,6 +13,7 @@ import (
 	"github.com/atomic-blend/backend/mail/models"
 	"github.com/atomic-blend/backend/mail/notifications/payloads"
 	"github.com/atomic-blend/backend/mail/repositories"
+	icalparser "github.com/atomic-blend/backend/mail/utils/ical_parser"
 	userclient "github.com/atomic-blend/backend/shared/grpc/user"
 	ageencryptionservice "github.com/atomic-blend/backend/shared/services/age_encryption"
 	rspamdservice "github.com/atomic-blend/backend/shared/services/rspamd"
@@ -21,6 +22,7 @@ import (
 	"github.com/atomic-blend/backend/shared/utils/db"
 	fcmutils "github.com/atomic-blend/backend/shared/utils/fcm_utils"
 	awss3 "github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/emersion/go-ical"
 	"github.com/emersion/go-message"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
@@ -221,8 +223,42 @@ func receiveMail(m *amqp.Delivery, payload ReceivedMailPayload) {
 		}
 
 		//TODO: parse the calendar attachment and create a calendar event in the calendar service via gRPC
+		if calendarAttachment != nil {
+			log.Debug().Str("rcpt", rcpt).Str("filename", calendarAttachment.Filename).Msg("Parsing calendar attachment")
 
-		//TODO: set the CalendarEvent field in the mail entity with the returned event ID
+			calendars, err := icalparser.ParseICal(calendarAttachment.Data)
+			if err != nil {
+				log.Error().Err(err).Msg("Failed to parse iCal data")
+				haveErrors = true
+				continue
+			}
+
+			log.Debug().Str("rcpt", rcpt).Int("calendarCount", len(calendars)).Msg("Parsed iCal calendars")
+
+			// handle only the first calendar and first event for now
+			if len(calendars) == 0 || len(calendars[0].Events()) == 0 {
+				log.Debug().Str("rcpt", rcpt).Msg("No calendar events found")
+				continue
+			}
+
+			event := calendars[0].Events()[0]
+			uid, err := event.Props.Text(ical.PropUID)
+			if err != nil {
+				log.Error().Err(err).Msg("Failed to get event UID")
+				haveErrors = true
+				continue
+			}
+			summary, err := event.Props.Text(ical.PropSummary)
+			if err != nil {
+				log.Warn().Err(err).Msg("Failed to get event summary, continuing without it")
+				summary = ""
+			}
+
+			log.Debug().Str("rcpt", rcpt).Str("summary", summary).Str("uid", uid).Msg("Parsed calendar event")
+
+
+			//TODO: set the CalendarEvent field in the mail entity with the returned event ID
+		}
 
 		// set the mail entity fields
 		mailEntity.Headers = encryptedMailContent.Headers
