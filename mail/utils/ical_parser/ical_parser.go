@@ -12,6 +12,7 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
+// ParseICal parses iCalendar data and returns a slice of ical.Calendar
 func ParseICal(data []byte) ([]ical.Calendar, error) {
 	//convert to io.Reader
 	reader := bytes.NewReader(data)
@@ -33,6 +34,7 @@ func ParseICal(data []byte) ([]ical.Calendar, error) {
 	return calendars, nil
 }
 
+// ToCalendarPayload converts an ical.Calendar to a calendarv1.Calendar payload
 func ToCalendarPayload(cal ical.Calendar) (*calendarv1.Calendar, error) {
 	payload := &calendarv1.Calendar{}
 
