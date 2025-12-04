@@ -64,30 +64,34 @@ func (s *GrpcServer) CreateCalendar(ctx context.Context, req *connect.Request[ca
 		}), nil
 	}
 
-	//TODO: if a user don't have a default calendar, create one
-	//TODO: create event repository
+	var defaultCalendar *models.Calendar
+	// DONE: if a user don't have a default calendar, create one
+	calendarRepo := repositories.NewCalendarRepository(db.Database)
 
-	// TODO: link event to calendar by setting calendarID in event
+	defaultCalendar, err = calendarRepo.GetByNameWithContext(ctx, userID, nil)
+	if err != nil {
+		log.Info().Err(err).Msg("No default calendar found, creating one")
+		defaultCalendar, err = calendarRepo.CreateWithContext(ctx, calendarModel)
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to create default calendar")
+			return connect.NewResponse(&calendarv1.CreateCalendarResponse{
+				Id:    nil,
+				Error: prt("Failed to create default calendar"),
+			}), nil
+		}
+	} else {
+		log.Info().Str("calendarID", defaultCalendar.ID.Hex()).Msg("Default calendar found")
+	}
 
-	// TODO: save the event
+	//DONE: create event repository
+
+	// DONE: link event to calendar by setting calendarID in event
 
 	// TODO: if event with same UID exists, update it instead and return existing one
 
-	// Set the user ID
-	calendarModel.UserID = &userID
+	// TODO: else create the event
 
-	// Create the calendar in the repository
-	calendarRepo := repositories.NewCalendarRepository(db.Database)
-	createdCalendar, err := calendarRepo.CreateWithContext(ctx, calendarModel)
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to create calendar")
-		return connect.NewResponse(&calendarv1.CreateCalendarResponse{
-			Id:    nil,
-			Error: prt("Failed to create calendar"),
-		}), nil
-	}
-
-	calendarID := createdCalendar.ID.Hex()
+	calendarID := defaultCalendar.ID.Hex()
 	return connect.NewResponse(&calendarv1.CreateCalendarResponse{
 		Id: &calendarID,
 	}), nil

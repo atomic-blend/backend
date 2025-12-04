@@ -87,3 +87,21 @@ func (m *MockCalendarRepository) CreateWithContext(ctx context.Context, calendar
 	}
 	return nil, args.Error(1)
 }
+
+// GetByName retrieves a calendar by its name for a specific user
+func (m *MockCalendarRepository) GetByName(ctx *gin.Context, userID primitive.ObjectID, name *string) (*models.Calendar, error) {
+	args := m.Called(ctx, userID, name)
+	if args.Get(0) != nil {
+		return args.Get(0).(*models.Calendar), args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
+// GetByNameWithContext retrieves a calendar by its name for a specific user using context.Context
+func (m *MockCalendarRepository) GetByNameWithContext(ctx context.Context, userID primitive.ObjectID, name *string) (*models.Calendar, error) {
+	args := m.Called(ctx, userID, name)
+	if args.Get(0) != nil {
+		return args.Get(0).(*models.Calendar), args.Error(1)
+	}
+	return nil, args.Error(1)
+}

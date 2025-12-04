@@ -21,6 +21,8 @@ type CalendarRepositoryInterface interface {
 	GetAll(ctx *gin.Context, userID primitive.ObjectID, page int64, size int64) ([]*models.Calendar, int64, error)
 	GetSince(ctx *gin.Context, userID primitive.ObjectID, since time.Time, page int64, size int64) ([]*models.Calendar, int64, error)
 	GetByID(ctx *gin.Context, id primitive.ObjectID) (*models.Calendar, error)
+	GetByName(ctx *gin.Context, userID primitive.ObjectID, name *string) (*models.Calendar, error)
+	GetByNameWithContext(ctx context.Context, userID primitive.ObjectID, name *string) (*models.Calendar, error)
 	Create(ctx *gin.Context, calendar *models.Calendar) (*models.Calendar, error)
 	CreateWithContext(ctx context.Context, calendar *models.Calendar) (*models.Calendar, error)
 	Update(ctx *gin.Context, id primitive.ObjectID, calendar *models.Calendar) (*models.Calendar, error)
@@ -173,4 +175,24 @@ func (r *CalendarRepository) CreateWithContext(ctx context.Context, calendar *mo
 		return nil, err
 	}
 	return calendar, nil
+}
+
+// GetByName retrieves a calendar by user ID and name
+func (r *CalendarRepository) GetByName(ctx *gin.Context, userID primitive.ObjectID, name *string) (*models.Calendar, error) {
+	cctx := ctx.Request.Context()
+	return r.GetByNameWithContext(cctx, userID, name)
+}
+
+// GetByNameWithContext retrieves a calendar by user ID and name using the provided context
+func (r *CalendarRepository) GetByNameWithContext(ctx context.Context, userID primitive.ObjectID, name *string) (*models.Calendar, error) {
+	filter := bson.M{"user_id": userID, "name": name}
+	var calendar models.Calendar
+	err := r.collection.FindOne(ctx, filter).Decode(&calendar)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &calendar, nil
 }

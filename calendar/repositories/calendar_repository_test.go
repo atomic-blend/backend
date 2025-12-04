@@ -51,6 +51,7 @@ func TestCalendarRepository_CreateGetUpdateDelete(t *testing.T) {
 
 	cal := createTestCalendar()
 	cal.UserID = &userID
+	cal.Name = ptr("Default Calendar")
 
 	// use a gin context for repository calls
 	gctx, _ := gin.CreateTestContext(httptest.NewRecorder())
@@ -63,13 +64,14 @@ func TestCalendarRepository_CreateGetUpdateDelete(t *testing.T) {
 	// GetByID
 	got, err := repo.GetByID(gctx, *created.ID)
 	require.NoError(t, err)
-	assert.Equal(t, created.ProdID, got.ProdID)
+	assert.Equal(t, *created.Name, *got.Name)
 
 	// Update
-	created.ProdID = "-//Atomic Blend Updated//EN"
+	newName := "Updated Calendar"
+	created.Name = &newName
 	updated, err := repo.Update(gctx, *created.ID, created)
 	require.NoError(t, err)
-	assert.Equal(t, "-//Atomic Blend Updated//EN", updated.ProdID)
+	assert.Equal(t, newName, *updated.Name)
 
 	// GetAll
 	list, total, err := repo.GetAll(gctx, userID, 1, 10)
@@ -84,6 +86,11 @@ func TestCalendarRepository_CreateGetUpdateDelete(t *testing.T) {
 	assert.GreaterOrEqual(t, totalSince, int64(1))
 	assert.NotEmpty(t, sinceList)
 
+	// GetByName
+	gotByName, err := repo.GetByName(gctx, userID, created.Name)
+	require.NoError(t, err)
+	assert.Equal(t, *created.Name, *gotByName.Name)
+
 	// Delete
 	err = repo.Delete(gctx, *created.ID)
 	require.NoError(t, err)
@@ -92,4 +99,8 @@ func TestCalendarRepository_CreateGetUpdateDelete(t *testing.T) {
 	gotAfter, err := repo.GetByID(gctx, *created.ID)
 	require.NoError(t, err)
 	assert.Nil(t, gotAfter)
+}
+
+func ptr(s string) *string {
+	return &s
 }
