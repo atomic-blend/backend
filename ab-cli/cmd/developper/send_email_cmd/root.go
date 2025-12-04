@@ -84,7 +84,6 @@ func NewCommand() *cobra.Command {
 							}
 						}
 					}()
-					fmt.Printf("📎 Calendar invite will be sent (uid: %s)\n", uid)
 				}
 
 				if invitePath != "" {
@@ -731,14 +730,18 @@ func generateICalReply(cfg *sendemail.EmailConfig, uid, attendee, method string)
 	p := ical.NewProp(ical.PropAttendee)
 	p.SetText("MAILTO:" + attendee)
 	// for replies/cancels, set PARTSTAT and optionally STATUS
-	if method == "CANCEL" {
+	switch method {
+	case "CANCEL":
 		ev.Props.SetText(ical.PropStatus, "CANCELLED")
 		// mark as declined
 		if p.Params == nil {
 			p.Params = ical.Params{}
 		}
 		p.Params.Set(ical.ParamParticipationStatus, "DECLINED")
-	} else if method == "REPLY" {
+	case "REPLY":
+		if p.Params == nil {
+			p.Params = ical.Params{}
+		}
 		// random accepted/tentative
 		if time.Now().UnixNano()%2 == 0 {
 			p.Params.Set(ical.ParamParticipationStatus, "ACCEPTED")

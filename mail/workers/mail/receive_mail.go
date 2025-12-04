@@ -142,6 +142,13 @@ func receiveMail(m *amqp.Delivery, payload ReceivedMailPayload) {
 	// Process the message body and collect all content
 	processMessageBody(entity, mailContent)
 
+	// Create a new calendar client
+	calendarService, err := calendarclient.NewCalendarClient()
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to create calendar client")
+		return
+	}
+
 	encryptedMails := map[string]models.Mail{}
 	encryptedNotifications := make(map[string]payloads.MailReceivedPayload, 0)
 	encryptedAttachments := make([]*awss3.PutObjectInput, 0)
@@ -200,6 +207,7 @@ func receiveMail(m *amqp.Delivery, payload ReceivedMailPayload) {
 		var calendarAttachment *models.RawAttachment
 
 		// capture the calendar attachment only if there's a single attachment and it's a calendar file
+		// for now, we consider that a calendar event is a single email with an ics attachment
 		if len(encryptedMailContent.Attachments) == 1 && (encryptedMailContent.Attachments[0].ContentType == "text/calendar" || strings.HasSuffix(encryptedMailContent.Attachments[0].Filename, ".ics")) {
 			calendarAttachment = &encryptedMailContent.Attachments[0]
 			log.Debug().Str("rcpt", rcpt).Str("filename", calendarAttachment.Filename).Msg("Found calendar attachment")
@@ -224,7 +232,8 @@ func receiveMail(m *amqp.Delivery, payload ReceivedMailPayload) {
 			encryptedAttachments = append(encryptedAttachments, payload)
 		}
 
-		// parse the calendar attachment and convert to calendar payload
+		// NOTE: If calendar parsing fails, the mail will still be saved without the calendar event.
+		// This is not treated as a fatal error, but a warning is logged for visibility.  ad
 		if calendarAttachment != nil {
 			log.Debug().Str("rcpt", rcpt).Str("filename", calendarAttachment.Filename).Msg("Parsing calendar attachment")
 
@@ -247,8 +256,6 @@ func receiveMail(m *amqp.Delivery, payload ReceivedMailPayload) {
 			newCalendarPayload, err := icalparser.ToCalendarPayload(calendars[0])
 			if err != nil {
 				log.Error().Err(err).Msg("Failed to convert calendar to payload")
-				haveErrors = true
-				continue
 			}
 
 			calendarPayloads[userID.Hex()] = newCalendarPayload
@@ -293,14 +300,11 @@ func receiveMail(m *amqp.Delivery, payload ReceivedMailPayload) {
 		return
 	}
 
-	// Create a new calendar client
-	calendarService, err := calendarclient.NewCalendarClient()
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to create calendar client")
-		return
-	}
 	// create calendars for users with calendar payloads
 	for userID, calendarPayload := range calendarPayloads {
+		if calendarPayload == nil {
+			continue
+		}
 		// Create a new calendar request
 		req := calendarclient.CreateCreateCalendarRequest(&authv1.User{Id: userID}, calendarPayload)
 

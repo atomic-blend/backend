@@ -87,6 +87,7 @@ func initialModel() model {
 	ta.Placeholder = "Write your message here... (press Ctrl+S to send)"
 
 	// configure invite input
+	// y/n for including calendar invite
 	invite := textinput.New()
 	invite.Placeholder = "n"
 	invite.CharLimit = 3

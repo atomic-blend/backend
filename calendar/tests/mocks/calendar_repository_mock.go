@@ -85,5 +85,5 @@ func (m *MockCalendarRepository) CreateWithContext(ctx context.Context, calendar
 	if args.Get(0) != nil {
 		return args.Get(0).(*models.Calendar), args.Error(1)
 	}
-	return args.Get(0).(*models.Calendar), args.Error(1)
+	return nil, args.Error(1)
 }

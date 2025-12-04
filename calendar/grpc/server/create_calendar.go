@@ -69,7 +69,7 @@ func (s *GrpcServer) CreateCalendar(ctx context.Context, req *connect.Request[ca
 
 	// Create the calendar in the repository
 	calendarRepo := repositories.NewCalendarRepository(db.Database)
-	createdCalendar, err := calendarRepo.CreateWithContext(context.TODO(), calendarModel)
+	createdCalendar, err := calendarRepo.CreateWithContext(ctx, calendarModel)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to create calendar")
 		return connect.NewResponse(&calendarv1.CreateCalendarResponse{

@@ -2,7 +2,9 @@ package icalparser
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
+	"io"
 	"time"
 
 	calendarv1 "github.com/atomic-blend/backend/grpc/gen/calendar/v1"
@@ -23,7 +25,7 @@ func ParseICal(data []byte) ([]ical.Calendar, error) {
 	for {
 		cal, err := dec.Decode()
 		if err != nil {
-			if err.Error() == "EOF" {
+			if errors.Is(err, io.EOF) {
 				break
 			}
 			return nil, err
@@ -237,8 +239,17 @@ func toVTimezone(comp *ical.Component) (*calendarv1.VTimezone, error) {
 	return tz, nil
 }
 
+func isDigits(s string) bool {
+	for _, r := range s {
+		if r < '0' || r > '9' {
+			return false
+		}
+	}
+	return true
+}
+
 func parseTimezoneOffset(s string) (int, error) {
-	if len(s) != 5 {
+	if len(s) < 5 || len(s) > 6 {
 		return 0, fmt.Errorf("invalid timezone offset format")
 	}
 	sign := 1
@@ -247,7 +258,27 @@ func parseTimezoneOffset(s string) (int, error) {
 	} else if s[0] != '+' {
 		return 0, fmt.Errorf("invalid timezone offset format")
 	}
-	hours := int(s[1]-'0')*10 + int(s[2]-'0')
-	minutes := int(s[3]-'0')*10 + int(s[4]-'0')
+	offsetStr := s[1:]
+	var hours, minutes int
+	if len(offsetStr) == 4 {
+		// +HHMM
+		if !isDigits(offsetStr) {
+			return 0, fmt.Errorf("invalid timezone offset format")
+		}
+		hours = int(offsetStr[0]-'0')*10 + int(offsetStr[1]-'0')
+		minutes = int(offsetStr[2]-'0')*10 + int(offsetStr[3]-'0')
+	} else if len(offsetStr) == 5 && offsetStr[2] == ':' {
+		// +HH:MM
+		if !isDigits(offsetStr[:2]) || !isDigits(offsetStr[3:]) {
+			return 0, fmt.Errorf("invalid timezone offset format")
+		}
+		hours = int(offsetStr[0]-'0')*10 + int(offsetStr[1]-'0')
+		minutes = int(offsetStr[3]-'0')*10 + int(offsetStr[4]-'0')
+	} else {
+		return 0, fmt.Errorf("invalid timezone offset format")
+	}
+	if hours < 0 || hours > 23 || minutes < 0 || minutes > 59 {
+		return 0, fmt.Errorf("invalid timezone offset format")
+	}
 	return sign * (hours*3600 + minutes*60), nil
 }

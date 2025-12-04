@@ -232,3 +232,47 @@ func TestToCalendarPayloadEmptyCalendar(t *testing.T) {
 		t.Errorf("Expected 0 timezones, got %d", len(payload.Timezones))
 	}
 }
+
+func TestParseTimezoneOffset(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected int
+		hasError bool
+	}{
+		{"+0000", 0, false},
+		{"-0000", 0, false},
+		{"+0500", 18000, false}, // 5*3600
+		{"-0500", -18000, false},
+		{"+0530", 19800, false}, // 5*3600 + 30*60
+		{"-0530", -19800, false},
+		{"+05:30", 19800, false},
+		{"-05:30", -19800, false},
+		{"+23:59", 86340, false}, // 23*3600 + 59*60
+		{"-23:59", -86340, false},
+		{"+2400", 0, true},  // invalid hours
+		{"+0060", 0, true},  // invalid minutes
+		{"+050", 0, true},   // too short
+		{"+05000", 0, true}, // too long
+		{"+05:3", 0, true},  // invalid minutes
+		{"+0a00", 0, true},  // non-digit
+		{"*0500", 0, true},  // invalid sign
+		{"+05:60", 0, true}, // invalid minutes
+		{"+25:00", 0, true}, // invalid hours
+	}
+
+	for _, test := range tests {
+		result, err := parseTimezoneOffset(test.input)
+		if test.hasError {
+			if err == nil {
+				t.Errorf("Expected error for input %s, but got none", test.input)
+			}
+		} else {
+			if err != nil {
+				t.Errorf("Unexpected error for input %s: %v", test.input, err)
+			}
+			if result != test.expected {
+				t.Errorf("For input %s, expected %d, got %d", test.input, test.expected, result)
+			}
+		}
+	}
+}
