@@ -8,6 +8,7 @@ import (
 
 // Event represents an RFC 5545 VEVENT object.
 type Event struct {
+	ID           primitive.ObjectID `json:"id" bson:"_id"`
 	UID          string              // UID (required)
 	DTStamp      time.Time           `json:"dtStamp" bson:"dt_stamp"`                               // DTSTAMP (required)
 	Start        *TimeSpec           `json:"start,omitempty" bson:"start,omitempty"`                // DTSTART (recommended)

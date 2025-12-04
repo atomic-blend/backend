@@ -65,8 +65,9 @@ func TestCreateCalendar(t *testing.T) {
 	resp, err := server.CreateCalendar(context.Background(), req)
 
 	require.NoError(t, err)
-	require.NotNil(t, resp.Msg.Id)
-	assert.Empty(t, resp.Msg.Error)
+	require.Nil(t, resp.Msg.Id)
+	assert.NotEmpty(t, resp.Msg.Error)
+	assert.Equal(t, "no_events_to_create", *resp.Msg.Error)
 
 	// You can add more assertions here, like checking the database directly
 	// But for now, just check response

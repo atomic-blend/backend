@@ -19,7 +19,7 @@ func (s *GrpcServer) CreateCalendar(ctx context.Context, req *connect.Request[ca
 		log.Error().Msg("User is required")
 		return connect.NewResponse(&calendarv1.CreateCalendarResponse{
 			Id:    nil,
-			Error: prt("User is required"),
+			Error: ptr("User is required"),
 		}), nil
 	}
 
@@ -28,7 +28,7 @@ func (s *GrpcServer) CreateCalendar(ctx context.Context, req *connect.Request[ca
 		log.Error().Msg("User ID is required")
 		return connect.NewResponse(&calendarv1.CreateCalendarResponse{
 			Id:    nil,
-			Error: prt("User ID is required"),
+			Error: ptr("User ID is required"),
 		}), nil
 	}
 
@@ -38,7 +38,7 @@ func (s *GrpcServer) CreateCalendar(ctx context.Context, req *connect.Request[ca
 		log.Error().Err(err).Msg("Invalid user ID format")
 		return connect.NewResponse(&calendarv1.CreateCalendarResponse{
 			Id:    nil,
-			Error: prt("Invalid user ID format"),
+			Error: ptr("Invalid user ID format"),
 		}), nil
 	}
 
@@ -50,7 +50,7 @@ func (s *GrpcServer) CreateCalendar(ctx context.Context, req *connect.Request[ca
 		log.Error().Msg("Calendar is required")
 		return connect.NewResponse(&calendarv1.CreateCalendarResponse{
 			Id:    nil,
-			Error: prt("Calendar is required"),
+			Error: ptr("Calendar is required"),
 		}), nil
 	}
 
@@ -60,44 +60,86 @@ func (s *GrpcServer) CreateCalendar(ctx context.Context, req *connect.Request[ca
 		log.Error().Err(err).Msg("Failed to convert calendar")
 		return connect.NewResponse(&calendarv1.CreateCalendarResponse{
 			Id:    nil,
-			Error: prt("Failed to convert calendar"),
+			Error: ptr("Failed to convert calendar"),
 		}), nil
 	}
 
 	var defaultCalendar *models.Calendar
-	// DONE: if a user don't have a default calendar, create one
 	calendarRepo := repositories.NewCalendarRepository(db.Database)
 
+	// if a user don't have a default calendar, create one
 	defaultCalendar, err = calendarRepo.GetByNameWithContext(ctx, userID, nil)
-	if err != nil {
-		log.Info().Err(err).Msg("No default calendar found, creating one")
+	if err != nil || defaultCalendar == nil {
+		if err != nil {
+			log.Info().Err(err).Msg("Error finding default calendar, creating one")
+		} else {
+			log.Info().Msg("No default calendar found, creating one")
+		}
 		defaultCalendar, err = calendarRepo.CreateWithContext(ctx, calendarModel)
 		if err != nil {
 			log.Error().Err(err).Msg("Failed to create default calendar")
 			return connect.NewResponse(&calendarv1.CreateCalendarResponse{
 				Id:    nil,
-				Error: prt("Failed to create default calendar"),
+				Error: ptr("Failed to create default calendar"),
 			}), nil
 		}
-	} else {
-		log.Info().Str("calendarID", defaultCalendar.ID.Hex()).Msg("Default calendar found")
 	}
 
-	//DONE: create event repository
+	log.Info().Str("calendarID", defaultCalendar.ID.Hex()).Msg("Default calendar found")
 
-	// DONE: link event to calendar by setting calendarID in event
+	if len(calendarModel.Events) == 0 {
+		log.Error().Msg("No events to create")
+		return connect.NewResponse(&calendarv1.CreateCalendarResponse{
+			Id:    nil,
+			Error: ptr("no_events_to_create"),
+		}), nil
+	}
 
-	// TODO: if event with same UID exists, update it instead and return existing one
+	// if event with same UID exists, update it instead and return existing one
+	eventRepo := repositories.NewEventRepository(db.Database)
+	existingEvent, _ := eventRepo.GetByUIDWithContext(ctx, calendarModel.Events[0].UID)
+	var newEvent *models.Event
 
-	// TODO: else create the event
+	if existingEvent != nil {
+		log.Info().Str("eventUID", existingEvent.UID).Msg("Event with same UID exists, updating it")
+		_, err = eventRepo.UpdateWithContext(ctx, existingEvent.ID, &calendarModel.Events[0])
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to update existing event")
+			return connect.NewResponse(&calendarv1.CreateCalendarResponse{
+				Id:    nil,
+				Error: ptr("Failed to update existing event"),
+			}), nil
+		}
+		//TODO: add a updated boolean to response to indicate update
+		return connect.NewResponse(&calendarv1.CreateCalendarResponse{
+			Id: ptr(existingEvent.ID.Hex()),
+		}), nil
+	}
 
-	calendarID := defaultCalendar.ID.Hex()
+	log.Info().Msg("Creating new event")
+	event := &calendarModel.Events[0]
+	event.CalendarID = defaultCalendar.ID
+	newEvent, err = eventRepo.CreateWithContext(ctx, event)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to create event")
+		return connect.NewResponse(&calendarv1.CreateCalendarResponse{
+			Id:    nil,
+			Error: ptr("Failed to create event"),
+		}), nil
+	}
+
+	var returnEventID *string
+	if existingEvent != nil {
+		returnEventID = ptr(existingEvent.ID.Hex())
+	} else {
+		returnEventID = ptr(newEvent.ID.Hex())
+	}
 	return connect.NewResponse(&calendarv1.CreateCalendarResponse{
-		Id: &calendarID,
+		Id: returnEventID,
 	}), nil
 }
 
-func prt(s string) *string {
+func ptr(s string) *string {
 	return &s
 }
 
