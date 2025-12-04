@@ -20,6 +20,7 @@ message CreateCalendarRequest {
 message CreateCalendarResponse {
   optional string id = 1;
   optional string error = 2;
+  optional bool updated = 3;
 }
 
 service CalendarService {

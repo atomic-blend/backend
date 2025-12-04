@@ -166,6 +166,7 @@ type CreateCalendarResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            *string                `protobuf:"bytes,1,opt,name=id,proto3,oneof" json:"id,omitempty"`
 	Error         *string                `protobuf:"bytes,2,opt,name=error,proto3,oneof" json:"error,omitempty"`
+	Updated       *bool                  `protobuf:"varint,3,opt,name=updated,proto3,oneof" json:"updated,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -214,6 +215,13 @@ func (x *CreateCalendarResponse) GetError() string {
 	return ""
 }
 
+func (x *CreateCalendarResponse) GetUpdated() bool {
+	if x != nil && x.Updated != nil {
+		return *x.Updated
+	}
+	return false
+}
+
 var File_calendar_v1_calendar_service_proto protoreflect.FileDescriptor
 
 const file_calendar_v1_calendar_service_proto_rawDesc = "" +
@@ -225,12 +233,15 @@ const file_calendar_v1_calendar_service_proto_rawDesc = "" +
 	"\asuccess\x18\x01 \x01(\bR\asuccess\"m\n" +
 	"\x15CreateCalendarRequest\x12!\n" +
 	"\x04user\x18\x01 \x01(\v2\r.auth.v1.UserR\x04user\x121\n" +
-	"\bcalendar\x18\x02 \x01(\v2\x15.calendar.v1.CalendarR\bcalendar\"Y\n" +
+	"\bcalendar\x18\x02 \x01(\v2\x15.calendar.v1.CalendarR\bcalendar\"\x84\x01\n" +
 	"\x16CreateCalendarResponse\x12\x13\n" +
 	"\x02id\x18\x01 \x01(\tH\x00R\x02id\x88\x01\x01\x12\x19\n" +
-	"\x05error\x18\x02 \x01(\tH\x01R\x05error\x88\x01\x01B\x05\n" +
+	"\x05error\x18\x02 \x01(\tH\x01R\x05error\x88\x01\x01\x12\x1d\n" +
+	"\aupdated\x18\x03 \x01(\bH\x02R\aupdated\x88\x01\x01B\x05\n" +
 	"\x03_idB\b\n" +
-	"\x06_error2\xc7\x01\n" +
+	"\x06_errorB\n" +
+	"\n" +
+	"\b_updated2\xc7\x01\n" +
 	"\x0fCalendarService\x12Y\n" +
 	"\x0eDeleteUserData\x12\".calendar.v1.DeleteUserDataRequest\x1a#.calendar.v1.DeleteUserDataResponse\x12Y\n" +
 	"\x0eCreateCalendar\x12\".calendar.v1.CreateCalendarRequest\x1a#.calendar.v1.CreateCalendarResponseB\xb5\x01\n" +

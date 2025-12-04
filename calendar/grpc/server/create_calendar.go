@@ -110,9 +110,10 @@ func (s *GrpcServer) CreateCalendar(ctx context.Context, req *connect.Request[ca
 				Error: ptr("Failed to update existing event"),
 			}), nil
 		}
-		//TODO: add a updated boolean to response to indicate update
+		updated := true
 		return connect.NewResponse(&calendarv1.CreateCalendarResponse{
-			Id: ptr(existingEvent.ID.Hex()),
+			Id:      ptr(existingEvent.ID.Hex()),
+			Updated: &updated,
 		}), nil
 	}
 
