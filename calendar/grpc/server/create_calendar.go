@@ -64,6 +64,15 @@ func (s *GrpcServer) CreateCalendar(ctx context.Context, req *connect.Request[ca
 		}), nil
 	}
 
+	//TODO: if a user don't have a default calendar, create one
+	//TODO: create event repository
+
+	// TODO: link event to calendar by setting calendarID in event
+
+	// TODO: save the event
+
+	// TODO: if event with same UID exists, update it instead and return existing one
+
 	// Set the user ID
 	calendarModel.UserID = &userID
 
