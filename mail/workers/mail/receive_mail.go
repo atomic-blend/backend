@@ -208,8 +208,10 @@ func receiveMail(m *amqp.Delivery, payload ReceivedMailPayload) {
 
 		// capture the calendar attachment only if there's a single attachment and it's a calendar file
 		// for now, we consider that a calendar event is a single email with an ics attachment
-		if len(encryptedMailContent.Attachments) == 1 && (encryptedMailContent.Attachments[0].ContentType == "text/calendar" || strings.HasSuffix(encryptedMailContent.Attachments[0].Filename, ".ics")) {
-			calendarAttachment = &encryptedMailContent.Attachments[0]
+		log.Debug().Str("rcpt", rcpt).Int("attachmentCount", len(mailContent.Attachments)).Msg("Checking for calendar attachment")
+		log.Debug().Str("rcpt", rcpt).Interface("attachments", mailContent.Attachments).Msg("Listing attachments")
+		if len(mailContent.Attachments) == 1 && (mailContent.Attachments[0].ContentType == "text/calendar" || strings.HasSuffix(mailContent.Attachments[0].Filename, ".ics")) {
+			calendarAttachment = &mailContent.Attachments[0]
 			log.Debug().Str("rcpt", rcpt).Str("filename", calendarAttachment.Filename).Msg("Found calendar attachment")
 		}
 
@@ -302,6 +304,8 @@ func receiveMail(m *amqp.Delivery, payload ReceivedMailPayload) {
 
 	// create calendars for users with calendar payloads
 	for userID, calendarPayload := range calendarPayloads {
+		log.Debug().Str("userID", userID).Msg("Creating calendar for user")
+		log.Debug().Str("userID", userID).Interface("calendarPayload", calendarPayload).Msg("Calendar payload")
 		if calendarPayload == nil {
 			continue
 		}

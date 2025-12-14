@@ -120,6 +120,8 @@ func (s *GrpcServer) CreateCalendar(ctx context.Context, req *connect.Request[ca
 	log.Info().Msg("Creating new event")
 	event := &calendarModel.Events[0]
 	event.CalendarID = defaultCalendar.ID
+	event.ID = primitive.NewObjectID()
+	event.UserID = userID
 	newEvent, err = eventRepo.CreateWithContext(ctx, event)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to create event")
