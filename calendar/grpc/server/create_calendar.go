@@ -75,7 +75,10 @@ func (s *GrpcServer) CreateCalendar(ctx context.Context, req *connect.Request[ca
 		} else {
 			log.Info().Msg("No default calendar found, creating one")
 		}
-		defaultCalendar, err = calendarRepo.CreateWithContext(ctx, calendarModel)
+		newDefaultCalendar := &models.Calendar{
+			UserID: &userID,
+		}
+		defaultCalendar, err = calendarRepo.CreateWithContext(ctx, newDefaultCalendar)
 		if err != nil {
 			log.Error().Err(err).Msg("Failed to create default calendar")
 			return connect.NewResponse(&calendarv1.CreateCalendarResponse{
