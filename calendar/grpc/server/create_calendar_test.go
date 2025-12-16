@@ -5,12 +5,16 @@ import (
 	"testing"
 
 	"connectrpc.com/connect"
+	"filippo.io/age"
+	"github.com/atomic-blend/backend/calendar/models"
 	authv1 "github.com/atomic-blend/backend/grpc/gen/auth/v1"
 	calendarv1 "github.com/atomic-blend/backend/grpc/gen/calendar/v1"
+	userv1 "github.com/atomic-blend/backend/grpc/gen/user/v1"
 	"github.com/atomic-blend/backend/shared/test_utils/inmemorymongo"
 	"github.com/atomic-blend/backend/shared/utils/db"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -154,6 +158,14 @@ func TestCreateCalendar_WithEvent(t *testing.T) {
 		Id: userID.Hex(),
 	}
 
+	// Generate an age X25519 identity and use its recipient as the public key
+	id, err := age.GenerateX25519Identity()
+	require.NoError(t, err)
+	pub := id.Recipient().String()
+
+	// inject a test user client that returns the generated public key
+	server.UserClient = &testUserClient{publicKey: pub}
+
 	req := &connect.Request[calendarv1.CreateCalendarRequest]{
 		Msg: &calendarv1.CreateCalendarRequest{
 			User:     userProto,
@@ -166,4 +178,31 @@ func TestCreateCalendar_WithEvent(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, resp.Msg.Id)
 	assert.Empty(t, resp.Msg.Error)
+
+	// verify the event was stored and that sensitive fields were encrypted
+	eventID, err := primitive.ObjectIDFromHex(*resp.Msg.Id)
+	require.NoError(t, err)
+
+	var stored models.Event
+	err = db.Database.Collection("events").FindOne(context.Background(), bson.M{"_id": eventID}).Decode(&stored)
+	require.NoError(t, err)
+
+	// original UID and organizer email should not be stored in plaintext
+	assert.NotEqual(t, "test-uid", stored.UID)
+	if stored.Organizer != nil {
+		assert.NotEqual(t, "organizer@example.com", stored.Organizer.Email)
+	}
+}
+
+// testUserClient is a minimal user client for tests
+type testUserClient struct {
+	publicKey string
+}
+
+func (t *testUserClient) GetUserDevices(ctx context.Context, req *connect.Request[userv1.GetUserDevicesRequest]) (*connect.Response[userv1.GetUserDevicesResponse], error) {
+	return nil, nil
+}
+
+func (t *testUserClient) GetUserPublicKey(ctx context.Context, req *connect.Request[userv1.GetUserPublicKeyRequest]) (*connect.Response[userv1.GetUserPublicKeyResponse], error) {
+	return connect.NewResponse(&userv1.GetUserPublicKeyResponse{UserId: req.Msg.GetId(), PublicKey: t.publicKey}), nil
 }

@@ -108,24 +108,38 @@ func (s *GrpcServer) CreateCalendar(ctx context.Context, req *connect.Request[ca
 
 	// get the user public key from the auth service via grpc
 	log.Debug().Str("userID", userIDHex).Msg("Instantiating user client")
-	userClient, err := userclient.NewUserClient()
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to create user client")
+
+	var userClient userclient.Interface
+	if s.UserClient != nil {
+		userClient = s.UserClient
+	} else {
+		uc, err := userclient.NewUserClient()
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to create user client")
+		} else {
+			userClient = uc
+		}
 	}
 
-	log.Debug().Str("userID", userIDHex).Msg("Getting user public key")
-	rcptPublicKey, err := userClient.GetUserPublicKey(context.Background(), &connect.Request[userv1.GetUserPublicKeyRequest]{
-		Msg: &userv1.GetUserPublicKeyRequest{
-			Id: userIDHex,
-		},
-	})
-	if err != nil {
-		log.Debug().Str("userID", userIDHex).Msg("User not found, skipping")
+	var userPublicKey string
+	if userClient != nil {
+		log.Debug().Str("userID", userIDHex).Msg("Getting user public key")
+		rcptPublicKey, err := userClient.GetUserPublicKey(context.Background(), &connect.Request[userv1.GetUserPublicKeyRequest]{
+			Msg: &userv1.GetUserPublicKeyRequest{
+				Id: userIDHex,
+			},
+		})
+		if err != nil {
+			log.Debug().Str("userID", userIDHex).Err(err).Msg("User not found, skipping")
+		} else if rcptPublicKey == nil || rcptPublicKey.Msg == nil {
+			log.Debug().Str("userID", userIDHex).Msg("No public key response, skipping")
+		} else {
+			log.Debug().Str("userID", userIDHex).Str("publicKey", rcptPublicKey.Msg.PublicKey).Msg("User public key")
+			userPublicKey = rcptPublicKey.Msg.PublicKey
+		}
+	} else {
+		log.Debug().Str("userID", userIDHex).Msg("No user client available, skipping public key retrieval")
 	}
-
-	log.Debug().Str("userID", userIDHex).Str("publicKey", rcptPublicKey.Msg.PublicKey).Msg("User public key")
-
-	userPublicKey := rcptPublicKey.Msg.PublicKey
 
 	// encrypt the event
 	encryptedEvent, err := event.Encrypt(userPublicKey)
