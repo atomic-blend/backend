@@ -3,6 +3,7 @@ package models
 import (
 	"time"
 
+	ageencryptionservice "github.com/atomic-blend/backend/shared/services/age_encryption"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -63,4 +64,100 @@ type RRule struct {
 type VTimezone struct {
 	TZID   string `json:"tzid" bson:"tzid"`
 	Offset int    `json:"offset,omitempty" bson:"offset,omitempty"` // offset from UTC in seconds (simplified model)
+}
+
+// Encrypt encrypts the event fields using the age encryption library
+func (m *Event) Encrypt(publicKey string) (*Event, error) {
+	ageService := ageencryptionservice.NewAgeEncryptionService()
+
+	encryptedEvent := &Event{
+		ID:       m.ID,
+		UserID:   m.UserID,
+		DTStamp:  m.DTStamp,
+		Sequence: m.Sequence,
+		Status:   m.Status,
+	}
+
+	// encrypt UID
+	if m.UID != "" {
+		encryptedUID, err := ageService.EncryptString(publicKey, m.UID)
+		if err != nil {
+			return nil, err
+		}
+		encryptedEvent.UID = encryptedUID
+	}
+
+	// Encrypt Summary
+	if m.Summary != "" {
+		encryptedSummary, err := ageService.EncryptString(publicKey, m.Summary)
+		if err != nil {
+			return nil, err
+		}
+		encryptedEvent.Summary = encryptedSummary
+	}
+
+	// Encrypt Description
+	if m.Description != "" {
+		encryptedDescription, err := ageService.EncryptString(publicKey, m.Description)
+		if err != nil {
+			return nil, err
+		}
+		encryptedEvent.Description = encryptedDescription
+	}
+
+	// encrypt attendee emails
+	if len(m.Attendees) > 0 {
+		encryptedEvent.Attendees = make([]CalAddress, len(m.Attendees))
+		for i, attendee := range m.Attendees {
+			encryptedEmail, err := ageService.EncryptString(publicKey, attendee.Email)
+			if err != nil {
+				return nil, err
+			}
+			encryptedEvent.Attendees[i] = CalAddress{
+				Email:    encryptedEmail,
+				CN:       attendee.CN,
+				Role:     attendee.Role,
+				PartStat: attendee.PartStat,
+				RSVP:     attendee.RSVP,
+			}
+		}
+	}
+
+	// encrypt organizer email
+	if m.Organizer != nil {
+		encryptedEmail, err := ageService.EncryptString(publicKey, m.Organizer.Email)
+		if err != nil {
+			return nil, err
+		}
+		encryptedEvent.Organizer = &CalAddress{
+			Email:    encryptedEmail,
+			CN:       m.Organizer.CN,
+			Role:     m.Organizer.Role,
+			PartStat: m.Organizer.PartStat,
+			RSVP:     m.Organizer.RSVP,
+		}
+	}
+
+	// encrypt location
+	if m.Location != nil {
+		encryptedLocation, err := ageService.EncryptString(publicKey, *m.Location)
+		if err != nil {
+			return nil, err
+		}
+		encryptedEvent.Location = &encryptedLocation
+	}
+
+	// Copy other fields as is
+	encryptedEvent.Start = m.Start
+	encryptedEvent.End = m.End
+	encryptedEvent.Duration = m.Duration
+	encryptedEvent.Recurrence = m.Recurrence
+	encryptedEvent.ExDates = m.ExDates
+	encryptedEvent.RDates = m.RDates
+	encryptedEvent.LastModified = m.LastModified
+	encryptedEvent.CalendarID = m.CalendarID
+	encryptedEvent.CreatedAt = m.CreatedAt
+	encryptedEvent.UpdatedAt = m.UpdatedAt
+
+	return encryptedEvent, nil
 }

@@ -7,6 +7,8 @@ import (
 	"github.com/atomic-blend/backend/calendar/models"
 	"github.com/atomic-blend/backend/calendar/repositories"
 	calendarv1 "github.com/atomic-blend/backend/grpc/gen/calendar/v1"
+	userv1 "github.com/atomic-blend/backend/grpc/gen/user/v1"
+	userclient "github.com/atomic-blend/backend/shared/grpc/user"
 	"github.com/atomic-blend/backend/shared/utils/db"
 	"github.com/rs/zerolog/log"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -101,11 +103,48 @@ func (s *GrpcServer) CreateCalendar(ctx context.Context, req *connect.Request[ca
 	// if event with same UID exists, update it instead and return existing one
 	eventRepo := repositories.NewEventRepository(db.Database)
 	existingEvent, _ := eventRepo.GetByUIDWithContext(ctx, calendarModel.Events[0].UID)
+
+	event := calendarModel.Events[0]
+
+	// get the user public key from the auth service via grpc
+	log.Debug().Str("userID", userIDHex).Msg("Instantiating user client")
+	userClient, err := userclient.NewUserClient()
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to create user client")
+	}
+
+	log.Debug().Str("userID", userIDHex).Msg("Getting user public key")
+	rcptPublicKey, err := userClient.GetUserPublicKey(context.Background(), &connect.Request[userv1.GetUserPublicKeyRequest]{
+		Msg: &userv1.GetUserPublicKeyRequest{
+			Id: userIDHex,
+		},
+	})
+	if err != nil {
+		log.Debug().Str("userID", userIDHex).Msg("User not found, skipping")
+	}
+
+	log.Debug().Str("userID", userIDHex).Str("publicKey", rcptPublicKey.Msg.PublicKey).Msg("User public key")
+
+	userPublicKey := rcptPublicKey.Msg.PublicKey
+
+	// encrypt the event
+	encryptedEvent, err := event.Encrypt(userPublicKey)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to encrypt event")
+		return connect.NewResponse(&calendarv1.CreateCalendarResponse{
+			Id:    nil,
+			Error: ptr("Failed to encrypt event"),
+		}), nil
+	}
+	encryptedEvent.ID = primitive.NewObjectID()
+	encryptedEvent.CalendarID = defaultCalendar.ID
+	encryptedEvent.UserID = userID
+
 	var newEvent *models.Event
 
 	if existingEvent != nil {
 		log.Info().Str("eventUID", existingEvent.UID).Msg("Event with same UID exists, updating it")
-		_, err = eventRepo.UpdateWithContext(ctx, existingEvent.ID, &calendarModel.Events[0])
+		_, err = eventRepo.UpdateWithContext(ctx, existingEvent.ID, encryptedEvent)
 		if err != nil {
 			log.Error().Err(err).Msg("Failed to update existing event")
 			return connect.NewResponse(&calendarv1.CreateCalendarResponse{
@@ -121,11 +160,7 @@ func (s *GrpcServer) CreateCalendar(ctx context.Context, req *connect.Request[ca
 	}
 
 	log.Info().Msg("Creating new event")
-	event := &calendarModel.Events[0]
-	event.CalendarID = defaultCalendar.ID
-	event.ID = primitive.NewObjectID()
-	event.UserID = userID
-	newEvent, err = eventRepo.CreateWithContext(ctx, event)
+	newEvent, err = eventRepo.CreateWithContext(ctx, encryptedEvent)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to create event")
 		return connect.NewResponse(&calendarv1.CreateCalendarResponse{

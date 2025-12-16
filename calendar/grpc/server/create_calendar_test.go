@@ -5,8 +5,8 @@ import (
 	"testing"
 
 	"connectrpc.com/connect"
-	"github.com/atomic-blend/backend/grpc/gen/auth/v1"
-	"github.com/atomic-blend/backend/grpc/gen/calendar/v1"
+	authv1 "github.com/atomic-blend/backend/grpc/gen/auth/v1"
+	calendarv1 "github.com/atomic-blend/backend/grpc/gen/calendar/v1"
 	"github.com/atomic-blend/backend/shared/test_utils/inmemorymongo"
 	"github.com/atomic-blend/backend/shared/utils/db"
 	"github.com/stretchr/testify/assert"

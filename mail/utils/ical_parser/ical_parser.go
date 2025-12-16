@@ -182,11 +182,15 @@ func toTimeSpec(t time.Time, prop *ical.Prop) *calendarv1.TimeSpec {
 }
 
 func toCalAddress(prop *ical.Prop) *calendarv1.CalAddress {
+	partStat := prop.Params.Get(ical.ParamParticipationStatus)
+	if partStat == "" {
+		partStat = "NEEDS-ACTION"
+	}
 	addr := &calendarv1.CalAddress{
 		Email:    prop.Value,
 		Cn:       prop.Params.Get(ical.ParamCommonName),
 		Role:     prop.Params.Get(ical.ParamRole),
-		PartStat: prop.Params.Get(ical.ParamParticipationStatus),
+		PartStat: partStat,
 	}
 	if rsvp := prop.Params.Get(ical.ParamRSVP); rsvp == "TRUE" {
 		addr.Rsvp = true
