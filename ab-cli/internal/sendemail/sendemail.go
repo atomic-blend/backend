@@ -21,21 +21,22 @@ import (
 )
 
 type EmailConfig struct {
-	Sender         string
-	Recipients     []string
-	CCRecipients   []string
-	BCCRecipients  []string
-	Subject        string
-	Body           string
-	AttachmentPath string
-	SMTPServer     string
-	SMTPUsername   string
-	SMTPPassword   string
-	MessageID      string
-	InReplyTo      string
-	References     []string
-	Date           time.Time
-	ThreadSize     int
+	Sender          string
+	Recipients      []string
+	CCRecipients    []string
+	BCCRecipients   []string
+	Subject         string
+	Body            string
+	AttachmentPath  string
+	IncludeCalendar bool
+	SMTPServer      string
+	SMTPUsername    string
+	SMTPPassword    string
+	MessageID       string
+	InReplyTo       string
+	References      []string
+	Date            time.Time
+	ThreadSize      int
 }
 
 func PromptInteractiveConfig(in io.Reader, out io.Writer) (*EmailConfig, error) {
@@ -329,27 +330,44 @@ func createMultipartMessage(cfg *EmailConfig) ([]byte, error) {
 	fileName := filepath.Base(cfg.AttachmentPath)
 	mimeType := mime.TypeByExtension(filepath.Ext(fileName))
 	if mimeType == "" {
-		mimeType = "application/octet-stream"
+		// treat .ics specially
+		if strings.EqualFold(filepath.Ext(fileName), ".ics") {
+			mimeType = "text/calendar"
+		} else {
+			mimeType = "application/octet-stream"
+		}
 	}
 
-	buffer.WriteString(fmt.Sprintf("--%s\r\n", boundary))
-	buffer.WriteString(fmt.Sprintf("Content-Type: %s\r\n", mimeType))
-	buffer.WriteString("Content-Transfer-Encoding: base64\r\n")
-	buffer.WriteString(fmt.Sprintf("Content-Disposition: attachment; filename=\"%s\"\r\n", fileName))
-	buffer.WriteString("\r\n")
-
+	// Read the file data first so we can choose encoding based on mime type
 	fileData, err := io.ReadAll(file)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read attachment: %v", err)
 	}
-	encoded := base64.StdEncoding.EncodeToString(fileData)
-	for i := 0; i < len(encoded); i += 76 {
-		end := i + 76
-		if end > len(encoded) {
-			end = len(encoded)
-		}
-		buffer.WriteString(encoded[i:end])
+
+	buffer.WriteString(fmt.Sprintf("--%s\r\n", boundary))
+	// For calendar attachments, include method and charset parameters and use 7bit
+	if mimeType == "text/calendar" {
+		buffer.WriteString(fmt.Sprintf("Content-Type: %s; method=REQUEST; charset=UTF-8\r\n", mimeType))
+		buffer.WriteString("Content-Transfer-Encoding: 7bit\r\n")
+		buffer.WriteString(fmt.Sprintf("Content-Disposition: attachment; filename=\"%s\"\r\n", fileName))
 		buffer.WriteString("\r\n")
+		buffer.Write(fileData)
+		buffer.WriteString("\r\n")
+	} else {
+		buffer.WriteString(fmt.Sprintf("Content-Type: %s\r\n", mimeType))
+		buffer.WriteString("Content-Transfer-Encoding: base64\r\n")
+		buffer.WriteString(fmt.Sprintf("Content-Disposition: attachment; filename=\"%s\"\r\n", fileName))
+		buffer.WriteString("\r\n")
+
+		encoded := base64.StdEncoding.EncodeToString(fileData)
+		for i := 0; i < len(encoded); i += 76 {
+			end := i + 76
+			if end > len(encoded) {
+				end = len(encoded)
+			}
+			buffer.WriteString(encoded[i:end])
+			buffer.WriteString("\r\n")
+		}
 	}
 
 	buffer.WriteString(fmt.Sprintf("--%s--\r\n", boundary))

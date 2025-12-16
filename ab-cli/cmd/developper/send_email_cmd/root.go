@@ -2,6 +2,8 @@
 package sendemailcmd
 
 import (
+	"bufio"
+	"bytes"
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
@@ -12,6 +14,7 @@ import (
 	sendemail "github.com/atomic-blend/backend/ab-cli/internal/sendemail"
 	"github.com/charmbracelet/bubbles/table"
 	tea "github.com/charmbracelet/bubbletea"
+	ical "github.com/emersion/go-ical"
 	"github.com/spf13/cobra"
 )
 
@@ -33,7 +36,7 @@ func NewCommand() *cobra.Command {
 				if err != nil {
 					return err
 				}
-				// after composer, determine effective thread size and pre-generate IDs
+				// determine effective thread size and pre-generate IDs
 				effectiveThread := threadSize
 				if effectiveThread <= 0 {
 					effectiveThread = cfg.ThreadSize
@@ -47,7 +50,45 @@ func NewCommand() *cobra.Command {
 					ids[i] = genMessageID()
 				}
 
-				if cfg.AttachmentPath != "" {
+				// If composer requested a calendar invite, generate invite + reply .ics files
+				var invitePath string
+				var replyPaths []string
+				var attendees []string
+				var uid string
+				var replyMethods []string
+				if cfg.IncludeCalendar {
+					attendees = buildAttendeesList(cfg, effectiveThread)
+					// create invite (METHOD=REQUEST)
+					p, uid, err := generateICalInvite(cfg, attendees)
+					if err != nil {
+						return err
+					}
+					invitePath = p
+					replyPaths = make([]string, effectiveThread)
+					replyMethods = make([]string, effectiveThread)
+					// generate per-attendee replies for messages 1..N-1
+					for j := 1; j < effectiveThread; j++ {
+						method := randomReplyMethod()
+						rp, err := generateICalReply(cfg, uid, attendees[j], method)
+						if err != nil {
+							return err
+						}
+						replyPaths[j] = rp
+						replyMethods[j] = method
+					}
+					defer func() {
+						_ = os.Remove(invitePath)
+						for _, r := range replyPaths {
+							if r != "" {
+								_ = os.Remove(r)
+							}
+						}
+					}()
+				}
+
+				if invitePath != "" {
+					fmt.Printf("📎 Calendar invite will be sent (uid: %s)\n", uid)
+				} else if cfg.AttachmentPath != "" {
 					fmt.Printf("📎 Attachment: %s\n", cfg.AttachmentPath)
 				}
 				if effectiveThread > 1 {
@@ -58,6 +99,25 @@ func NewCommand() *cobra.Command {
 					recipients += ", cc:" + strings.Join(cfg.CCRecipients, ",")
 				}
 				summary := fmt.Sprintf("From: %s\nTo: %s\nSubject: %s\nBody length: %d chars\nAttachment: %v\nSMTP: %s\nThread size: %d\n", cfg.Sender, recipients, cfg.Subject, len(cfg.Body), cfg.AttachmentPath != "", cfg.SMTPServer, effectiveThread)
+				// include calendar details when present
+				if invitePath != "" {
+					calInfo := fmt.Sprintf("Calendar UID: %s\nAttendees: %s\n", uid, strings.Join(attendees, ","))
+					for i := 0; i < effectiveThread; i++ {
+						if i == 0 {
+							ctype, brief := summarizeICal(invitePath)
+							calInfo += fmt.Sprintf("Email %d Attachment: invite (Type=%s) %s\n", i+1, ctype, brief)
+						} else {
+							m := replyMethods[i]
+							if m == "" {
+								m = "REPLY"
+							}
+							p := replyPaths[i]
+							ctype, brief := summarizeICal(p)
+							calInfo += fmt.Sprintf("Email %d Calendar Reply: %s (from %s) Type=%s %s\n", i+1, m, attendees[i], ctype, brief)
+						}
+					}
+					summary += calInfo
+				}
 				// append full headers for each email in the thread so user sees exact headers
 				summary += buildThreadHeaders(cfg, ids)
 
@@ -71,12 +131,37 @@ func NewCommand() *cobra.Command {
 				}
 				// send thread using the pre-generated IDs
 				var prevID string
+				origSender := cfg.Sender
+				origRecipients := append([]string{}, cfg.Recipients...)
+				origCC := append([]string{}, cfg.CCRecipients...)
+				origBCC := append([]string{}, cfg.BCCRecipients...)
+				origSubject := cfg.Subject
 				for i := 0; i < effectiveThread; i++ {
 					if i > 0 {
 						cfg.InReplyTo = prevID
 						cfg.References = append(cfg.References, prevID)
 					}
 					cfg.MessageID = ids[i]
+					// attach appropriate calendar file and, for replies, set sender/recipient
+					if invitePath != "" {
+						if i == 0 {
+							cfg.AttachmentPath = invitePath
+							cfg.Sender = origSender
+							cfg.Recipients = origRecipients
+							cfg.CCRecipients = origCC
+							cfg.BCCRecipients = origBCC
+							cfg.Subject = origSubject
+						} else {
+							// send reply from attendee[i] to original sender
+							att := attendees[i]
+							cfg.Sender = att
+							cfg.Recipients = []string{origSender}
+							cfg.CCRecipients = nil
+							cfg.BCCRecipients = nil
+							cfg.AttachmentPath = replyPaths[i]
+							cfg.Subject = "Re: " + origSubject
+						}
+					}
 					msg, err := sendemail.CreateRFCMessage(cfg)
 					if err != nil {
 						return err
@@ -86,6 +171,12 @@ func NewCommand() *cobra.Command {
 					}
 					fmt.Printf("📨 Sent message id %s to %d recipients\n", cfg.MessageID, len(cfg.Recipients)+len(cfg.CCRecipients)+len(cfg.BCCRecipients))
 					prevID = cfg.MessageID
+					// restore original sender/recipients/subject for next iteration if needed
+					cfg.Sender = origSender
+					cfg.Recipients = append([]string{}, origRecipients...)
+					cfg.CCRecipients = append([]string{}, origCC...)
+					cfg.BCCRecipients = append([]string{}, origBCC...)
+					cfg.Subject = origSubject
 					if delayMs > 0 {
 						time.Sleep(time.Duration(delayMs) * time.Millisecond)
 					}
@@ -103,6 +194,15 @@ func NewCommand() *cobra.Command {
 				if cfg.AttachmentPath != "" {
 					fmt.Printf("📎 Attachment: %s\n", cfg.AttachmentPath)
 				}
+				// Ask user if they want to include a calendar invitation
+				reader := bufio.NewReader(os.Stdin)
+				fmt.Print("Include calendar invitation (.ics)? (y/n) [n]: ")
+				choice, _ := reader.ReadString('\n')
+				choice = strings.TrimSpace(strings.ToLower(choice))
+				if choice == "y" || choice == "yes" {
+					cfg.IncludeCalendar = true
+				}
+
 				// determine effective thread size and pre-generate IDs
 				effectiveThread := threadSize
 				if effectiveThread <= 0 {
@@ -113,12 +213,65 @@ func NewCommand() *cobra.Command {
 					ids[i] = genMessageID()
 				}
 
+				// If calendar requested, generate invite + replies
+				var invitePath string
+				var replyPaths []string
+				var attendees []string
+				var uid string
+				var replyMethods []string
+				if cfg.IncludeCalendar {
+					attendees = buildAttendeesList(cfg, effectiveThread)
+					p, uid, err := generateICalInvite(cfg, attendees)
+					if err != nil {
+						return err
+					}
+					invitePath = p
+					replyPaths = make([]string, effectiveThread)
+					replyMethods = make([]string, effectiveThread)
+					for j := 1; j < effectiveThread; j++ {
+						method := randomReplyMethod()
+						rp, err := generateICalReply(cfg, uid, attendees[j], method)
+						if err != nil {
+							return err
+						}
+						replyPaths[j] = rp
+						replyMethods[j] = method
+					}
+					defer func() {
+						_ = os.Remove(invitePath)
+						for _, r := range replyPaths {
+							if r != "" {
+								_ = os.Remove(r)
+							}
+						}
+					}()
+					fmt.Printf("📎 Calendar invite will be sent (uid: %s)\n", uid)
+				}
+
 				// build and show summary
 				recipients := strings.Join(cfg.Recipients, ",")
 				if len(cfg.CCRecipients) > 0 {
 					recipients += ", cc:" + strings.Join(cfg.CCRecipients, ",")
 				}
 				summary := fmt.Sprintf("From: %s\nTo: %s\nSubject: %s\nBody length: %d chars\nAttachment: %v\nSMTP: %s\nThread size: %d\n", cfg.Sender, recipients, cfg.Subject, len(cfg.Body), cfg.AttachmentPath != "", cfg.SMTPServer, effectiveThread)
+				if invitePath != "" {
+					calInfo := fmt.Sprintf("Calendar UID: %s\nAttendees: %s\n", uid, strings.Join(attendees, ","))
+					for i := 0; i < effectiveThread; i++ {
+						if i == 0 {
+							ctype, brief := summarizeICal(invitePath)
+							calInfo += fmt.Sprintf("Email %d Attachment: invite (Type=%s) %s\n", i+1, ctype, brief)
+						} else {
+							m := replyMethods[i]
+							if m == "" {
+								m = "REPLY"
+							}
+							p := replyPaths[i]
+							ctype, brief := summarizeICal(p)
+							calInfo += fmt.Sprintf("Email %d Calendar Reply: %s (from %s) Type=%s %s\n", i+1, m, attendees[i], ctype, brief)
+						}
+					}
+					summary += calInfo
+				}
 				summary += buildThreadHeaders(cfg, ids)
 				ok, err := showSummaryTUI(summary)
 				if err != nil {
@@ -163,6 +316,15 @@ func NewCommand() *cobra.Command {
 				fmt.Printf("🔁 Sending thread of %d messages\n", cfg.ThreadSize)
 			}
 
+			// Ask user if they want to include a calendar invitation
+			reader := bufio.NewReader(os.Stdin)
+			fmt.Print("Include calendar invitation (.ics)? (y/n) [n]: ")
+			choice, _ := reader.ReadString('\n')
+			choice = strings.TrimSpace(strings.ToLower(choice))
+			if choice == "y" || choice == "yes" {
+				cfg.IncludeCalendar = true
+			}
+
 			// interactive summary + confirmation (compute effective thread and ids first)
 			effectiveThread := threadSize
 			if effectiveThread <= 0 {
@@ -176,11 +338,64 @@ func NewCommand() *cobra.Command {
 				ids[i] = genMessageID()
 			}
 
+			// If calendar requested, generate invite + replies
+			var invitePath string
+			var replyPaths []string
+			var attendees []string
+			var uid string
+			var replyMethods []string
+			if cfg.IncludeCalendar {
+				attendees = buildAttendeesList(cfg, effectiveThread)
+				p, uid, err := generateICalInvite(cfg, attendees)
+				if err != nil {
+					return err
+				}
+				invitePath = p
+				replyPaths = make([]string, effectiveThread)
+				replyMethods = make([]string, effectiveThread)
+				for j := 1; j < effectiveThread; j++ {
+					method := randomReplyMethod()
+					rp, err := generateICalReply(cfg, uid, attendees[j], method)
+					if err != nil {
+						return err
+					}
+					replyPaths[j] = rp
+					replyMethods[j] = method
+				}
+				defer func() {
+					_ = os.Remove(invitePath)
+					for _, r := range replyPaths {
+						if r != "" {
+							_ = os.Remove(r)
+						}
+					}
+				}()
+				fmt.Printf("📎 Calendar invite will be sent (uid: %s)\n", uid)
+			}
+
 			recipients := strings.Join(cfg.Recipients, ",")
 			if len(cfg.CCRecipients) > 0 {
 				recipients += ", cc:" + strings.Join(cfg.CCRecipients, ",")
 			}
 			summary := fmt.Sprintf("From: %s\nTo: %s\nSubject: %s\nBody length: %d chars\nAttachment: %v\nSMTP: %s\nThread size: %d\n", cfg.Sender, recipients, cfg.Subject, len(cfg.Body), cfg.AttachmentPath != "", cfg.SMTPServer, effectiveThread)
+			if invitePath != "" {
+				calInfo := fmt.Sprintf("Calendar UID: %s\nAttendees: %s\n", uid, strings.Join(attendees, ","))
+				for i := 0; i < effectiveThread; i++ {
+					if i == 0 {
+						ctype, brief := summarizeICal(invitePath)
+						calInfo += fmt.Sprintf("Email %d Attachment: invite (Type=%s) %s\n", i+1, ctype, brief)
+					} else {
+						m := replyMethods[i]
+						if m == "" {
+							m = "REPLY"
+						}
+						p := replyPaths[i]
+						ctype, brief := summarizeICal(p)
+						calInfo += fmt.Sprintf("Email %d Calendar Reply: %s (from %s) Type=%s %s\n", i+1, m, attendees[i], ctype, brief)
+					}
+				}
+				summary += calInfo
+			}
 			summary += buildThreadHeaders(cfg, ids)
 			ok, err := showSummaryTUI(summary)
 			if err != nil {
@@ -192,12 +407,34 @@ func NewCommand() *cobra.Command {
 			}
 			// send thread using the pre-generated IDs
 			var prevID string
+			origSender := cfg.Sender
+			origRecipients := append([]string{}, cfg.Recipients...)
+			origCC := append([]string{}, cfg.CCRecipients...)
+			origBCC := append([]string{}, cfg.BCCRecipients...)
 			for i := 0; i < effectiveThread; i++ {
 				if i > 0 {
 					cfg.InReplyTo = prevID
 					cfg.References = append(cfg.References, prevID)
 				}
 				cfg.MessageID = ids[i]
+				// attach appropriate calendar file and, for replies, set sender/recipient
+				if invitePath != "" {
+					if i == 0 {
+						cfg.AttachmentPath = invitePath
+						cfg.Sender = origSender
+						cfg.Recipients = origRecipients
+						cfg.CCRecipients = origCC
+						cfg.BCCRecipients = origBCC
+					} else {
+						// send reply from attendee[i] to original sender
+						att := attendees[i]
+						cfg.Sender = att
+						cfg.Recipients = []string{origSender}
+						cfg.CCRecipients = nil
+						cfg.BCCRecipients = nil
+						cfg.AttachmentPath = replyPaths[i]
+					}
+				}
 				msg, err := sendemail.CreateRFCMessage(cfg)
 				if err != nil {
 					return err
@@ -207,6 +444,11 @@ func NewCommand() *cobra.Command {
 				}
 				fmt.Printf("📨 Sent message id %s to %d recipients\n", cfg.MessageID, len(cfg.Recipients)+len(cfg.CCRecipients)+len(cfg.BCCRecipients))
 				prevID = cfg.MessageID
+				// restore original sender/recipients for next iteration if needed
+				cfg.Sender = origSender
+				cfg.Recipients = append([]string{}, origRecipients...)
+				cfg.CCRecipients = append([]string{}, origCC...)
+				cfg.BCCRecipients = append([]string{}, origBCC...)
 				if delayMs > 0 {
 					time.Sleep(time.Duration(delayMs) * time.Millisecond)
 				}
@@ -397,4 +639,201 @@ func buildThreadHeaders(orig *sendemail.EmailConfig, ids []string) string {
 		}
 	}
 	return sb.String()
+}
+
+// buildAttendeesList returns a list of attendees with length equal to threadSize.
+// It prefers provided recipients and fills remaining slots with generated addresses.
+func buildAttendeesList(cfg *sendemail.EmailConfig, threadSize int) []string {
+	out := make([]string, threadSize)
+	// derive domain from sender
+	domain := "example.com"
+	if parts := strings.Split(cfg.Sender, "@"); len(parts) == 2 {
+		domain = parts[1]
+	}
+	for i := 0; i < threadSize; i++ {
+		if i < len(cfg.Recipients) {
+			out[i] = cfg.Recipients[i]
+			continue
+		}
+		out[i] = fmt.Sprintf("attendee+%d@%s", i+1, domain)
+	}
+	return out
+}
+
+// generateICalInvite creates an .ics file for an initial invite (METHOD=REQUEST)
+// and returns the file path and generated UID.
+func generateICalInvite(cfg *sendemail.EmailConfig, attendees []string) (string, string, error) {
+	cal := ical.NewCalendar()
+	cal.Props.SetText(ical.PropVersion, "2.0")
+	cal.Props.SetText(ical.PropProductID, "-//atomic-blend//EN")
+	cal.Props.SetText(ical.PropMethod, "REQUEST")
+
+	ev := ical.NewEvent()
+	uid := genMessageID()
+	ev.Props.SetText(ical.PropUID, uid)
+	now := time.Now().UTC()
+	ev.Props.SetDateTime(ical.PropDateTimeStamp, now)
+	start := now.Add(1 * time.Hour)
+	ev.Props.SetDateTime(ical.PropDateTimeStart, start)
+	ev.Props.SetDateTime(ical.PropDateTimeEnd, start.Add(1*time.Hour))
+	ev.Props.SetText(ical.PropSummary, cfg.Subject)
+	ev.Props.SetText(ical.PropDescription, cfg.Body)
+	ev.Props.SetText(ical.PropOrganizer, "MAILTO:"+cfg.Sender)
+	for _, r := range attendees {
+		p := ical.NewProp(ical.PropAttendee)
+		p.SetText("MAILTO:" + r)
+		ev.Props.Add(p)
+	}
+
+	cal.Children = append(cal.Children, ev.Component)
+
+	var buf bytes.Buffer
+	enc := ical.NewEncoder(&buf)
+	if err := enc.Encode(cal); err != nil {
+		return "", "", err
+	}
+
+	f, err := os.CreateTemp("", "invite-*.ics")
+	if err != nil {
+		return "", "", err
+	}
+	if _, err := f.Write(buf.Bytes()); err != nil {
+		f.Close()
+		return "", "", err
+	}
+	if err := f.Close(); err != nil {
+		return "", "", err
+	}
+	return f.Name(), uid, nil
+}
+
+// generateICalReply creates an .ics file for a reply/cancel/publish with the
+// given UID and attendee. method should be one of "REPLY","CANCEL","PUBLISH".
+func generateICalReply(cfg *sendemail.EmailConfig, uid, attendee, method string) (string, error) {
+	cal := ical.NewCalendar()
+	cal.Props.SetText(ical.PropVersion, "2.0")
+	cal.Props.SetText(ical.PropProductID, "-//atomic-blend//EN")
+	cal.Props.SetText(ical.PropMethod, method)
+
+	ev := ical.NewEvent()
+	ev.Props.SetText(ical.PropUID, uid)
+	now := time.Now().UTC()
+	ev.Props.SetDateTime(ical.PropDateTimeStamp, now)
+	// replies typically include DTSTART/DTEND as reference to original
+	start := now.Add(1 * time.Hour)
+	ev.Props.SetDateTime(ical.PropDateTimeStart, start)
+	ev.Props.SetDateTime(ical.PropDateTimeEnd, start.Add(1*time.Hour))
+	ev.Props.SetText(ical.PropSummary, cfg.Subject)
+	ev.Props.SetText(ical.PropOrganizer, "MAILTO:"+cfg.Sender)
+
+	// attendee for this reply
+	p := ical.NewProp(ical.PropAttendee)
+	p.SetText("MAILTO:" + attendee)
+	// for replies/cancels, set PARTSTAT and optionally STATUS
+	switch method {
+	case "CANCEL":
+		ev.Props.SetText(ical.PropStatus, "CANCELLED")
+		// mark as declined
+		if p.Params == nil {
+			p.Params = ical.Params{}
+		}
+		p.Params.Set(ical.ParamParticipationStatus, "DECLINED")
+	case "REPLY":
+		if p.Params == nil {
+			p.Params = ical.Params{}
+		}
+		// random accepted/tentative
+		if time.Now().UnixNano()%2 == 0 {
+			p.Params.Set(ical.ParamParticipationStatus, "ACCEPTED")
+		} else {
+			p.Params.Set(ical.ParamParticipationStatus, "TENTATIVE")
+		}
+	}
+	ev.Props.Add(p)
+
+	cal.Children = append(cal.Children, ev.Component)
+
+	var buf bytes.Buffer
+	enc := ical.NewEncoder(&buf)
+	if err := enc.Encode(cal); err != nil {
+		return "", err
+	}
+
+	f, err := os.CreateTemp("", "reply-*.ics")
+	if err != nil {
+		return "", err
+	}
+	if _, err := f.Write(buf.Bytes()); err != nil {
+		f.Close()
+		return "", err
+	}
+	if err := f.Close(); err != nil {
+		return "", err
+	}
+	return f.Name(), nil
+}
+
+// randomReplyMethod returns either "REPLY" or "CANCEL" at random.
+func randomReplyMethod() string {
+	if time.Now().UnixNano()%2 == 0 {
+		return "REPLY"
+	}
+	return "CANCEL"
+}
+
+// summarizeICal reads an .ics file and returns a short content type (METHOD)
+// and a brief summary (SUMMARY or DESCRIPTION plus attendees) for display.
+func summarizeICal(path string) (string, string) {
+	if path == "" {
+		return "", ""
+	}
+	b, err := os.ReadFile(path)
+	if err != nil {
+		return "", ""
+	}
+	s := string(b)
+	lines := strings.Split(s, "\n")
+	var method, summary string
+	var attendees []string
+	for _, l := range lines {
+		l = strings.TrimSpace(l)
+		if method == "" && strings.HasPrefix(l, "METHOD:") {
+			method = strings.TrimSpace(strings.TrimPrefix(l, "METHOD:"))
+			continue
+		}
+		if summary == "" && strings.HasPrefix(l, "SUMMARY:") {
+			summary = strings.TrimSpace(strings.TrimPrefix(l, "SUMMARY:"))
+			continue
+		}
+		if summary == "" && strings.HasPrefix(l, "DESCRIPTION:") {
+			summary = strings.TrimSpace(strings.TrimPrefix(l, "DESCRIPTION:"))
+			continue
+		}
+		if strings.HasPrefix(l, "ATTENDEE:") {
+			a := strings.TrimSpace(strings.TrimPrefix(l, "ATTENDEE:"))
+			a = strings.TrimPrefix(a, "MAILTO:")
+			attendees = append(attendees, a)
+		}
+	}
+	if method == "" {
+		method = "UNKNOWN"
+	}
+	brief := summary
+	if brief == "" {
+		// fallback to first 80 characters of file
+		if len(s) > 80 {
+			brief = strings.TrimSpace(s[:80]) + "..."
+		} else {
+			brief = strings.TrimSpace(s)
+		}
+	}
+	if len(attendees) > 0 {
+		// show up to 3 attendees
+		n := 3
+		if len(attendees) < n {
+			n = len(attendees)
+		}
+		brief += " (Attendees: " + strings.Join(attendees[:n], ",") + ")"
+	}
+	return method, brief
 }

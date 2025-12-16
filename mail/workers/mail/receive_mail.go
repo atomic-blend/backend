@@ -9,10 +9,13 @@ import (
 	"connectrpc.com/connect"
 	"github.com/appleboy/go-fcm"
 	authv1 "github.com/atomic-blend/backend/grpc/gen/auth/v1"
+	calendarv1 "github.com/atomic-blend/backend/grpc/gen/calendar/v1"
 	userv1 "github.com/atomic-blend/backend/grpc/gen/user/v1"
 	"github.com/atomic-blend/backend/mail/models"
 	"github.com/atomic-blend/backend/mail/notifications/payloads"
 	"github.com/atomic-blend/backend/mail/repositories"
+	icalparser "github.com/atomic-blend/backend/mail/utils/ical_parser"
+	calendarclient "github.com/atomic-blend/backend/shared/grpc/calendar"
 	userclient "github.com/atomic-blend/backend/shared/grpc/user"
 	ageencryptionservice "github.com/atomic-blend/backend/shared/services/age_encryption"
 	rspamdservice "github.com/atomic-blend/backend/shared/services/rspamd"
@@ -139,9 +142,17 @@ func receiveMail(m *amqp.Delivery, payload ReceivedMailPayload) {
 	// Process the message body and collect all content
 	processMessageBody(entity, mailContent)
 
-	encryptedMails := make([]models.Mail, 0)
+	// Create a new calendar client
+	calendarService, err := calendarclient.NewCalendarClient()
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to create calendar client")
+		return
+	}
+
+	encryptedMails := map[string]models.Mail{}
 	encryptedNotifications := make(map[string]payloads.MailReceivedPayload, 0)
 	encryptedAttachments := make([]*awss3.PutObjectInput, 0)
+	calendarPayloads := map[string]*calendarv1.Calendar{}
 	haveErrors := false
 
 	for _, rcpt := range payload.Rcpt {
@@ -193,6 +204,17 @@ func receiveMail(m *amqp.Delivery, payload ReceivedMailPayload) {
 
 		log.Debug().Str("rcpt", rcpt).Interface("encryptedContent", encryptedMailContent).Msg("Encrypted mail content")
 
+		var calendarAttachment *models.RawAttachment
+
+		// capture the calendar attachment only if there's a single attachment and it's a calendar file
+		// for now, we consider that a calendar event is a single email with an ics attachment
+		log.Debug().Str("rcpt", rcpt).Int("attachmentCount", len(mailContent.Attachments)).Msg("Checking for calendar attachment")
+		log.Debug().Str("rcpt", rcpt).Interface("attachments", mailContent.Attachments).Msg("Listing attachments")
+		if len(mailContent.Attachments) == 1 && (mailContent.Attachments[0].ContentType == "text/calendar" || strings.HasSuffix(mailContent.Attachments[0].Filename, ".ics")) {
+			calendarAttachment = &mailContent.Attachments[0]
+			log.Debug().Str("rcpt", rcpt).Str("filename", calendarAttachment.Filename).Msg("Found calendar attachment")
+		}
+
 		// upload the attachments to s3 and store the references in the mail entity
 		for _, attachment := range encryptedMailContent.Attachments {
 			uniqueFileID := uuid.New().String()
@@ -212,8 +234,35 @@ func receiveMail(m *amqp.Delivery, payload ReceivedMailPayload) {
 			encryptedAttachments = append(encryptedAttachments, payload)
 		}
 
-		//TODO: send the calendar event to the calendar service via grpc
-		//TODO: set the CalendarEvent field in the mail entity with the returned event ID
+		// NOTE: If calendar parsing fails, the mail will still be saved without the calendar event.
+		// This is not treated as a fatal error, but a warning is logged for visibility.  ad
+		if calendarAttachment != nil {
+			log.Debug().Str("rcpt", rcpt).Str("filename", calendarAttachment.Filename).Msg("Parsing calendar attachment")
+
+			calendars, err := icalparser.ParseICal(calendarAttachment.Data)
+			if err != nil {
+				log.Error().Err(err).Msg("Failed to parse iCal data")
+				haveErrors = true
+				continue
+			}
+
+			log.Debug().Str("rcpt", rcpt).Int("calendarCount", len(calendars)).Msg("Parsed iCal calendars")
+
+			// handle only the first calendar and first event for now
+			if len(calendars) == 0 || len(calendars[0].Events()) == 0 {
+				log.Debug().Str("rcpt", rcpt).Msg("No calendar events found")
+				continue
+			}
+
+			// convert the calendar to calendar payload
+			newCalendarPayload, err := icalparser.ToCalendarPayload(calendars[0])
+			if err != nil {
+				log.Error().Err(err).Msg("Failed to convert calendar to payload")
+			}
+
+			calendarPayloads[userID.Hex()] = newCalendarPayload
+			log.Debug().Str("rcpt", rcpt).Msg("Converted calendar to payload")
+		}
 
 		// set the mail entity fields
 		mailEntity.Headers = encryptedMailContent.Headers
@@ -224,7 +273,7 @@ func receiveMail(m *amqp.Delivery, payload ReceivedMailPayload) {
 		mailEntity.RewriteSubject = boolPtr(encryptedMailContent.RewriteSubject)
 		mailEntity.Greylisted = boolPtr(encryptedMailContent.Greylisted)
 
-		encryptedMails = append(encryptedMails, *mailEntity)
+		encryptedMails[userID.Hex()] = *mailEntity
 
 		// encrypt the notification content for mongodb with user's public key
 		log.Debug().Str("rcpt", rcpt).Msg("Encrypting notification content")
@@ -253,9 +302,44 @@ func receiveMail(m *amqp.Delivery, payload ReceivedMailPayload) {
 		return
 	}
 
+	// create calendars for users with calendar payloads
+	for userID, calendarPayload := range calendarPayloads {
+		log.Debug().Str("userID", userID).Msg("Creating calendar for user")
+		log.Debug().Str("userID", userID).Interface("calendarPayload", calendarPayload).Msg("Calendar payload")
+		if calendarPayload == nil {
+			continue
+		}
+		// Create a new calendar request
+		req := calendarclient.CreateCreateCalendarRequest(&authv1.User{Id: userID}, calendarPayload)
+
+		// Call the CreateCalendar method
+		response, err := calendarService.CreateCalendar(context.TODO(), req)
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to create calendar")
+			return
+		}
+
+		// convert the returned calendar event ID to ObjectID
+		calendarEventID, err := primitive.ObjectIDFromHex(*response.Msg.Id)
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to convert calendar event ID to ObjectID")
+			return
+		}
+
+		// link the created calendar event to the mail entity
+		mail := encryptedMails[userID]
+		mail.CalendarEvent = &calendarEventID
+		encryptedMails[userID] = mail
+	}
+
 	// save the mail documents with s3 references to mongodb
 	log.Debug().Int("count", len(encryptedMails)).Msg("Saving mail documents to MongoDB")
-	_, err = mailRepository.CreateMany(context.TODO(), encryptedMails)
+	// gather all the mail entities into a slice
+	mailsToCreate := make([]models.Mail, 0, len(encryptedMails))
+	for _, mail := range encryptedMails {
+		mailsToCreate = append(mailsToCreate, mail)
+	}
+	_, err = mailRepository.CreateMany(context.TODO(), mailsToCreate)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to save mail documents to MongoDB")
 		s3Service.BulkDeleteFiles(context.TODO(), uploadedKeys)
