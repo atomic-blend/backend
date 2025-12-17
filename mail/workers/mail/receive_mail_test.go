@@ -3,6 +3,7 @@ package mail
 import (
 	"context"
 	"errors"
+	"io"
 	"strings"
 	"testing"
 
@@ -23,6 +24,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	htmlcharset "golang.org/x/net/html/charset"
 )
 
 func TestMailContent_Encrypt(t *testing.T) {
@@ -1170,4 +1172,128 @@ Email with custom headers.`,
 }
 func stringPtr(s string) *string {
 	return &s
+}
+
+// Test that iso-8859-1 charset messages are parsed correctly when a
+// CharsetReader is registered (mirrors runtime behavior in receive_mail.go).
+func TestReceiveMail_Iso8859_1(t *testing.T) {
+	// Register charset reader to handle iso-8859-1 (same as runtime)
+	message.CharsetReader = func(charset string, input io.Reader) (io.Reader, error) {
+		return htmlcharset.NewReaderLabel(charset, input)
+	}
+
+	// Test data
+	testPublicKey := "age1jl76v4rmz5ukg9danl3v0zmyet9sqejmngs52wj9m497wgd02s9quq4qfl"
+	testUserID := "user123"
+	testEmail := "test@example.com"
+
+	// MIME with iso-8859-1 body containing "Olá" (Ol\xE1)
+	isoMIME := "From: sender@example.com\nTo: test@example.com\nSubject: ISO-8859-1 Test\nDate: Mon, 01 Jan 2024 00:00:00 +0000\nMessage-ID: <test@example.com>\nContent-Type: text/plain; charset=iso-8859-1\n\nOl\xE1"
+
+	// Create mocks
+	mockMailRepo := &mocks.MockMailRepository{}
+	mockS3Service := &s3service.MockS3Service{}
+	mockUserClient := &mocks.MockUserClient{}
+
+	// Setup mocks: user found, no attachments, DB save succeeds
+	mockUserClient.On("GetUserPublicKey", mock.Anything, mock.Anything).Return(
+		&connect.Response[userv1.GetUserPublicKeyResponse]{
+			Msg: &userv1.GetUserPublicKeyResponse{
+				PublicKey: testPublicKey,
+				UserId:    testUserID,
+			},
+		}, nil,
+	)
+	mockS3Service.On("BulkUploadFiles", mock.Anything, mock.Anything).Return([]string{}, nil)
+	mockMailRepo.On("CreateMany", mock.Anything, mock.Anything).Return(true, nil)
+
+	// Create AMQP delivery
+	delivery := &amqp.Delivery{
+		Acknowledger: &mockAcknowledger{},
+	}
+
+	// Payload with iso-8859-1 content
+	payload := ReceivedMailPayload{
+		Content:    isoMIME,
+		IP:         "192.168.1.1",
+		Hostname:   "test-host",
+		From:       "sender@example.com",
+		Rcpt:       []string{testEmail},
+		QueueID:    "queue123",
+		User:       "user",
+		DeliverTo:  testEmail,
+		ReceivedAt: "2024-01-01T00:00:00Z",
+	}
+
+	// Simulate pipeline as other tests do
+	encryptedMails := make([]models.Mail, 0)
+	encryptedAttachments := make([]*s3.PutObjectInput, 0)
+	haveErrors := false
+
+	for _, rcpt := range payload.Rcpt {
+		// Get user public key
+		rcptPublicKey, err := mockUserClient.GetUserPublicKey(context.Background(), &connect.Request[userv1.GetUserPublicKeyRequest]{
+			Msg: &userv1.GetUserPublicKeyRequest{
+				Email: rcpt,
+			},
+		})
+		if err != nil {
+			continue
+		}
+
+		userPublicKey := rcptPublicKey.Msg.PublicKey
+
+		// Parse the MIME message (CharsetReader already registered)
+		entity, err := message.Read(strings.NewReader(payload.Content))
+		if err != nil {
+			haveErrors = true
+			continue
+		}
+
+		mailContent := &models.RawMail{
+			Attachments: make([]models.RawAttachment, 0),
+		}
+		processMessageBody(entity, mailContent)
+
+		// Ensure the text content was decoded from iso-8859-1 to utf-8
+		assert.Equal(t, "Olá", mailContent.TextContent)
+
+		// Encrypt mail content
+		encryptedMailContent, err := mailContent.Encrypt(userPublicKey)
+		if err != nil {
+			haveErrors = true
+			continue
+		}
+
+		// Upload attachments (none expected)
+		_, err = mockS3Service.BulkUploadFiles(context.Background(), encryptedAttachments)
+		if err != nil {
+			haveErrors = true
+			continue
+		}
+
+		// Create mail entity
+		mailEntity := models.Mail{
+			Headers:     encryptedMailContent.Headers,
+			TextContent: encryptedMailContent.TextContent,
+			HTMLContent: encryptedMailContent.HTMLContent,
+		}
+		encryptedMails = append(encryptedMails, mailEntity)
+	}
+
+	if haveErrors {
+		t.Fatalf("processing failed")
+	}
+
+	// Save mails
+	_, err := mockMailRepo.CreateMany(context.Background(), encryptedMails)
+	require.NoError(t, err)
+
+	// Acknowledge
+	delivery.Ack(false)
+
+	// Verify expectations
+	mockUserClient.AssertExpectations(t)
+	mockS3Service.AssertExpectations(t)
+	mockMailRepo.AssertExpectations(t)
 }
