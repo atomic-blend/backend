@@ -29,6 +29,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/streadway/amqp"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	htmlcharset "golang.org/x/net/html/charset"
 )
 
 func receiveMail(m *amqp.Delivery, payload ReceivedMailPayload) {
@@ -115,6 +116,11 @@ func receiveMail(m *amqp.Delivery, payload ReceivedMailPayload) {
 		default:
 			log.Debug().Msg("No action taken")
 		}
+	}
+
+	// Register a charset reader so charsets like iso-8859-1 are handled
+	message.CharsetReader = func(charset string, input io.Reader) (io.Reader, error) {
+		return htmlcharset.NewReaderLabel(charset, input)
 	}
 
 	// Parse the MIME message
