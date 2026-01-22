@@ -1,3 +1,4 @@
+// Package resend provides utilities for sending emails using the Resend service
 package resend
 
 import (

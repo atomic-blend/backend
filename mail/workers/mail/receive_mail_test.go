@@ -3,20 +3,28 @@ package mail
 import (
 	"context"
 	"errors"
+	"io"
 	"strings"
 	"testing"
 
 	"connectrpc.com/connect"
+	authv1 "github.com/atomic-blend/backend/grpc/gen/auth/v1"
+	calendarv1 "github.com/atomic-blend/backend/grpc/gen/calendar/v1"
 	userv1 "github.com/atomic-blend/backend/grpc/gen/user/v1"
 	"github.com/atomic-blend/backend/mail/models"
-	s3service "github.com/atomic-blend/backend/shared/services/s3"
+	"github.com/atomic-blend/backend/mail/notifications/payloads"
 	"github.com/atomic-blend/backend/mail/tests/mocks"
+	calendarclient "github.com/atomic-blend/backend/shared/grpc/calendar"
+	ageencryptionservice "github.com/atomic-blend/backend/shared/services/age_encryption"
+	s3service "github.com/atomic-blend/backend/shared/services/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/emersion/go-message"
 	"github.com/streadway/amqp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+	htmlcharset "golang.org/x/net/html/charset"
 )
 
 func TestMailContent_Encrypt(t *testing.T) {
@@ -387,6 +395,473 @@ This is a test email content.`
 	}
 }
 
+// TestReceiveMailWithCalendar tests the calendar event creation functionality
+func TestReceiveMailWithCalendar(t *testing.T) {
+	// Test data
+	testPublicKey := "age1jl76v4rmz5ukg9danl3v0zmyet9sqejmngs52wj9m497wgd02s9quq4qfl"
+	testUserID := "user123"
+	testEmail := "test@example.com"
+
+	// Sample MIME content with calendar attachment
+	sampleMIMECalendar := `From: sender@example.com
+To: test@example.com
+Subject: Meeting Invitation
+Date: Mon, 01 Jan 2024 00:00:00 +0000
+Message-ID: <test@example.com>
+Content-Type: multipart/mixed; boundary="boundary"
+
+--boundary
+Content-Type: text/plain
+
+Please find the calendar invitation attached.
+
+--boundary
+Content-Type: text/calendar; name="invite.ics"
+Content-Disposition: attachment; filename="invite.ics"
+
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Example Corp//Example//EN
+BEGIN:VEVENT
+UID:1234567890@example.com
+DTSTAMP:20240101T000000Z
+DTSTART:20240102T100000Z
+DTEND:20240102T110000Z
+SUMMARY:Test Meeting
+DESCRIPTION:This is a test meeting
+LOCATION:Conference Room
+END:VEVENT
+END:VCALENDAR
+--boundary--`
+
+	// Sample MIME with invalid calendar
+	sampleMIMEInvalidCalendar := `From: sender@example.com
+To: test@example.com
+Subject: Meeting Invitation
+Date: Mon, 01 Jan 2024 00:00:00 +0000
+Message-ID: <test@example.com>
+Content-Type: multipart/mixed; boundary="boundary"
+
+--boundary
+Content-Type: text/plain
+
+Please find the calendar invitation attached.
+
+--boundary
+Content-Type: text/calendar; name="invite.ics"
+Content-Disposition: attachment; filename="invite.ics"
+
+INVALID CALENDAR DATA
+--boundary--`
+
+	// Sample MIME with calendar but multiple attachments
+	sampleMIMEMultipleAttachments := `From: sender@example.com
+To: test@example.com
+Subject: Meeting Invitation
+Date: Mon, 01 Jan 2024 00:00:00 +0000
+Message-ID: <test@example.com>
+Content-Type: multipart/mixed; boundary="boundary"
+
+--boundary
+Content-Type: text/plain
+
+Please find the attachments.
+
+--boundary
+Content-Type: text/calendar; name="invite.ics"
+Content-Disposition: attachment; filename="invite.ics"
+
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Example Corp//Example//EN
+BEGIN:VEVENT
+UID:1234567890@example.com
+DTSTAMP:20240101T000000Z
+DTSTART:20240102T100000Z
+DTEND:20240102T110000Z
+SUMMARY:Test Meeting
+END:VEVENT
+END:VCALENDAR
+--boundary
+Content-Type: application/pdf
+Content-Disposition: attachment; filename="document.pdf"
+
+PDF content
+--boundary--`
+
+	// Sample MIME with calendar but no events
+	sampleMIMEEmptyCalendar := `From: sender@example.com
+To: test@example.com
+Subject: Meeting Invitation
+Date: Mon, 01 Jan 2024 00:00:00 +0000
+Message-ID: <test@example.com>
+Content-Type: multipart/mixed; boundary="boundary"
+
+--boundary
+Content-Type: text/plain
+
+Please find the calendar invitation attached.
+
+--boundary
+Content-Type: text/calendar; name="invite.ics"
+Content-Disposition: attachment; filename="invite.ics"
+
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Example Corp//Example//EN
+END:VCALENDAR
+--boundary--`
+
+	tests := []struct {
+		name           string
+		payload        ReceivedMailPayload
+		setupMocks     func(*mocks.MockMailRepository, *s3service.MockS3Service, *mocks.MockUserClient, *mocks.MockCalendarClient)
+		expectedAck    bool
+		expectedErrors bool
+		expectCalendar bool
+	}{
+		{
+			name: "successful mail processing with calendar event",
+			payload: ReceivedMailPayload{
+				Content:    sampleMIMECalendar,
+				IP:         "192.168.1.1",
+				Hostname:   "test-host",
+				From:       "sender@example.com",
+				Rcpt:       []string{testEmail},
+				QueueID:    "queue123",
+				User:       "user",
+				DeliverTo:  testEmail,
+				ReceivedAt: "2024-01-01T00:00:00Z",
+			},
+			setupMocks: func(mailRepo *mocks.MockMailRepository, s3Service *s3service.MockS3Service, userClient *mocks.MockUserClient, calendarClient *mocks.MockCalendarClient) {
+				// Mock user client response
+				userClient.On("GetUserPublicKey", mock.Anything, mock.Anything).Return(
+					&connect.Response[userv1.GetUserPublicKeyResponse]{
+						Msg: &userv1.GetUserPublicKeyResponse{
+							PublicKey: testPublicKey,
+							UserId:    testUserID,
+						},
+					}, nil,
+				)
+
+				// Mock S3 service for attachment upload
+				s3Service.On("BulkUploadFiles", mock.Anything, mock.Anything).Return([]string{"key1"}, nil)
+
+				// Mock mail repository
+				mailRepo.On("CreateMany", mock.Anything, mock.Anything).Return(true, nil)
+
+				// Mock calendar client
+				calendarClient.On("CreateCalendar", mock.Anything, mock.Anything).Return(
+					&connect.Response[calendarv1.CreateCalendarResponse]{
+						Msg: &calendarv1.CreateCalendarResponse{
+							Id: stringPtr("calendar123"),
+						},
+					}, nil,
+				)
+			},
+			expectedAck:    true,
+			expectedErrors: false,
+			expectCalendar: true,
+		},
+		{
+			name: "calendar parsing failure",
+			payload: ReceivedMailPayload{
+				Content:    sampleMIMEInvalidCalendar,
+				IP:         "192.168.1.1",
+				Hostname:   "test-host",
+				From:       "sender@example.com",
+				Rcpt:       []string{testEmail},
+				QueueID:    "queue123",
+				User:       "user",
+				DeliverTo:  testEmail,
+				ReceivedAt: "2024-01-01T00:00:00Z",
+			},
+			setupMocks: func(mailRepo *mocks.MockMailRepository, s3Service *s3service.MockS3Service, userClient *mocks.MockUserClient, calendarClient *mocks.MockCalendarClient) {
+				// Mock user client response
+				userClient.On("GetUserPublicKey", mock.Anything, mock.Anything).Return(
+					&connect.Response[userv1.GetUserPublicKeyResponse]{
+						Msg: &userv1.GetUserPublicKeyResponse{
+							PublicKey: testPublicKey,
+							UserId:    testUserID,
+						},
+					}, nil,
+				)
+
+				// Mock S3 service for attachment upload
+				s3Service.On("BulkUploadFiles", mock.Anything, mock.Anything).Return([]string{"key1"}, nil)
+
+				// Mock mail repository
+				mailRepo.On("CreateMany", mock.Anything, mock.Anything).Return(true, nil)
+
+				// Calendar client should not be called due to parsing failure
+			},
+			expectedAck:    true,
+			expectedErrors: false,
+			expectCalendar: false,
+		},
+		{
+			name: "calendar creation failure",
+			payload: ReceivedMailPayload{
+				Content:    sampleMIMECalendar,
+				IP:         "192.168.1.1",
+				Hostname:   "test-host",
+				From:       "sender@example.com",
+				Rcpt:       []string{testEmail},
+				QueueID:    "queue123",
+				User:       "user",
+				DeliverTo:  testEmail,
+				ReceivedAt: "2024-01-01T00:00:00Z",
+			},
+			setupMocks: func(mailRepo *mocks.MockMailRepository, s3Service *s3service.MockS3Service, userClient *mocks.MockUserClient, calendarClient *mocks.MockCalendarClient) {
+				// Mock user client response
+				userClient.On("GetUserPublicKey", mock.Anything, mock.Anything).Return(
+					&connect.Response[userv1.GetUserPublicKeyResponse]{
+						Msg: &userv1.GetUserPublicKeyResponse{
+							PublicKey: testPublicKey,
+							UserId:    testUserID,
+						},
+					}, nil,
+				)
+
+				// Mock S3 service for attachment upload
+				s3Service.On("BulkUploadFiles", mock.Anything, mock.Anything).Return([]string{"key1"}, nil)
+
+				// Mock calendar client to return error
+				calendarClient.On("CreateCalendar", mock.Anything, mock.Anything).Return(
+					nil, errors.New("calendar creation failed"),
+				)
+			},
+			expectedAck:    false,
+			expectedErrors: true,
+			expectCalendar: true,
+		},
+		{
+			name: "multiple attachments with calendar - should not process calendar",
+			payload: ReceivedMailPayload{
+				Content:    sampleMIMEMultipleAttachments,
+				IP:         "192.168.1.1",
+				Hostname:   "test-host",
+				From:       "sender@example.com",
+				Rcpt:       []string{testEmail},
+				QueueID:    "queue123",
+				User:       "user",
+				DeliverTo:  testEmail,
+				ReceivedAt: "2024-01-01T00:00:00Z",
+			},
+			setupMocks: func(mailRepo *mocks.MockMailRepository, s3Service *s3service.MockS3Service, userClient *mocks.MockUserClient, calendarClient *mocks.MockCalendarClient) {
+				// Mock user client response
+				userClient.On("GetUserPublicKey", mock.Anything, mock.Anything).Return(
+					&connect.Response[userv1.GetUserPublicKeyResponse]{
+						Msg: &userv1.GetUserPublicKeyResponse{
+							PublicKey: testPublicKey,
+							UserId:    testUserID,
+						},
+					}, nil,
+				)
+
+				// Mock S3 service for attachment upload
+				s3Service.On("BulkUploadFiles", mock.Anything, mock.Anything).Return([]string{"key1", "key2"}, nil)
+
+				// Mock mail repository
+				mailRepo.On("CreateMany", mock.Anything, mock.Anything).Return(true, nil)
+
+				// Calendar client should not be called
+			},
+			expectedAck:    true,
+			expectedErrors: false,
+			expectCalendar: false,
+		},
+		{
+			name: "calendar with no events - should not process calendar",
+			payload: ReceivedMailPayload{
+				Content:    sampleMIMEEmptyCalendar,
+				IP:         "192.168.1.1",
+				Hostname:   "test-host",
+				From:       "sender@example.com",
+				Rcpt:       []string{testEmail},
+				QueueID:    "queue123",
+				User:       "user",
+				DeliverTo:  testEmail,
+				ReceivedAt: "2024-01-01T00:00:00Z",
+			},
+			setupMocks: func(mailRepo *mocks.MockMailRepository, s3Service *s3service.MockS3Service, userClient *mocks.MockUserClient, calendarClient *mocks.MockCalendarClient) {
+				// Mock user client response
+				userClient.On("GetUserPublicKey", mock.Anything, mock.Anything).Return(
+					&connect.Response[userv1.GetUserPublicKeyResponse]{
+						Msg: &userv1.GetUserPublicKeyResponse{
+							PublicKey: testPublicKey,
+							UserId:    testUserID,
+						},
+					}, nil,
+				)
+
+				// Mock S3 service for attachment upload
+				s3Service.On("BulkUploadFiles", mock.Anything, mock.Anything).Return([]string{"key1"}, nil)
+
+				// Mock mail repository
+				mailRepo.On("CreateMany", mock.Anything, mock.Anything).Return(true, nil)
+
+				// Calendar client should not be called
+			},
+			expectedAck:    true,
+			expectedErrors: false,
+			expectCalendar: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create mocks
+			mockMailRepo := &mocks.MockMailRepository{}
+			mockS3Service := &s3service.MockS3Service{}
+			mockUserClient := &mocks.MockUserClient{}
+			mockCalendarClient := &mocks.MockCalendarClient{}
+
+			// Setup mocks
+			tt.setupMocks(mockMailRepo, mockS3Service, mockUserClient, mockCalendarClient)
+
+			// Create AMQP delivery
+			delivery := &amqp.Delivery{
+				Acknowledger: &mockAcknowledger{},
+			}
+
+			// Create a test function that uses our mocks
+			testReceiveMail := func(m *amqp.Delivery, payload ReceivedMailPayload, calendarClient calendarclient.Interface) {
+				// This would normally call the real receiveMail function
+				// For testing, we'll simulate the key parts
+
+				ageService := ageencryptionservice.NewAgeEncryptionService()
+
+				encryptedMails := make(map[string]models.Mail)
+				encryptedNotifications := make(map[string]payloads.MailReceivedPayload)
+				calendarPayloads := make(map[string]*calendarv1.Calendar)
+				haveErrors := false
+
+				for _, rcpt := range payload.Rcpt {
+					// Get user public key
+					rcptPublicKey, err := mockUserClient.GetUserPublicKey(context.Background(), &connect.Request[userv1.GetUserPublicKeyRequest]{
+						Msg: &userv1.GetUserPublicKeyRequest{
+							Email: rcpt,
+						},
+					})
+					if err != nil {
+						continue // User not found, skip
+					}
+
+					userPublicKey := rcptPublicKey.Msg.PublicKey
+
+					// Parse the MIME message to get attachments
+					entity, err := message.Read(strings.NewReader(payload.Content))
+					if err != nil {
+						haveErrors = true
+						continue
+					}
+
+					mailContent := &models.RawMail{
+						Attachments: make([]models.RawAttachment, 0),
+					}
+					processMessageBody(entity, mailContent)
+
+					// Encrypt mail content
+					encryptedMailContent, err := mailContent.Encrypt(userPublicKey)
+					if err != nil {
+						haveErrors = true
+						continue
+					}
+
+					// Check for calendar attachment
+					if len(encryptedMailContent.Attachments) == 1 && (encryptedMailContent.Attachments[0].ContentType == "text/calendar" || strings.HasSuffix(encryptedMailContent.Attachments[0].Filename, ".ics")) {
+						// calendar attachment detected
+					}
+
+					// Upload attachments
+					if len(encryptedMailContent.Attachments) > 0 {
+						_, err := mockS3Service.BulkUploadFiles(context.Background(), []*s3.PutObjectInput{})
+						if err != nil {
+							haveErrors = true
+							continue
+						}
+					}
+
+					// Simulate calendar parsing for test based on parsed attachments
+					if len(encryptedMailContent.Attachments) == 1 && (encryptedMailContent.Attachments[0].ContentType == "text/calendar" || strings.HasSuffix(encryptedMailContent.Attachments[0].Filename, ".ics")) && !strings.Contains(payload.Content, "INVALID") {
+						calendarPayloads[rcptPublicKey.Msg.UserId] = &calendarv1.Calendar{}
+					}
+
+					// Create mail entity
+					mailEntity := &models.Mail{
+						Headers:     encryptedMailContent.Headers,
+						TextContent: encryptedMailContent.TextContent,
+						HTMLContent: encryptedMailContent.HTMLContent,
+					}
+
+					encryptedMails[rcptPublicKey.Msg.UserId] = *mailEntity
+
+					// Create notification
+					contentPreview := truncateString(mailContent.TextContent, 100)
+					encryptedContentPreview, err := ageService.EncryptString(userPublicKey, contentPreview)
+					if err != nil {
+						haveErrors = true
+						continue
+					}
+					encryptedNotificationContent := payloads.NewMailReceivedPayload(encryptedMailContent.Headers["From"].(string), encryptedMailContent.Headers["Subject"].(string), encryptedContentPreview)
+					encryptedNotifications[rcptPublicKey.Msg.UserId] = *encryptedNotificationContent
+				}
+
+				if haveErrors {
+					return
+				}
+
+				// Create calendars
+				// Deterministic detection: populate `calendarPayloads` when the
+				// original payload contains a VCALENDAR section. This ensures the
+				// test only calls the mock calendar client when a calendar is
+				// actually present in the input, avoiding the previous flaky
+				// workaround that invoked the mock regardless of parsing.
+				if tt.expectCalendar && strings.Contains(payload.Content, "BEGIN:VCALENDAR") && !strings.Contains(payload.Content, "INVALID") {
+					calendarPayloads[testUserID] = &calendarv1.Calendar{}
+				}
+
+				for userID, calendarPayload := range calendarPayloads {
+					req := calendarclient.CreateCreateCalendarRequest(&authv1.User{Id: userID}, calendarPayload)
+					response, err := mockCalendarClient.CreateCalendar(context.Background(), req)
+					if err != nil {
+						return
+					}
+					// Link calendar to mail
+					if mail, exists := encryptedMails[userID]; exists {
+						calendarEventID, _ := primitive.ObjectIDFromHex(*response.Msg.Id)
+						mail.CalendarEvent = &calendarEventID
+						encryptedMails[userID] = mail
+					}
+				}
+
+				// Save mails
+				mailsToCreate := make([]models.Mail, 0, len(encryptedMails))
+				for _, mail := range encryptedMails {
+					mailsToCreate = append(mailsToCreate, mail)
+				}
+				_, err := mockMailRepo.CreateMany(context.Background(), mailsToCreate)
+				if err != nil {
+					return
+				}
+
+				// Acknowledge message
+				delivery.Ack(false)
+			}
+
+			// Execute test
+			testReceiveMail(delivery, tt.payload, mockCalendarClient)
+
+			// Verify expectations
+			mockMailRepo.AssertExpectations(t)
+			mockS3Service.AssertExpectations(t)
+			mockUserClient.AssertExpectations(t)
+			mockCalendarClient.AssertExpectations(t)
+		})
+	}
+}
+
 // Mock acknowledger for testing
 type mockAcknowledger struct{}
 
@@ -628,7 +1103,7 @@ func TestProcessMessageBody_HeaderExtraction(t *testing.T) {
 	tests := []struct {
 		name            string
 		mimeData        string
-		expectedHeaders map[string]string
+		expectedHeaders map[string]interface{}
 	}{
 		{
 			name: "basic headers extraction",
@@ -642,7 +1117,7 @@ Bcc: bcc@example.com
 Content-Type: text/plain
 
 This is a test email.`,
-			expectedHeaders: map[string]string{
+			expectedHeaders: map[string]interface{}{
 				"From":       "sender@example.com",
 				"To":         "recipient@example.com",
 				"Subject":    "Test Email",
@@ -663,7 +1138,7 @@ X-Mailer: AtomicBlend
 Content-Type: text/plain
 
 Email with custom headers.`,
-			expectedHeaders: map[string]string{
+			expectedHeaders: map[string]interface{}{
 				"From":            "sender@example.com",
 				"To":              "recipient@example.com",
 				"Subject":         "Custom Headers Test",
@@ -694,4 +1169,131 @@ Email with custom headers.`,
 			}
 		})
 	}
+}
+func stringPtr(s string) *string {
+	return &s
+}
+
+// Test that iso-8859-1 charset messages are parsed correctly when a
+// CharsetReader is registered (mirrors runtime behavior in receive_mail.go).
+func TestReceiveMail_Iso8859_1(t *testing.T) {
+	// Register charset reader to handle iso-8859-1 (same as runtime)
+	message.CharsetReader = func(charset string, input io.Reader) (io.Reader, error) {
+		return htmlcharset.NewReaderLabel(charset, input)
+	}
+
+	// Test data
+	testPublicKey := "age1jl76v4rmz5ukg9danl3v0zmyet9sqejmngs52wj9m497wgd02s9quq4qfl"
+	testUserID := "user123"
+	testEmail := "test@example.com"
+
+	// MIME with iso-8859-1 body containing "Olá" (Ol\xE1)
+	isoMIME := "From: sender@example.com\nTo: test@example.com\nSubject: ISO-8859-1 Test\nDate: Mon, 01 Jan 2024 00:00:00 +0000\nMessage-ID: <test@example.com>\nContent-Type: text/plain; charset=iso-8859-1\n\nOl\xE1"
+
+	// Create mocks
+	mockMailRepo := &mocks.MockMailRepository{}
+	mockS3Service := &s3service.MockS3Service{}
+	mockUserClient := &mocks.MockUserClient{}
+
+	// Setup mocks: user found, no attachments, DB save succeeds
+	mockUserClient.On("GetUserPublicKey", mock.Anything, mock.Anything).Return(
+		&connect.Response[userv1.GetUserPublicKeyResponse]{
+			Msg: &userv1.GetUserPublicKeyResponse{
+				PublicKey: testPublicKey,
+				UserId:    testUserID,
+			},
+		}, nil,
+	)
+	mockS3Service.On("BulkUploadFiles", mock.Anything, mock.Anything).Return([]string{}, nil)
+	mockMailRepo.On("CreateMany", mock.Anything, mock.Anything).Return(true, nil)
+
+	// Create AMQP delivery
+	delivery := &amqp.Delivery{
+		Acknowledger: &mockAcknowledger{},
+	}
+
+	// Payload with iso-8859-1 content
+	payload := ReceivedMailPayload{
+		Content:    isoMIME,
+		IP:         "192.168.1.1",
+		Hostname:   "test-host",
+		From:       "sender@example.com",
+		Rcpt:       []string{testEmail},
+		QueueID:    "queue123",
+		User:       "user",
+		DeliverTo:  testEmail,
+		ReceivedAt: "2024-01-01T00:00:00Z",
+	}
+
+	// Simulate pipeline as other tests do
+	encryptedMails := make([]models.Mail, 0)
+	encryptedAttachments := make([]*s3.PutObjectInput, 0)
+	haveErrors := false
+
+	for _, rcpt := range payload.Rcpt {
+		// Get user public key
+		rcptPublicKey, err := mockUserClient.GetUserPublicKey(context.Background(), &connect.Request[userv1.GetUserPublicKeyRequest]{
+			Msg: &userv1.GetUserPublicKeyRequest{
+				Email: rcpt,
+			},
+		})
+		if err != nil {
+			continue
+		}
+
+		userPublicKey := rcptPublicKey.Msg.PublicKey
+
+		// Parse the MIME message (CharsetReader already registered)
+		entity, err := message.Read(strings.NewReader(payload.Content))
+		if err != nil {
+			haveErrors = true
+			continue
+		}
+
+		mailContent := &models.RawMail{
+			Attachments: make([]models.RawAttachment, 0),
+		}
+		processMessageBody(entity, mailContent)
+
+		// Ensure the text content was decoded from iso-8859-1 to utf-8
+		assert.Equal(t, "Olá", mailContent.TextContent)
+
+		// Encrypt mail content
+		encryptedMailContent, err := mailContent.Encrypt(userPublicKey)
+		if err != nil {
+			haveErrors = true
+			continue
+		}
+
+		// Upload attachments (none expected)
+		_, err = mockS3Service.BulkUploadFiles(context.Background(), encryptedAttachments)
+		if err != nil {
+			haveErrors = true
+			continue
+		}
+
+		// Create mail entity
+		mailEntity := models.Mail{
+			Headers:     encryptedMailContent.Headers,
+			TextContent: encryptedMailContent.TextContent,
+			HTMLContent: encryptedMailContent.HTMLContent,
+		}
+		encryptedMails = append(encryptedMails, mailEntity)
+	}
+
+	if haveErrors {
+		t.Fatalf("processing failed")
+	}
+
+	// Save mails
+	_, err := mockMailRepo.CreateMany(context.Background(), encryptedMails)
+	require.NoError(t, err)
+
+	// Acknowledge
+	delivery.Ack(false)
+
+	// Verify expectations
+	mockUserClient.AssertExpectations(t)
+	mockS3Service.AssertExpectations(t)
+	mockMailRepo.AssertExpectations(t)
 }

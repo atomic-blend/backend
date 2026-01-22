@@ -9,10 +9,13 @@ import (
 	"connectrpc.com/connect"
 	"github.com/appleboy/go-fcm"
 	authv1 "github.com/atomic-blend/backend/grpc/gen/auth/v1"
+	calendarv1 "github.com/atomic-blend/backend/grpc/gen/calendar/v1"
 	userv1 "github.com/atomic-blend/backend/grpc/gen/user/v1"
 	"github.com/atomic-blend/backend/mail/models"
 	"github.com/atomic-blend/backend/mail/notifications/payloads"
 	"github.com/atomic-blend/backend/mail/repositories"
+	icalparser "github.com/atomic-blend/backend/mail/utils/ical_parser"
+	calendarclient "github.com/atomic-blend/backend/shared/grpc/calendar"
 	userclient "github.com/atomic-blend/backend/shared/grpc/user"
 	ageencryptionservice "github.com/atomic-blend/backend/shared/services/age_encryption"
 	rspamdservice "github.com/atomic-blend/backend/shared/services/rspamd"
@@ -26,6 +29,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/streadway/amqp"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	htmlcharset "golang.org/x/net/html/charset"
 )
 
 func receiveMail(m *amqp.Delivery, payload ReceivedMailPayload) {
@@ -51,8 +55,7 @@ func receiveMail(m *amqp.Delivery, payload ReceivedMailPayload) {
 		fcm.WithCredentialsFile(googleApplicationCredentials),
 	)
 	if err != nil {
-		log.Fatal().Err(err).Msg("Failed to create FCM client")
-		return
+		log.Error().Err(err).Msg("Failed to create FCM client")
 	}
 
 	mailContent := &models.RawMail{
@@ -79,7 +82,7 @@ func receiveMail(m *amqp.Delivery, payload ReceivedMailPayload) {
 		log.Error().Err(err).Msg("Failed to check message with Rspamd")
 		// Continue processing even if Rspamd check fails
 	} else {
-		log.Info().
+		log.Debug().
 			Str("action", checkResponse.Action).
 			Float64("score", checkResponse.Score).
 			Float64("required_score", checkResponse.RequiredScore).
@@ -88,31 +91,36 @@ func receiveMail(m *amqp.Delivery, payload ReceivedMailPayload) {
 
 		// Log triggered symbols if any
 		if len(checkResponse.Symbols) > 0 {
-			log.Info().Interface("symbols", checkResponse.Symbols).Msg("Rspamd triggered symbols")
+			log.Debug().Interface("symbols", checkResponse.Symbols).Msg("Rspamd triggered symbols")
 		}
 
 		switch checkResponse.Action {
 		case "reject":
-			log.Info().Msg("Rejecting email")
+			log.Debug().Msg("Rejecting email")
 			mailContent.Rejected = true
 		case "soft reject":
-			log.Info().Msg("Soft rejecting email")
+			log.Debug().Msg("Soft rejecting email")
 			mailContent.Rejected = true
 		case "no action":
-			log.Info().Msg("No action taken")
+			log.Debug().Msg("No action taken")
 		case "add header":
-			log.Info().Msg("Adding spam header")
+			log.Debug().Msg("Adding spam header")
 			mailContent.RewriteSubject = true
 		case "rewrite subject":
-			log.Info().Msg("Rewrite subject")
+			log.Debug().Msg("Rewrite subject")
 			// mark the email subject as needing a rewrite (only when sending, ignored on receiving)
 			mailContent.RewriteSubject = true
 		case "greylist":
-			log.Info().Msg("Greylisting email")
+			log.Debug().Msg("Greylisting email")
 			mailContent.Greylisted = true
 		default:
-			log.Info().Msg("No action taken")
+			log.Debug().Msg("No action taken")
 		}
+	}
+
+	// Register a charset reader so charsets like iso-8859-1 are handled
+	message.CharsetReader = func(charset string, input io.Reader) (io.Reader, error) {
+		return htmlcharset.NewReaderLabel(charset, input)
 	}
 
 	// Parse the MIME message
@@ -122,7 +130,7 @@ func receiveMail(m *amqp.Delivery, payload ReceivedMailPayload) {
 		return
 	}
 
-	log.Info().
+	log.Debug().
 		Str("from", payload.From).
 		Interface("to", payload.Rcpt).
 		Str("date", payload.ReceivedAt).
@@ -140,18 +148,26 @@ func receiveMail(m *amqp.Delivery, payload ReceivedMailPayload) {
 	// Process the message body and collect all content
 	processMessageBody(entity, mailContent)
 
-	encryptedMails := make([]models.Mail, 0)
+	// Create a new calendar client
+	calendarService, err := calendarclient.NewCalendarClient()
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to create calendar client")
+		return
+	}
+
+	encryptedMails := map[string]models.Mail{}
 	encryptedNotifications := make(map[string]payloads.MailReceivedPayload, 0)
 	encryptedAttachments := make([]*awss3.PutObjectInput, 0)
+	calendarPayloads := map[string]*calendarv1.Calendar{}
 	haveErrors := false
 
 	for _, rcpt := range payload.Rcpt {
-		log.Info().Str("rcpt", rcpt).Msg("Handling recepient")
+		log.Debug().Str("rcpt", rcpt).Msg("Handling recepient")
 
 		mailEntity := &models.Mail{}
 
 		// get the user public key from the auth service via grpc
-		log.Info().Str("rcpt", rcpt).Msg("Instantiating user client")
+		log.Debug().Str("rcpt", rcpt).Msg("Instantiating user client")
 		userClient, err := userclient.NewUserClient()
 		if err != nil {
 			log.Error().Err(err).Msg("Failed to create user client")
@@ -159,14 +175,14 @@ func receiveMail(m *amqp.Delivery, payload ReceivedMailPayload) {
 			continue
 		}
 
-		log.Info().Str("rcpt", rcpt).Msg("Getting user public key")
+		log.Debug().Str("rcpt", rcpt).Msg("Getting user public key")
 		rcptPublicKey, err := userClient.GetUserPublicKey(context.Background(), &connect.Request[userv1.GetUserPublicKeyRequest]{
 			Msg: &userv1.GetUserPublicKeyRequest{
 				Email: rcpt,
 			},
 		})
 		if err != nil {
-			log.Info().Str("rcpt", rcpt).Msg("User not found, skipping")
+			log.Debug().Str("rcpt", rcpt).Msg("User not found, skipping")
 			continue
 		}
 
@@ -178,13 +194,13 @@ func receiveMail(m *amqp.Delivery, payload ReceivedMailPayload) {
 		}
 		mailEntity.UserID = userID
 
-		log.Info().Str("rcpt", rcpt).Str("publicKey", rcptPublicKey.Msg.PublicKey).Msg("User public key")
-		log.Info().Interface("encryptedMails", encryptedMails).Msg("Encrypted mails")
+		log.Debug().Str("rcpt", rcpt).Str("publicKey", rcptPublicKey.Msg.PublicKey).Msg("User public key")
+		log.Debug().Interface("encryptedMails", encryptedMails).Msg("Encrypted mails")
 
 		userPublicKey := rcptPublicKey.Msg.PublicKey
 
 		// encrypt the mail content for mongodb with user's public key
-		log.Info().Str("rcpt", rcpt).Msg("Encrypting mail content")
+		log.Debug().Str("rcpt", rcpt).Msg("Encrypting mail content")
 		encryptedMailContent, err := mailContent.Encrypt(userPublicKey)
 		if err != nil {
 			log.Error().Err(err).Msg("Failed to encrypt mail content")
@@ -192,7 +208,18 @@ func receiveMail(m *amqp.Delivery, payload ReceivedMailPayload) {
 			continue
 		}
 
-		log.Info().Str("rcpt", rcpt).Interface("encryptedContent", encryptedMailContent).Msg("Encrypted mail content")
+		log.Debug().Str("rcpt", rcpt).Interface("encryptedContent", encryptedMailContent).Msg("Encrypted mail content")
+
+		var calendarAttachment *models.RawAttachment
+
+		// capture the calendar attachment only if there's a single attachment and it's a calendar file
+		// for now, we consider that a calendar event is a single email with an ics attachment
+		log.Debug().Str("rcpt", rcpt).Int("attachmentCount", len(mailContent.Attachments)).Msg("Checking for calendar attachment")
+		log.Debug().Str("rcpt", rcpt).Interface("attachments", mailContent.Attachments).Msg("Listing attachments")
+		if len(mailContent.Attachments) == 1 && (mailContent.Attachments[0].ContentType == "text/calendar" || strings.HasSuffix(mailContent.Attachments[0].Filename, ".ics")) {
+			calendarAttachment = &mailContent.Attachments[0]
+			log.Debug().Str("rcpt", rcpt).Str("filename", calendarAttachment.Filename).Msg("Found calendar attachment")
+		}
 
 		// upload the attachments to s3 and store the references in the mail entity
 		for _, attachment := range encryptedMailContent.Attachments {
@@ -213,6 +240,36 @@ func receiveMail(m *amqp.Delivery, payload ReceivedMailPayload) {
 			encryptedAttachments = append(encryptedAttachments, payload)
 		}
 
+		// NOTE: If calendar parsing fails, the mail will still be saved without the calendar event.
+		// This is not treated as a fatal error, but a warning is logged for visibility.  ad
+		if calendarAttachment != nil {
+			log.Debug().Str("rcpt", rcpt).Str("filename", calendarAttachment.Filename).Msg("Parsing calendar attachment")
+
+			calendars, err := icalparser.ParseICal(calendarAttachment.Data)
+			if err != nil {
+				log.Error().Err(err).Msg("Failed to parse iCal data")
+				haveErrors = true
+				continue
+			}
+
+			log.Debug().Str("rcpt", rcpt).Int("calendarCount", len(calendars)).Msg("Parsed iCal calendars")
+
+			// handle only the first calendar and first event for now
+			if len(calendars) == 0 || len(calendars[0].Events()) == 0 {
+				log.Debug().Str("rcpt", rcpt).Msg("No calendar events found")
+				continue
+			}
+
+			// convert the calendar to calendar payload
+			newCalendarPayload, err := icalparser.ToCalendarPayload(calendars[0])
+			if err != nil {
+				log.Error().Err(err).Msg("Failed to convert calendar to payload")
+			}
+
+			calendarPayloads[userID.Hex()] = newCalendarPayload
+			log.Debug().Str("rcpt", rcpt).Msg("Converted calendar to payload")
+		}
+
 		// set the mail entity fields
 		mailEntity.Headers = encryptedMailContent.Headers
 
@@ -222,10 +279,10 @@ func receiveMail(m *amqp.Delivery, payload ReceivedMailPayload) {
 		mailEntity.RewriteSubject = boolPtr(encryptedMailContent.RewriteSubject)
 		mailEntity.Greylisted = boolPtr(encryptedMailContent.Greylisted)
 
-		encryptedMails = append(encryptedMails, *mailEntity)
+		encryptedMails[userID.Hex()] = *mailEntity
 
 		// encrypt the notification content for mongodb with user's public key
-		log.Info().Str("rcpt", rcpt).Msg("Encrypting notification content")
+		log.Debug().Str("rcpt", rcpt).Msg("Encrypting notification content")
 		ageService := ageencryptionservice.NewAgeEncryptionService()
 		contentPreview := truncateString(mailContent.TextContent, 100)
 		encryptedContentPreview, err := ageService.EncryptString(userPublicKey, contentPreview)
@@ -244,24 +301,63 @@ func receiveMail(m *amqp.Delivery, payload ReceivedMailPayload) {
 	}
 
 	// upload the attachments to s3 in bulk
-	uploadedKeys, err := s3Service.BulkUploadFiles(context.Background(), encryptedAttachments)
+	log.Debug().Msg("Uploading attachments to S3 in bulk")
+	uploadedKeys, err := s3Service.BulkUploadFiles(context.TODO(), encryptedAttachments)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to upload attachments to S3")
 		return
 	}
 
+	// create calendars for users with calendar payloads
+	for userID, calendarPayload := range calendarPayloads {
+		log.Debug().Str("userID", userID).Msg("Creating calendar for user")
+		log.Debug().Str("userID", userID).Interface("calendarPayload", calendarPayload).Msg("Calendar payload")
+		if calendarPayload == nil {
+			continue
+		}
+		// Create a new calendar request
+		req := calendarclient.CreateCreateCalendarRequest(&authv1.User{Id: userID}, calendarPayload)
+
+		// Call the CreateCalendar method
+		response, err := calendarService.CreateCalendar(context.TODO(), req)
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to create calendar")
+			return
+		}
+
+		// convert the returned calendar event ID to ObjectID
+		calendarEventID, err := primitive.ObjectIDFromHex(*response.Msg.Id)
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to convert calendar event ID to ObjectID")
+			return
+		}
+
+		// link the created calendar event to the mail entity
+		mail := encryptedMails[userID]
+		mail.CalendarEvent = &calendarEventID
+		encryptedMails[userID] = mail
+	}
+
 	// save the mail documents with s3 references to mongodb
-	_, err = mailRepository.CreateMany(context.Background(), encryptedMails)
+	log.Debug().Int("count", len(encryptedMails)).Msg("Saving mail documents to MongoDB")
+	// gather all the mail entities into a slice
+	mailsToCreate := make([]models.Mail, 0, len(encryptedMails))
+	for _, mail := range encryptedMails {
+		mailsToCreate = append(mailsToCreate, mail)
+	}
+	_, err = mailRepository.CreateMany(context.TODO(), mailsToCreate)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to save mail documents to MongoDB")
-		s3Service.BulkDeleteFiles(context.Background(), uploadedKeys)
+		s3Service.BulkDeleteFiles(context.TODO(), uploadedKeys)
 		return
 	}
 
 	// send notifications to the user
+	log.Debug().Msg("Sending notifications to users")
 	for userID, notification := range encryptedNotifications {
 
 		// Get user devices using gRPC client
+		log.Debug().Str("userID", userID).Msg("Getting user devices for notification")
 		req := &connect.Request[userv1.GetUserDevicesRequest]{
 			Msg: &userv1.GetUserDevicesRequest{
 				User: &authv1.User{
@@ -276,6 +372,7 @@ func receiveMail(m *amqp.Delivery, payload ReceivedMailPayload) {
 			return
 		}
 
+		log.Debug().Str("userID", userID).Msg("Fetching user devices via gRPC")
 		resp, err := userService.GetUserDevices(context.TODO(), req)
 		if err != nil {
 			log.Error().Err(err).Msgf("Failed to get user devices for user: %s", userID)
@@ -290,7 +387,7 @@ func receiveMail(m *amqp.Delivery, payload ReceivedMailPayload) {
 		}
 
 		if len(deviceTokens) == 0 {
-			log.Debug().Msgf("No device tokens found for user: %s", userID)
+			log.Debug().Str("userID", userID).Msg("No device tokens found for user")
 			continue
 		}
 		data := notification.GetData()
@@ -299,6 +396,7 @@ func receiveMail(m *amqp.Delivery, payload ReceivedMailPayload) {
 		log.Debug().Msgf("Data: %v", data)
 
 		// send the notification to the user
+		log.Debug().Str("userID", userID).Msg("Sending FCM notification to user devices")
 		fcmutils.SendMulticast(context.TODO(), fcmClient, data, deviceTokens)
 	}
 

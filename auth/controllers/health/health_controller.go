@@ -1,3 +1,4 @@
+// Package health contains controllers and routes for health check actions
 package health
 
 import (

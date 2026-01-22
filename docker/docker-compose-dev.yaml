@@ -95,6 +95,35 @@ services:
     env_file:
       - .env
     command: air # Hot-reloading for development
+  
+  calendar:
+    working_dir: /workspace/calendar
+    build:
+      context: ../calendar
+      dockerfile: Dockerfile.dev # Use a dev-specific Dockerfile
+    container_name: calendar
+    expose:
+      - "8080"
+      - "50051" # gRPC port
+    volumes:
+      - ../:/workspace
+      - type: bind
+        source: ${HOME}${USERPROFILE}/.netrc
+        target: /root/.netrc
+      - type: bind
+        source: ../firebase-adminsdk-prod.json
+        target: /app/firebase_sac.json
+    networks:
+      - default
+      - rspamd
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+    env_file:
+      - .env
+    command: air # Hot-reloading for development
 
   productivity:
     working_dir: /workspace/productivity

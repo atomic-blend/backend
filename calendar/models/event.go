@@ -1,0 +1,163 @@
+package models
+
+import (
+	"time"
+
+	ageencryptionservice "github.com/atomic-blend/backend/shared/services/age_encryption"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+)
+
+// Event represents an RFC 5545 VEVENT object.
+type Event struct {
+	ID           primitive.ObjectID  `json:"id" bson:"_id"`
+	UID          string              // UID (required)
+	UserID       primitive.ObjectID  `json:"userId" bson:"user_id"`                                 // Reference to owning user
+	DTStamp      time.Time           `json:"dtStamp" bson:"dt_stamp"`                               // DTSTAMP (required)
+	Start        *TimeSpec           `json:"start,omitempty" bson:"start,omitempty"`                // DTSTART (recommended)
+	End          *TimeSpec           `json:"end,omitempty" bson:"end,omitempty"`                    // DTEND (optional)
+	Duration     *time.Duration      `json:"duration,omitempty" bson:"duration,omitempty"`          // DURATION (optional, alternative to DTEND)
+	Summary      string              `json:"summary,omitempty" bson:"summary,omitempty"`            // SUMMARY
+	Description  string              `json:"description,omitempty" bson:"description,omitempty"`    // DESCRIPTION
+	Location     *string             `json:"location,omitempty" bson:"location,omitempty"`          // LOCATION
+	Organizer    *CalAddress         `json:"organizer,omitempty" bson:"organizer,omitempty"`        // ORGANIZER
+	Attendees    []CalAddress        `json:"attendees,omitempty" bson:"attendees,omitempty"`        // ATTENDEE
+	Recurrence   *RRule              `json:"recurrence,omitempty" bson:"recurrence,omitempty"`      // RRULE
+	ExDates      []TimeSpec          `json:"exDates,omitempty" bson:"ex_dates,omitempty"`           // EXDATE
+	RDates       []TimeSpec          `json:"rDates,omitempty" bson:"r_dates,omitempty"`             // RDATE
+	Status       string              `json:"status,omitempty" bson:"status,omitempty"`              // STATUS: CONFIRMED / TENTATIVE / CANCELLED
+	Sequence     int                 `json:"sequence,omitempty" bson:"sequence,omitempty"`          // SEQUENCE (increments on update)
+	LastModified *time.Time          `json:"lastModified,omitempty" bson:"last_modified,omitempty"` // LAST-MODIFIED
+	CalendarID   *primitive.ObjectID `json:"calendarId,omitempty" bson:"calendar_id,omitempty"`     // Reference to parent calendar in DB
+	CreatedAt    *primitive.DateTime `json:"createdAt,omitempty" bson:"created_at,omitempty"`
+	UpdatedAt    *primitive.DateTime `json:"updatedAt,omitempty" bson:"updated_at,omitempty"`
+}
+
+// TimeSpec represents a date or date-time with an optional timezone.
+// RFC 5545 allows floating times, UTC times, or TZID-bound times.
+type TimeSpec struct {
+	Time time.Time `json:"time" bson:"time"`
+	TZID string    `json:"tzid,omitempty" bson:"tzid,omitempty"` // empty means floating or UTC depending on Time.Location
+}
+
+// CalAddress represents ORGANIZER and ATTENDEE fields.
+type CalAddress struct {
+	Email    string `json:"email" bson:"email"`                            // mailto: address without the "mailto:" prefix
+	CN       string `json:"cn,omitempty" bson:"cn,omitempty"`              // Common Name
+	Role     string `json:"role,omitempty" bson:"role,omitempty"`          // ROLE=REQ-PARTICIPANT / OPTIONAL / NON-PARTICIPANT
+	PartStat string `json:"partStat,omitempty" bson:"part_stat,omitempty"` // PARTSTAT=ACCEPTED/TENTATIVE/DECLINED
+	RSVP     bool   `json:"rsvp,omitempty" bson:"rsvp,omitempty"`          // RSVP=TRUE/FALSE
+}
+
+// RRule represents the RFC 5545 recurrence rule.
+type RRule struct {
+	Freq     string     `json:"freq" bson:"freq"`                             // FREQ=DAILY/WEEKLY/MONTHLY/YEARLY
+	Interval int        `json:"interval,omitempty" bson:"interval,omitempty"` // INTERVAL=n
+	Until    *time.Time `json:"until,omitempty" bson:"until,omitempty"`
+	Count    int        `json:"count,omitempty" bson:"count,omitempty"`
+	ByDay    []string   `json:"byDay,omitempty" bson:"by_day,omitempty"` // e.g. MO,WE,FR
+	ByMonth  []int      `json:"byMonth,omitempty" bson:"by_month,omitempty"`
+	BySetPos []int      `json:"bySetPos,omitempty" bson:"by_set_pos,omitempty"`
+}
+
+// VTimezone represents VTIMEZONE blocks.
+// Minimal version; can be extended if needed.
+type VTimezone struct {
+	TZID   string `json:"tzid" bson:"tzid"`
+	Offset int    `json:"offset,omitempty" bson:"offset,omitempty"` // offset from UTC in seconds (simplified model)
+}
+
+// Encrypt encrypts the event fields using the age encryption library
+func (m *Event) Encrypt(publicKey string) (*Event, error) {
+	ageService := ageencryptionservice.NewAgeEncryptionService()
+
+	encryptedEvent := &Event{
+		ID:       m.ID,
+		UserID:   m.UserID,
+		DTStamp:  m.DTStamp,
+		Sequence: m.Sequence,
+		Status:   m.Status,
+	}
+
+	// encrypt UID
+	if m.UID != "" {
+		encryptedUID, err := ageService.EncryptString(publicKey, m.UID)
+		if err != nil {
+			return nil, err
+		}
+		encryptedEvent.UID = encryptedUID
+	}
+
+	// Encrypt Summary
+	if m.Summary != "" {
+		encryptedSummary, err := ageService.EncryptString(publicKey, m.Summary)
+		if err != nil {
+			return nil, err
+		}
+		encryptedEvent.Summary = encryptedSummary
+	}
+
+	// Encrypt Description
+	if m.Description != "" {
+		encryptedDescription, err := ageService.EncryptString(publicKey, m.Description)
+		if err != nil {
+			return nil, err
+		}
+		encryptedEvent.Description = encryptedDescription
+	}
+
+	// encrypt attendee emails
+	if len(m.Attendees) > 0 {
+		encryptedEvent.Attendees = make([]CalAddress, len(m.Attendees))
+		for i, attendee := range m.Attendees {
+			encryptedEmail, err := ageService.EncryptString(publicKey, attendee.Email)
+			if err != nil {
+				return nil, err
+			}
+			encryptedEvent.Attendees[i] = CalAddress{
+				Email:    encryptedEmail,
+				CN:       attendee.CN,
+				Role:     attendee.Role,
+				PartStat: attendee.PartStat,
+				RSVP:     attendee.RSVP,
+			}
+		}
+	}
+
+	// encrypt organizer email
+	if m.Organizer != nil {
+		encryptedEmail, err := ageService.EncryptString(publicKey, m.Organizer.Email)
+		if err != nil {
+			return nil, err
+		}
+		encryptedEvent.Organizer = &CalAddress{
+			Email:    encryptedEmail,
+			CN:       m.Organizer.CN,
+			Role:     m.Organizer.Role,
+			PartStat: m.Organizer.PartStat,
+			RSVP:     m.Organizer.RSVP,
+		}
+	}
+
+	// encrypt location
+	if m.Location != nil {
+		encryptedLocation, err := ageService.EncryptString(publicKey, *m.Location)
+		if err != nil {
+			return nil, err
+		}
+		encryptedEvent.Location = &encryptedLocation
+	}
+
+	// Copy other fields as is
+	encryptedEvent.Start = m.Start
+	encryptedEvent.End = m.End
+	encryptedEvent.Duration = m.Duration
+	encryptedEvent.Recurrence = m.Recurrence
+	encryptedEvent.ExDates = m.ExDates
+	encryptedEvent.RDates = m.RDates
+	encryptedEvent.LastModified = m.LastModified
+	encryptedEvent.CalendarID = m.CalendarID
+	encryptedEvent.CreatedAt = m.CreatedAt
+	encryptedEvent.UpdatedAt = m.UpdatedAt
+
+	return encryptedEvent, nil
+}

@@ -32,7 +32,7 @@ func TestMailController_GetMailByID(t *testing.T) {
 				mail := &models.Mail{
 					ID:     &mailID,
 					UserID: userID,
-					Headers: map[string]string{
+					Headers: map[string]interface{}{
 						"Subject": "Test Email",
 						"From":    "test@example.com",
 					},

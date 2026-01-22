@@ -40,6 +40,8 @@ func SendEmail(mail models.RawMail, recipients []any) ([]string, error) {
 	} else {
 		// Handle both []string and []interface{} cases for To header
 		switch toHeader := mail.Headers["To"].(type) {
+		case string:
+			recipientsToSend = []any{toHeader}
 		case []string:
 			// Convert []string to []any
 			recipientsToSend = make([]any, len(toHeader))
@@ -49,7 +51,7 @@ func SendEmail(mail models.RawMail, recipients []any) ([]string, error) {
 		case []any:
 			recipientsToSend = toHeader
 		default:
-			log.Error().Interface("To", mail.Headers["To"]).Msg("Unexpected type for To header")
+			log.Error().Interface("To", mail.Headers["To"]).Interface("type", fmt.Sprintf("%T", mail.Headers["To"])).Msg("Unexpected type for To header")
 			return []string{}, fmt.Errorf("invalid_to_header_type")
 		}
 	}

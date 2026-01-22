@@ -10,6 +10,7 @@ import (
 	"github.com/atomic-blend/backend/auth/controllers/auth"
 	"github.com/atomic-blend/backend/auth/controllers/config"
 	"github.com/atomic-blend/backend/auth/controllers/health"
+	"github.com/atomic-blend/backend/auth/controllers/payment"
 	"github.com/atomic-blend/backend/auth/controllers/users"
 	waitinglist "github.com/atomic-blend/backend/auth/controllers/waiting_list"
 	"github.com/atomic-blend/backend/auth/controllers/webhooks"
@@ -155,12 +156,17 @@ func main() {
 	webhooks.SetupRoutes(router, db.Database)
 	config.SetupRoutes(router, db.Database)
 	waitinglist.SetupRoutes(router, db.Database, amqpService)
+	payment.SetupRoutes(router, db.Database)
 
 	// start cron
 	go func() {
 		err := gocron.Every(5).Minutes().Do(cron.WaitingListCron)
 		if err != nil {
-			log.Error().Err(err).Msg("Error defining cron job")
+			log.Error().Err(err).Msg("Error defining cron job: WaitingListCron")
+		}
+		err = gocron.Every(1).Hour().Do(cron.DeleteInactiveSubscriptionUsersCron)
+		if err != nil {
+			log.Error().Err(err).Msg("Error defining cron job: DeleteInactiveSubscriptionUsersCron")
 		}
 		<-gocron.Start()
 	}()

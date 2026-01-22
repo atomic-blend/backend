@@ -53,6 +53,7 @@ jobs:
             grpc/**
             mail/**
             mail-server/**
+            calendar/**
             shared/**
           quotepath: false
 

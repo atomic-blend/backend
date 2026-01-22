@@ -1,9 +1,10 @@
 package subscription
 
 import (
+	"time"
+
 	"github.com/atomic-blend/backend/shared/repositories/user"
 	"github.com/atomic-blend/backend/shared/utils/db"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -25,9 +26,18 @@ func IsUserSubscribed(ctx *gin.Context, userID primitive.ObjectID) bool {
 	// check in the user's purchase if the user has an active subscription
 	purchases := user.Purchases
 	for _, purchase := range purchases {
-		// compare expiration at ms with current time
-		if purchase.PurchaseData.ExpirationAtMs > 0 && purchase.PurchaseData.ExpirationAtMs > time.Now().UnixMilli() {
-			return true
+		// Handle RevenueCat purchases
+		if rcData, ok := purchase.GetRevenueCatData(); ok {
+			if rcData.ExpirationAtMs > 0 && rcData.ExpirationAtMs > time.Now().UnixMilli() {
+				return true
+			}
+		}
+
+		// Handle Stripe purchases
+		if stripeData, ok := purchase.GetStripeData(); ok {
+			if stripeData.Status == "active" {
+				return true
+			}
 		}
 	}
 	return false

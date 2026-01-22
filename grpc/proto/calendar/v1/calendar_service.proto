@@ -1,0 +1,29 @@
+syntax = "proto3";
+package calendar.v1;
+
+import "auth/v1/user.proto";
+import "calendar/v1/calendar.proto";
+
+message DeleteUserDataRequest {
+  auth.v1.User user = 1;
+}
+
+message DeleteUserDataResponse {
+  bool success = 1;
+}
+
+message CreateCalendarRequest {
+  auth.v1.User user = 1;
+  calendar.v1.Calendar calendar = 2;
+}
+
+message CreateCalendarResponse {
+  optional string id = 1;
+  optional string error = 2;
+  optional bool updated = 3;
+}
+
+service CalendarService {
+  rpc DeleteUserData(DeleteUserDataRequest) returns (DeleteUserDataResponse);
+  rpc CreateCalendar(CreateCalendarRequest) returns (CreateCalendarResponse);
+}

@@ -36,8 +36,12 @@ func (c *Controller) GetConfig(ctx *gin.Context) {
 		return
 	}
 
+	// get payment config
+	isPaymentEnabled := os.Getenv("PAYMENT_ENABLED") == "true"
+	
 	ctx.JSON(http.StatusOK, gin.H{
 		"domains":        domains,
 		"remainingSpots": spotsRemaining,
+		"paymentEnabled": isPaymentEnabled,
 	})
 }

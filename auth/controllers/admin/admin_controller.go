@@ -1,8 +1,9 @@
+// Package admin contains controllers and routes for admin-related actions
 package admin
 
 import (
-	"github.com/atomic-blend/backend/shared/middlewares/auth"
 	"github.com/atomic-blend/backend/auth/controllers/admin/userrole"
+	"github.com/atomic-blend/backend/shared/middlewares/auth"
 	userrolerepo "github.com/atomic-blend/backend/shared/repositories/user_role"
 
 	"github.com/gin-gonic/gin"

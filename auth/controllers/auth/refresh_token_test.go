@@ -252,20 +252,13 @@ func (suite *RefreshTokenTestSuite) TestRefreshToken() {
 			setupTestData: func() (primitive.ObjectID, *models.UserEntity) {
 				// Create purchase with active subscription
 				futureTime := time.Now().Add(24 * time.Hour).UnixMilli() // 1 day in future
-				purchaseType := "REVENUE_CAT"
-				purchases := []*models.PurchaseEntity{
-					{
-						ID:   primitive.NewObjectID(),
-						Type: &purchaseType,
-						PurchaseData: models.RevenueCatPurchaseData{
-							ExpirationAtMs: futureTime,
-							ProductID:      "test_product",
-							AppUserID:      "test_user",
-						},
-						CreatedAt: primitive.NewDateTimeFromTime(time.Now()),
-						UpdatedAt: primitive.NewDateTimeFromTime(time.Now()),
-					},
+				purchaseData := models.RevenueCatPurchaseData{
+					ExpirationAtMs: futureTime,
+					ProductID:      "test_product",
+					AppUserID:      "test_user",
 				}
+				purchase := models.NewRevenueCatPurchase(purchaseData)
+				purchases := []*models.PurchaseEntity{&purchase}
 
 				user := createTestUser(suite.T(), suite.userRepo, purchases)
 				role := createTestRole(suite.T(), suite.userRoleRepo)

@@ -1,0 +1,72 @@
+syntax = "proto3";
+package calendar.v1;
+
+import "google/protobuf/duration.proto";
+import "google/protobuf/timestamp.proto";
+
+// Calendar represents an RFC 5545 VCALENDAR object.
+message Calendar {
+  string id = 1; // Mongo ObjectID as hex string
+  string user_id = 2;
+  string prod_id = 3;
+  string version = 4;
+  string method = 5;
+  repeated Event events = 6;
+  repeated VTimezone timezones = 7;
+  google.protobuf.Timestamp created_at = 8;
+  google.protobuf.Timestamp updated_at = 9;
+}
+
+// Event represents an RFC 5545 VEVENT object.
+message Event {
+  string uid = 1;
+  google.protobuf.Timestamp dt_stamp = 2;
+  TimeSpec start = 3;
+  TimeSpec end = 4;
+  google.protobuf.Duration duration = 5;
+  string summary = 6;
+  string description = 7;
+  string location = 8;
+  CalAddress organizer = 9;
+  repeated CalAddress attendees = 10;
+  RRule recurrence = 11;
+  repeated TimeSpec ex_dates = 12;
+  repeated TimeSpec r_dates = 13;
+  string status = 14;
+  int32 sequence = 15;
+  google.protobuf.Timestamp last_modified = 16;
+  google.protobuf.Timestamp created_at = 17;
+  google.protobuf.Timestamp updated_at = 18;
+}
+
+// TimeSpec represents a date or date-time with an optional timezone identifier.
+message TimeSpec {
+  google.protobuf.Timestamp time = 1;
+  string tzid = 2;
+}
+
+// CalAddress represents ORGANIZER and ATTENDEE fields.
+message CalAddress {
+  string email = 1;
+  string cn = 2;
+  string role = 3;
+  string part_stat = 4;
+  bool rsvp = 5;
+}
+
+// RRule represents the RFC 5545 recurrence rule.
+message RRule {
+  string freq = 1;
+  int32 interval = 2;
+  google.protobuf.Timestamp until = 3;
+  int32 count = 4;
+  repeated string by_day = 5;
+  repeated int32 by_month = 6;
+  repeated int32 by_set_pos = 7;
+}
+
+// VTimezone represents VTIMEZONE blocks.
+message VTimezone {
+  string tzid = 1;
+  int32 offset = 2; // offset in seconds from UTC
+}

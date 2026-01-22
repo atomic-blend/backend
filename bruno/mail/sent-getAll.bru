@@ -1,0 +1,25 @@
+meta {
+  name: /sent/getAll
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{API_URL}}/mail/send?page=1&size=10
+  body: none
+  auth: inherit
+}
+
+params:query {
+  page: 1
+  size: 10
+}
+
+script:pre-request {
+  await bru.runRequest("/auth/login")
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

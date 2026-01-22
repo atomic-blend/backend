@@ -52,6 +52,7 @@ jobs:
             grpc/**
             mail/**
             mail-server/**
+            calendar/**
             shared/**
           files_ignore: |
             **/CHANGELOG.md

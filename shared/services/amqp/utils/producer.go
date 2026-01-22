@@ -22,6 +22,7 @@ func InitProducerAMQP(workerName string) {
 
 	// Set values from environment variables
 	amqpURL := getAMQPURL(workerName, true)
+	queueName := getAMQPQueueName(workerName, true)
 	exchangeNames := getAMQPExchangeNames(workerName, true)
 
 	// Skip initialization in test environment
@@ -30,8 +31,13 @@ func InitProducerAMQP(workerName string) {
 		return
 	}
 
+	if amqpURL == "" || queueName == "" || exchangeNames == "" {
+		log.Warn().Msg("AMQP producer configuration is incomplete. Please check environment variables.")
+		return
+	}
+
 	shortcuts.CheckRequiredEnvVar(workerName+"_PRODUCER_AMQP_URL or "+workerName+"_AMQP_URL or AMQP_URL", amqpURL, "amqp://user:password@localhost:5672/")
-	shortcuts.CheckRequiredEnvVar(workerName+"_PRODUCER_AMQP_QUEUE_NAME or "+workerName+"_AMQP_QUEUE_NAME or AMQP_QUEUE_NAME", getAMQPQueueName(workerName, true), "")
+	shortcuts.CheckRequiredEnvVar(workerName+"_PRODUCER_AMQP_QUEUE_NAME or "+workerName+"_AMQP_QUEUE_NAME or AMQP_QUEUE_NAME", queueName, "")
 	shortcuts.CheckRequiredEnvVar(workerName+"_PRODUCER_AMQP_EXCHANGE_NAMES or "+workerName+"_AMQP_EXCHANGE_NAMES or AMQP_EXCHANGE_NAMES", exchangeNames, "")
 
 	//split exchange names
@@ -52,7 +58,6 @@ func InitProducerAMQP(workerName string) {
 	}
 
 	log.Info().Msg("Declaring queue")
-	queueName := getAMQPQueueName(workerName, true)
 	_, err = producerCh.QueueDeclare(queueName, true, false, false, false, nil)
 	if err != nil {
 		log.Info().Err(err).Msg("Failed to declare a queue")

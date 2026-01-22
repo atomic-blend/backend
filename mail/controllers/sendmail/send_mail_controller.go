@@ -16,15 +16,17 @@ import (
 // Controller handles send mail related operations
 type Controller struct {
 	sendMailRepo repositories.SendMailRepositoryInterface
+	mailRepo     repositories.MailRepositoryInterface
 	userClient   userclient.Interface
 	amqpService  amqpinterfaces.AMQPServiceInterface
 	s3Service    s3interfaces.S3ServiceInterface
 }
 
 // NewSendMailController creates a new send mail controller instance
-func NewSendMailController(sendMailRepo repositories.SendMailRepositoryInterface, userClient userclient.Interface, amqpService amqpinterfaces.AMQPServiceInterface, s3Service s3interfaces.S3ServiceInterface) *Controller {
+func NewSendMailController(sendMailRepo repositories.SendMailRepositoryInterface, mailRepo repositories.MailRepositoryInterface, userClient userclient.Interface, amqpService amqpinterfaces.AMQPServiceInterface, s3Service s3interfaces.S3ServiceInterface) *Controller {
 	return &Controller{
 		sendMailRepo: sendMailRepo,
+		mailRepo:     mailRepo,
 		userClient:   userClient,
 		amqpService:  amqpService,
 		s3Service:    s3Service,
@@ -36,13 +38,14 @@ func SetupRoutes(router *gin.Engine, database *mongo.Database, amqpService amqpi
 	sendMailRepo := repositories.NewSendMailRepository(database)
 	userClient, _ := userclient.NewUserClient()
 	s3Service, _ := s3service.NewS3Service()
-	sendMailController := NewSendMailController(sendMailRepo, userClient, amqpService, s3Service)
+	mailRepo := repositories.NewMailRepository(database)
+	sendMailController := NewSendMailController(sendMailRepo, mailRepo, userClient, amqpService, s3Service)
 	setupSendMailRoutes(router, sendMailController)
 }
 
 // SetupRoutesWithMock sets up the send mail routes with mock services for testing
-func SetupRoutesWithMock(router *gin.Engine, sendMailRepo repositories.SendMailRepositoryInterface, userClient userclient.Interface, amqpService amqpinterfaces.AMQPServiceInterface, s3Service s3interfaces.S3ServiceInterface) {
-	sendMailController := NewSendMailController(sendMailRepo, userClient, amqpService, s3Service)
+func SetupRoutesWithMock(router *gin.Engine, sendMailRepo repositories.SendMailRepositoryInterface, mailRepo repositories.MailRepositoryInterface, userClient userclient.Interface, amqpService amqpinterfaces.AMQPServiceInterface, s3Service s3interfaces.S3ServiceInterface) {
+	sendMailController := NewSendMailController(sendMailRepo, mailRepo, userClient, amqpService, s3Service)
 	setupSendMailRoutes(router, sendMailController)
 }
 
@@ -52,6 +55,7 @@ func setupSendMailRoutes(router *gin.Engine, sendMailController *Controller) {
 	auth.RequireAuth(sendMailRoutes)
 	{
 		sendMailRoutes.GET("", pagination.New(), sendMailController.GetAllSendMails)
+		sendMailRoutes.GET("/since", pagination.New(), sendMailController.GetSendMailsSince)
 		sendMailRoutes.GET("/:id", sendMailController.GetSendMailByID)
 		sendMailRoutes.POST("", sendMailController.CreateSendMail)
 		sendMailRoutes.DELETE("/:id", sendMailController.DeleteSendMail)

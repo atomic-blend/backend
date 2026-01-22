@@ -47,7 +47,7 @@ func TestDraftMailController_GetDraftMailsSince(t *testing.T) {
 						Mail: &models.Mail{
 							ID:     &mailID1,
 							UserID: userID,
-							Headers: map[string]string{
+							Headers: map[string]interface{}{
 								"Subject": "User Draft Mail 1",
 							},
 						},
@@ -57,7 +57,7 @@ func TestDraftMailController_GetDraftMailsSince(t *testing.T) {
 						Mail: &models.Mail{
 							ID:     &mailID2,
 							UserID: userID,
-							Headers: map[string]string{
+							Headers: map[string]interface{}{
 								"Subject": "User Draft Mail 2",
 							},
 						},
@@ -83,7 +83,7 @@ func TestDraftMailController_GetDraftMailsSince(t *testing.T) {
 						Mail: &models.Mail{
 							ID:     &mailID,
 							UserID: userID,
-							Headers: map[string]string{
+							Headers: map[string]interface{}{
 								"Subject": "User Draft Mail",
 							},
 						},
@@ -175,7 +175,7 @@ func TestDraftMailController_GetDraftMailsSince(t *testing.T) {
 						Mail: &models.Mail{
 							ID:     &mailID,
 							UserID: userID,
-							Headers: map[string]string{
+							Headers: map[string]interface{}{
 								"Subject": "User Draft Mail",
 							},
 						},

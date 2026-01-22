@@ -1,8 +1,10 @@
+// Package webhooks handles incoming webhooks from third-party services
 package webhooks
 
 import (
-	"github.com/atomic-blend/backend/shared/models"
 	"slices"
+
+	"github.com/atomic-blend/backend/shared/models"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog/log"

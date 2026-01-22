@@ -2,11 +2,12 @@ go 1.24.5
 
 use (
 	./auth
+	./ab-cli
 	./grpc
 	./mail
 	./mail-server
+	./calendar
+	./template
 	./productivity
-	./scripts/run-tests-and-lint
-	./scripts/send-email-via-smtp
 	./shared
 )

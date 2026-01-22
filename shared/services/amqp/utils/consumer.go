@@ -24,6 +24,7 @@ func InitConsumerAMQP(workerName string) {
 	var q amqp.Queue
 
 	// Set values from environment variables
+	amqpURL := getAMQPURL(workerName, false)
 	exchangeNamesRaw := getAMQPExchangeNames(workerName, false)
 	queueName := getAMQPQueueName(workerName, false)
 	routingKeysRaw := getAMQPRoutingKeys(workerName, false)
@@ -34,12 +35,17 @@ func InitConsumerAMQP(workerName string) {
 		return
 	}
 
-	shortcuts.CheckRequiredEnvVar(workerName+"_CONSUMER_AMQP_URL or "+workerName+"_AMQP_URL or AMQP_URL", getAMQPURL(workerName, false), "amqp://user:password@localhost:5672")
+	if amqpURL == "" || exchangeNamesRaw == "" || queueName == "" || routingKeysRaw == "" {
+		log.Warn().Msg("AMQP consumer configuration is incomplete. Please check environment variables.")
+		return
+	}
+
+	shortcuts.CheckRequiredEnvVar(workerName+"_CONSUMER_AMQP_URL or "+workerName+"_AMQP_URL or AMQP_URL", amqpURL, "amqp://user:password@localhost:5672")
 	shortcuts.CheckRequiredEnvVar(workerName+"_CONSUMER_AMQP_EXCHANGE_NAMES or "+workerName+"_AMQP_EXCHANGE_NAMES or AMQP_EXCHANGE_NAMES", exchangeNamesRaw, "")
 	shortcuts.CheckRequiredEnvVar(workerName+"_CONSUMER_AMQP_QUEUE_NAME or "+workerName+"_AMQP_QUEUE_NAME or AMQP_QUEUE_NAME", queueName, "")
 	shortcuts.CheckRequiredEnvVar(workerName+"_CONSUMER_AMQP_ROUTING_KEYS or "+workerName+"_AMQP_ROUTING_KEYS or AMQP_ROUTING_KEYS", routingKeysRaw, "")
 
-	consumerConn, err = amqp.Dial(getAMQPURL(workerName, false))
+	consumerConn, err = amqp.Dial(amqpURL)
 	shortcuts.FailOnError(err, "Failed to connect to RabbitMQ")
 
 	exchangeNames := strings.Split(exchangeNamesRaw, ",")
