@@ -2,6 +2,56 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## auth/v0.13.0 - 2026-01-22
+
+- - -
+
+## auth/v0.13.0-rc-1131b74 - 2026-01-22
+#### Bug Fixes
+- add tests for new endpoint - (16c6d7d) - Brandon Guigo
+#### Features
+- add endpoint to generate a customer portal session url - (e6cdcab) - Brandon Guigo
+
+- - -
+
+## auth/v0.13.0-rc-cc57f38 - 2026-01-22
+#### Features
+- add test command to test a single microservice - (51831e8) - Brandon Guigo
+
+- - -
+
+## shared/v0.2.0-rc-80d36dc - 2026-01-22
+#### Bug Fixes
+- unit tests - (370e40a) - Brandon Guigo
+- refactor remove personal data inside a dedicated util - (e92da78) - Brandon Guigo
+- store subscription id from the webhook - (6b047e3) - Brandon Guigo
+- always return all necessary info for setup intent - (3bd7651) - Brandon Guigo
+- return customer ephemeral keys too when creating a subscription - (f548e13) - Brandon Guigo
+- tests and linter - (7692330) - Brandon Guigo
+- make subscription be billed after trial end - (f62efe5) - Brandon Guigo
+- return existing subscription when it already exists - (ef14077) - Brandon Guigo
+- return the setup intent secret and id for the client to use - (fa52635) - Brandon Guigo
+- test the payment controller - (ca235ad) - Brandon Guigo
+- add tests for stripe service - (9761158) - Brandon Guigo
+- make create or get customer work - (565e621) - Brandon Guigo
+#### Features
+- add cron tests - (969bc47) - Brandon Guigo
+- add first version of delete inactive user cron - (8194895) - Brandon Guigo
+- setup cron - (fc6ad34) - Brandon Guigo
+- support optional success and cancel callback from front-end - (1fcacb0) - Brandon Guigo
+- add checkout endpoint and tests - (47c517a) - Brandon Guigo
+- update user sub status when receiving webhook - (870e124) - Brandon Guigo
+- add processing pipeline for stripe webhooks + validation - (d1ed159) - Brandon Guigo
+- add create subscription to the stripe service - (d98db43) - Brandon Guigo
+- add get or create customer - (c5979a4) - Brandon Guigo
+- add payment controller inside auth - (685345a) - Brandon Guigo
+- support stripe purchase data - (781f03f) - Brandon Guigo
+- add payment enabled to config returned to apps - (3793402) - Brandon Guigo
+#### Miscellaneous Chores
+- **(release)** bump versions for auth@auth/v0.12.0 grpc@grpc/v0.2.1 mail-server@mail-server/v0.3.0 mail@mail/v0.3.0 productivity@productivity/v0.12.0 shared@shared/v0.1.0 [skip ci] - (1ad0b64) - GitHub Actions
+
+- - -
+
 ## auth/v0.12.0 - 2025-10-21
 
 - - -

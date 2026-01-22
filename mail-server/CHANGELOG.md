@@ -2,6 +2,18 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## mail-server/v0.3.1 - 2026-01-22
+
+- - -
+
+## mail-server/v0.3.1-rc-7516dd0 - 2026-01-22
+#### Bug Fixes
+- when user send an email, accept the To header as a string or a list of string - (7516dd0) - Brandon Guigo
+#### Miscellaneous Chores
+- **(release)** bump versions for auth@auth/v0.12.0 grpc@grpc/v0.2.1 mail-server@mail-server/v0.3.0 mail@mail/v0.3.0 productivity@productivity/v0.12.0 shared@shared/v0.1.0 [skip ci] - (1ad0b64) - GitHub Actions
+
+- - -
+
 ## mail-server/v0.3.0 - 2025-10-21
 
 - - -

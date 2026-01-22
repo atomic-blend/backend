@@ -2,6 +2,48 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## shared/v0.2.0 - 2026-01-22
+
+- - -
+
+## shared/v0.2.0-rc-0372efa - 2026-01-22
+#### Bug Fixes
+- grpc error and event don't have calendar or user id affected - (99a9164) - Brandon Guigo
+#### Features
+- add tests for new calendar receive feature - (8da2107) - Brandon Guigo
+- parse the ical event, prepare payload, send it and store returned ID - (0a69aee) - Brandon Guigo
+- refactor template to calendar micriservice - (6ef0111) - Brandon Guigo
+
+- - -
+
+## calendar/v0.0.1 - 2026-01-22
+#### Bug Fixes
+- skip amqp init if config is incomplete - (585cb85) - Brandon Guigo
+
+- - -
+
+## shared/v0.2.0-rc-ec1a0a7 - 2026-01-22
+#### Bug Fixes
+- make firebase sac not mandatory - (703a026) - Brandon Guigo
+
+- - -
+
+## shared/v0.2.0-rc-80d36dc - 2026-01-22
+#### Bug Fixes
+- return customer ephemeral keys too when creating a subscription - (f548e13) - Brandon Guigo
+- tests and linter - (7692330) - Brandon Guigo
+#### Features
+- add cron tests - (969bc47) - Brandon Guigo
+- add first version of delete inactive user cron - (8194895) - Brandon Guigo
+- add checkout endpoint and tests - (47c517a) - Brandon Guigo
+- update user sub status when receiving webhook - (870e124) - Brandon Guigo
+- add payment controller inside auth - (685345a) - Brandon Guigo
+- support stripe purchase data - (781f03f) - Brandon Guigo
+#### Miscellaneous Chores
+- **(release)** bump versions for auth@auth/v0.12.0 grpc@grpc/v0.2.1 mail-server@mail-server/v0.3.0 mail@mail/v0.3.0 productivity@productivity/v0.12.0 shared@shared/v0.1.0 [skip ci] - (1ad0b64) - GitHub Actions
+
+- - -
+
 ## shared/v0.1.0 - 2025-10-21
 
 - - -

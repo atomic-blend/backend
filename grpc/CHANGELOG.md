@@ -2,6 +2,21 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## grpc/v0.3.0 - 2026-01-22
+
+- - -
+
+## shared/v0.2.0-rc-0372efa - 2026-01-22
+#### Bug Fixes
+- unit tests for encryption - (1aa2bb1) - Brandon Guigo
+#### Features
+- return updated to true when event have been updated - (8d79a96) - Brandon Guigo
+- refactor template to calendar micriservice - (6ef0111) - Brandon Guigo
+#### Miscellaneous Chores
+- **(release)** bump versions for auth@auth/v0.12.0 grpc@grpc/v0.2.1 mail-server@mail-server/v0.3.0 mail@mail/v0.3.0 productivity@productivity/v0.12.0 shared@shared/v0.1.0 [skip ci] - (1ad0b64) - GitHub Actions
+
+- - -
+
 ## grpc/v0.2.1 - 2025-10-21
 
 - - -

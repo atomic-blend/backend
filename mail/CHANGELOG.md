@@ -2,6 +2,76 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## mail/v0.4.0 - 2026-01-22
+
+- - -
+
+## mail/v0.4.0-rc-f5845a8 - 2026-01-22
+#### Bug Fixes
+- **(mail)** be able to receive email with other encoding than utf-8 - (08d39bc) - Brandon Guigo
+
+- - -
+
+## shared/v0.2.0-rc-0372efa - 2026-01-22
+#### Bug Fixes
+- encryption of event - (3835d3b) - Brandon Guigo
+- grpc error and event don't have calendar or user id affected - (99a9164) - Brandon Guigo
+- copilot review - (8a53a6f) - Brandon Guigo
+#### Features
+- save calendar event via grpc and return id - (f78c40d) - Brandon Guigo
+- add tests for new calendar receive feature - (8da2107) - Brandon Guigo
+- parse the ical event, prepare payload, send it and store returned ID - (0a69aee) - Brandon Guigo
+- add ical_parser and it's tests - (56475e4) - Brandon Guigo
+- detect the first calendar Attachment and store it to process later after encryption - (aa57fa9) - Brandon Guigo
+- link calendar event to the mail entity - (b4cbd9e) - Brandon Guigo
+
+- - -
+
+## mail/v0.4.0-rc-77a1539 - 2026-01-22
+#### Bug Fixes
+- linter - (902ada4) - Brandon Guigo
+- add logs and set context to TODO - (f5a3a5a) - Brandon Guigo
+- add tests - (22841f2) - Brandon Guigo
+- add tests for references and in-reply-to headers - (baaf43a) - Brandon Guigo
+- add unit tests for message id gen - (1e4df92) - Brandon Guigo
+#### Features
+- reformat to and from headers when sending email - (a446ad3) - Brandon Guigo
+- set in reply to header when sending an email - (a5b5d80) - Brandon Guigo
+- generate message id automatically - (c136214) - Brandon Guigo
+#### Miscellaneous Chores
+- add logs to the receive method to debug - (124bbbe) - Brandon Guigo
+
+- - -
+
+## mail/v0.4.0-rc-63dc4a5 - 2026-01-22
+#### Bug Fixes
+- linter - (1e3225e) - Brandon Guigo
+- userID were not set when user is sending an email - (601b806) - Brandon Guigo
+#### Features
+- add get since endpoint for sent mails - (d216269) - Brandon Guigo
+
+- - -
+
+## mail/v0.4.0-rc-b0562f5 - 2026-01-22
+#### Bug Fixes
+- change fatal into error to not exit - (b0562f5) - Brandon Guigo
+
+- - -
+
+## shared/v0.2.0-rc-ec1a0a7 - 2026-01-22
+#### Bug Fixes
+- make firebase sac not mandatory - (703a026) - Brandon Guigo
+
+- - -
+
+## shared/v0.2.0-rc-80d36dc - 2026-01-22
+#### Features
+- add payment controller inside auth - (685345a) - Brandon Guigo
+#### Miscellaneous Chores
+- **(release)** bump versions for auth@auth/v0.12.0 grpc@grpc/v0.2.1 mail-server@mail-server/v0.3.0 mail@mail/v0.3.0 productivity@productivity/v0.12.0 shared@shared/v0.1.0 [skip ci] - (1ad0b64) - GitHub Actions
+
+- - -
+
 ## mail/v0.3.0 - 2025-10-21
 
 - - -
