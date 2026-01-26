@@ -2,6 +2,19 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## auth/v0.13.2 - 2026-01-26
+
+- - -
+
+## auth/v0.13.2-rc-d4be9ed - 2026-01-26
+#### Bug Fixes
+- make it configurable with env var - (8241eed) - Brandon Guigo
+- disable the cron that delete inactive users after the 7 day grace period - (ba9e691) - Brandon Guigo
+#### Miscellaneous Chores
+- **(release)** bump versions for auth@auth/v0.13.1 [skip ci] - (405de2d) - GitHub Actions
+
+- - -
+
 ## auth/v0.13.1 - 2026-01-26
 
 - - -
