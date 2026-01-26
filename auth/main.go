@@ -164,10 +164,14 @@ func main() {
 		if err != nil {
 			log.Error().Err(err).Msg("Error defining cron job: WaitingListCron")
 		}
-		// err = gocron.Every(1).Hour().Do(cron.DeleteInactiveSubscriptionUsersCron)
-		// if err != nil {
-		// 	log.Error().Err(err).Msg("Error defining cron job: DeleteInactiveSubscriptionUsersCron")
-		// }
+		enableDeleteInactiveUsersCron := os.Getenv("ENABLE_DELETE_INACTIVE_SUBSCRIPTION_USERS_CRON")
+		log.Info().Msgf("ENABLE_DELETE_INACTIVE_SUBSCRIPTION_USERS_CRON: %s", enableDeleteInactiveUsersCron)
+		if strings.ToLower(enableDeleteInactiveUsersCron) == "true" {
+			err = gocron.Every(1).Day().Do(cron.DeleteInactiveSubscriptionUsersCron)
+			if err != nil {
+				log.Error().Err(err).Msg("Error defining cron job: DeleteInactiveSubscriptionUsersCron")
+			}
+		}
 		<-gocron.Start()
 	}()
 
