@@ -2,6 +2,18 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## auth/v0.13.1 - 2026-01-26
+
+- - -
+
+## auth/v0.13.1-rc-ae884a0 - 2026-01-26
+#### Bug Fixes
+- set unknow as customer name if no infos are set (old accounts) - (4b33bd4) - Brandon Guigo
+#### Miscellaneous Chores
+- **(release)** bump versions for auth@auth/v0.13.0 calendar@calendar/v0.1.0 grpc@grpc/v0.3.0 mail-server@mail-server/v0.3.1 mail@mail/v0.4.0 shared@shared/v0.2.0 [skip ci] - (a10dcca) - GitHub Actions
+
+- - -
+
 ## auth/v0.13.0 - 2026-01-22
 
 - - -
