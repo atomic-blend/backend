@@ -52,8 +52,18 @@ func (s *Service) GetOrCreateCustomer(ctx *gin.Context, userID primitive.ObjectI
 
 	if userEntity.StripeCustomerID == nil {
 		// create stripe customer
+		customerName := ""
+		if userEntity.FirstName != nil {
+			customerName += *userEntity.FirstName + " "
+		}
+		if userEntity.LastName != nil {
+			customerName += *userEntity.LastName
+		}
+		if customerName == "" {
+			customerName = "Unknown"
+		}
 		params := &stripe.CustomerCreateParams{
-			Name:  stripe.String(*userEntity.FirstName + " " + *userEntity.LastName),
+			Name:  stripe.String(customerName),
 			Email: stripe.String(*userEntity.Email),
 			Metadata: map[string]string{
 				"app_user_id": userEntity.ID.Hex(),
